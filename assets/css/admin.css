@@ -1,0 +1,294 @@
+/* General Layout */
+.wrap {
+    margin: 20px 20px 0 0;
+}
+
+.wp-heading-inline {
+    display: inline-block;
+    margin-right: 15px;
+}
+
+/* DataTables Customization */
+.dataTables_wrapper {
+    margin-top: 20px;
+}
+
+.dataTables_length,
+.dataTables_filter {
+    margin-bottom: 15px;
+}
+
+.dataTables_info,
+.dataTables_paginate {
+    margin-top: 15px;
+}
+
+/* Right Panel */
+.right-panel {
+    position: fixed;
+    top: 32px;
+    right: -400px;
+    width: 400px;
+    height: calc(100vh - 32px);
+    background: #fff;
+    box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+    z-index: 9999;
+    transition: right 0.3s ease;
+}
+
+.right-panel.open {
+    right: 0;
+}
+
+.right-panel-header {
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.right-panel-header h2 {
+    margin: 0;
+    font-size: 1.3em;
+}
+
+.close-panel {
+    cursor: pointer;
+    border: none;
+    background: none;
+    padding: 5px;
+}
+
+.right-panel-content {
+    height: calc(100% - 60px);
+    overflow-y: auto;
+    padding: 20px;
+}
+
+/* Tabs */
+.nav-tab-wrapper {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #ccc;
+    padding: 0;
+}
+
+.nav-tab-wrapper li {
+    display: inline-block;
+    margin-bottom: -1px;
+}
+
+.nav-tab {
+    padding: 8px 15px;
+    font-size: 14px;
+    line-height: 1.71428571;
+    font-weight: 600;
+    margin: 0 5px;
+    border: 1px solid transparent;
+    text-decoration: none;
+    color: #555;
+    display: inline-block;
+}
+
+.nav-tab-active,
+.nav-tab:hover {
+    border-color: #ccc #ccc #f1f1f1;
+    background: #f1f1f1;
+    color: #000;
+}
+
+.tab-content > .tab-pane {
+    display: none;
+}
+
+.tab-content > .active {
+    display: block;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: 99999;
+}
+
+.modal.open {
+    display: block;
+}
+
+.modal-content {
+    position: relative;
+    width: 500px;
+    margin: 100px auto;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.modal-header {
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.3em;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 15px;
+    border-top: 1px solid #ddd;
+    text-align: right;
+}
+
+/* Forms */
+.form-row {
+    margin-bottom: 15px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.form-group input[type="text"],
+.form-group input[type="email"],
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Info Display */
+.info-section {
+    margin-bottom: 30px;
+}
+
+.info-section h3 {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.info-item label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 5px;
+}
+
+/* Membership Badge */
+.membership-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.membership-regular {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.membership-priority {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.membership-utama {
+    background: #d4edda;
+    color: #155724;
+}
+
+/* Notes Section */
+.notes-section {
+    margin-top: 20px;
+}
+
+.add-note {
+    margin-bottom: 20px;
+}
+
+.add-note textarea {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.notes-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.note-item {
+    padding: 10px;
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+/* Activity List */
+.activity-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.activity-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+/* Button styles */
+.button-danger {
+    background: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #fff !important;
+}
+
+.button-danger:hover {
+    background: #c82333 !important;
+    border-color: #bd2130 !important;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+    .right-panel {
+        width: 100%;
+        right: -100%;
+    }
+
+    .modal-content {
+        width: 90%;
+        margin: 50px auto;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+}
