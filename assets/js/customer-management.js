@@ -1,166 +1,182 @@
 jQuery(document).ready(function($) {
     'use strict';
+    let isPanelOpen = false; // Track panel state
+    let activeCustomerId = null;
+    let hasLoadedTabs = {
+        info: false,
+        activity: false,
+        notes: false
+    };
 
-    // Initialize DataTable
+    // Function untuk cek state
+    function isPanelCurrentlyOpen() {
+        return $('.customer-panels').hasClass('show-right-panel');
+    }
+
+    // Update URL hash without triggering hashchange
+    function updateUrlHash(id) {
+        console.log('Updating URL hash:', { currentId: activeCustomerId, newId: id });
+        
+        if (id) {
+            const newUrl = `${window.location.pathname}${window.location.search}#${id}`;
+            window.history.pushState({id: id}, '', newUrl);
+            console.log('URL updated with hash:', newUrl);
+        } else {
+            const newUrl = `${window.location.pathname}${window.location.search}`;
+            window.history.pushState({id: null}, '', newUrl);
+            console.log('URL hash cleared:', newUrl);
+        }
+    }
 
     // DataTables initialization
-    var customersTable = $('#customers-table').DataTable({
+    const customersTable = $('#customers-table').DataTable({
         processing: true,
         serverSide: true,
+        autoWidth: false,
+        width: '100%',
         ajax: {
             url: customerManagement.ajaxUrl,
             type: 'POST',
             data: function(d) {
                 d.action = 'get_customers';
                 d.nonce = customerManagement.nonce;
-                // Add filters
                 d.membership_type = $('#membership-filter').val();
                 d.branch_id = $('#branch-filter').val();
+                return d;
             }
         },
         columns: [
-            { data: 'name' },
+            { 
+                data: 'name',
+                render: function(data, type, row) {
+                    return '<a href="#" class="view-customer" data-id="' + row.id + '">' + data + '</a>';
+                }
+            },
             { data: 'email' },
             { data: 'phone' },
             { 
-                data: 'membership_type',
+               data: 'membership_type',
+               //hideable: true,
                 render: function(data) {
-                    if (!data) return '';
-                    const type = data.toLowerCase();
-                    return '<span class="membership-badge membership-' + type + '">' + 
-                           data + '</span>';
+                    if (data) {
+                        const type = data.toLowerCase();
+                        return '<span class="membership-badge membership-' + type + '">' + data + '</span>';
+                    } else {
+                        console.warn('Membership type is undefined or null');
+                        return '<span class="membership-badge membership-unknown">Unknown</span>';
+                    }
                 }
             },
             { data: 'branch_name' },
             { data: 'employee_name' },
             {
-                data: 'id',
+                data: null,
                 orderable: false,
+                //hideable: false,  // Kolom nama selalu tampil
                 render: function(data, type, row) {
-                    var actions = '<button class="button view-customer" data-id="' + data + '">View</button> ';
+                    let actions = '<div class="row-actions">';
                     if (customerManagement.can_edit) {
-                        actions += '<button class="button edit-customer" data-id="' + data + '">Edit</button> ';
+                        actions += '<span class="edit"><a href="#" class="edit-customer" data-id="' + row.id + '">Edit</a></span>';
                     }
-                    if (customerManagement.can_delete) {
-                        actions += '<button class="button button-danger delete-customer" data-id="' + data + '">Delete</button>';
-                    }
+                    actions += '</div>';
                     return actions;
                 }
             }
         ],
+
         language: {
             emptyTable: 'No customers found',
             zeroRecords: 'No matching customers found'
+        },    
+        order: [[0, 'asc']],
+        pageLength: 25,
+        initComplete: function() {
+            // This function intentionally left empty for error purposes
         }
     });
 
+    // Modified showRightPanel
+    function showRightPanel() {
+        // Cek if already open
+        if (isPanelCurrentlyOpen()) {
+            console.log('Panel already open, skipping animation');
+            return;
+        }
 
-    // Filter handlers
-    $('#membership-filter, #branch-filter').on('change', function() {
-        customersTable.ajax.reload();
-    });
+        const $panels = $('.customer-panels');
+        const $rightPanel = $('.right-panel');
+        
+        $panels.addClass('panel-transition');
+        $rightPanel[0].offsetHeight; // Trigger reflow
+        $panels.addClass('show-right-panel');
+        
+        setTimeout(() => {
+            $panels.removeClass('panel-transition');
+            isPanelOpen = true;
+        }, 300);
+    }
 
-    // Right Panel
-    let activeCustomerId = null;
-
-    function loadCustomerDetails(customerId) {
-        $.ajax({
-            url: customerManagement.ajaxUrl,
-            type: 'POST',
-            data: {
-                action: 'get_customer',
-                id: customerId,
-                nonce: customerManagement.nonce
-            },
-            success: function(response) {
-                if (response.success) {
-                    const customer = response.data;
-                    activeCustomerId = customer.id;
-                    populateRightPanel(customer);
-                    openRightPanel();
+    function hideRightPanel() {
+        const $panels = $('.customer-panels');
+        
+        // Batch DOM operations
+        requestAnimationFrame(() => {
+            $panels.removeClass('show-right-panel');
+            
+            // Reset table columns after transition
+            setTimeout(() => {
+                if (customersTable) {
+                    customersTable.columns.adjust();
                 }
-            }
+            }, 300);
         });
-    }
-
-    function populateRightPanel(customer) {
-        // Basic info
-        $('.customer-name').text(customer.name);
-        $('.customer-email').text(customer.email);
-        $('.customer-phone').text(customer.phone || '-');
-        $('.customer-address').text(customer.address || '-');
-        
-        // Membership badge
-        const badgeClass = {
-            regular: 'badge-secondary',
-            priority: 'badge-primary',
-            utama: 'badge-success'
-        }[customer.membership_type];
-        $('.membership-badge').attr('class', 'membership-badge badge ' + badgeClass)
-            .text(customer.membership_type);
-
-        // Assignment info
-        $('.customer-branch').text(customer.branch_name || '-');
-        $('.customer-employee').text(customer.employee_name || '-');
-        
-        // Location info
-        $('.customer-province').text(customer.province_name || '-');
-        $('.customer-city').text(customer.city_name || '-');
-    }
-
-    // Right Panel functionality
-    function openRightPanel() {
-        $('.right-panel').addClass('open');
     }
 
     function closeRightPanel() {
-        $('.right-panel').removeClass('open');
+        hideRightPanel();
+        activeCustomerId = null;
+        updateUrlHash('');
+        resetTabsLoadState();
+        tableHelper.hideColumns(customersTable, [-1]);
+        isPanelOpen = false;
     }
 
-    // Customer view handler
-    $(document).on('click', '.view-customer', function(e) {
-        e.preventDefault();
-        const customerId = $(this).data('id');
-        loadCustomerDetails(customerId);
-    });
-
-    // Close right panel
-    $('.close-panel').on('click', closeRightPanel);
-
-    // Modal handlers
-    const $customerModal = $('#customer-modal');
-    const $customerForm = $('#customer-form');
-    const $deleteModal = $('#delete-customer-modal');
-    const $deleteForm = $('#delete-customer-form');
-
-    function openModal($modal) {
-        $modal.addClass('open');
-        $('body').addClass('modal-open');
+    // URL handling
+    function handleUrlState() {
+        const hash = window.location.hash;
+        const id = hash && hash.match(/^#\d+$/) ? parseInt(hash.substring(1)) : null;
+        
+        if (id && !isPanelCurrentlyOpen()) {
+            // Load customer and show panel
+            loadCustomerDetails(id);
+        } else if (!id && isPanelCurrentlyOpen()) {
+            // Close panel
+            closeRightPanel(); 
+        }
     }
 
-    function closeModal($modal) {
-        $modal.removeClass('open');
-        $('body').removeClass('modal-open');
+
+    function resetTabsLoadState() {
+        console.log('Resetting tabs load state');
+        hasLoadedTabs = {
+            info: false,
+            activity: false,
+            notes: false
+        };
     }
 
-    function resetForm($form) {
-        $form[0].reset();
-        $form.find('input[name="customer_id"]').val('');
-        $form.find('input[name="action"]').val('create_customer');
-    }
 
-    // Add new customer
-    $('.add-new-customer').on('click', function(e) {
-        e.preventDefault();
-        resetForm($customerForm);
-        $('.modal-title').text('Add New Customer');
-        openModal($customerModal);
-    });
-
-    // Edit customer
-    $(document).on('click', '.edit-customer', function(e) {
-        e.preventDefault();
-        const customerId = $(this).data('id');
+    function loadCustomerDetails(customerId) {
+        if (customerId === activeCustomerId) return;
+        
+        // Cache DOM queries
+        const $tabInfo = $('#tab-info');
+        const $rightPanel = $('.right-panel');
+        
+        $tabInfo.addClass('loading-state');
+        
+        // Show panel first to avoid multiple reflows
+        // showRightPanel();
         
         $.ajax({
             url: customerManagement.ajaxUrl,
@@ -172,141 +188,174 @@ jQuery(document).ready(function($) {
             },
             success: function(response) {
                 if (response.success) {
-                    const customer = response.data;
-                    populateCustomerForm(customer);
-                    $('.modal-title').text('Edit Customer');
-                    openModal($customerModal);
+                    // Batch DOM updates
+                    //Tunggu ajax selesai baru tampilkan panel kanan
+                    showRightPanel();
+                    
+                    requestAnimationFrame(() => {
+                        activeCustomerId = customerId;
+                        updateUrlHash(customerId);
+                        populateRightPanel(response.data);
+                        hasLoadedTabs.info = true;
+
+                        // Update tab states
+                        $('.nav-tab').removeClass('nav-tab-active');
+                        $('.nav-tab[data-tab="info"]').addClass('nav-tab-active');
+                        $('.tab-pane').removeClass('active');
+                        $('#tab-info').addClass('active');
+                    });
                 }
+            },
+            complete: function() {
+                $tabInfo.removeClass('loading-state');
             }
         });
-    });
-
-    function populateCustomerForm(customer) {
-        $customerForm.find('input[name="customer_id"]').val(customer.id);
-        $customerForm.find('input[name="action"]').val('update_customer');
-        $customerForm.find('input[name="name"]').val(customer.name);
-        $customerForm.find('input[name="email"]').val(customer.email);
-        $customerForm.find('input[name="phone"]').val(customer.phone);
-        $customerForm.find('textarea[name="address"]').val(customer.address);
-        $customerForm.find('select[name="membership_type"]').val(customer.membership_type);
-        $customerForm.find('select[name="provinsi_id"]').val(customer.provinsi_id);
-        $customerForm.find('select[name="branch_id"]').val(customer.branch_id);
-        $customerForm.find('select[name="employee_id"]').val(customer.employee_id);
-        $customerForm.find('select[name="assigned_to"]').val(customer.assigned_to);
     }
 
-    // Save customer
-    $('.save-customer').on('click', function() {
-        const formData = new FormData($customerForm[0]);
-        
-        $.ajax({
-            url: customerManagement.ajaxUrl,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.success) {
-                    closeModal($customerModal);
-                    customersTable.ajax.reload();
-                    if (activeCustomerId === response.data.id) {
-                        loadCustomerDetails(response.data.id);
-                    }
-                }
-            }
-        });
-    });
-
-    // Delete customer
-    $(document).on('click', '.delete-customer', function(e) {
+    // Tab Management
+    $('.nav-tab').on('click', function(e) {
         e.preventDefault();
-        const customerId = $(this).data('id');
-        const customerName = $(this).closest('tr').find('td:first').text();
-        
-        $deleteForm.find('input[name="id"]').val(customerId);
-        $('.customer-name-display').text(customerName);
-        openModal($deleteModal);
-    });
+        const $this = $(this);
+        const tabId = $this.attr('href');
+        const tabName = $this.data('tab');
 
-    $('.confirm-delete-customer').on('click', function() {
-        const formData = new FormData($deleteForm[0]);
-        
-        $.ajax({
-            url: customerManagement.ajaxUrl,
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.success) {
-                    closeModal($deleteModal);
-                    customersTable.ajax.reload();
-                    if (activeCustomerId === formData.get('id')) {
-                        closeRightPanel();
-                    }
-                }
-            }
+        console.log('Tab clicked:', { 
+            tabId, 
+            tabName, 
+            currentActiveId: activeCustomerId,
+            tabsLoadState: hasLoadedTabs 
         });
-    });
 
-    // Modal close buttons
-    $('.modal-close, [data-dismiss="modal"]').on('click', function() {
-        closeModal($(this).closest('.modal'));
-    });
+        // Update active states
+        $('.nav-tab').removeClass('nav-tab-active');
+        $this.addClass('nav-tab-active');
+        $('.tab-pane').removeClass('active');
+        $(tabId).addClass('active');
 
-    // Dynamic location dropdowns
-    $('#customer-province').on('change', function() {
-        const provinceId = $(this).val();
-        if (provinceId) {
-            loadCities(provinceId);
-        } else {
-            $('#customer-city').html('<option value="">Select City</option>');
+        // Load tab content if not already loaded
+        if (!hasLoadedTabs[tabName] && activeCustomerId) {
+            console.log('Loading tab content:', { tabName, customerId: activeCustomerId });
+            loadTabContent(tabName, activeCustomerId);
         }
     });
 
-    function loadCities(provinceId) {
+    function loadTabContent(tabName, customerId) {
+        console.log('Loading tab content:', { tabName, customerId });
+        const $tab = $(`#tab-${tabName}`);
+        $tab.addClass('loading-state');
+
         $.ajax({
             url: customerManagement.ajaxUrl,
             type: 'POST',
             data: {
-                action: 'get_cities',
-                province_id: provinceId,
+                action: `get_customer_${tabName}`,
+                id: customerId,
                 nonce: customerManagement.nonce
             },
             success: function(response) {
+                console.log('Tab content response:', { tabName, response });
                 if (response.success) {
-                    let options = '<option value="">Select City</option>';
-                    response.data.forEach(function(city) {
-                        options += `<option value="${city.id}">${city.name}</option>`;
-                    });
-                    $('#customer-city').html(options);
+                    $tab.html(response.data.html);
+                    hasLoadedTabs[tabName] = true;
                 }
+            },
+            error: function(xhr, status, error) {
+                console.error('Tab load error:', { tabName, status, error, xhr });
+            },
+            complete: function() {
+                console.log('Tab load complete:', tabName);
+                $tab.removeClass('loading-state');
             }
         });
     }
 
-    // Export handler
-    $('.export-customers').on('click', function(e) {
+    // Modified click handler
+    $(document).on('click', '.view-customer', function(e) {
         e.preventDefault();
-        
-        const params = {
-            action: 'export_customers',
-            nonce: customerManagement.nonce,
-            membership_type: $('#membership-filter').val(),
-            branch_id: $('#branch-filter').val()
-        };
+        const customerId = $(this).data('id');
+        const isAlreadyOpen = isPanelCurrentlyOpen();
 
-        const queryString = $.param(params);
-        window.location.href = `${customerManagement.ajaxUrl}?${queryString}`;
-    });
-
-
-    // Add debug logging
-    $(document).ajaxComplete(function(event, xhr, settings) {
-        if (settings.url === customerManagement.ajaxUrl) {
-            console.log('AJAX Response:', xhr.responseJSON);
+        if (isAlreadyOpen && activeCustomerId === customerId) {
+            //console.log('Same customer already active, no action needed');
+            return;
         }
+        
+        loadCustomerDetails(customerId);
+
+        // Sembunyikan kolom di tabel customer
+        tableHelper.hideColumns(customersTable, [2,3,4]);
+
+        // Di staff-management.js 
+        //const staffTable = $('#staff-table').DataTable({...});
+
+        // Sembunyikan kolom di tabel staff
+        //tableHelper.hideColumns(staffTable, [3,4]);
+
+        // Di branch-management.js
+        //const branchTable = $('#branch-table').DataTable({...});
+
+        // Sembunyikan kolom di tabel branch
+        //tableHelper.hideColumns(branchTable, [2,5]);
+
     });
 
+    $('.close-panel').on('click', function() {
+        closeRightPanel();
+    });
+
+    function populateRightPanel(customer) {
+
+        // Pastikan mengakses data yang benar
+        const customerData = customer.data;  // karena ada nested "data"
+        if (!customerData || !customerData.tabs || !customerData.tabs.info || !customerData.tabs.info.data) {
+            console.error('Invalid customer data structure:', customer);
+            return;
+        }
+
+        const info = customerData.tabs.info.data;
+        
+        // Basic Info (header)
+        $('.customer-name').text(customerData.name || 'NOT FOUND');
+        $('.membership-badge')
+            .attr('class', 'membership-badge badge badge-secondary')
+            .text(customerData.membership_type || 'NOT FOUND');
+
+        // Contact Information
+        $('.customer-email').text(info.basic_info.email || 'NOT FOUND'); 
+        $('.customer-phone').text(info.basic_info.phone || 'NOT FOUND');
+        $('.customer-address').text(info.basic_info.address || 'NOT FOUND');
+        
+        // Membership Details
+        $('.membership-type').text(info.membership.type || 'NOT FOUND');
+        $('.membership-since').text(info.membership.since || 'NOT FOUND');
+        
+        // Assignment
+        $('.customer-branch').text(info.assignment.branch || 'NOT FOUND');
+        $('.customer-employee').text(info.assignment.employee || 'NOT FOUND');
+        
+        // Location
+        $('.customer-province').text(info.location.province || 'NOT FOUND');
+        $('.customer-city').text(info.location.city || 'NOT FOUND');
+
+        // Additional Information
+        if (customerData.created_at) {
+            $('.customer-created-at').text(customerData.created_at || 'NOT FOUND');
+        }
+        if (customerData.updated_at) {
+            $('.customer-updated-at').text(customerData.updated_at || 'NOT FOUND');
+        }
+
+        //console.log('Customer object structure:', customer);
+        // atau lebih detail dengan
+        //console.dir(customer);
+    }
+
+    // Handle browser back/forward
+    window.addEventListener('popstate', function(e) {
+        handleUrlState();
+    });
+
+    // Initial load check    
+    handleUrlState();
 
 });

@@ -46,18 +46,18 @@ class Router {
     }
 
     public function render_main_page() {
-        require_once CUSTOMER_PLUGIN_PATH . 'includes/Views/customers/customer-page.php';
+        require_once WP_CUSTOMER_PATH . 'includes/Views/customers/customer-page.php';
     }
 
     public function render_staff_page() {
-        require_once CUSTOMER_PLUGIN_PATH . 'includes/Views/staff/staff_page.php';
+        require_once WP_CUSTOMER_PATH . 'includes/Views/staff/staff_page.php';
     }
 
     public function render_branch_page() {
-        require_once CUSTOMER_PLUGIN_PATH . 'includes/Views/branches/branch_page.php';
+        require_once WP_CUSTOMER_PATH . 'includes/Views/branches/branch_page.php';
     }
 
     public function render_settings_page() {
-        require_once CUSTOMER_PLUGIN_PATH . 'includes/Views/settings/settings_page.php';
+        require_once WP_CUSTOMER_PATH . 'includes/Views/settings/settings_page.php';
     }
 }

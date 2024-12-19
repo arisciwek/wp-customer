@@ -5,7 +5,7 @@ class CustomerModel extends BaseModel {
     protected function get_table_name() {
         return 'customers';
     }
-
+        
     public function get_with_relations($id) {
         $sql = $this->wpdb->prepare("
             SELECT 
@@ -14,11 +14,40 @@ class CustomerModel extends BaseModel {
                 e.position as employee_position,
                 b.name as branch_name,
                 b.location as branch_location,
-                u.display_name as created_by_name,
+                ml.name as membership_level_name,
+                ml.slug as membership_level_slug,
+                COALESCE(wp.name, '-') as province_name,
+                COALESCE(wr.name, '-') as city_name,
                 ua.display_name as assigned_to_name
             FROM {$this->table_name} c
             LEFT JOIN {$this->wpdb->prefix}customer_employees e ON c.employee_id = e.id
             LEFT JOIN {$this->wpdb->prefix}customer_branches b ON c.branch_id = b.id
+            LEFT JOIN {$this->wpdb->prefix}customer_membership_levels ml ON c.membership_level_id = ml.id
+            LEFT JOIN {$this->wpdb->base_prefix}wi_provinces wp ON c.provinsi_id = wp.id
+            LEFT JOIN {$this->wpdb->base_prefix}wi_regencies wr ON c.kabupaten_id = wr.id
+            LEFT JOIN {$this->wpdb->users} u ON c.created_by = u.ID
+            LEFT JOIN {$this->wpdb->users} ua ON c.assigned_to = ua.ID
+            WHERE c.id = %d
+        ", $id);
+
+        return $this->wpdb->get_row($sql);
+    }
+
+    public function _get_with_relations($id) {
+        $sql = $this->wpdb->prepare("
+            SELECT 
+                c.*, 
+                e.name as employee_name,
+                e.position as employee_position,
+                b.name as branch_name,
+                b.location as branch_location,
+                ml.name as membership_level_name,
+                ml.slug as membership_level_slug,
+                ua.display_name as assigned_to_name
+            FROM {$this->table_name} c
+            LEFT JOIN {$this->wpdb->prefix}customer_employees e ON c.employee_id = e.id
+            LEFT JOIN {$this->wpdb->prefix}customer_branches b ON c.branch_id = b.id
+            LEFT JOIN {$this->wpdb->prefix}customer_membership_levels ml ON c.membership_level_id = ml.id
             LEFT JOIN {$this->wpdb->users} u ON c.created_by = u.ID
             LEFT JOIN {$this->wpdb->users} ua ON c.assigned_to = ua.ID
             WHERE c.id = %d
@@ -55,8 +84,6 @@ class CustomerModel extends BaseModel {
         return $this->get_all(['where' => $where]);
     }
 
-    // In Customer.php, update the get_for_datatable method:
-
     public function get_for_datatable($args = []) {
         $defaults = [
             'start' => 0,
@@ -68,17 +95,14 @@ class CustomerModel extends BaseModel {
 
         $args = wp_parse_args($args, $defaults);
 
-        // Map DataTables column index to actual column names
         $columns = [
             0 => 'c.name',
             1 => 'c.email',
             2 => 'c.phone',
-            3 => 'c.membership_type',
-            4 => 'b.name',
-            5 => 'e.name'
+            3 => 'ml.name',
+            4 => 'b.name'
         ];
 
-        // Get the actual column name from the index
         $order_column = isset($columns[$args['order_column']]) ? 
                        $columns[$args['order_column']] : 
                        'c.name';
@@ -88,7 +112,8 @@ class CustomerModel extends BaseModel {
                 c.*,
                 COALESCE(e.name, '') as employee_name,
                 COALESCE(b.name, '') as branch_name,
-                ml.name as membership_level_name
+                COALESCE(ml.name, 'Regular') as membership_level_name,
+                COALESCE(ml.slug, 'regular') as membership_level_slug
             FROM {$this->table_name} c
             LEFT JOIN {$this->wpdb->prefix}customer_employees e ON c.employee_id = e.id
             LEFT JOIN {$this->wpdb->prefix}customer_branches b ON c.branch_id = b.id

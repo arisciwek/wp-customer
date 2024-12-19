@@ -24,10 +24,10 @@ class Installer {
             }
 
             // Load table classes
-            require_once CUSTOMER_PLUGIN_PATH . 'includes/Database/Tables/customer-membership-levels.php';
-            require_once CUSTOMER_PLUGIN_PATH . 'includes/Database/Tables/customers.php';
-            require_once CUSTOMER_PLUGIN_PATH . 'includes/Database/Tables/customer-branches.php';
-            require_once CUSTOMER_PLUGIN_PATH . 'includes/Database/Tables/customer-employees.php';
+            require_once WP_CUSTOMER_PATH . 'includes/Database/Tables/customer-membership-levels.php';
+            require_once WP_CUSTOMER_PATH . 'includes/Database/Tables/customers.php';
+            require_once WP_CUSTOMER_PATH . 'includes/Database/Tables/customer-branches.php';
+            require_once WP_CUSTOMER_PATH . 'includes/Database/Tables/customer-employees.php';
 
             // Create tables in order
             dbDelta(Tables\Customer_Membership_Levels::get_schema());
@@ -59,7 +59,7 @@ class Installer {
             }
 
             // Load demo data if in development mode
-            require_once CUSTOMER_PLUGIN_PATH . 'includes/Database/demo-data.php';
+            require_once WP_CUSTOMER_PATH . 'includes/Database/demo-data.php';
             Demo_Data::load();
 
             $wpdb->query('COMMIT');
@@ -70,7 +70,7 @@ class Installer {
             error_log('Plugin activation failed: ' . $e->getMessage());
             // Deactivate plugin
             require_once(ABSPATH . 'wp-admin/includes/plugin.php');
-            deactivate_plugins(plugin_basename(CUSTOMER_PLUGIN_PATH . 'wp-customer.php'));
+            deactivate_plugins(plugin_basename(WP_CUSTOMER_PATH . 'wp-customer.php'));
             wp_die('Plugin activation failed: ' . $e->getMessage());
             return false;
         }

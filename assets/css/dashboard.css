@@ -114,10 +114,6 @@
     gap: 20px;
 }
 
-.left-panel {
-    flex: 1;
-}
-
 /* Responsive Adjustments */
 @media screen and (max-width: 782px) {
     .dashboard-grid {

@@ -1,0 +1,94 @@
+/* Customer Info Tab Styles */
+.info-section {
+    margin-bottom: 25px;
+    background: #fff;
+    border-radius: 4px;
+}
+
+.info-section h3 {
+    font-size: 14px;
+    padding: 12px 15px;
+    margin: 0;
+    border-bottom: 1px solid #e5e5e5;
+    background: #f8f9fa;
+    border-radius: 4px 4px 0 0;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    padding: 15px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.info-item label {
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 5px;
+    font-size: 12px;
+}
+
+.info-item span {
+    color: #333;
+    line-height: 1.4;
+}
+
+/* Action buttons section */
+.info-section.actions {
+    padding: 15px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-start;
+    border-top: 1px solid #e5e5e5;
+    margin-top: 30px;
+}
+
+/* Status badges */
+.status-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-active {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-inactive {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Custom fields section */
+.custom-fields {
+    border-top: 1px solid #e5e5e5;
+    margin-top: 30px;
+    padding-top: 20px;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .info-section.actions {
+        flex-direction: column;
+    }
+    
+    .info-section.actions .button {
+        width: 100%;
+    }
+}

@@ -2,7 +2,7 @@
 defined('ABSPATH') || exit;
 ?>
 
-<div class="dashboard-section">
+
     <div class="dashboard-grid">
         <!-- Total Customers Card -->
         <div class="dashboard-card">
@@ -65,4 +65,3 @@ defined('ABSPATH') || exit;
             </div>
         </div>
     </div>
-</div>
