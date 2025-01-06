@@ -14,6 +14,7 @@ final class Init {
             Controllers\CustomerController::class,
             Controllers\EmployeeController::class,
             Controllers\BranchController::class,
+            Controllers\SettingsController::class // Tambahkan ini
         ];
     }
 
