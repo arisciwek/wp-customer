@@ -36,13 +36,13 @@ class PermissionModel {
         'delete_customer' => 'Hapus Customer',
 
         // Branch capabilities
-        'view_branch_list' => 'Lihat Daftar Kabupaten/Kota',
-        'view_branch_detail' => 'Lihat Detail Kabupaten/Kota',
-        'view_own_branch' => 'Lihat Kabupaten/Kota Sendiri',
-        'add_branch' => 'Tambah Kabupaten/Kota',
-        'edit_all_branches' => 'Edit Semua Kabupaten/Kota',
-        'edit_own_branch' => 'Edit Kabupaten/Kota Sendiri',
-        'delete_branch' => 'Hapus Kabupaten/Kota'
+        'view_branch_list' => 'Lihat Daftar Cabang',
+        'view_branch_detail' => 'Lihat Detail Cabang',
+        'view_own_branch' => 'Lihat Cabang Sendiri',
+        'add_branch' => 'Tambah Cabang',
+        'edit_all_branches' => 'Edit Semua Cabang',
+        'edit_own_branch' => 'Edit Cabang Sendiri',
+        'delete_branch' => 'Hapus Cabang'
     ];
 
     private $default_role_caps = [

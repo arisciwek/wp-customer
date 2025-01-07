@@ -42,13 +42,13 @@ function get_capability_description($capability) {
         'delete_customer' => __('Memungkinkan menghapus data customer', 'wp-customer'),
         
         // Branch capabilities
-        'view_branch_list' => __('Memungkinkan melihat daftar semua kabupaten/kota', 'wp-customer'),
-        'view_branch_detail' => __('Memungkinkan melihat detail kabupaten/kota', 'wp-customer'),
-        'view_own_branch' => __('Memungkinkan melihat kabupaten/kota yang ditugaskan', 'wp-customer'),
-        'add_branch' => __('Memungkinkan menambahkan data kabupaten/kota baru', 'wp-customer'),
-        'edit_all_branches' => __('Memungkinkan mengedit semua data kabupaten/kota', 'wp-customer'),
-        'edit_own_branch' => __('Memungkinkan mengedit hanya kabupaten/kota yang ditugaskan', 'wp-customer'),
-        'delete_branch' => __('Memungkinkan menghapus data kabupaten/kota', 'wp-customer')
+        'view_branch_list' => __('Memungkinkan melihat daftar semua cabang', 'wp-customer'),
+        'view_branch_detail' => __('Memungkinkan melihat detail cabang', 'wp-customer'),
+        'view_own_branch' => __('Memungkinkan melihat cabang yang ditugaskan', 'wp-customer'),
+        'add_branch' => __('Memungkinkan menambahkan data cabang baru', 'wp-customer'),
+        'edit_all_branches' => __('Memungkinkan mengedit semua data cabang', 'wp-customer'),
+        'edit_own_branch' => __('Memungkinkan mengedit hanya cabang yang ditugaskan', 'wp-customer'),
+        'delete_branch' => __('Memungkinkan menghapus data cabang', 'wp-customer')
     );
 
     return isset($descriptions[$capability]) ? $descriptions[$capability] : '';
@@ -169,10 +169,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             <dd><?php _e('Memiliki akses penuh ke semua fitur dan pengaturan.', 'wp-customer'); ?></dd>
             
             <dt><?php _e('Editor', 'wp-customer'); ?></dt>
-            <dd><?php _e('Dapat melihat dan mengedit data customer dan kabupaten/kota yang ditugaskan.', 'wp-customer'); ?></dd>
+            <dd><?php _e('Dapat melihat dan mengedit data customer dan cabang yang ditugaskan.', 'wp-customer'); ?></dd>
             
             <dt><?php _e('Author', 'wp-customer'); ?></dt>
-            <dd><?php _e('Dapat melihat data customer dan kabupaten/kota yang ditugaskan.', 'wp-customer'); ?></dd>
+            <dd><?php _e('Dapat melihat data customer dan cabang yang ditugaskan.', 'wp-customer'); ?></dd>
             
             <dt><?php _e('Contributor', 'wp-customer'); ?></dt>
             <dd><?php _e('Hanya dapat melihat data customers yang ditugaskan.', 'wp-customer'); ?></dd>

@@ -9,7 +9,7 @@
 * Path: /wp-customer/assets/js/dashboard.js
 *
 * Description: Handler untuk statistik dashboard.
-*              Menangani pembaruan statistik total customer dan kabupaten.
+*              Menangani pembaruan statistik total customer dan cabang.
 *              Includes AJAX loading, event handling, dan formatting angka.
 *              Terintegrasi dengan CustomerDataTable untuk data customer.
 *

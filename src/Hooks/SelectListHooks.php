@@ -121,7 +121,7 @@ class SelectListHooks {
             $options = $default_options;
             
             if ($include_empty) {
-                $options[''] = __('Pilih Kabupaten/Kota', 'wp-customer');
+                $options[''] = __('Pilih Cabang', 'wp-customer');
             }
 
             if ($customer_id) {
@@ -209,7 +209,7 @@ class SelectListHooks {
         } catch (\Exception $e) {
             $this->logError('AJAX Error: ' . $e->getMessage());
             wp_send_json_error([
-                'message' => __('Gagal memuat data kabupaten/kota', 'wp-customer')
+                'message' => __('Gagal memuat data cabang', 'wp-customer')
             ]);
         }
     }

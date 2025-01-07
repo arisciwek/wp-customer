@@ -9,7 +9,7 @@
  *
  * Path: /wp-customer/src/Views/templates/branch/forms/edit-branch-form.php
  *
- * Description: Form modal untuk mengedit data kabupaten/kota.
+ * Description: Form modal untuk mengedit data cabang.
  *              Includes input validation, error handling,
  *              dan AJAX submission handling.
  *              Terintegrasi dengan komponen toast notification.
@@ -27,7 +27,7 @@
 <div id="edit-branch-modal" class="modal-overlay wi-customer-modal">
     <div class="modal-container">
         <div class="modal-header">
-            <h3><?php _e('Edit Kabupaten/Kota', 'wp-customer'); ?></h3>
+            <h3><?php _e('Edit Cabang', 'wp-customer'); ?></h3>
             <button type="button" class="modal-close" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
@@ -40,7 +40,7 @@
             <div class="modal-content">
                 <div class="wi-form-group">
                     <label for="edit-branch-code" class="required-field">
-                        <?php _e('Kode Kabupaten/Kota', 'wp-customer'); ?>
+                        <?php _e('Kode Cabang', 'wp-customer'); ?>
                     </label>
                     <input type="text"
                            id="edit-branch-code"
@@ -56,7 +56,7 @@
                               
                 <div class="wi-form-group">
                     <label for="edit-branch-name" class="required-field">
-                        <?php _e('Nama Kabupaten/Kota', 'wp-customer'); ?>
+                        <?php _e('Nama Cabang', 'wp-customer'); ?>
                     </label>
                     <input type="text"
                            id="edit-branch-name"

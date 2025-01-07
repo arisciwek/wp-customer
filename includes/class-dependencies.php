@@ -163,7 +163,7 @@ class WP_Customer_Dependencies {
             'nonce' => wp_create_nonce('wp_customer_nonce'),
             'texts' => [
                 'select_customer' => __('Pilih Customer', 'wp-customer'),
-                'select_branch' => __('Pilih Kabupaten/Kota', 'wp-customer'),
+                'select_branch' => __('Pilih Cabang', 'wp-customer'),
                 'loading' => __('Memuat...', 'wp-customer')
             ]
         ]);

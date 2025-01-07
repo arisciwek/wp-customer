@@ -30,7 +30,7 @@ add_action('admin_enqueue_scripts', function($hook) {
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'nonce' => wp_create_nonce('wp_customer_select_nonce'),
             'texts' => [
-                'select_branch' => __('Pilih Kabupaten/Kota', 'wp-customer'),
+                'select_branch' => __('Pilih Cabang', 'wp-customer'),
                 'loading' => __('Memuat...', 'wp-customer'),
                 'error' => __('Gagal memuat data', 'wp-customer')
             ]
@@ -65,7 +65,7 @@ $customer_options = apply_filters('wp_customer_get_customer_options', [
     '' => __('Pilih Customer', 'your-textdomain')
 ], true); // Parameter kedua untuk include_empty
 
-// Mendapatkan options kabupaten/kota dengan cache
+// Mendapatkan options cabang dengan cache
 $branch_options = apply_filters(
     'wp_customer_get_branch_options',
     [],
@@ -94,7 +94,7 @@ do_action('wp_customer_branch_select', [
     'class' => 'my-select-class wp-customer-branch-select',
     'data-loading-text' => __('Memuat...', 'your-textdomain'),
     'required' => 'required',
-    'aria-label' => __('Pilih Kabupaten/Kota', 'your-textdomain')
+    'aria-label' => __('Pilih Cabang', 'your-textdomain')
 ], $customer_id, $selected_branch_id);
 ```
 

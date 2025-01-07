@@ -8,7 +8,7 @@
  *
  * Path: /wp-customer/assets/js/branch/branch-datatable.js
  *
- * Description: Komponen untuk mengelola DataTables kabupaten/kota.
+ * Description: Komponen untuk mengelola DataTables cabang.
  *              Includes state management, export functions,
  *              dan error handling yang lebih baik.
  *
@@ -94,7 +94,7 @@
 
              WIModal.show({
                  title: 'Konfirmasi Hapus',
-                 message: 'Yakin ingin menghapus kabupaten/kota ini? Aksi ini tidak dapat dibatalkan.',
+                 message: 'Yakin ingin menghapus cabang ini? Aksi ini tidak dapat dibatalkan.',
                  icon: 'trash',
                  type: 'danger',
                  confirmText: 'Hapus',
@@ -117,7 +117,7 @@
                              this.refresh();
                              $(document).trigger('branch:deleted', [id]);
                          } else {
-                             BranchToast.error(response.data?.message || 'Gagal menghapus kabupaten/kota');
+                             BranchToast.error(response.data?.message || 'Gagal menghapus cabang');
                          }
                      } catch (error) {
                          console.error('Delete branch error:', error);

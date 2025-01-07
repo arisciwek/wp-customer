@@ -9,7 +9,7 @@
  *
  * Path: /wp-customer/src/Controllers/Branch/BranchController.php
  *
- * Description: Controller untuk mengelola data kabupaten/kota.
+ * Description: Controller untuk mengelola data cabang.
  *              Menangani operasi CRUD dengan integrasi cache.
  *              Includes validasi input, permission checks,
  *              dan response formatting untuk DataTables.

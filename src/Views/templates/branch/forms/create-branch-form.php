@@ -9,7 +9,7 @@
  *
  * Path: /wp-customer/src/Views/templates/branch/forms/create-branch-form.php
  *
- * Description: Form modal untuk menambah kabupaten/kota baru.
+ * Description: Form modal untuk menambah cabang baru.
  *              Includes input validation, error handling,
  *              dan AJAX submission handling.
  *              Terintegrasi dengan komponen toast notification.
@@ -27,7 +27,7 @@ defined('ABSPATH') || exit;
 <div id="create-branch-modal" class="modal-overlay" style="display: none;">
     <div class="modal-container">
         <div class="modal-header">
-            <h3><?php _e('Tambah Kabupaten/Kota', 'wp-customer'); ?></h3>
+            <h3><?php _e('Tambah Cabang', 'wp-customer'); ?></h3>
             <button type="button" class="modal-close" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
             </button>
@@ -40,7 +40,7 @@ defined('ABSPATH') || exit;
             <div class="modal-content">
                 <div class="wi-form-group">
                     <label for="branch-code" class="required-field">
-                        <?php _e('Kode Kabupaten/Kota', 'wp-customer'); ?>
+                        <?php _e('Kode Cabang', 'wp-customer'); ?>
                     </label>
                     <input type="text"
                            id="branch-code"
@@ -55,7 +55,7 @@ defined('ABSPATH') || exit;
                 </div>
                 <div class="wi-form-group">
                     <label for="branch-name" class="required-field">
-                        <?php _e('Nama Kabupaten/Kota', 'wp-customer'); ?>
+                        <?php _e('Nama Cabang', 'wp-customer'); ?>
                     </label>
                     <input type="text"
                            id="branch-name"

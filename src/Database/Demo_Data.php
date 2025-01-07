@@ -1,4 +1,31 @@
 <?php
+/**
+ * Demo Data Generator
+ *
+ * @package     WP_Customer
+ * @subpackage  Database
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/src/Database/Demo_Data.php
+ *
+ * Description: Menyediakan data demo untuk testing.
+ *              Includes generator untuk customers, branches, dan employees.
+ *              Menggunakan transaction untuk data consistency.
+ *              Generates realistic Indonesian names dan alamat.
+ *
+ * Generated Data:
+ * - 10 Customer records with unique codes
+ * - 30 Branch records (3 per customer)
+ * - 20 Employee records with departments
+ *
+ * Changelog:
+ * 1.0.0 - 2024-01-07
+ * - Initial version
+ * - Added customer demo data
+ * - Added branch demo data
+ * - Added employee demo data
+ */
 namespace WPCustomer\Database;
 
 defined('ABSPATH') || exit;

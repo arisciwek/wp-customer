@@ -9,7 +9,7 @@
 *
 * Path: src/Validators/Branch/BranchValidator.php
 *
-* Description: Validator untuk operasi CRUD Kabupaten/Kota.
+* Description: Validator untuk operasi CRUD Cabang.
 *              Memastikan semua input data valid sebelum diproses model.
 *              Menyediakan validasi untuk create, update, dan delete.
 *              Includes validasi permission dan ownership.
@@ -42,7 +42,7 @@ class BranchValidator {
 
         // Permission check
         if (!current_user_can('add_branch')) {
-            $errors['permission'] = __('Anda tidak memiliki izin untuk menambah kabupaten/kota.', 'wp-customer');
+            $errors['permission'] = __('Anda tidak memiliki izin untuk menambah cabang.', 'wp-customer');
             return $errors;
         }
 
@@ -56,29 +56,29 @@ class BranchValidator {
         // Code validation
         $code = trim(sanitize_text_field($data['code'] ?? ''));
         if (empty($code)) {
-            $errors['code'] = __('Kode kabupaten/kota wajib diisi.', 'wp-customer');
+            $errors['code'] = __('Kode cabang wajib diisi.', 'wp-customer');
         } elseif (!preg_match('/^\d{4}$/', $code)) {
-            $errors['code'] = __('Kode kabupaten/kota harus berupa 4 digit angka.', 'wp-customer');
+            $errors['code'] = __('Kode cabang harus berupa 4 digit angka.', 'wp-customer');
         } elseif ($this->branch_model->existsByCode($code)) {
-            $errors['code'] = __('Kode kabupaten/kota sudah ada.', 'wp-customer');
+            $errors['code'] = __('Kode cabang sudah ada.', 'wp-customer');
         }
 
         // Name validation
         $name = trim(sanitize_text_field($data['name'] ?? ''));
         if (empty($name)) {
-            $errors['name'] = __('Nama kabupaten/kota wajib diisi.', 'wp-customer');
+            $errors['name'] = __('Nama cabang wajib diisi.', 'wp-customer');
         } elseif (mb_strlen($name) > 100) {
-            $errors['name'] = __('Nama kabupaten/kota maksimal 100 karakter.', 'wp-customer');
+            $errors['name'] = __('Nama cabang maksimal 100 karakter.', 'wp-customer');
         } elseif ($this->branch_model->existsByNameInCustomer($name, $customer_id)) {
-            $errors['name'] = __('Nama kabupaten/kota sudah ada di customer ini.', 'wp-customer');
+            $errors['name'] = __('Nama cabang sudah ada di customer ini.', 'wp-customer');
         }
 
         // Type validation
         $type = trim(sanitize_text_field($data['type'] ?? ''));
         if (empty($type)) {
-            $errors['type'] = __('Tipe kabupaten/kota wajib diisi.', 'wp-customer');
+            $errors['type'] = __('Tipe cabang wajib diisi.', 'wp-customer');
         } elseif (!in_array($type, ['kabupaten', 'kota'])) {
-            $errors['type'] = __('Tipe kabupaten/kota tidak valid.', 'wp-customer');
+            $errors['type'] = __('Tipe cabang tidak valid.', 'wp-customer');
         }
 
         return $errors;
@@ -97,31 +97,31 @@ class BranchValidator {
         // Permission check
         if (!current_user_can('edit_all_branches') &&
             (!current_user_can('edit_own_branch') || $branch->created_by !== get_current_user_id())) {
-            $errors['permission'] = __('Anda tidak memiliki izin untuk mengedit kabupaten/kota ini.', 'wp-customer');
+            $errors['permission'] = __('Anda tidak memiliki izin untuk mengedit cabang ini.', 'wp-customer');
             return $errors;
         }
 
         // Basic validation
         $name = trim(sanitize_text_field($data['name'] ?? ''));
         if (empty($name)) {
-            $errors['name'] = __('Nama kabupaten/kota wajib diisi.', 'wp-customer');
+            $errors['name'] = __('Nama cabang wajib diisi.', 'wp-customer');
         }
 
         // Length check
         if (mb_strlen($name) > 100) {
-            $errors['name'] = __('Nama kabupaten/kota maksimal 100 karakter.', 'wp-customer');
+            $errors['name'] = __('Nama cabang maksimal 100 karakter.', 'wp-customer');
         }
 
         // Unique check excluding current ID
         if ($this->branch_model->existsByNameInCustomer($name, $branch->customer_id, $id)) {
-            $errors['name'] = __('Nama kabupaten/kota sudah ada di customer ini.', 'wp-customer');
+            $errors['name'] = __('Nama cabang sudah ada di customer ini.', 'wp-customer');
         }
 
         // Type validation if provided
         if (isset($data['type'])) {
             $type = trim(sanitize_text_field($data['type']));
             if (!in_array($type, ['kabupaten', 'kota'])) {
-                $errors['type'] = __('Tipe kabupaten/kota tidak valid.', 'wp-customer');
+                $errors['type'] = __('Tipe cabang tidak valid.', 'wp-customer');
             }
         }
 
@@ -141,7 +141,7 @@ class BranchValidator {
         // Permission check
         if (!current_user_can('delete_branch') &&
             (!current_user_can('delete_own_branch') || $branch->created_by !== get_current_user_id())) {
-            $errors['permission'] = __('Anda tidak memiliki izin untuk menghapus kabupaten/kota ini.', 'wp-customer');
+            $errors['permission'] = __('Anda tidak memiliki izin untuk menghapus cabang ini.', 'wp-customer');
         }
 
         return $errors;
@@ -163,7 +163,7 @@ class BranchValidator {
         // Permission check
         if (!current_user_can('view_branch_detail') &&
             (!current_user_can('view_own_branch') || $branch->created_by !== get_current_user_id())) {
-            $errors['permission'] = __('Anda tidak memiliki izin untuk melihat detail kabupaten/kota ini.', 'wp-customer');
+            $errors['permission'] = __('Anda tidak memiliki izin untuk melihat detail cabang ini.', 'wp-customer');
         }
 
         return $errors;

@@ -1,13 +1,37 @@
 <?php
 /**
- * Database Installer 
+ * Database Installer
  *
  * @package     WP_Customer
  * @subpackage  Database
  * @version     1.0.0
  * @author      arisciwek
+ *
+ * Path: /wp-customer/src/Database/Installer.php
+ *
+ * Description: Mengelola instalasi database plugin.
+ *              Handles table creation dengan foreign keys.
+ *              Menggunakan transaction untuk data consistency.
+ *              Includes demo data installation.
+ *
+ * Tables Created:
+ * - app_customers
+ * - app_branches
+ * - app_customer_employees
+ * - app_customer_membership_levels
+ *
+ * Foreign Keys:
+ * - fk_branch_customer
+ * - fk_employee_customer
+ * - fk_employee_branch
+ *
+ * Changelog:
+ * 1.0.0 - 2024-01-07
+ * - Initial version
+ * - Added table creation
+ * - Added foreign key management
+ * - Added demo data installation
  */
-
 namespace WPCustomer\Database;
 
 defined('ABSPATH') || exit;
@@ -20,56 +44,6 @@ class Installer {
         'app_customer_membership_levels'
     ];
 
-    // Di dalam file database/Installer.php, di dalam method run()
-/*
-    public static function run() {
-        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
-        global $wpdb;
-        
-        try {
-            $wpdb->query('START TRANSACTION');
-
-            // Load table classes
-            require_once WP_CUSTOMER_PATH . 'database/Tables/Customers.php';
-            require_once WP_CUSTOMER_PATH . 'database/Tables/Branches.php';
-            require_once WP_CUSTOMER_PATH . 'database/Tables/CustomerEmployees.php';
-            require_once WP_CUSTOMER_PATH . 'database/Tables/CustomerMembershipLevels.php';
-
-            // Create tables in correct order (parent tables first)
-            dbDelta(Tables\CustomerMembershipLevels::get_schema());
-            dbDelta(Tables\Customers::get_schema());
-            dbDelta(Tables\Branches::get_schema());
-            dbDelta(Tables\CustomerEmployees::get_schema());
-
-            // Verify tables were created
-            foreach (self::$tables as $table) {
-                $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}{$table}'");
-                if (!$table_exists) {
-                    throw new \Exception("Failed to create table: {$wpdb->prefix}{$table}");
-                }
-            }
-
-            // Drop any existing foreign keys for clean slate
-            self::ensure_no_foreign_keys();
-            
-            // Add foreign key constraints
-            self::add_foreign_keys();
-
-            // Add demo data - TAMBAHKAN INI
-            require_once WP_CUSTOMER_PATH . 'database/Demo_Data.php';
-            Demo_Data::load();
-
-            $wpdb->query('COMMIT');
-            return true;
-
-        } catch (\Exception $e) {
-            $wpdb->query('ROLLBACK');
-            error_log('Database installation failed: ' . $e->getMessage());
-            return false;
-        }
-    }
-*/
-
     public static function run() {
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         global $wpdb;
@@ -78,10 +52,10 @@ class Installer {
             $wpdb->query('START TRANSACTION');
 
 	        // Database Tables
-	        require_once WP_CUSTOMER_PATH . 'database/Tables/Customers.php';
-	        require_once WP_CUSTOMER_PATH . 'database/Tables/Branches.php';
-	        require_once WP_CUSTOMER_PATH . 'database/Tables/CustomerMembershipLevels.php';
-	        require_once WP_CUSTOMER_PATH . 'database/Tables/CustomerEmployees.php';
+	        require_once WP_CUSTOMER_PATH . 'src/Database/Tables/Customers.php';
+	        require_once WP_CUSTOMER_PATH . 'src/Database/Tables/Branches.php';
+	        require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomerMembershipLevels.php';
+	        require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomerEmployees.php';
 
             // Create tables in correct order (parent tables first)
             dbDelta(Tables\CustomerMembershipLevels::get_schema());
@@ -107,7 +81,7 @@ class Installer {
             //Tables\CustomerMembershipLevels::insert_defaults();
 
             // Add demo data - TAMBAHKAN INI
-            require_once WP_CUSTOMER_PATH . 'database/Demo_Data.php';
+            require_once WP_CUSTOMER_PATH . 'src/Database/Demo_Data.php';
             Demo_Data::load();
 
             $wpdb->query('COMMIT');

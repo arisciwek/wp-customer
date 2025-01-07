@@ -8,7 +8,7 @@
  *
  * Path: /wp-customer/assets/js/branch/branch-toast.js
  *
- * Description: Komponen toast notification khusus untuk manajemen kabupaten/kota.
+ * Description: Komponen toast notification khusus untuk manajemen cabang.
  *              Support queue system untuk multiple notifications.
  *              Includes custom styling dan animations.
  */

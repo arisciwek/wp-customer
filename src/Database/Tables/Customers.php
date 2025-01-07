@@ -7,7 +7,7 @@
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/database/Tables/Customers.php
+ * Path: /wp-customer/src/Database/Tables/Customers.php
  *
  * Description: Mendefinisikan struktur tabel customers.
  *              Table prefix yang digunakan adalah 'app_'.
@@ -19,7 +19,7 @@
  * - code           : Kode customer (2 digit)
  * - name           : Nama customer
  * - provinsi_id    : ID provinsi (nullable)
- * - regency_id     : ID kabupaten/kota (nullable)
+ * - regency_id     : ID cabang (nullable)
  * - user_id        : ID User WP sebagai Owner (nullable)
  * - created_by     : User ID pembuat
  * - created_at     : Timestamp pembuatan

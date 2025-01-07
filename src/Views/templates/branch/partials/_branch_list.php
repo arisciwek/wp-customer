@@ -9,7 +9,7 @@
  *
  * Path: /wp-customer/src/Views/templates/branch/partials/_branch_list.php
  *
- * Description: Template untuk menampilkan daftar kabupaten/kota.
+ * Description: Template untuk menampilkan daftar cabang.
  *              Includes DataTable, loading states, empty states,
  *              dan action buttons dengan permission checks.
  *
@@ -27,13 +27,13 @@ defined('ABSPATH') || exit;
 <div id="branch-list" class="tab-content">
     <div class="wi-branch-header">
         <div class="wi-header-title">
-            <h3><?php _e('Daftar Kabupaten/Kota', 'wp-customer'); ?></h3>
+            <h3><?php _e('Daftar Cabang', 'wp-customer'); ?></h3>
         </div>
         <div class="wi-header-actions">
             <?php if (current_user_can('add_branch')): ?>
                 <button type="button" class="button button-primary" id="add-branch-btn">
                     <span class="dashicons dashicons-plus-alt"></span>
-                    <?php _e('Tambah Kabupaten/Kota', 'wp-customer'); ?>
+                    <?php _e('Tambah Cabang', 'wp-customer'); ?>
                 </button>
             <?php endif; ?>
         </div>
@@ -54,9 +54,9 @@ defined('ABSPATH') || exit;
                 <p>
                     <?php
                     if (current_user_can('add_branch')) {
-                        _e('Belum ada kabupaten/kota yang ditambahkan. Klik tombol "Tambah Kabupaten/Kota" untuk menambahkan data baru.', 'wp-customer');
+                        _e('Belum ada cabang yang ditambahkan. Klik tombol "Tambah Cabang" untuk menambahkan data baru.', 'wp-customer');
                     } else {
-                        _e('Belum ada kabupaten/kota yang ditambahkan.', 'wp-customer');
+                        _e('Belum ada cabang yang ditambahkan.', 'wp-customer');
                     }
                     ?>
                 </p>

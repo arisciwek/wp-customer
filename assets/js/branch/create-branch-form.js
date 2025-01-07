@@ -8,7 +8,7 @@
  *
  * Path: /wp-customer/assets/js/branch/create-branch-form.js
  *
- * Description: Handler untuk form tambah kabupaten/kota.
+ * Description: Handler untuk form tambah cabang.
  *              Includes form validation, AJAX submission,
  *              error handling, dan modal management.
  *              Terintegrasi dengan toast notifications.
@@ -105,12 +105,12 @@
                 },
                 messages: {
                     name: {
-                        required: 'Nama kabupaten/kota wajib diisi',
-                        minlength: 'Nama kabupaten/kota minimal 3 karakter',
-                        maxlength: 'Nama kabupaten/kota maksimal 100 karakter'
+                        required: 'Nama cabang wajib diisi',
+                        minlength: 'Nama cabang minimal 3 karakter',
+                        maxlength: 'Nama cabang maksimal 100 karakter'
                     },
                     type: {
-                        required: 'Tipe kabupaten/kota wajib dipilih'
+                        required: 'Tipe cabang wajib dipilih'
                     }
                 },
                 errorElement: 'span',
@@ -133,16 +133,16 @@
             const errors = [];
 
             if (!value) {
-                errors.push('Nama kabupaten/kota wajib diisi');
+                errors.push('Nama cabang wajib diisi');
             } else {
                 if (value.length < 3) {
-                    errors.push('Nama kabupaten/kota minimal 3 karakter');
+                    errors.push('Nama cabang minimal 3 karakter');
                 }
                 if (value.length > 100) {
-                    errors.push('Nama kabupaten/kota maksimal 100 karakter');
+                    errors.push('Nama cabang maksimal 100 karakter');
                 }
                 if (!/^[a-zA-Z\s]+$/.test(value)) {
-                    errors.push('Nama kabupaten/kota hanya boleh mengandung huruf dan spasi');
+                    errors.push('Nama cabang hanya boleh mengandung huruf dan spasi');
                 }
             }
 
@@ -199,7 +199,7 @@
                         window.BranchDataTable.refresh();
                     }
                 } else {
-                    BranchToast.error(response.data?.message || 'Gagal menambah kabupaten/kota');
+                    BranchToast.error(response.data?.message || 'Gagal menambah cabang');
                 }
             } catch (error) {
                 console.error('Create branch error:', error);

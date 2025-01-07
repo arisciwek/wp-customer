@@ -154,7 +154,7 @@ class CustomerValidator {
 
        // Check for existing branches
        if ($this->customer_model->getBranchCount($id) > 0) {
-           $errors['dependencies'] = __('Customer tidak dapat dihapus karena masih memiliki kabupaten/kota.', 'wp-customer');
+           $errors['dependencies'] = __('Customer tidak dapat dihapus karena masih memiliki cabang.', 'wp-customer');
        }
 
        return $errors;

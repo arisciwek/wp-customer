@@ -9,7 +9,7 @@
  *
  * Path: /wp-customer/src/Models/Branch/BranchModel.php
  *
- * Description: Model untuk mengelola data kabupaten/kota di database.
+ * Description: Model untuk mengelola data cabang di database.
  *              Handles operasi CRUD dengan caching terintegrasi.
  *              Includes query optimization dan data formatting.
  *              Menyediakan metode untuk DataTables server-side.

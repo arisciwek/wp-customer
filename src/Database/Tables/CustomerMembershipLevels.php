@@ -7,7 +7,7 @@
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/database/Tables/CustomerMembershipLevels.php
+ * Path: /wp-customer/src/Database/Tables/CustomerMembershipLevels.php
  *
  * Description: Mendefinisikan struktur tabel membership levels.
  *              Table prefix yang digunakan adalah 'app_'.

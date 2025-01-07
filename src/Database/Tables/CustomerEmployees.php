@@ -1,30 +1,33 @@
 <?php
 /**
- * Branches Table Schema
+ * Customer Employees Table Schema
  *
  * @package     WP_Customer
  * @subpackage  Database/Tables
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/database/Tables/Branches.php
+ * Path: /wp-customer/src/Database/Tables/CustomerEmployees.php
  *
- * Description: Mendefinisikan struktur tabel branches.
+ * Description: Mendefinisikan struktur tabel employees.
  *              Table prefix yang digunakan adalah 'app_'.
- *              Includes field untuk integrasi wilayah.
- *              Menyediakan foreign key ke customers table.
+ *              Includes relasi dengan tabel customers.
+ *              Menyediakan data karyawan customer.
  *
  * Fields:
  * - id             : Primary key
  * - customer_id    : Foreign key ke customer
- * - code           : Kode branch (4 digit)
- * - name           : Nama branch
- * - type           : Tipe wilayah (kabupaten/kota)
- * - provinsi_id    : ID provinsi (nullable)
- * - regency_id     : ID kabupaten/kota (nullable)
+ * - branch_id      : Foreign key ke branch
+ * - user_id        : Foreign key ke user
+ * - name           : Nama karyawan
+ * - position       : Jabatan karyawan
+ * - department     : Departemen
+ * - email          : Email karyawan (unique)
+ * - phone          : Nomor telepon
  * - created_by     : User ID pembuat
  * - created_at     : Timestamp pembuatan
  * - updated_at     : Timestamp update terakhir
+ * - status         : Status aktif/nonaktif
  *
  * Foreign Keys:
  * - customer_id    : REFERENCES app_customers(id) ON DELETE CASCADE
@@ -32,39 +35,40 @@
  * Changelog:
  * 1.0.0 - 2024-01-07
  * - Initial version
- * - Added basic branch fields
- * - Added wilayah integration fields
- * - Added foreign key constraint to customers
+ * - Added basic employee fields
+ * - Added customer relation
+ * - Added contact information fields
  */
 
 namespace WPCustomer\Database\Tables;
 
 defined('ABSPATH') || exit;
 
-namespace WPCustomer\Database\Tables;
-
-class Branches {
+class CustomerEmployees {
     public static function get_schema() {
         global $wpdb;
-        $table_name = $wpdb->prefix . 'app_branches';
+        $table_name = $wpdb->prefix . 'app_customer_employees';
         $charset_collate = $wpdb->get_charset_collate();
 
         return "CREATE TABLE {$table_name} (
             id bigint(20) UNSIGNED NOT NULL auto_increment,
             customer_id bigint(20) UNSIGNED NOT NULL,
-            code varchar(4) NOT NULL,
+            branch_id bigint(20) UNSIGNED NOT NULL,
+            user_id bigint(20) UNSIGNED NOT NULL,
             name varchar(100) NOT NULL,
-            type enum('kabupaten','kota') NOT NULL,
-            provinsi_id bigint(20) UNSIGNED NULL,
-            regency_id bigint(20) UNSIGNED NULL,
+            position varchar(100) NULL,
+            department varchar(100) NULL,
+            email varchar(100) NOT NULL,
+            phone varchar(20) NULL,
             created_by bigint(20) NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY  (id),
-            UNIQUE KEY customer_name (customer_id, name),
-            UNIQUE KEY code (code),
+            status enum('active','inactive') DEFAULT 'active',
+            PRIMARY KEY (id),
+            UNIQUE KEY email (email),
+            KEY customer_id_index (customer_id),
             KEY created_by_index (created_by),
-            CONSTRAINT `{$wpdb->prefix}app_branches_ibfk_1` 
+            CONSTRAINT `{$wpdb->prefix}app_customer_employees_ibfk_1` 
                 FOREIGN KEY (customer_id) 
                 REFERENCES `{$wpdb->prefix}app_customers` (id) 
                 ON DELETE CASCADE

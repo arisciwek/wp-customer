@@ -222,7 +222,7 @@
         const $select = $(this);
         if (!$select.attr('aria-label')) {
             $select.attr('aria-label', $select.hasClass('wp-customer-customer-select') ? 
-                'Pilih Customer' : 'Pilih Kabupaten/Kota');
+                'Pilih Customer' : 'Pilih Cabang');
         }
     });
 

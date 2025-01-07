@@ -42,7 +42,7 @@
                             <p class="wi-stat-number"><span id="total-customers">0</span></p>
                         </div>
                         <div class="wi-stat-box">
-                            <h3>Total Kabupaten/Kota</h3>
+                            <h3>Total Cabang</h3>
                             <p class="wi-stat-number" id="total-branches">0</p>
                         </div>
                     </div>

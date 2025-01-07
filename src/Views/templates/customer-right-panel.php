@@ -7,7 +7,7 @@
 <div class="wi-customer-panel-content">
     <div class="nav-tab-wrapper">
         <a href="#" class="nav-tab nav-tab-customer-details nav-tab-active" data-tab="customer-details">Data Customer</a>
-        <a href="#" class="nav-tab" data-tab="branch-list">Kabupaten/Kota</a>
+        <a href="#" class="nav-tab" data-tab="branch-list">Cabang</a>
     </div>
 
     <?php
