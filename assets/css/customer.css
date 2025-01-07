@@ -1,0 +1,272 @@
+/**
+ * File: customer.css
+ * Path: /wp-customer/assets/css/customer.css
+ * Description: Styles for customer management interface
+ * Last modified: 2024-11-23
+ */
+
+/* Dashboard Section */
+.wi-customer-dashboard {
+    margin: 20px 0;
+}
+
+.wi-stats-container {
+    display: flex;
+    gap: 20px;
+    margin: 15px 0;
+}
+
+.wi-stat-box {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 15px 20px;
+    border-radius: 4px;
+    flex: 1;
+    text-align: center;
+}
+
+.wi-stat-number {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2271b1;
+    margin: 10px 0 0;
+}
+
+/* Main Content Layout */
+.wi-customer-content-area {
+    margin-top: 20px;
+}
+
+.wi-customer-container {
+    display: flex;
+    gap: 20px;
+    position: relative;
+}
+
+/* Left Panel Styles */
+.wi-customer-left-panel {
+    width: 100%;
+    transition: width 0.3s ease;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+}
+
+.wi-customer-container.with-right-panel .wi-customer-left-panel {
+    width: 45%;
+}
+
+.wi-panel-header h2 {
+    margin: 0;
+    font-size: 1.3em;
+}
+
+.wi-panel-content {
+    padding: 20px;
+}
+
+/* Right Panel Styles */
+.wi-customer-right-panel {
+    width: 55%;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    display: none;
+}
+
+.wi-customer-right-panel.visible {
+    display: block;
+}
+.wi-panel-header,
+.wi-customer-panel-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #ccd0d4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 50px;
+}
+
+.wi-customer-close-panel {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.wi-customer-close-panel:hover {
+    color: #d63638;
+}
+
+.wi-customer-panel-content {
+    padding: 20px;
+}
+
+/* Tab Navigation */
+.nav-tab-wrapper {
+    border-bottom: 1px solid #c3c4c7;
+    margin: 0;
+    padding-top: 9px;
+    padding-bottom: 0;
+    line-height: inherit;
+}
+
+.nav-tab {
+    border: 1px solid #c3c4c7;
+    border-bottom: none;
+    margin-left: 0.5em;
+    padding: 5px 10px;
+    font-size: 14px;
+    line-height: 1.71428571;
+    font-weight: 600;
+    background: #dcdcde;
+    color: #50575e;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.nav-tab-active {
+    background: #f0f0f1;
+    color: #000;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+    padding: 20px 0;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* DataTables Customization */
+#customers-table {
+    width: 100% !important;
+    margin-top: 15px;
+}
+
+.customers-table-actions {
+    white-space: nowrap;
+}
+
+.customers-table-actions button {
+    padding: 4px 8px;
+    margin: 0 2px;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+    .wi-stats-container {
+        flex-direction: column;
+    }
+
+    .wi-customer-container.with-right-panel {
+        flex-direction: column;
+    }
+
+    .wi-customer-container.with-right-panel .wi-customer-left-panel,
+    .wi-customer-right-panel {
+        width: 100%;
+    }
+}
+
+/* Loading States */
+.wi-customer-panel-content.loading {
+    position: relative;
+    min-height: 200px;
+}
+
+.wi-customer-panel-content.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 1;
+}
+
+.wi-customer-panel-content.loading .spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    visibility: visible;
+}
+
+/* Active Row Highlight */
+#customers-table tr.highlight {
+    background-color: #f0f6fc !important;
+    transition: background-color 0.5s ease;
+}
+
+/* Smooth Panel Transitions */
+.wi-customer-left-panel,
+.wi-customer-right-panel {
+    transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+.wi-customer-right-panel {
+    opacity: 0;
+}
+
+.wi-customer-right-panel.visible {
+    opacity: 1;
+}
+
+div#customers-table_length select {
+    width: 70px;
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+
+.button.view-customer,
+.button.edit-customer,
+.button.delete-customer {
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    line-height: 28px;
+    text-align: center;
+    margin: 0 2px;
+}
+
+.button .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 1.4;
+}
+
+.wi-stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.wi-stat-box {
+    background: #fff;
+    padding: 20px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.wi-stat-box h3 {
+    margin: 0 0 10px 0;
+    color: #1d2327;
+}
+
+.wi-stat-number {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+    color: #2271b1;
+}

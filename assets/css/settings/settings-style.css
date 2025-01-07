@@ -1,0 +1,172 @@
+/**
+ * File: settings-style.css
+ * Path: /wp-customer/assets/css/settings/settings-style.css
+ * Description: Styling untuk halaman pengaturan
+ * Version: 3.0.0
+ * Last modified: 2024-11-28 12:15:00
+ */
+
+/* Tab Navigation */
+.nav-tab-wrapper {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #c3c4c7;
+    padding-bottom: 0;
+}
+
+.nav-tab {
+    padding: 10px 15px;
+    font-size: 14px;
+    line-height: 1.71428571;
+    font-weight: 600;
+    margin-left: 0.5em;
+    margin-bottom: -1px;
+}
+
+.nav-tab-active {
+    border-bottom: 1px solid #f0f0f1;
+    background: #f0f0f1;
+    color: #000;
+}
+
+/* Tab Content */
+.tab-content {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    border-top: none;
+    margin-top: -1px;
+    padding: 20px;
+    min-height: 200px;
+}
+
+.tab-content.hidden {
+    display: none;
+}
+
+/* Settings Form */
+.form-table th {
+    width: 250px;
+    padding: 20px 10px 20px 0;
+}
+
+.form-table td {
+    padding: 15px 10px;
+}
+
+.description {
+    font-style: italic;
+    color: #666;
+}
+
+/* Permission Matrix */
+.wp-customer-permissions-wrapper {
+    margin: 20px 0;
+}
+
+.capability-group {
+    background: #fff;
+    border: 1px solid #c3c4c7;
+    margin-bottom: 20px;
+    border-radius: 3px;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.group-title {
+    margin: 0;
+    padding: 15px;
+    border-bottom: 1px solid #c3c4c7;
+    background: #f6f7f7;
+}
+
+.permission-matrix {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.permission-matrix th,
+.permission-matrix td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #c3c4c7;
+    vertical-align: middle;
+}
+
+.permission-matrix thead th {
+    background: #f6f7f7;
+    font-weight: 600;
+}
+
+.column-role {
+    width: 200px;
+    background: #f6f7f7;
+}
+
+.column-capability {
+    text-align: center;
+    width: auto;
+}
+
+/* Dependency Indicator */
+.dependency-indicator {
+    display: inline-block;
+    margin-left: 5px;
+    color: #007cba;
+    cursor: help;
+}
+
+/* Role Management */
+.roles-table {
+    margin-top: 20px;
+}
+
+.column-actions {
+    width: 200px;
+    text-align: right;
+}
+
+.action {
+    margin-left: 5px !important;
+}
+
+.edit-role {
+    background: #007cba;
+    color: #fff;
+    border-color: #007cba;
+}
+
+.delete-role {
+    color: #b32d2e;
+    border-color: #b32d2e;
+}
+
+/* Loading States */
+.spinner.is-active {
+    visibility: visible;
+    float: none;
+    margin: 4px 10px;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+    .form-table th {
+        width: auto;
+        padding: 10px 0;
+    }
+    
+    .form-table td {
+        padding: 10px 0;
+    }
+
+    .column-role {
+        width: 150px;
+    }
+
+    .capability-group .group-title {
+        padding: 10px;
+    }
+
+    .permission-matrix th,
+    .permission-matrix td {
+        padding: 8px;
+    }
+}
+

@@ -1,0 +1,196 @@
+/**
+ * Modal Component Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Components
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/components/confirmation-modal.css
+ *
+ * Description: Styling untuk reusable modal component.
+ *              Includes themes, animations, dan responsive design.
+ *              Terintegrasi dengan WordPress admin styles.
+ *
+ * Features:
+ * - Theme variations (danger/warning/info/success)
+ * - Responsive design
+ * - Smooth animations
+ * - Accessible styling
+ * - WordPress admin integration
+ *
+ * Changelog:
+ * 1.0.0 - 2024-12-07
+ * - Initial styling
+ * - Added theme variations
+ * - Added animations
+ * - Added responsive styles
+ */
+/**
+ * Modal Component Styles
+ * [header documentation yang sudah ada...]
+ */
+
+
+ .wi-modal-overlay {
+     display: none;
+     position: fixed;
+     top: 0;
+     left: 0;
+     right: 0;
+     bottom: 0;
+     background: rgba(0, 0, 0, 0.7);
+     z-index: 160000;
+     /* Tambahkan properti flexbox untuk centering */
+     display: none; /* akan diubah jadi flex saat aktif */
+     align-items: center; /* vertical center */
+     justify-content: center; /* horizontal center */
+     padding: 1rem; /* Beri padding agar tidak terlalu dekat dengan edge di mobile */
+ }
+
+ .wi-modal {
+     position: relative;
+     width: 90%;
+     max-width: 500px;
+     margin: 0; /* Hapus margin karena sudah dihandle flexbox */
+     background: #fff;
+     border-radius: 4px;
+     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+     transform: translateY(-20px) scale(0.95);
+     opacity: 0;
+     transition: all 0.3s ease;
+ }
+
+ /* Modal Active States */
+ .wi-modal-overlay.active {
+     display: flex; /* Ganti jadi flex saat aktif */
+ }
+
+ .wi-modal-overlay.active .wi-modal {
+     transform: translateY(0) scale(1); /* Tambahkan scale untuk efek pop */
+     opacity: 1;
+ }
+
+/* Modal Header */
+.wi-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-bottom: 1px solid #ddd;
+}
+
+.wi-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* Modal Types */
+.wi-modal.type-danger .wi-modal-icon { color: #dc3232; }
+.wi-modal.type-warning .wi-modal-icon { color: #ffb900; }
+.wi-modal.type-info .wi-modal-icon { color: #00a0d2; }
+.wi-modal.type-success .wi-modal-icon { color: #46b450; }
+
+/* Modal Body */
+.wi-modal-body {
+    padding: 1rem;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Modal Footer */
+.wi-modal-footer {
+    padding: 1rem;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+}
+
+/* Danger Button Style */
+.button-danger {
+    background: #dc3232 !important;
+    border-color: #ba2020 !important;
+    color: #fff !important;
+}
+
+.button-danger:hover {
+    background: #ba2020 !important;
+    border-color: #a01c1c !important;
+}
+
+.button-danger:focus {
+    box-shadow: 0 0 0 1px #fff, 0 0 0 3px #dc3232 !important;
+}
+
+.button-danger:active {
+    background: #a01c1c !important;
+    border-color: #8a1818 !important;
+}
+
+/* Disabled state */
+.button-danger:disabled,
+.button-danger.disabled {
+    background: #e57373 !important;
+    border-color: #dc3232 !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    cursor: not-allowed;
+}
+
+/* Close Button Style */
+.wi-modal-close {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: #999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.wi-modal-close:hover {
+    background: #f0f0f0;
+    color: #666;
+}
+
+.wi-modal-close:focus {
+    outline: none;
+    box-shadow: 0 0 0 1px #fff, 0 0 0 3px #2271b1;
+    color: #666;
+}
+
+/* Close icon */
+.wi-modal-close span {
+    font-size: 20px;
+    line-height: 1;
+    display: block;
+}
+
+/* Animation Keyframes */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+
+/* Responsive adjustments jika diperlukan */
+@media screen and (max-width: 782px) {
+    .wi-modal-overlay {
+        padding: 1rem;
+    }
+
+    .wi-modal {
+        width: 100%;
+        max-height: calc(100vh - 2rem); /* Pastikan tidak lebih tinggi dari viewport */
+        overflow-y: auto; /* Scroll jika konten terlalu panjang */
+    }
+}
