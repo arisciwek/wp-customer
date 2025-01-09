@@ -33,6 +33,7 @@
  * Last modified: 2024-12-03 16:30:00
  */
 
+// Edit Customer Form Handler
 (function($) {
     'use strict';
 
@@ -79,7 +80,13 @@
             // Populate form data
             this.form.find('#customer-id').val(data.customer.id);
             this.form.find('[name="name"]').val(data.customer.name);
-            this.form.find('[name="code"]').val(data.customer.code);  // Tambahkan ini
+            this.form.find('[name="code"]').val(data.customer.code);
+            
+            // Set user_id if exists
+            const userSelect = this.form.find('[name="user_id"]');
+            if (userSelect.length && data.customer.user_id) {
+                userSelect.val(data.customer.user_id);
+            }
 
             // Update modal title with customer name
             this.modal.find('.modal-header h3').text(`Edit Customer: ${data.customer.name}`);
@@ -103,29 +110,36 @@
         initializeValidation() {
             this.form.validate({
                 rules: {
+                    code: {
+                        required: true,
+                        minlength: 2,
+                        maxlength: 2,
+                        digits: true
+                    },
                     name: {
                         required: true,
                         minlength: 3,
                         maxlength: 100
+                    },
+                    user_id: {
+                        required: $('#edit-user').length > 0
                     }
                 },
                 messages: {
+                    code: {
+                        required: 'Kode customer wajib diisi',
+                        minlength: 'Kode harus 2 digit',
+                        maxlength: 'Kode harus 2 digit',
+                        digits: 'Kode hanya boleh berisi angka'
+                    },
                     name: {
                         required: 'Nama customer wajib diisi',
-                        minlength: 'Nama customer minimal 3 karakter',
-                        maxlength: 'Nama customer maksimal 100 karakter'
+                        minlength: 'Nama minimal 3 karakter',
+                        maxlength: 'Nama maksimal 100 karakter'
+                    },
+                    user_id: {
+                        required: 'User penanggung jawab wajib dipilih'
                     }
-                },
-                errorElement: 'span',
-                errorClass: 'form-error',
-                errorPlacement: (error, element) => {
-                    error.insertAfter(element);
-                },
-                highlight: (element) => {
-                    $(element).addClass('error');
-                },
-                unhighlight: (element) => {
-                    $(element).removeClass('error');
                 }
             });
         },
@@ -180,11 +194,14 @@
                 nonce: wpCustomerData.nonce,
                 id: id,
                 name: this.form.find('[name="name"]').val().trim(),
-                code: this.form.find('[name="code"]').val().trim()  // Pastikan ini ada
+                code: this.form.find('[name="code"]').val().trim(),
+                user_id: this.form.find('#edit-user').val() // Tambahkan ini
 
             };
 
             this.setLoadingState(true);
+
+            console.log('Sending data:', requestData);
 
             try {
                 const response = await $.ajax({

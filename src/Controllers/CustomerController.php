@@ -77,34 +77,83 @@ class CustomerController {
     }
 
     /**
-     * Inisialisasi direktori log jika belum ada
+     * Initialize log directory if it doesn't exist
      */
     private function initLogDirectory(): void {
-        $log_dir = dirname($this->log_file);
+        // Get WordPress uploads directory information
+        $upload_dir = wp_upload_dir();
+        $customer_base_dir = $upload_dir['basedir'] . '/wp-customer';
+        $customer_log_dir = $customer_base_dir . '/logs';
+        
+        // Update log file path with monthly rotation format
+        $this->log_file = $customer_log_dir . '/customer-' . date('Y-m') . '.log';
 
-        // Buat direktori jika belum ada
-        if (!file_exists($log_dir)) {
-            // Coba buat direktori dengan izin 0755
-            if (!wp_mkdir_p($log_dir)) {
-                // Jika gagal, gunakan sys_get_temp_dir sebagai fallback
-                $this->log_file = rtrim(sys_get_temp_dir(), '/') . 'wp-customer.log';
+        // Create base wp-customer directory if it doesn't exist
+        if (!file_exists($customer_base_dir)) {
+            if (!wp_mkdir_p($customer_base_dir)) {
+                $this->log_file = rtrim(sys_get_temp_dir(), '/') . '/wp-customer.log';
+                error_log('Failed to create base directory in uploads: ' . $customer_base_dir);
+                return;
+            }
+            
+            // Add .htaccess to base directory
+            $base_htaccess_content = "# Protect Directory\n";
+            $base_htaccess_content .= "<FilesMatch \"^.*$\">\n";
+            $base_htaccess_content .= "Order Deny,Allow\n";
+            $base_htaccess_content .= "Deny from all\n";
+            $base_htaccess_content .= "</FilesMatch>\n";
+            $base_htaccess_content .= "\n";
+            $base_htaccess_content .= "# Allow specific file types if needed\n";
+            $base_htaccess_content .= "<FilesMatch \"\.(jpg|jpeg|png|gif|css|js)$\">\n";
+            $base_htaccess_content .= "Order Allow,Deny\n";
+            $base_htaccess_content .= "Allow from all\n";
+            $base_htaccess_content .= "</FilesMatch>";
+            
+            @file_put_contents($customer_base_dir . '/.htaccess', $base_htaccess_content);
+            @chmod($customer_base_dir, 0755);
+        }
+
+        // Create logs directory if it doesn't exist
+        if (!file_exists($customer_log_dir)) {
+            if (!wp_mkdir_p($customer_log_dir)) {
+                $this->log_file = rtrim(sys_get_temp_dir(), '/') . '/wp-customer.log';
+                error_log('Failed to create log directory in uploads: ' . $customer_log_dir);
                 return;
             }
 
-            // Set proper permissions
-            chmod($log_dir, 0755);
+            // Add .htaccess to logs directory with strict rules
+            $logs_htaccess_content = "# Deny access to all files\n";
+            $logs_htaccess_content .= "Order deny,allow\n";
+            $logs_htaccess_content .= "Deny from all\n\n";
+            $logs_htaccess_content .= "# Deny access to log files specifically\n";
+            $logs_htaccess_content .= "<Files ~ \"\.log$\">\n";
+            $logs_htaccess_content .= "Order allow,deny\n";
+            $logs_htaccess_content .= "Deny from all\n";
+            $logs_htaccess_content .= "</Files>\n\n";
+            $logs_htaccess_content .= "# Extra protection\n";
+            $logs_htaccess_content .= "<IfModule mod_php.c>\n";
+            $logs_htaccess_content .= "php_flag engine off\n";
+            $logs_htaccess_content .= "</IfModule>";
+            
+            @file_put_contents($customer_log_dir . '/.htaccess', $logs_htaccess_content);
+            @chmod($customer_log_dir, 0755);
         }
 
-        // Buat file log jika belum ada
+        // Create log file if it doesn't exist
         if (!file_exists($this->log_file)) {
-            touch($this->log_file);
-            chmod($this->log_file, 0644);
+            if (@touch($this->log_file)) {
+                chmod($this->log_file, 0644);
+            } else {
+                error_log('Failed to create log file: ' . $this->log_file);
+                $this->log_file = rtrim(sys_get_temp_dir(), '/') . '/wp-customer.log';
+                return;
+            }
         }
 
-        // Pastikan file bisa ditulis
+        // Double check writability
         if (!is_writable($this->log_file)) {
-            // Gunakan fallback ke temporary directory
-            $this->log_file = rtrim(sys_get_temp_dir(), '/') . 'wp-customer.log';
+            error_log('Log file not writable: ' . $this->log_file);
+            $this->log_file = rtrim(sys_get_temp_dir(), '/') . '/wp-customer.log';
         }
     }
 
@@ -150,7 +199,8 @@ class CustomerController {
             $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
 
             // Map column index to column name
-            $columns = ['code', 'name', 'branch_count', 'actions'];
+            $columns = ['code', 'name', 'owner_name', 'branch_count', 'actions']; // tambah owner_name
+
             $orderBy = isset($columns[$orderColumn]) ? $columns[$orderColumn] : 'code';
 
             if ($orderBy === 'actions') {
@@ -170,6 +220,7 @@ class CustomerController {
                         'id' => $customer->id,
                         'code' => esc_html($customer->code),
                         'name' => esc_html($customer->name),
+                        'owner_name' => esc_html($customer->owner_name ?? '-'), // tambah owner_name
                         'branch_count' => intval($customer->branch_count),
                         'actions' => $this->generateActionButtons($customer)
                     ];
@@ -231,33 +282,43 @@ class CustomerController {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
-
-                // Debug current user
-                $current_user = wp_get_current_user();
-                $this->debug_log("Current User ID: " . $current_user->ID);
-                $this->debug_log("Current User Login: " . $current_user->user_login);
-                $this->debug_log("Current User Roles: " . print_r($current_user->roles, true));
-                
-                // Debug semua capabilities user
-                $this->debug_log("All User Capabilities: " . print_r($current_user->allcaps, true));
-                
-                // Debug specific capability
-                $this->debug_log("Has create_customer capability: " . 
-                    (current_user_can('create_customer') ? 'Yes' : 'No'));
-                
-
             if (!current_user_can('create_customer')) {
-                wp_send_json_error(['message' => __('Insufficient permissions', 'wp-customer')]);
+                wp_send_json_error([
+                    'message' => __('Insufficient permissions', 'wp-customer')
+                ]);
                 return;
             }
 
+            $current_user_id = get_current_user_id();
+            
+            // Debug POST data - hanya log data yang kita perlukan
+            $debug_post = [
+                'name' => $_POST['name'] ?? 'not set',
+                'code' => $_POST['code'] ?? 'not set',
+                'user_id' => $_POST['user_id'] ?? 'not set',
+            ];
+            $this->debug_log('Relevant POST data:');
+            $this->debug_log($debug_post);
+            
+            // Basic data
             $data = [
                 'name' => sanitize_text_field($_POST['name']),
                 'code' => sanitize_text_field($_POST['code']),
-                'created_by' => get_current_user_id()
+                'created_by' => $current_user_id
             ];
 
-            // Validasi input
+            // Handle user_id
+            if (isset($_POST['user_id']) && !empty($_POST['user_id'])) {
+                $data['user_id'] = absint($_POST['user_id']);
+            } else {
+                $data['user_id'] = $current_user_id;
+            }
+
+            // Debug final data
+            $this->debug_log('Data to be saved:');
+            $this->debug_log($data);
+
+            // Validate input
             $errors = $this->validator->validateCreate($data);
             if (!empty($errors)) {
                 wp_send_json_error([
@@ -270,16 +331,15 @@ class CustomerController {
             // Get ID from creation
             $id = $this->model->create($data);
             if (!$id) {
-                error_log('Failed to create customer');
                 wp_send_json_error([
                     'message' => __('Failed to create customer', 'wp-customer')
                 ]);
                 return;
             }
+
             // Get fresh data for response
             $customer = $this->model->find($id);
             if (!$customer) {
-                error_log('Failed to retrieve created customer');
                 wp_send_json_error([
                     'message' => __('Failed to retrieve created customer', 'wp-customer')
                 ]);
@@ -294,8 +354,6 @@ class CustomerController {
             ]);
 
         } catch (\Exception $e) {
-            error_log('Store error: ' . $e->getMessage());
-            error_log('Stack trace: ' . $e->getTraceAsString());
             wp_send_json_error([
                 'message' => $e->getMessage() ?: 'Terjadi kesalahan saat menambah customer',
                 'error_details' => WP_DEBUG ? $e->getTraceAsString() : null
@@ -312,12 +370,42 @@ class CustomerController {
                 throw new \Exception('Invalid customer ID');
             }
 
-            // Validasi input
+            // Get existing customer data
+            $existing_customer = $this->model->find($id);
+            if (!$existing_customer) {
+                throw new \Exception('Customer not found');
+            }
+
+            // Check permissions
+            if (!current_user_can('edit_all_customers') && 
+                (!current_user_can('edit_own_customer') || $existing_customer->created_by !== get_current_user_id())) {
+                wp_send_json_error([
+                    'message' => __('You do not have permission to edit this customer', 'wp-customer')
+                ]);
+                return;
+            }
+
+            // Basic data
             $data = [
                 'name' => sanitize_text_field($_POST['name']),
-                'code' => sanitize_text_field($_POST['code'])  // Tambahkan ini
+                'code' => sanitize_text_field($_POST['code'])
             ];
 
+            $this->debug_log('POST: ' . print_r($_POST, true));
+
+            // Handle user_id
+            if (isset($_POST['user_id'])) {
+                if (current_user_can('edit_all_customers')) {
+                    $data['user_id'] = !empty($_POST['user_id']) ? intval($_POST['user_id']) : null;
+                    $this->debug_log('Setting user_id to: ' . print_r($data['user_id'], true));
+                } else {
+                    $this->debug_log('User lacks permission to change user_id');
+                }
+            }
+
+            // If no edit_all_customers capability, user_id remains unchanged
+
+            // Validate input
             $errors = $this->validator->validateUpdate($data, $id);
             if (!empty($errors)) {
                 wp_send_json_error(['message' => implode(', ', $errors)]);
@@ -337,7 +425,7 @@ class CustomerController {
             }
 
             wp_send_json_success([
-                'message' => 'Customer updated successfully',
+                'message' => __('Customer updated successfully', 'wp-customer'),
                 'data' => [
                     'customer' => $customer,
                     'branch_count' => $this->model->getBranchCount($id)
@@ -349,11 +437,11 @@ class CustomerController {
         }
     }
 
-    public function show($id) {
+    public function show() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
-            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
 
+            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
             if (!$id) {
                 throw new \Exception('Invalid customer ID');
             }
@@ -363,10 +451,18 @@ class CustomerController {
                 throw new \Exception('Customer not found');
             }
 
-            // Add permission check
-            if (!current_user_can('view_customer_detail') &&
-                (!current_user_can('view_own_customer') || $customer->created_by !== get_current_user_id())) {
+            // Add user permission check
+            if (!current_user_can('view_customer_detail') && 
+                (!current_user_can('view_own_customer') || $customer->user_id !== get_current_user_id())) {
                 throw new \Exception('You do not have permission to view this customer');
+            }
+
+            // Add owner information to response
+            if ($customer->user_id) {
+                $user = get_userdata($customer->user_id);
+                if ($user) {
+                    $customer->owner_name = $user->display_name;
+                }
             }
 
             wp_send_json_success([

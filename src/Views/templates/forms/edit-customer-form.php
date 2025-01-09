@@ -22,9 +22,7 @@
  * - Added permission checks
  * - Added AJAX integration
  */
-?>
-<?php
-// File: edit-customer-form.php
+
 defined('ABSPATH') || exit;
 ?>
 
@@ -36,10 +34,11 @@ defined('ABSPATH') || exit;
         </div>
         <div class="modal-content">
             <div id="edit-mode">
-                <form id="edit-customer-form" class="wi-form">
+                <form id="edit-customer-form" class="wp-customer-form">
+                    <?php wp_nonce_field('wp_customer_nonce'); ?>
                     <input type="hidden" id="customer-id" name="id" value="">
                     
-                    <div class="wi-form-group">
+                    <div class="wp-customer-form-group">
                         <label for="edit-code" class="required-field">Kode Customer</label>
                         <input type="text" 
                                id="edit-code" 
@@ -53,7 +52,7 @@ defined('ABSPATH') || exit;
                         </p>
                     </div>
 
-                    <div class="wi-form-group">
+                    <div class="wp-customer-form-group">
                         <label for="edit-name" class="required-field">Nama Customer</label>
                         <input type="text" 
                                id="edit-name" 
@@ -62,6 +61,27 @@ defined('ABSPATH') || exit;
                                maxlength="100" 
                                required>
                     </div>
+
+                    <?php if (current_user_can('edit_all_customers')): ?>
+                    <div class="wp-customer-form-group">
+                        <label for="edit-user" class="required-field">
+                            <?php _e('User Admin', 'wp-customer'); ?>
+                        </label>
+                        <select name="user_id" id="edit-user" class="regular-text">
+                            <option value=""><?php _e('Pilih Admin', 'wp-customer'); ?></option>
+                            <?php
+                            $users = get_users(['role__in' => ['Customer']]);
+                            foreach ($users as $user) {
+                                printf(
+                                    '<option value="%d">%s</option>',
+                                    $user->ID,
+                                    esc_html($user->display_name)
+                                );
+                            }
+                            ?>
+                        </select>
+                    </div>
+                    <?php endif; ?>
 
                     <div class="submit-wrapper">
                         <button type="submit" class="button button-primary">Update</button>
@@ -73,4 +93,3 @@ defined('ABSPATH') || exit;
         </div>
     </div>
 </div>
-

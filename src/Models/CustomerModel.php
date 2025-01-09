@@ -42,11 +42,12 @@
             [
                 'code' => $data['code'],
                 'name' => $data['name'],
+                'user_id' => $data['user_id'],
                 'created_by' => get_current_user_id(),
                 'created_at' => current_time('mysql'),
                 'updated_at' => current_time('mysql')
             ],
-            ['%s', '%s', '%d', '%s', '%s']
+            ['%s', '%s', '%d', '%d', '%s', '%s']
         );
 
         if ($result === false) {
@@ -56,29 +57,32 @@
         return (int) $wpdb->insert_id;
     }
 
-     public function find($id): ?object {
-         global $wpdb;
+    public function find($id): ?object {
+        global $wpdb;
 
-         // Ensure integer type for ID
-         $id = (int) $id;
+        // Ensure integer type for ID
+        $id = (int) $id;
 
-         $result = $wpdb->get_row($wpdb->prepare("
-             SELECT p.*, COUNT(r.id) as branch_count
-             FROM {$this->table} p
-             LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id
-             WHERE p.id = %d
-             GROUP BY p.id
-         ", $id));
+        $result = $wpdb->get_row($wpdb->prepare("
+            SELECT p.*, 
+                   COUNT(r.id) as branch_count,
+                   u.display_name as owner_name
+            FROM {$this->table} p
+            LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id
+            LEFT JOIN {$wpdb->users} u ON p.user_id = u.ID
+            WHERE p.id = %d
+            GROUP BY p.id
+        ", $id));
 
-         if ($result === null) {
-             return null;
-         }
+        if ($result === null) {
+            return null;
+        }
 
-         // Ensure branch_count is always an integer
-         $result->branch_count = (int) $result->branch_count;
+        // Ensure branch_count is always an integer
+        $result->branch_count = (int) $result->branch_count;
 
-         return $result;
-     }
+        return $result;
+    }
 
     public function update(int $id, array $data): bool {
         global $wpdb;
@@ -89,6 +93,7 @@
         // Add format for each field
         if (isset($data['code'])) $format[] = '%s';
         if (isset($data['name'])) $format[] = '%s';
+        if (isset($data['user_id'])) $format[] = '%d';
         $format[] = '%s'; // for updated_at
 
         $result = $wpdb->update(
@@ -100,6 +105,83 @@
         );
 
         return $result !== false;
+    }
+
+    public function getDataTableData(int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
+        global $wpdb;
+
+        // Base query parts
+        $select = "SELECT SQL_CALC_FOUND_ROWS p.*, 
+                         COUNT(r.id) as branch_count,
+                         u.display_name as owner_name";
+        $from = " FROM {$this->table} p";
+        $join = " LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id
+                  LEFT JOIN {$wpdb->users} u ON p.user_id = u.ID";
+        $where = " WHERE 1=1";
+        $group = " GROUP BY p.id";
+
+        // Add search if provided
+        if (!empty($search)) {
+            $where .= $wpdb->prepare(
+                " AND (p.name LIKE %s OR p.code LIKE %s OR u.display_name LIKE %s)",
+                '%' . $wpdb->esc_like($search) . '%',
+                '%' . $wpdb->esc_like($search) . '%',
+                '%' . $wpdb->esc_like($search) . '%'
+            );
+        }
+
+        // Check for user-specific view permission
+        if (!current_user_can('view_customer_list') && current_user_can('view_own_customer')) {
+            $current_user_id = get_current_user_id();
+            $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
+        }
+
+        // Validate order column
+        $validColumns = ['code', 'name', 'branch_count', 'owner_name'];
+        if (!in_array($orderColumn, $validColumns)) {
+            $orderColumn = 'code';
+        }
+
+        // Map frontend column to actual column
+        $orderColumnMap = [
+            'owner_name' => 'u.display_name',
+            'code' => 'p.code',
+            'name' => 'p.name',
+            'branch_count' => 'branch_count'
+        ];
+
+        $orderColumn = $orderColumnMap[$orderColumn] ?? 'p.code';
+
+        // Validate order direction
+        $orderDir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
+
+        // Build order clause
+        $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
+
+        // Add limit
+        $limit = $wpdb->prepare(" LIMIT %d, %d", $start, $length);
+
+        // Complete query
+        $sql = $select . $from . $join . $where . $group . $order . $limit;
+
+        // Get paginated results
+        $results = $wpdb->get_results($sql);
+
+        if ($results === null) {
+            throw new \Exception($wpdb->last_error);
+        }
+
+        // Get total filtered count
+        $filtered = $wpdb->get_var("SELECT FOUND_ROWS()");
+
+        // Get total count
+        $total = $wpdb->get_var("SELECT COUNT(DISTINCT id) FROM {$this->table}");
+
+        return [
+            'data' => $results,
+            'total' => (int) $total,
+            'filtered' => (int) $filtered
+        ];
     }
 
      public function delete(int $id): bool {
@@ -136,62 +218,6 @@
              FROM {$this->branch_table}
              WHERE customer_id = %d
          ", $id));
-     }
-
-     public function getDataTableData(int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
-         global $wpdb;
-
-         // Base query parts
-         $select = "SELECT SQL_CALC_FOUND_ROWS p.*, COUNT(r.id) as branch_count";
-         $from = " FROM {$this->table} p";
-         $join = " LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id";
-         $where = " WHERE 1=1";
-         $group = " GROUP BY p.id";
-
-         // Add search if provided
-         if (!empty($search)) {
-             $where .= $wpdb->prepare(
-                 " AND p.name LIKE %s",
-                 '%' . $wpdb->esc_like($search) . '%'
-             );
-         }
-
-         // Validate order column
-         $validColumns = ['name', 'branch_count'];
-         if (!in_array($orderColumn, $validColumns)) {
-             $orderColumn = 'name';
-         }
-
-         // Validate order direction
-         $orderDir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
-
-         // Build order clause
-         $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
-
-         // Add limit
-         $limit = $wpdb->prepare(" LIMIT %d, %d", $start, $length);
-
-         // Complete query
-         $sql = $select . $from . $join . $where . $group . $order . $limit;
-
-         // Get paginated results
-         $results = $wpdb->get_results($sql);
-
-         if ($results === null) {
-             throw new \Exception($wpdb->last_error);
-         }
-
-         // Get total filtered count
-         $filtered = $wpdb->get_var("SELECT FOUND_ROWS()");
-
-         // Get total count
-         $total = $wpdb->get_var("SELECT COUNT(DISTINCT id) FROM {$this->table}");
-
-         return [
-             'data' => $results,
-             'total' => (int) $total,
-             'filtered' => (int) $filtered
-         ];
      }
 
      public function existsByName(string $name, ?int $excludeId = null): bool {

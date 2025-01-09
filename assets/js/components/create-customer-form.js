@@ -35,222 +35,160 @@
  (function($) {
      'use strict';
 
-     const CreateCustomerForm = {
-         modal: null,
-         form: null,
-         isProcessing: false,
-         initialized: false,
+    const CreateCustomerForm = {
+        modal: null,
+        form: null,
 
-         init() {
-             if (this.initialized) return;
-             // Initialize modal and form elements
-             this.modal = $('#create-customer-modal');
-             this.form = $('#create-customer-form');
+        init() {
+            this.modal = $('#create-customer-modal');
+            this.form = $('#create-customer-form');
 
-             this.bindEvents();
-             this.initializeValidation();
-             this.initialized = true;
-         },
+            this.bindEvents();
+            this.initializeValidation();
+        },
 
-         bindEvents() {
-             // Form events
-             this.form.off('submit').on('submit', (e) => this.handleCreate(e));
-             this.form.off('input', 'input[name="name"]').on('input', 'input[name="name"]', (e) => {
-                 this.validateField(e.target);
-             });
+        bindEvents() {
+            // Form events
+            this.form.on('submit', (e) => this.handleCreate(e));
+            this.form.on('input', 'input[name="name"]', (e) => {
+                this.validateField(e.target);
+            });
 
-             // Modal events
-             $('.modal-close', this.modal).off('click').on('click', () => this.hideModal());
-             $('.cancel-create', this.modal).off('click').on('click', () => this.hideModal());
+            // Add button handler
+            $('#add-customer-btn').on('click', () => this.showModal());
 
-             // Close modal when clicking outside
-             this.modal.off('click').on('click', (e) => {
-                 if ($(e.target).is('.modal-overlay')) {
-                     this.hideModal();
-                 }
-             });
+            // Modal events
+            $('.modal-close', this.modal).on('click', () => this.hideModal());
+            $('.cancel-create', this.modal).on('click', () => this.hideModal());
 
-             // Add button handler
-             $('#add-customer-btn').off('click').on('click', () => this.showModal());
-         },
+            // Close modal when clicking outside
+            this.modal.on('click', (e) => {
+                if ($(e.target).is('.modal-overlay')) {
+                    this.hideModal();
+                }
+            });
+        },
 
-         showModal() {
-             // Reset form first
-             this.resetForm();
+        async handleCreate(e) {
+            e.preventDefault();
 
-             // Show modal with animation
-             this.modal.fadeIn(300);
-             this.form.find('[name="code"]').focus();
-         },
+            if (!this.form.valid()) {
+                return;
+            }
 
-         hideModal() {
-             this.modal.fadeOut(300, () => {
-                 this.resetForm();
-             });
-         },
+            // Ambil semua data form termasuk user_id
+            const formData = {
+                action: 'create_customer',
+                nonce: wpCustomerData.nonce,
+                name: this.form.find('[name="name"]').val().trim(),
+                code: this.form.find('[name="code"]').val().trim(),
+            };
 
-         initializeValidation() {
-             this.form.validate({
-                 rules: {
-                     name: {
-                         required: true,
-                         minlength: 3,
-                         maxlength: 100
-                     },
-                     code: {
-                         required: true,
-                         minlength: 2,
-                         maxlength: 2,
-                         digits: true
-                     }
-                 },
-                 messages: {
-                     name: {
-                         required: 'Nama customer wajib diisi',
-                         minlength: 'Nama customer minimal 3 karakter',
-                         maxlength: 'Nama customer maksimal 100 karakter'
-                     },
-                     code: {
-                         required: 'Kode customer wajib diisi',
-                         minlength: 'Kode customer harus 2 digit',
-                         maxlength: 'Kode customer harus 2 digit',
-                         digits: 'Kode customer harus berupa angka'
-                     }
-                 },
-                 errorElement: 'span',
-                 errorClass: 'form-error',
-                 errorPlacement: (error, element) => {
-                     error.insertAfter(element);
-                 },
-                 highlight: (element) => {
-                     $(element).addClass('error');
-                 },
-                 unhighlight: (element) => {
-                     $(element).removeClass('error');
-                 }
-             });
-         },
+            // Tambahkan user_id jika ada
+            const userIdField = this.form.find('[name="user_id"]');
+            if (userIdField.length && userIdField.val()) {
+                formData.user_id = userIdField.val();
+            }
 
-         validateField(field) {
-             const $field = $(field);
-             const value = $field.val().trim();
-             const errors = [];
+            this.setLoadingState(true);
 
-             if (!value) {
-                 errors.push('Nama customer wajib diisi');
-             } else {
-                 if (value.length < 3) {
-                     errors.push('Nama customer minimal 3 karakter');
-                 }
-                 if (value.length > 100) {
-                     errors.push('Nama customer maksimal 100 karakter');
-                 }
-                 if (!/^[a-zA-Z\s]+$/.test(value)) {
-                     errors.push('Nama customer hanya boleh mengandung huruf dan spasi');
-                 }
-             }
+            try {
+                const response = await $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: formData
+                });
 
-             const $error = $field.next('.form-error');
-             if (errors.length > 0) {
-                 $field.addClass('error');
-                 if ($error.length) {
-                     $error.text(errors[0]);
-                 } else {
-                     $('<span class="form-error"></span>')
-                         .text(errors[0])
-                         .insertAfter($field);
-                 }
-                 return false;
-             } else {
-                 $field.removeClass('error');
-                 $error.remove();
-                 return true;
-             }
-         },
+                if (response.success) {
+                    CustomerToast.success('Customer berhasil ditambahkan');
+                    this.hideModal();
+                    $(document).trigger('customer:created', [response.data]);
 
-         async handleCreate(e) {
-             e.preventDefault();
+                    if (window.CustomerDataTable) {
+                        window.CustomerDataTable.refresh();
+                    }
+                } else {
+                    CustomerToast.error(response.data?.message || 'Gagal menambah customer');
+                }
+            } catch (error) {
+                console.error('Create customer error:', error);
+                CustomerToast.error('Gagal menghubungi server. Silakan coba lagi.');
+            } finally {
+                this.setLoadingState(false);
+            }
+        },
 
-             if (!this.form.valid() || this.isProcessing) {
-                 return;
-             }
+        setLoadingState(loading) {
+            const $submitBtn = this.form.find('[type="submit"]');
+            const $spinner = this.form.find('.spinner');
 
-             const requestData = {
-                 action: 'create_customer',
-                 nonce: wpCustomerData.nonce,
-                 name: this.form.find('[name="name"]').val().trim(),
-                 code: this.form.find('[name="code"]').val().trim()
-             };
+            if (loading) {
+                $submitBtn.prop('disabled', true);
+                $spinner.addClass('is-active');
+                this.form.addClass('loading');
+            } else {
+                $submitBtn.prop('disabled', false);
+                $spinner.removeClass('is-active');
+                this.form.removeClass('loading');
+            }
+        },
 
-             this.isProcessing = true;
-             this.setLoadingState(true);
+        showModal() {
+            this.resetForm();
+            this.modal.fadeIn(300, () => {
+                this.form.find('[name="name"]').focus();
+            });
+        },
 
-             try {
-                 const response = await $.ajax({
-                     url: wpCustomerData.ajaxUrl,
-                     type: 'POST',
-                     data: requestData
-                 });
+        hideModal() {
+            this.modal.fadeOut(300, () => {
+                this.resetForm();
+            });
+        },
 
-                 if (response.success) {
-                     CustomerToast.success('Customer berhasil ditambahkan');  // Hanya satu notifikasi
-                     this.hideModal();
+        resetForm() {
+            this.form[0].reset();
+            this.form.find('.form-error').remove();
+            this.form.find('.error').removeClass('error');
+            this.form.validate().resetForm();
+        },
 
-                     // Trigger events untuk komponen lain tanpa notifikasi tambahan
-                     $(document).trigger('customer:created', [response.data]);
+        initializeValidation() {
+            this.form.validate({
+                rules: {
+                    name: {
+                        required: true,
+                        minlength: 3,
+                        maxlength: 100
+                    },
+                    code: {
+                        required: true,
+                        digits: true,
+                        minlength: 2,
+                        maxlength: 2
+                    }
+                },
+                messages: {
+                    name: {
+                        required: 'Nama customer wajib diisi',
+                        minlength: 'Nama customer minimal 3 karakter',
+                        maxlength: 'Nama customer maksimal 100 karakter'
+                    },
+                    code: {
+                        required: 'Kode wajib diisi',
+                        digits: 'Kode harus berupa angka',
+                        minlength: 'Kode harus 2 digit',
+                        maxlength: 'Kode harus 2 digit'
+                    }
+                }
+            });
+        }
+    };
 
-                     // Refresh DataTable jika ada
-                     if (window.CustomerDataTable) {
-                         window.CustomerDataTable.refresh();
-                     }
-                 } else {
-                     CustomerToast.error(response.data?.message || 'Gagal menambah customer');
-                 }
-             } catch (error) {
-                 console.error('Create customer error:', error);
-                 if (!this.isProcessing) {
-                     CustomerToast.error('Gagal menghubungi server. Silakan coba lagi.');
-                 }
-             } finally {
-                 setTimeout(() => {
-                     this.isProcessing = false;
-                     this.setLoadingState(false);
-                 }, 500);
-             }
-         },
-
-         setLoadingState(loading) {
-             const $submitBtn = this.form.find('[type="submit"]');
-             const $spinner = this.form.find('.spinner');
-
-             if (loading) {
-                 $submitBtn.prop('disabled', true);
-                 $spinner.addClass('is-active');
-                 this.form.addClass('loading');
-             } else {
-                 $submitBtn.prop('disabled', false);
-                 $spinner.removeClass('is-active');
-                 this.form.removeClass('loading');
-             }
-         },
-
-         resetForm() {
-             if (this.form && this.form[0]) {
-                 this.form[0].reset();
-                 this.form.find('.form-error').remove();
-                 this.form.find('.error').removeClass('error');
-                 if (this.form.validate) {
-                     this.form.validate().resetForm();
-                 }
-                 this.isProcessing = false;
-             }
-         }
-     };
-
-     // Initialize when document is ready
-     $(document).ready(() => {
-         window.CreateCustomerForm = CreateCustomerForm;
-         CreateCustomerForm.init();
-     });
+    // Initialize when document is ready
+    $(document).ready(() => {
+        window.CreateCustomerForm = CreateCustomerForm;
+        CreateCustomerForm.init();
+    });
 
  })(jQuery);

@@ -43,7 +43,7 @@ defined('ABSPATH') || exit;
                 <?php wp_nonce_field('wp_customer_nonce'); ?>
                 <input type="hidden" name="action" value="create_customer">
                 
-                <div class="wi-form-group">
+                <div class="wp-customer-form-group">
                     <label for="customer-code" class="required-field">
                         <?php _e('Kode Customer', 'wp-customer'); ?>
                     </label>
@@ -59,7 +59,7 @@ defined('ABSPATH') || exit;
                     </p>
                 </div>
 
-                <div class="wi-form-group">
+                <div class="wp-customer-form-group">
                     <label for="customer-name" class="required-field">
                         <?php _e('Nama Customer', 'wp-customer'); ?>
                     </label>
@@ -70,6 +70,28 @@ defined('ABSPATH') || exit;
                            maxlength="100" 
                            required>
                 </div>
+
+                <?php if (current_user_can('edit_all_customers')): ?>
+                <div class="wp-customer-form-group">
+                    <label for="customer-owner">
+                        <?php _e('Admin', 'wp-customer'); ?>
+                    </label>
+                    <select id="customer-owner" name="user_id" class="regular-text">
+                        <option value=""><?php _e('Pilih Admin', 'wp-customer'); ?></option>
+                        <?php
+                        //$users = get_users(['role__in' => ['administrator', 'editor', 'author']]);
+                        $users = get_users(['role__in' => ['Customer']]);
+                        foreach ($users as $user) {
+                            printf(
+                                '<option value="%d">%s</option>',
+                                $user->ID,
+                                esc_html($user->display_name)
+                            );
+                        }
+                        ?>
+                    </select>
+                </div>
+                <?php endif; ?>
                 
                 <div class="submit-wrapper">
                     <button type="submit" class="button button-primary">
@@ -84,4 +106,3 @@ defined('ABSPATH') || exit;
         </div>
     </div>
 </div>
-

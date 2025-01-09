@@ -65,7 +65,7 @@
              this.loadStats();
 
              // Update stats setelah operasi CRUD
-             $(document)
+            $(document)
                 .on('customer:created.Customer', () => this.loadStats())
                 .on('customer:deleted.Customer', () => this.loadStats())
                 .on('branch:created.Customer', () => this.loadStats())

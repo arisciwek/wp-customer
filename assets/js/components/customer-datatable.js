@@ -73,7 +73,8 @@
                     <tr>
                         <th>Kode</th>
                         <th>Nama Customer</th>
-                        <th>Jumlah Kab/Kota</th>
+                        <th>Admin</th>
+                        <th>Cabang</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -98,6 +99,7 @@
                         CustomerToast.error('Gagal memuat data customer');
                     }
                 },
+                // Di bagian columns, tambahkan setelah kolom code
                 columns: [
                     {
                         data: 'code',
@@ -109,8 +111,13 @@
                         title: 'Nama Customer'
                     },
                     {
+                        data: 'owner_name', // Kolom baru
+                        title: 'Admin',
+                        defaultContent: '-'
+                    },
+                    {
                         data: 'branch_count',
-                        title: 'Jumlah Kab/Kota',
+                        title: 'Cabang',
                         className: 'text-center',
                         searchable: false
                     },

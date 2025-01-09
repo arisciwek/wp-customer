@@ -15,16 +15,16 @@
  */
 
 /* Form Validation States */
-.wi-form-group {
+.wp-customer-form-group {
     position: relative;
     margin-bottom: 15px;
 }
 
-.wi-form-group input.error {
+.wp-customer-form-group input.error {
     border-color: #d63638;
 }
 
-.wi-form-group .form-error {
+.wp-customer-form-group .form-error {
     display: block;
     color: #d63638;
     font-size: 12px;
@@ -33,12 +33,12 @@
 }
 
 /* Loading States */
-.wi-form.loading {
+.wp-customer-form.loading {
     position: relative;
     pointer-events: none;
 }
 
-.wi-form.loading::after {
+.wp-customer-form.loading::after {
     content: '';
     position: absolute;
     top: 0;
@@ -49,7 +49,7 @@
     z-index: 1;
 }
 
-.wi-form.loading .spinner {
+.wp-customer-form.loading .spinner {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -60,7 +60,7 @@
 }
 
 /* Submit Button States */
-.wi-form .submit-wrapper {
+.wp-customer-form .submit-wrapper {
     position: relative;
     display: flex;
     align-items: center;
@@ -70,38 +70,38 @@
     border-top: 1px solid #dcdcde;
 }
 
-.wi-form .submit-wrapper .spinner {
+.wp-customer-form .submit-wrapper .spinner {
     float: none;
     margin: 0;
 }
 
 /* Form Fields */
-.wi-form input[type="text"] {
+.wp-customer-form input[type="text"] {
     width: 100%;
     max-width: 25em;
 }
 
-.wi-form input[type="text"]:focus {
+.wp-customer-form input[type="text"]:focus {
     border-color: #2271b1;
     box-shadow: 0 0 0 1px #2271b1;
 }
 
 /* Field Description */
-.wi-form .field-description {
+.wp-customer-form .field-description {
     color: #646970;
     font-size: 12px;
     margin-top: 5px;
 }
 
 /* Required Field Indicator */
-.wi-form .required-field::after {
+.wp-customer-form .required-field::after {
     content: '*';
     color: #d63638;
     margin-left: 4px;
 }
 
 /* Form Grid Layout */
-.wi-form-grid {
+.wp-customer-form-grid {
     display: grid;
     grid-template-columns: 200px 1fr;
     gap: 15px;
@@ -109,49 +109,49 @@
 }
 
 @media screen and (max-width: 782px) {
-    .wi-form-grid {
+    .wp-customer-form-grid {
         grid-template-columns: 1fr;
     }
 }
 
 /* Responsive Adjustments */
 @media screen and (max-width: 782px) {
-    .wi-form input[type="text"] {
+    .wp-customer-form input[type="text"] {
         max-width: none;
     }
 
-    .wi-form .submit-wrapper {
+    .wp-customer-form .submit-wrapper {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .wi-form .submit-wrapper button {
+    .wp-customer-form .submit-wrapper button {
         width: 100%;
     }
 }
 
 /* Form Section */
-.wi-form-section {
+.wp-customer-form-section {
     margin-bottom: 30px;
     padding-bottom: 20px;
     border-bottom: 1px solid #dcdcde;
 }
 
-.wi-form-section:last-child {
+.wp-customer-form-section:last-child {
     margin-bottom: 0;
     padding-bottom: 0;
     border-bottom: none;
 }
 
 /* Help Text Toggle */
-.wi-form .help-text-toggle {
+.wp-customer-form .help-text-toggle {
     color: #2271b1;
     text-decoration: none;
     font-size: 12px;
     cursor: pointer;
 }
 
-.wi-form .help-text {
+.wp-customer-form .help-text {
     display: none;
     margin-top: 10px;
     padding: 10px;
@@ -159,19 +159,19 @@
     border-left: 4px solid #72aee6;
 }
 
-.wi-form .help-text.visible {
+.wp-customer-form .help-text.visible {
     display: block;
 }
 
 /* Form Actions */
-.wi-form-actions {
+.wp-customer-form-actions {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
     margin-top: 20px;
 }
 
-.wi-form-actions button {
+.wp-customer-form-actions button {
     min-width: 100px;
 }
 
