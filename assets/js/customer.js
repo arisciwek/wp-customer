@@ -61,6 +61,16 @@
 
              this.bindEvents();
              this.handleInitialState();
+             // Tambahkan load stats saat inisialisasi
+             this.loadStats();
+
+             // Update stats setelah operasi CRUD
+             $(document)
+                .on('customer:created.Customer', () => this.loadStats())
+                .on('customer:deleted.Customer', () => this.loadStats())
+                .on('branch:created.Customer', () => this.loadStats())
+                .on('branch:deleted.Customer', () => this.loadStats());
+
          },
 
          bindEvents() {
@@ -237,7 +247,29 @@
              if (window.Dashboard) {
                 window.Dashboard.loadStats(); // Gunakan loadStats() langsung
              }
-         }
+         },
+
+         loadStats() {
+            $.ajax({
+                url: wpCustomerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'get_customer_stats',
+                    nonce: wpCustomerData.nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        this.updateStats(response.data);
+                    }
+                }
+            });
+        },
+
+        updateStats(stats) {
+            $('#total-customers').text(stats.total_customers);
+            $('#total-branches').text(stats.total_branches);
+        }
+
      };
 
      // Initialize when document is ready

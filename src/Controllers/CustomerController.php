@@ -33,6 +33,7 @@
 namespace WPCustomer\Controllers;
 
 use WPCustomer\Models\CustomerModel;
+use WPCustomer\Models\Branch\BranchModel;
 use WPCustomer\Validators\CustomerValidator;
 use WPCustomer\Cache\CacheManager;
 
@@ -40,6 +41,8 @@ class CustomerController {
     private CustomerModel $model;
     private CustomerValidator $validator;
     private CacheManager $cache;
+    private BranchModel $branchModel;  // Tambahkan ini
+
     private string $log_file;
 
     /**
@@ -49,6 +52,7 @@ class CustomerController {
 
     public function __construct() {
         $this->model = new CustomerModel();
+        $this->branchModel = new BranchModel();  // Inisialisasi di constructor
         $this->validator = new CustomerValidator();
         $this->cache = new CacheManager();
 
@@ -406,5 +410,31 @@ class CustomerController {
             wp_send_json_error(['message' => $e->getMessage()]);
         }
     }
+
+    public function getStats() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+
+            if (!current_user_can('view_customer_list')) {
+                wp_send_json_error([
+                    'message' => __('Insufficient permissions', 'wp-customer')
+                ]);
+                return;
+            }
+
+            $stats = [
+                'total_customers' => $this->model->getTotalCount(),
+                'total_branches' => $this->branchModel->getTotalCount()
+            ];
+
+            wp_send_json_success($stats);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
 
 }

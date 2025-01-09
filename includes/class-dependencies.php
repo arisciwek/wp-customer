@@ -109,13 +109,6 @@ class WP_Customer_Dependencies {
             wp_enqueue_script('create-customer-form', WP_CUSTOMER_URL . 'assets/js/components/create-customer-form.js', ['jquery', 'jquery-validate', 'customer-toast'], $this->version, true);
             wp_enqueue_script('edit-customer-form', WP_CUSTOMER_URL . 'assets/js/components/edit-customer-form.js', ['jquery', 'jquery-validate', 'customer-toast'], $this->version, true);
 
-            wp_enqueue_script('wp-customer-dashboard',
-                WP_CUSTOMER_URL . 'assets/js/dashboard.js',
-                ['jquery'],
-                $this->version,
-                true
-            );
-
             wp_enqueue_script('customer',
                 WP_CUSTOMER_URL . 'assets/js/customer.js',
                 [
@@ -123,12 +116,20 @@ class WP_Customer_Dependencies {
                     'customer-toast',
                     'customer-datatable',
                     'create-customer-form',
-                    'edit-customer-form',
-                    'wp-customer-dashboard' // Tambahkan dependency
+                    'edit-customer-form'
                 ],
                 $this->version,
                 true
             );
+
+            // Gunakan wpCustomerData untuk semua
+            $customer_nonce = wp_create_nonce('wp_customer_nonce');
+            wp_localize_script('customer', 'wpCustomerData', [
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce' => $customer_nonce,
+                'debug' => true
+            ]);
+
 
             // Branch scripts
             wp_enqueue_script('branch-datatable', WP_CUSTOMER_URL . 'assets/js/branch/branch-datatable.js', ['jquery', 'datatables', 'customer-toast', 'customer'], $this->version, true);
@@ -136,11 +137,6 @@ class WP_Customer_Dependencies {
             // Update dependencies untuk form
             wp_enqueue_script('create-branch-form', WP_CUSTOMER_URL . 'assets/js/branch/create-branch-form.js', ['jquery', 'jquery-validate', 'branch-toast', 'branch-datatable'], $this->version, true);
             wp_enqueue_script('edit-branch-form', WP_CUSTOMER_URL . 'assets/js/branch/edit-branch-form.js', ['jquery', 'jquery-validate', 'branch-toast', 'branch-datatable'], $this->version, true);
-            // Localize script
-            wp_localize_script('customer', 'wpCustomerData', [
-                'ajaxUrl' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('wp_customer_nonce')
-            ]);
 
         }
     }

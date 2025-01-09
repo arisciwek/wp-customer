@@ -143,7 +143,6 @@
                 },
                 drawCallback: (settings) => {
                     this.bindActionButtons();
-                    this.updateDashboardStats(settings);
 
                     // Get current hash if any
                     const hash = window.location.hash;
@@ -319,18 +318,8 @@
              if (this.table) {
                  this.table.ajax.reload(null, false);
              }
-         },
-
-         // Di dalam CustomerDataTable object
-         updateDashboardStats(settings) {
-             // Trigger event yang didengarkan oleh Dashboard
-             $(document).trigger('datatable:loaded', [settings]);
-
-             // Atau bisa langsung memanggil Dashboard jika tersedia
-             if (window.Dashboard) {
-                 window.Dashboard.updateStats(settings._iRecordsTotal, null);
-             }
          }
+
      };
 
      // Initialize when document is ready

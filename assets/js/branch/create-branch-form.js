@@ -190,7 +190,7 @@
                 });
 
                 if (response.success) {
-                    BranchToast.success('Kabupaten/kota berhasil ditambahkan');
+                    BranchToast.success('Cabang berhasil ditambahkan');
                     this.hideModal();
 
                     $(document).trigger('branch:created', [response.data]);
