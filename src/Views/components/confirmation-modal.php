@@ -40,16 +40,16 @@ defined('ABSPATH') || exit;
 if (!function_exists('wp_customer_render_confirmation_modal')) {
     function wp_customer_render_confirmation_modal() {
         ?>
-        <div id="wi-confirmation-modal" class="wi-modal-overlay" aria-modal="true" role="dialog">
-            <div class="wi-modal" role="document">
+        <div id="wp-customer-confirmation-modal" class="wp-customer-modal-overlay" aria-modal="true" role="dialog">
+            <div class="wp-customer-modal" role="document">
                 <!-- Header -->
-                <div class="wi-modal-header">
-                    <div class="wi-modal-title">
-                        <span class="wi-modal-icon"></span>
+                <div class="wp-customer-modal-header">
+                    <div class="wp-customer-modal-title">
+                        <span class="wp-customer-modal-icon"></span>
                         <h3 id="modal-title"></h3>
                     </div>
                     <button type="button"
-                            class="wi-modal-close"
+                            class="wp-customer-modal-close"
                             aria-label="Close modal"
                             data-dismiss="modal">
                         <span aria-hidden="true">&times;</span>
@@ -57,18 +57,18 @@ if (!function_exists('wp_customer_render_confirmation_modal')) {
                 </div>
 
                 <!-- Body -->
-                <div class="wi-modal-body">
+                <div class="wp-customer-modal-body">
                     <p id="modal-message"></p>
                 </div>
 
                 <!-- Footer -->
-                <div class="wi-modal-footer">
+                <div class="wp-customer-modal-footer">
                     <button type="button"
-                            class="button wi-confirm-btn"
+                            class="button wp-customer-confirm-btn"
                             id="modal-confirm-btn">
                     </button>
                     <button type="button"
-                            class="button wi-cancel-btn"
+                            class="button wp-customer-cancel-btn"
                             id="modal-cancel-btn"
                             data-dismiss="modal">
                     </button>

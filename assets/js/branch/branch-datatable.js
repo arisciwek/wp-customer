@@ -45,10 +45,10 @@
          init(customerId) {
              // Cache DOM elements
              this.$container = $('#branch-list');
-             this.$tableContainer = this.$container.find('.wi-table-container');
-             this.$loadingState = this.$container.find('.wi-loading-state');
-             this.$emptyState = this.$container.find('.wi-empty-state');
-             this.$errorState = this.$container.find('.wi-error-state');
+             this.$tableContainer = this.$container.find('.wp-customer-table-container');
+             this.$loadingState = this.$container.find('.wp-customer-loading-state');
+             this.$emptyState = this.$container.find('.wp-customer-empty-state');
+             this.$errorState = this.$container.find('.wp-customer-error-state');
 
              if (this.initialized && this.customerId === customerId) {
                  this.refresh();
@@ -113,7 +113,7 @@
                          });
 
                          if (response.success) {
-                             BranchToast.success('Kabupaten/kota berhasil dihapus');
+                             BranchToast.success('Unit berhasil dihapus');
                              this.refresh();
                              $(document).trigger('branch:deleted', [id]);
                          } else {

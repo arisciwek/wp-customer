@@ -200,15 +200,15 @@
 
      // Pre-defined messages untuk branch
      showCreated() {
-         this.success('Kabupaten/kota berhasil ditambahkan');
+         this.success('Unit berhasil ditambahkan');
      },
 
      showUpdated() {
-         this.success('Kabupaten/kota berhasil diperbarui');
+         this.success('Unit berhasil diperbarui');
      },
 
      showDeleted() {
-         this.success('Kabupaten/kota berhasil dihapus');
+         this.success('Unit berhasil dihapus');
      },
 
      showServerError() {

@@ -31,19 +31,19 @@
 <div class="wrap">
     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
     <!-- Dashboard Section -->
-    <div class="wi-customer-dashboard">
+    <div class="wp-customer-dashboard">
         <div class="postbox">
             <div class="inside">
                 <div class="main">
                     <h2>Statistik WP</h2>
-                    <div class="wi-stats-container">
-                        <div class="wi-stat-box customer-stats">
+                    <div class="wp-customer-stats-container">
+                        <div class="wp-customer-stat-box customer-stats">
                             <h3>Total Customer</h3>
-                            <p class="wi-stat-number"><span id="total-customers">0</span></p>
+                            <p class="wp-customer-stat-number"><span id="total-customers">0</span></p>
                         </div>
-                        <div class="wi-stat-box">
+                        <div class="wp-customer-stat-box">
                             <h3>Total Cabang</h3>
-                            <p class="wi-stat-number" id="total-branches">0</p>
+                            <p class="wp-customer-stat-number" id="total-branches">0</p>
                         </div>
                     </div>
                 </div>
@@ -52,13 +52,13 @@
     </div>
 
     <!-- Main Content Area -->
-    <div class="wi-customer-content-area">
-        <div id="wi-customer-main-container" class="wi-customer-container">
+    <div class="wp-customer-content-area">
+        <div id="wp-customer-main-container" class="wp-customer-container">
             <!-- Left Panel -->
             <?php require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-left-panel.php'; ?>
 
             <!-- Right Panel -->
-            <div id="wi-customer-right-panel" class="wi-customer-right-panel hidden">
+            <div id="wp-customer-right-panel" class="wp-customer-right-panel hidden">
                 <?php require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-right-panel.php'; ?>
             </div>
         </div>

@@ -19,7 +19,7 @@
  * - code           : Kode customer (2 digit)
  * - name           : Nama customer
  * - provinsi_id    : ID provinsi (nullable)
- * - regency_id     : ID cabang (nullable)
+ * - unit_id     : ID cabang (nullable)
  * - user_id        : ID User WP sebagai Owner (nullable)
  * - created_by     : User ID pembuat
  * - created_at     : Timestamp pembuatan
@@ -50,7 +50,7 @@ class Customers {
             code varchar(2) NOT NULL,
             name varchar(100) NOT NULL,
             provinsi_id bigint(20) UNSIGNED NULL,
-            regency_id bigint(20) UNSIGNED NULL,
+            unit_id bigint(20) UNSIGNED NULL,
             user_id bigint(20) UNSIGNED NULL,
             created_by bigint(20) NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,

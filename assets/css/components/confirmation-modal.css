@@ -32,7 +32,7 @@
  */
 
 
- .wi-modal-overlay {
+ .wp-customer-modal-overlay {
      display: none;
      position: fixed;
      top: 0;
@@ -48,7 +48,7 @@
      padding: 1rem; /* Beri padding agar tidak terlalu dekat dengan edge di mobile */
  }
 
- .wi-modal {
+ .wp-customer-modal {
      position: relative;
      width: 90%;
      max-width: 500px;
@@ -62,17 +62,17 @@
  }
 
  /* Modal Active States */
- .wi-modal-overlay.active {
+ .wp-customer-modal-overlay.active {
      display: flex; /* Ganti jadi flex saat aktif */
  }
 
- .wi-modal-overlay.active .wi-modal {
+ .wp-customer-modal-overlay.active .wp-customer-modal {
      transform: translateY(0) scale(1); /* Tambahkan scale untuk efek pop */
      opacity: 1;
  }
 
 /* Modal Header */
-.wi-modal-header {
+.wp-customer-modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -80,27 +80,27 @@
     border-bottom: 1px solid #ddd;
 }
 
-.wi-modal-title {
+.wp-customer-modal-title {
     display: flex;
     align-items: center;
     gap: 0.75rem;
 }
 
 /* Modal Types */
-.wi-modal.type-danger .wi-modal-icon { color: #dc3232; }
-.wi-modal.type-warning .wi-modal-icon { color: #ffb900; }
-.wi-modal.type-info .wi-modal-icon { color: #00a0d2; }
-.wi-modal.type-success .wi-modal-icon { color: #46b450; }
+.wp-customer-modal.type-danger .wp-customer-modal-icon { color: #dc3232; }
+.wp-customer-modal.type-warning .wp-customer-modal-icon { color: #ffb900; }
+.wp-customer-modal.type-info .wp-customer-modal-icon { color: #00a0d2; }
+.wp-customer-modal.type-success .wp-customer-modal-icon { color: #46b450; }
 
 /* Modal Body */
-.wi-modal-body {
+.wp-customer-modal-body {
     padding: 1rem;
     font-size: 14px;
     line-height: 1.5;
 }
 
 /* Modal Footer */
-.wi-modal-footer {
+.wp-customer-modal-footer {
     padding: 1rem;
     border-top: 1px solid #ddd;
     display: flex;
@@ -139,7 +139,7 @@
 }
 
 /* Close Button Style */
-.wi-modal-close {
+.wp-customer-modal-close {
     position: absolute;
     right: 10px;
     top: 10px;
@@ -157,19 +157,19 @@
     transition: all 0.2s ease;
 }
 
-.wi-modal-close:hover {
+.wp-customer-modal-close:hover {
     background: #f0f0f0;
     color: #666;
 }
 
-.wi-modal-close:focus {
+.wp-customer-modal-close:focus {
     outline: none;
     box-shadow: 0 0 0 1px #fff, 0 0 0 3px #2271b1;
     color: #666;
 }
 
 /* Close icon */
-.wi-modal-close span {
+.wp-customer-modal-close span {
     font-size: 20px;
     line-height: 1;
     display: block;
@@ -184,11 +184,11 @@
 
 /* Responsive adjustments jika diperlukan */
 @media screen and (max-width: 782px) {
-    .wi-modal-overlay {
+    .wp-customer-modal-overlay {
         padding: 1rem;
     }
 
-    .wi-modal {
+    .wp-customer-modal {
         width: 100%;
         max-height: calc(100vh - 2rem); /* Pastikan tidak lebih tinggi dari viewport */
         overflow-y: auto; /* Scroll jika konten terlalu panjang */
