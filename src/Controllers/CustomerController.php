@@ -207,7 +207,7 @@ class CustomerController {
             );
         }
 
-        if (current_user_can('edit_customer') ||
+        if (current_user_can('edit_all_customers') ||
             (current_user_can('edit_own_customer') && $customer->created_by === get_current_user_id())) {
             $actions .= sprintf(
                 '<button type="button" class="button edit-customer" data-id="%d" title="%s"><i class="dashicons dashicons-edit"></i></button> ',
