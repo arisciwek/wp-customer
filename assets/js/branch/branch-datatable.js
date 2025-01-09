@@ -45,10 +45,17 @@
          init(customerId) {
              // Cache DOM elements
              this.$container = $('#branch-list');
+<<<<<<< HEAD
+             this.$tableContainer = this.$container.find('.wi-table-container');
+             this.$loadingState = this.$container.find('.branch-loading-state');
+             this.$emptyState = this.$container.find('.empty-state');
+             this.$errorState = this.$container.find('.error-state');
+=======
              this.$tableContainer = this.$container.find('.wp-customer-table-container');
              this.$loadingState = this.$container.find('.wp-customer-loading-state');
              this.$emptyState = this.$container.find('.wp-customer-empty-state');
              this.$errorState = this.$container.find('.wp-customer-error-state');
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
 
              if (this.initialized && this.customerId === customerId) {
                  this.refresh();

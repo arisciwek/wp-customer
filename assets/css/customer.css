@@ -77,7 +77,11 @@
 .wp-customer-right-panel.visible {
     display: block;
 }
+<<<<<<< HEAD
+.wi-panel-header,
+=======
 .wp-customer-panel-header,
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
 .wp-customer-panel-header {
     padding: 15px 20px;
     border-bottom: 1px solid #ccd0d4;

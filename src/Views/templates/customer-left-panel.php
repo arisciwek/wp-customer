@@ -5,7 +5,11 @@
  */
 ?>
 <div id="wp-customer-left-panel" class="wp-customer-left-panel">
+<<<<<<< HEAD
+    <div class="wi-panel-header">
+=======
     <div class="wp-customer-panel-header">
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
         <h2>Daftar Customer</h2>
         <button type="button" class="button button-primary" id="add-customer-btn">
             Tambah Customer
@@ -17,7 +21,7 @@
             <thead>
                 <tr>
                     <th>Nama Customer</th>
-                    <th>Jumlah Kab/Kota</th>
+                    <th>Cabang</th>
                     <th>Aksi</th>
                 </tr>
             </thead>
