@@ -38,7 +38,11 @@
             <input type="hidden" name="id" id="branch-id">
 
             <div class="modal-content">
+<<<<<<< HEAD
                 <div class="branch-form-group">
+=======
+                <div class="wp-customer-form-group">
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
                     <label for="edit-branch-code" class="required-field">
                         <?php _e('Kode Cabang', 'wp-customer'); ?>
                     </label>
@@ -54,7 +58,11 @@
                     </p>
                 </div>
                               
+<<<<<<< HEAD
                 <div class="branch-form-group">
+=======
+                <div class="wp-customer-form-group">
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
                     <label for="edit-branch-name" class="required-field">
                         <?php _e('Nama Cabang', 'wp-customer'); ?>
                     </label>
@@ -66,7 +74,11 @@
                            required>
                 </div>
 
+<<<<<<< HEAD
                 <div class="branch-form-group">
+=======
+                <div class="wp-customer-form-group">
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
                     <label for="edit-branch-type" class="required-field">
                         <?php _e('Tipe', 'wp-customer'); ?>
                     </label>
@@ -79,7 +91,11 @@
             </div>
 
             <div class="modal-footer">
+<<<<<<< HEAD
                 <div class="branch-form-actions">
+=======
+                <div class="wp-customer-form-actions">
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
                     <button type="button" class="button cancel-edit">
                         <?php _e('Batal', 'wp-customer'); ?>
                     </button>

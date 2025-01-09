@@ -32,7 +32,11 @@
  */
 
 
+<<<<<<< HEAD
  .modal-overlay {
+=======
+ .wp-customer-modal-overlay {
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
      display: none;
      position: fixed;
      top: 0;
@@ -48,7 +52,11 @@
      padding: 1rem; /* Beri padding agar tidak terlalu dekat dengan edge di mobile */
  }
 
+<<<<<<< HEAD
  .modal {
+=======
+ .wp-customer-modal {
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
      position: relative;
      width: 90%;
      max-width: 500px;
@@ -62,17 +70,29 @@
  }
 
  /* Modal Active States */
+<<<<<<< HEAD
  .modal-overlay.active {
      display: flex; /* Ganti jadi flex saat aktif */
  }
 
  .modal-overlay.active .modal {
+=======
+ .wp-customer-modal-overlay.active {
+     display: flex; /* Ganti jadi flex saat aktif */
+ }
+
+ .wp-customer-modal-overlay.active .wp-customer-modal {
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
      transform: translateY(0) scale(1); /* Tambahkan scale untuk efek pop */
      opacity: 1;
  }
 
 /* Modal Header */
+<<<<<<< HEAD
 .modal-header {
+=======
+.wp-customer-modal-header {
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -80,13 +100,18 @@
     border-bottom: 1px solid #ddd;
 }
 
+<<<<<<< HEAD
 .modal-title {
+=======
+.wp-customer-modal-title {
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     display: flex;
     align-items: center;
     gap: 0.75rem;
 }
 
 /* Modal Types */
+<<<<<<< HEAD
 .modal-type-danger .modal-icon { color: #dc3232; }
 .modal-type-warning .modal-icon { color: #ffb900; }
 .modal-type-info .modal-icon { color: #00a0d2; }
@@ -94,13 +119,26 @@
 
 /* Modal Body */
 .modal-body {
+=======
+.wp-customer-modal.type-danger .wp-customer-modal-icon { color: #dc3232; }
+.wp-customer-modal.type-warning .wp-customer-modal-icon { color: #ffb900; }
+.wp-customer-modal.type-info .wp-customer-modal-icon { color: #00a0d2; }
+.wp-customer-modal.type-success .wp-customer-modal-icon { color: #46b450; }
+
+/* Modal Body */
+.wp-customer-modal-body {
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     padding: 1rem;
     font-size: 14px;
     line-height: 1.5;
 }
 
 /* Modal Footer */
+<<<<<<< HEAD
 .modal-footer {
+=======
+.wp-customer-modal-footer {
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     padding: 1rem;
     border-top: 1px solid #ddd;
     display: flex;
@@ -139,7 +177,11 @@
 }
 
 /* Close Button Style */
+<<<<<<< HEAD
 .modal-close {
+=======
+.wp-customer-modal-close {
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     position: absolute;
     right: 10px;
     top: 10px;
@@ -157,19 +199,31 @@
     transition: all 0.2s ease;
 }
 
+<<<<<<< HEAD
 .modal-close:hover {
+=======
+.wp-customer-modal-close:hover {
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     background: #f0f0f0;
     color: #666;
 }
 
+<<<<<<< HEAD
 .modal-close:focus {
+=======
+.wp-customer-modal-close:focus {
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     outline: none;
     box-shadow: 0 0 0 1px #fff, 0 0 0 3px #2271b1;
     color: #666;
 }
 
 /* Close icon */
+<<<<<<< HEAD
 .modal-close span {
+=======
+.wp-customer-modal-close span {
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     font-size: 20px;
     line-height: 1;
     display: block;
@@ -184,11 +238,19 @@
 
 /* Responsive adjustments jika diperlukan */
 @media screen and (max-width: 782px) {
+<<<<<<< HEAD
     .modal-overlay {
         padding: 1rem;
     }
 
     .modal {
+=======
+    .wp-customer-modal-overlay {
+        padding: 1rem;
+    }
+
+    .wp-customer-modal {
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
         width: 100%;
         max-height: calc(100vh - 2rem); /* Pastikan tidak lebih tinggi dari viewport */
         overflow-y: auto; /* Scroll jika konten terlalu panjang */

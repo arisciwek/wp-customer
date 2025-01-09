@@ -10,13 +10,13 @@
     margin: 20px 0;
 }
 
-.wi-stats-container {
+.wp-customer-stats-container {
     display: flex;
     gap: 20px;
     margin: 15px 0;
 }
 
-.wi-stat-box {
+.wp-customer-stat-box {
     background: #fff;
     border: 1px solid #ccd0d4;
     padding: 15px 20px;
@@ -25,7 +25,7 @@
     text-align: center;
 }
 
-.wi-stat-number {
+.wp-customer-stat-number {
     font-size: 24px;
     font-weight: bold;
     color: #2271b1;
@@ -56,12 +56,12 @@
     width: 45%;
 }
 
-.wi-panel-header h2 {
+.wp-customer-panel-header h2 {
     margin: 0;
     font-size: 1.3em;
 }
 
-.wi-panel-content {
+.wp-customer-panel-content {
     padding: 20px;
 }
 
@@ -77,7 +77,11 @@
 .wp-customer-right-panel.visible {
     display: block;
 }
+<<<<<<< HEAD
 .wi-panel-header,
+=======
+.wp-customer-panel-header,
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
 .wp-customer-panel-header {
     padding: 15px 20px;
     border-bottom: 1px solid #ccd0d4;
@@ -160,7 +164,7 @@
 
 /* Responsive Adjustments */
 @media screen and (max-width: 782px) {
-    .wi-stats-container {
+    .wp-customer-stats-container {
         flex-direction: column;
     }
 
@@ -245,26 +249,26 @@ div#customers-table_length select {
     line-height: 1.4;
 }
 
-.wi-stats-container {
+.wp-customer-stats-container {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 20px;
     margin: 20px 0;
 }
 
-.wi-stat-box {
+.wp-customer-stat-box {
     background: #fff;
     padding: 20px;
     border-radius: 4px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.wi-stat-box h3 {
+.wp-customer-stat-box h3 {
     margin: 0 0 10px 0;
     color: #1d2327;
 }
 
-.wi-stat-number {
+.wp-customer-stat-number {
     font-size: 24px;
     font-weight: 600;
     margin: 0;

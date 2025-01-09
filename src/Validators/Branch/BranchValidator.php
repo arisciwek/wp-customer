@@ -90,7 +90,7 @@ class BranchValidator {
         // Check if branch exists
         $branch = $this->branch_model->find($id);
         if (!$branch) {
-            $errors['id'] = __('Kabupaten/kota tidak ditemukan.', 'wp-customer');
+            $errors['id'] = __('Unit tidak ditemukan.', 'wp-customer');
             return $errors;
         }
 
@@ -134,7 +134,7 @@ class BranchValidator {
         // Check if branch exists
         $branch = $this->branch_model->find($id);
         if (!$branch) {
-            $errors['id'] = __('Kabupaten/kota tidak ditemukan.', 'wp-customer');
+            $errors['id'] = __('Unit tidak ditemukan.', 'wp-customer');
             return $errors;
         }
 
@@ -156,7 +156,7 @@ class BranchValidator {
         // Check if branch exists
         $branch = $this->branch_model->find($id);
         if (!$branch) {
-            $errors['id'] = __('Kabupaten/kota tidak ditemukan.', 'wp-customer');
+            $errors['id'] = __('Unit tidak ditemukan.', 'wp-customer');
             return $errors;
         }
 

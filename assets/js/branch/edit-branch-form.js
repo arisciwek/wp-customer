@@ -213,7 +213,7 @@
                 });
 
                 if (response.success) {
-                    CustomerToast.success('Kabupaten/kota berhasil diperbarui');
+                    CustomerToast.success('Unit berhasil diperbarui');
                     this.hideModal();
 
                     // Trigger events untuk refresh DataTable

@@ -47,7 +47,11 @@ const WIModal = {
     options: null,
 
     init() {
+<<<<<<< HEAD
         this.modal = document.getElementById('confirmation-modal');
+=======
+        this.modal = document.getElementById('wp-customer-confirmation-modal');
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
         if (!this.modal) return;
 
         this.bindEvents();
@@ -108,15 +112,26 @@ const WIModal = {
         document.getElementById('modal-message').textContent = options.message || '';
 
         // Set icon if provided
+<<<<<<< HEAD
         const iconElem = this.modal.querySelector('.modal-icon');
         if (options.icon) {
             iconElem.className = `modal-icon dashicons dashicons-${options.icon}`;
+=======
+        const iconElem = this.modal.querySelector('.wp-customer-modal-icon');
+        if (options.icon) {
+            iconElem.className = `wp-customer-modal-icon dashicons dashicons-${options.icon}`;
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
         }
 
         // Set modal type
         if (options.type) {
+<<<<<<< HEAD
             this.modal.querySelector('.modal').className =
                 `modal type-${options.type}`;
+=======
+            this.modal.querySelector('.wp-customer-modal').className =
+                `wp-customer-modal type-${options.type}`;
+>>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
         }
 
         // Set buttons
