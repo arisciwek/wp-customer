@@ -46,9 +46,9 @@
              // Cache DOM elements
              this.$container = $('#branch-list');
              this.$tableContainer = this.$container.find('.wi-table-container');
-             this.$loadingState = this.$container.find('.wi-loading-state');
-             this.$emptyState = this.$container.find('.wi-empty-state');
-             this.$errorState = this.$container.find('.wi-error-state');
+             this.$loadingState = this.$container.find('.branch-loading-state');
+             this.$emptyState = this.$container.find('.empty-state');
+             this.$errorState = this.$container.find('.error-state');
 
              if (this.initialized && this.customerId === customerId) {
                  this.refresh();

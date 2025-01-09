@@ -24,7 +24,7 @@
  defined('ABSPATH') || exit;
  ?>
 
-<div id="edit-branch-modal" class="modal-overlay wi-customer-modal">
+<div id="edit-branch-modal" class="modal-overlay wp-customer-modal">
     <div class="modal-container">
         <div class="modal-header">
             <h3><?php _e('Edit Cabang', 'wp-customer'); ?></h3>
@@ -38,7 +38,7 @@
             <input type="hidden" name="id" id="branch-id">
 
             <div class="modal-content">
-                <div class="wi-form-group">
+                <div class="branch-form-group">
                     <label for="edit-branch-code" class="required-field">
                         <?php _e('Kode Cabang', 'wp-customer'); ?>
                     </label>
@@ -54,7 +54,7 @@
                     </p>
                 </div>
                               
-                <div class="wi-form-group">
+                <div class="branch-form-group">
                     <label for="edit-branch-name" class="required-field">
                         <?php _e('Nama Cabang', 'wp-customer'); ?>
                     </label>
@@ -66,7 +66,7 @@
                            required>
                 </div>
 
-                <div class="wi-form-group">
+                <div class="branch-form-group">
                     <label for="edit-branch-type" class="required-field">
                         <?php _e('Tipe', 'wp-customer'); ?>
                     </label>
@@ -79,7 +79,7 @@
             </div>
 
             <div class="modal-footer">
-                <div class="wi-form-actions">
+                <div class="branch-form-actions">
                     <button type="button" class="button cancel-edit">
                         <?php _e('Batal', 'wp-customer'); ?>
                     </button>

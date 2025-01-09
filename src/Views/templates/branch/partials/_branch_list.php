@@ -25,11 +25,11 @@ defined('ABSPATH') || exit;
 ?>
 
 <div id="branch-list" class="tab-content">
-    <div class="wi-branch-header">
-        <div class="wi-header-title">
+    <div class="wp-customer-branch-header">
+        <div class="branch-header-title">
             <h3><?php _e('Daftar Cabang', 'wp-customer'); ?></h3>
         </div>
-        <div class="wi-header-actions">
+        <div class="branch-header-actions">
             <?php if (current_user_can('add_branch')): ?>
                 <button type="button" class="button button-primary" id="add-branch-btn">
                     <span class="dashicons dashicons-plus-alt"></span>
@@ -39,15 +39,15 @@ defined('ABSPATH') || exit;
         </div>
     </div>
 
-    <div class="wi-branch-content">
+    <div class="wp-customer-branch-content">
         <!-- Loading State -->
-        <div class="wi-loading-state" style="display: none;">
+        <div class="branch-loading-state" style="display: none;">
             <span class="spinner is-active"></span>
             <p><?php _e('Memuat data...', 'wp-customer'); ?></p>
         </div>
 
         <!-- Empty State -->
-        <div class="wi-empty-state" style="display: none;">
+        <div class="empty-state" style="display: none;">
             <div class="empty-state-content">
                 <span class="dashicons dashicons-location"></span>
                 <h4><?php _e('Belum Ada Data', 'wp-customer'); ?></h4>
@@ -91,7 +91,7 @@ defined('ABSPATH') || exit;
         </div>
 
         <!-- Error State -->
-        <div class="wi-error-state" style="display: none;">
+        <div class="error-state" style="display: none;">
             <div class="error-state-content">
                 <span class="dashicons dashicons-warning"></span>
                 <h4><?php _e('Gagal Memuat Data', 'wp-customer'); ?></h4>
@@ -106,7 +106,7 @@ defined('ABSPATH') || exit;
 
     <!-- Export Buttons (Optional, can be enabled via settings) -->
     <?php if (apply_filters('wp_customer_enable_export', false)): ?>
-        <div class="wi-export-actions">
+        <div class="export-actions">
             <button type="button" class="button export-excel">
                 <span class="dashicons dashicons-media-spreadsheet"></span>
                 <?php _e('Export Excel', 'wp-customer'); ?>

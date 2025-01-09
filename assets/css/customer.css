@@ -6,7 +6,7 @@
  */
 
 /* Dashboard Section */
-.wi-customer-dashboard {
+.wp-customer-dashboard {
     margin: 20px 0;
 }
 
@@ -33,18 +33,18 @@
 }
 
 /* Main Content Layout */
-.wi-customer-content-area {
+.wp-customer-content-area {
     margin-top: 20px;
 }
 
-.wi-customer-container {
+.wp-customer-container {
     display: flex;
     gap: 20px;
     position: relative;
 }
 
 /* Left Panel Styles */
-.wi-customer-left-panel {
+.wp-customer-left-panel {
     width: 100%;
     transition: width 0.3s ease;
     background: #fff;
@@ -52,7 +52,7 @@
     border-radius: 4px;
 }
 
-.wi-customer-container.with-right-panel .wi-customer-left-panel {
+.wp-customer-container.with-right-panel .wp-customer-left-panel {
     width: 45%;
 }
 
@@ -66,7 +66,7 @@
 }
 
 /* Right Panel Styles */
-.wi-customer-right-panel {
+.wp-customer-right-panel {
     width: 55%;
     background: #fff;
     border: 1px solid #ccd0d4;
@@ -74,11 +74,11 @@
     display: none;
 }
 
-.wi-customer-right-panel.visible {
+.wp-customer-right-panel.visible {
     display: block;
 }
 .wi-panel-header,
-.wi-customer-panel-header {
+.wp-customer-panel-header {
     padding: 15px 20px;
     border-bottom: 1px solid #ccd0d4;
     display: flex;
@@ -87,7 +87,7 @@
     min-height: 50px;
 }
 
-.wi-customer-close-panel {
+.wp-customer-close-panel {
     background: none;
     border: none;
     color: #666;
@@ -96,11 +96,11 @@
     padding: 0 5px;
 }
 
-.wi-customer-close-panel:hover {
+.wp-customer-close-panel:hover {
     color: #d63638;
 }
 
-.wi-customer-panel-content {
+.wp-customer-panel-content {
     padding: 20px;
 }
 
@@ -164,23 +164,23 @@
         flex-direction: column;
     }
 
-    .wi-customer-container.with-right-panel {
+    .wp-customer-container.with-right-panel {
         flex-direction: column;
     }
 
-    .wi-customer-container.with-right-panel .wi-customer-left-panel,
-    .wi-customer-right-panel {
+    .wp-customer-container.with-right-panel .wp-customer-left-panel,
+    .wp-customer-right-panel {
         width: 100%;
     }
 }
 
 /* Loading States */
-.wi-customer-panel-content.loading {
+.wp-customer-panel-content.loading {
     position: relative;
     min-height: 200px;
 }
 
-.wi-customer-panel-content.loading::after {
+.wp-customer-panel-content.loading::after {
     content: '';
     position: absolute;
     top: 0;
@@ -191,7 +191,7 @@
     z-index: 1;
 }
 
-.wi-customer-panel-content.loading .spinner {
+.wp-customer-panel-content.loading .spinner {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -207,16 +207,16 @@
 }
 
 /* Smooth Panel Transitions */
-.wi-customer-left-panel,
-.wi-customer-right-panel {
+.wp-customer-left-panel,
+.wp-customer-right-panel {
     transition: width 0.3s ease, opacity 0.3s ease;
 }
 
-.wi-customer-right-panel {
+.wp-customer-right-panel {
     opacity: 0;
 }
 
-.wi-customer-right-panel.visible {
+.wp-customer-right-panel.visible {
     opacity: 1;
 }
 

@@ -47,7 +47,7 @@ const WIModal = {
     options: null,
 
     init() {
-        this.modal = document.getElementById('wi-confirmation-modal');
+        this.modal = document.getElementById('confirmation-modal');
         if (!this.modal) return;
 
         this.bindEvents();
@@ -108,15 +108,15 @@ const WIModal = {
         document.getElementById('modal-message').textContent = options.message || '';
 
         // Set icon if provided
-        const iconElem = this.modal.querySelector('.wi-modal-icon');
+        const iconElem = this.modal.querySelector('.modal-icon');
         if (options.icon) {
-            iconElem.className = `wi-modal-icon dashicons dashicons-${options.icon}`;
+            iconElem.className = `modal-icon dashicons dashicons-${options.icon}`;
         }
 
         // Set modal type
         if (options.type) {
-            this.modal.querySelector('.wi-modal').className =
-                `wi-modal type-${options.type}`;
+            this.modal.querySelector('.modal').className =
+                `modal type-${options.type}`;
         }
 
         // Set buttons

@@ -50,8 +50,8 @@
 
          init() {
              this.components = {
-                 container: $('.wi-customer-container'),
-                 rightPanel: $('.wi-customer-right-panel'),
+                 container: $('.wp-customer-container'),
+                 rightPanel: $('.wp-customer-right-panel'),
                  detailsPanel: $('#customer-details'),
                  stats: {
                      totalCustomers: $('#total-customers'),
@@ -85,7 +85,7 @@
                  .on('customer:loaded.Customer', () => this.hideLoading());
 
              // Panel events
-             $('.wi-customer-close-panel').off('click').on('click', () => this.closePanel());
+             $('.wp-customer-close-panel').off('click').on('click', () => this.closePanel());
 
              // Panel navigation
              $('.nav-tab').off('click').on('click', (e) => {

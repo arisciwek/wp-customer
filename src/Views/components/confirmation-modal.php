@@ -40,16 +40,16 @@ defined('ABSPATH') || exit;
 if (!function_exists('wp_customer_render_confirmation_modal')) {
     function wp_customer_render_confirmation_modal() {
         ?>
-        <div id="wi-confirmation-modal" class="wi-modal-overlay" aria-modal="true" role="dialog">
-            <div class="wi-modal" role="document">
+        <div id="confirmation-modal" class="modal-overlay" aria-modal="true" role="dialog">
+            <div class="modal" role="document">
                 <!-- Header -->
-                <div class="wi-modal-header">
-                    <div class="wi-modal-title">
-                        <span class="wi-modal-icon"></span>
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <span class="modal-icon"></span>
                         <h3 id="modal-title"></h3>
                     </div>
                     <button type="button"
-                            class="wi-modal-close"
+                            class="modal-close"
                             aria-label="Close modal"
                             data-dismiss="modal">
                         <span aria-hidden="true">&times;</span>
@@ -57,18 +57,18 @@ if (!function_exists('wp_customer_render_confirmation_modal')) {
                 </div>
 
                 <!-- Body -->
-                <div class="wi-modal-body">
+                <div class="modal-body">
                     <p id="modal-message"></p>
                 </div>
 
                 <!-- Footer -->
-                <div class="wi-modal-footer">
+                <div class="modal-footer">
                     <button type="button"
-                            class="button wi-confirm-btn"
+                            class="button confirm-btn"
                             id="modal-confirm-btn">
                     </button>
                     <button type="button"
-                            class="button wi-cancel-btn"
+                            class="button cancel-btn"
                             id="modal-cancel-btn"
                             data-dismiss="modal">
                     </button>

@@ -22,7 +22,7 @@
  */
 
 /* Branch List Container */
-.wi-branch-content {
+.wp-customer-branch-content {
     margin-top: 20px;
     background: #fff;
     border: 1px solid #ccd0d4;
@@ -30,7 +30,7 @@
 }
 
 /* Header Actions */
-.wi-branch-header {
+.wp-customer-branch-header {
     padding: 15px 20px;
     border-bottom: 1px solid #ccd0d4;
     display: flex;
@@ -38,7 +38,7 @@
     align-items: center;
 }
 
-.wi-header-actions {
+.branch-header-actions {
     display: flex;
     gap: 10px;
     align-items: center;
@@ -97,12 +97,12 @@
 }
 
 /* Loading States */
-.wi-branch-content.loading {
+.wp-customer-branch-content.loading {
     position: relative;
     min-height: 200px;
 }
 
-.wi-branch-content.loading::after {
+.wp-customer-branch-content.loading::after {
     content: '';
     position: absolute;
     top: 0;
@@ -113,7 +113,7 @@
     z-index: 1;
 }
 
-.wi-branch-content.loading .spinner {
+.wp-customer-branch-content.loading .spinner {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -139,13 +139,13 @@ div#branch-table_filter input {
 
 /* Responsive Adjustments */
 @media screen and (max-width: 782px) {
-    .wi-branch-header {
+    .wp-customer-branch-header {
         flex-direction: column;
         align-items: stretch;
         gap: 10px;
     }
 
-    .wi-header-actions {
+    .branch-header-actions {
         justify-content: flex-end;
     }
 
@@ -181,7 +181,7 @@ div#branch-table_filter input {
     z-index: 160001; /* Higher than customer modal */
 }
 
-.branch-modal .wi-form-group {
+.branch-modal .branch-form-group {
     margin-bottom: 20px;
 }
 
@@ -217,14 +217,14 @@ div#branch-table_filter input {
 }
 
 /* Additional styles for branch-list states */
-.wi-loading-state,
-.wi-empty-state,
-.wi-error-state {
+.branch-loading-state,
+.empty-state,
+.error-state {
     padding: 40px;
     text-align: center;
 }
 
-.wi-loading-state .spinner {
+.branch-loading-state .spinner {
     float: none;
     margin: 0 auto 10px;
 }
@@ -257,13 +257,13 @@ div#branch-table_filter input {
     color: #757575;
 }
 
-.wi-error-state .button {
+.error-state .button {
     display: inline-flex;
     align-items: center;
     gap: 5px;
 }
 
-.wi-error-state .dashicons {
+.error-state .dashicons {
     color: inherit;
     width: 16px;
     height: 16px;
@@ -272,7 +272,7 @@ div#branch-table_filter input {
 }
 
 /* Export buttons section */
-.wi-export-actions {
+.export-actions {
     margin-top: 15px;
     padding: 15px;
     background: #f8f9fa;
@@ -282,7 +282,7 @@ div#branch-table_filter input {
     justify-content: flex-end;
 }
 
-.wi-export-actions .button {
+.export-actions .button {
     display: inline-flex;
     align-items: center;
     gap: 5px;
@@ -290,18 +290,18 @@ div#branch-table_filter input {
 
 /* Responsive adjustments */
 @media screen and (max-width: 782px) {
-    .wi-loading-state,
-    .wi-empty-state,
-    .wi-error-state {
+    .branch-loading-state,
+    .empty-state,
+    .error-state {
         padding: 30px 20px;
     }
 
-    .wi-export-actions {
+    .export-actions {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .wi-export-actions .button {
+    .export-actions .button {
         justify-content: center;
     }
 }

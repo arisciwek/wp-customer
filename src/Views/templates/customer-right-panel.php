@@ -1,10 +1,10 @@
 
-<div class="wi-customer-panel-header">
+<div class="wp-customer-panel-header">
     <h2>Detail Customer: <span id="customer-header-name"></span></h2>
-    <button type="button" class="wi-customer-close-panel">×</button>
+    <button type="button" class="wp-customer-close-panel">×</button>
 </div>
 
-<div class="wi-customer-panel-content">
+<div class="wp-customer-panel-content">
     <div class="nav-tab-wrapper">
         <a href="#" class="nav-tab nav-tab-customer-details nav-tab-active" data-tab="customer-details">Data Customer</a>
         <a href="#" class="nav-tab" data-tab="branch-list">Cabang</a>

@@ -38,7 +38,7 @@ defined('ABSPATH') || exit;
             <input type="hidden" name="customer_id" id="customer_id">
 
             <div class="modal-content">
-                <div class="wi-form-group">
+                <div class="branch-form-group">
                     <label for="branch-code" class="required-field">
                         <?php _e('Kode Cabang', 'wp-customer'); ?>
                     </label>
@@ -53,7 +53,7 @@ defined('ABSPATH') || exit;
                         <?php _e('Masukkan 4 digit angka', 'wp-customer'); ?>
                     </p>
                 </div>
-                <div class="wi-form-group">
+                <div class="branch-form-group">
                     <label for="branch-name" class="required-field">
                         <?php _e('Nama Cabang', 'wp-customer'); ?>
                     </label>
@@ -65,7 +65,7 @@ defined('ABSPATH') || exit;
                            required>
                 </div>
 
-                <div class="wi-form-group">
+                <div class="branch-form-group">
                     <label for="branch-type" class="required-field">
                         <?php _e('Tipe', 'wp-customer'); ?>
                     </label>
@@ -78,7 +78,7 @@ defined('ABSPATH') || exit;
             </div>
 
             <div class="modal-footer">
-                <div class="wi-form-actions">
+                <div class="branch-form-actions">
                     <button type="button" class="button cancel-create">
                         <?php _e('Batal', 'wp-customer'); ?>
                     </button>
