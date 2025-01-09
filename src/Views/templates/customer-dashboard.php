@@ -36,14 +36,14 @@
             <div class="inside">
                 <div class="main">
                     <h2>Statistik WP</h2>
-                    <div class="wp-customer-stats-container">
-                        <div class="wp-customer-stat-box customer-stats">
+                    <div class="wi-stats-container">
+                        <div class="wi-stat-box customer-stats">
                             <h3>Total Customer</h3>
-                            <p class="wp-customer-stat-number"><span id="total-customers">0</span></p>
+                            <p class="wi-stat-number"><span id="total-customers">0</span></p>
                         </div>
-                        <div class="wp-customer-stat-box">
+                        <div class="wi-stat-box">
                             <h3>Total Cabang</h3>
-                            <p class="wp-customer-stat-number" id="total-branches">0</p>
+                            <p class="wi-stat-number" id="total-branches">0</p>
                         </div>
                     </div>
                 </div>

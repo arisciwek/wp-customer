@@ -38,18 +38,14 @@
     align-items: center;
 }
 
-<<<<<<< HEAD
 .branch-header-actions {
-=======
-.wp-customer-header-actions {
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     display: flex;
     gap: 10px;
     align-items: center;
 }
 
 /* DataTable Customization */
-.wp-customer-table-container {
+.wi-table-container {
     padding: 20px;
 }
 
@@ -149,15 +145,11 @@ div#branch-table_filter input {
         gap: 10px;
     }
 
-<<<<<<< HEAD
     .branch-header-actions {
-=======
-    .wp-customer-header-actions {
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
         justify-content: flex-end;
     }
 
-    .wp-customer-table-container {
+    .wi-table-container {
         padding: 10px;
         overflow-x: auto;
     }
@@ -189,11 +181,7 @@ div#branch-table_filter input {
     z-index: 160001; /* Higher than customer modal */
 }
 
-<<<<<<< HEAD
 .branch-modal .branch-form-group {
-=======
-.branch-modal .wp-customer-form-group {
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     margin-bottom: 20px;
 }
 
@@ -229,24 +217,14 @@ div#branch-table_filter input {
 }
 
 /* Additional styles for branch-list states */
-<<<<<<< HEAD
 .branch-loading-state,
 .empty-state,
 .error-state {
-=======
-.wp-customer-loading-state,
-.wp-customer-empty-state,
-.wp-customer-error-state {
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     padding: 40px;
     text-align: center;
 }
 
-<<<<<<< HEAD
 .branch-loading-state .spinner {
-=======
-.wp-customer-loading-state .spinner {
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     float: none;
     margin: 0 auto 10px;
 }
@@ -279,21 +257,13 @@ div#branch-table_filter input {
     color: #757575;
 }
 
-<<<<<<< HEAD
 .error-state .button {
-=======
-.wp-customer-error-state .button {
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     display: inline-flex;
     align-items: center;
     gap: 5px;
 }
 
-<<<<<<< HEAD
 .error-state .dashicons {
-=======
-.wp-customer-error-state .dashicons {
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     color: inherit;
     width: 16px;
     height: 16px;
@@ -302,11 +272,7 @@ div#branch-table_filter input {
 }
 
 /* Export buttons section */
-<<<<<<< HEAD
 .export-actions {
-=======
-.wp-customer-export-actions {
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     margin-top: 15px;
     padding: 15px;
     background: #f8f9fa;
@@ -316,11 +282,7 @@ div#branch-table_filter input {
     justify-content: flex-end;
 }
 
-<<<<<<< HEAD
 .export-actions .button {
-=======
-.wp-customer-export-actions .button {
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
     display: inline-flex;
     align-items: center;
     gap: 5px;
@@ -328,7 +290,6 @@ div#branch-table_filter input {
 
 /* Responsive adjustments */
 @media screen and (max-width: 782px) {
-<<<<<<< HEAD
     .branch-loading-state,
     .empty-state,
     .error-state {
@@ -336,24 +297,11 @@ div#branch-table_filter input {
     }
 
     .export-actions {
-=======
-    .wp-customer-loading-state,
-    .wp-customer-empty-state,
-    .wp-customer-error-state {
-        padding: 30px 20px;
-    }
-
-    .wp-customer-export-actions {
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
         flex-direction: column;
         align-items: stretch;
     }
 
-<<<<<<< HEAD
     .export-actions .button {
-=======
-    .wp-customer-export-actions .button {
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
         justify-content: center;
     }
 }

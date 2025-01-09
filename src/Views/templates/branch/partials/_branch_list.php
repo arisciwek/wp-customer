@@ -26,17 +26,10 @@ defined('ABSPATH') || exit;
 
 <div id="branch-list" class="tab-content">
     <div class="wp-customer-branch-header">
-<<<<<<< HEAD
         <div class="branch-header-title">
             <h3><?php _e('Daftar Cabang', 'wp-customer'); ?></h3>
         </div>
         <div class="branch-header-actions">
-=======
-        <div class="wp-customer-header-title">
-            <h3><?php _e('Daftar Cabang', 'wp-customer'); ?></h3>
-        </div>
-        <div class="wp-customer-header-actions">
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
             <?php if (current_user_can('add_branch')): ?>
                 <button type="button" class="button button-primary" id="add-branch-btn">
                     <span class="dashicons dashicons-plus-alt"></span>
@@ -48,21 +41,13 @@ defined('ABSPATH') || exit;
 
     <div class="wp-customer-branch-content">
         <!-- Loading State -->
-<<<<<<< HEAD
         <div class="branch-loading-state" style="display: none;">
-=======
-        <div class="wp-customer-loading-state" style="display: none;">
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
             <span class="spinner is-active"></span>
             <p><?php _e('Memuat data...', 'wp-customer'); ?></p>
         </div>
 
         <!-- Empty State -->
-<<<<<<< HEAD
         <div class="empty-state" style="display: none;">
-=======
-        <div class="wp-customer-empty-state" style="display: none;">
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
             <div class="empty-state-content">
                 <span class="dashicons dashicons-location"></span>
                 <h4><?php _e('Belum Ada Data', 'wp-customer'); ?></h4>
@@ -79,7 +64,7 @@ defined('ABSPATH') || exit;
         </div>
 
         <!-- Data Table -->
-        <div class="wp-customer-table-container">
+        <div class="wi-table-container">
             <table id="branch-table" class="display" style="width:100%">
                 <thead>
                     <tr>
@@ -106,11 +91,7 @@ defined('ABSPATH') || exit;
         </div>
 
         <!-- Error State -->
-<<<<<<< HEAD
         <div class="error-state" style="display: none;">
-=======
-        <div class="wp-customer-error-state" style="display: none;">
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
             <div class="error-state-content">
                 <span class="dashicons dashicons-warning"></span>
                 <h4><?php _e('Gagal Memuat Data', 'wp-customer'); ?></h4>
@@ -125,11 +106,7 @@ defined('ABSPATH') || exit;
 
     <!-- Export Buttons (Optional, can be enabled via settings) -->
     <?php if (apply_filters('wp_customer_enable_export', false)): ?>
-<<<<<<< HEAD
         <div class="export-actions">
-=======
-        <div class="wp-customer-export-actions">
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
             <button type="button" class="button export-excel">
                 <span class="dashicons dashicons-media-spreadsheet"></span>
                 <?php _e('Export Excel', 'wp-customer'); ?>

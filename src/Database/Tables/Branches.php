@@ -21,7 +21,7 @@
  * - name           : Nama branch
  * - type           : Tipe wilayah (cabang)
  * - provinsi_id    : ID provinsi (nullable)
- * - unit_id     : ID cabang (nullable)
+ * - regency_id     : ID cabang (nullable)
  * - created_by     : User ID pembuat
  * - created_at     : Timestamp pembuatan
  * - updated_at     : Timestamp update terakhir
@@ -56,7 +56,7 @@ class Branches {
             name varchar(100) NOT NULL,
             type enum('kabupaten','kota') NOT NULL,
             provinsi_id bigint(20) UNSIGNED NULL,
-            unit_id bigint(20) UNSIGNED NULL,
+            regency_id bigint(20) UNSIGNED NULL,
             created_by bigint(20) NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

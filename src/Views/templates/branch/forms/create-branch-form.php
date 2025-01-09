@@ -38,11 +38,7 @@ defined('ABSPATH') || exit;
             <input type="hidden" name="customer_id" id="customer_id">
 
             <div class="modal-content">
-<<<<<<< HEAD
                 <div class="branch-form-group">
-=======
-                <div class="wp-customer-form-group">
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
                     <label for="branch-code" class="required-field">
                         <?php _e('Kode Cabang', 'wp-customer'); ?>
                     </label>
@@ -57,11 +53,7 @@ defined('ABSPATH') || exit;
                         <?php _e('Masukkan 4 digit angka', 'wp-customer'); ?>
                     </p>
                 </div>
-<<<<<<< HEAD
                 <div class="branch-form-group">
-=======
-                <div class="wp-customer-form-group">
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
                     <label for="branch-name" class="required-field">
                         <?php _e('Nama Cabang', 'wp-customer'); ?>
                     </label>
@@ -73,11 +65,7 @@ defined('ABSPATH') || exit;
                            required>
                 </div>
 
-<<<<<<< HEAD
                 <div class="branch-form-group">
-=======
-                <div class="wp-customer-form-group">
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
                     <label for="branch-type" class="required-field">
                         <?php _e('Tipe', 'wp-customer'); ?>
                     </label>
@@ -90,11 +78,7 @@ defined('ABSPATH') || exit;
             </div>
 
             <div class="modal-footer">
-<<<<<<< HEAD
                 <div class="branch-form-actions">
-=======
-                <div class="wp-customer-form-actions">
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
                     <button type="button" class="button cancel-create">
                         <?php _e('Batal', 'wp-customer'); ?>
                     </button>

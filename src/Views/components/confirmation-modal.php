@@ -40,7 +40,6 @@ defined('ABSPATH') || exit;
 if (!function_exists('wp_customer_render_confirmation_modal')) {
     function wp_customer_render_confirmation_modal() {
         ?>
-<<<<<<< HEAD
         <div id="confirmation-modal" class="modal-overlay" aria-modal="true" role="dialog">
             <div class="modal" role="document">
                 <!-- Header -->
@@ -51,18 +50,6 @@ if (!function_exists('wp_customer_render_confirmation_modal')) {
                     </div>
                     <button type="button"
                             class="modal-close"
-=======
-        <div id="wp-customer-confirmation-modal" class="wp-customer-modal-overlay" aria-modal="true" role="dialog">
-            <div class="wp-customer-modal" role="document">
-                <!-- Header -->
-                <div class="wp-customer-modal-header">
-                    <div class="wp-customer-modal-title">
-                        <span class="wp-customer-modal-icon"></span>
-                        <h3 id="modal-title"></h3>
-                    </div>
-                    <button type="button"
-                            class="wp-customer-modal-close"
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
                             aria-label="Close modal"
                             data-dismiss="modal">
                         <span aria-hidden="true">&times;</span>
@@ -70,16 +57,11 @@ if (!function_exists('wp_customer_render_confirmation_modal')) {
                 </div>
 
                 <!-- Body -->
-<<<<<<< HEAD
                 <div class="modal-body">
-=======
-                <div class="wp-customer-modal-body">
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
                     <p id="modal-message"></p>
                 </div>
 
                 <!-- Footer -->
-<<<<<<< HEAD
                 <div class="modal-footer">
                     <button type="button"
                             class="button confirm-btn"
@@ -87,15 +69,6 @@ if (!function_exists('wp_customer_render_confirmation_modal')) {
                     </button>
                     <button type="button"
                             class="button cancel-btn"
-=======
-                <div class="wp-customer-modal-footer">
-                    <button type="button"
-                            class="button wp-customer-confirm-btn"
-                            id="modal-confirm-btn">
-                    </button>
-                    <button type="button"
-                            class="button wp-customer-cancel-btn"
->>>>>>> 5cf836118009a5ac1dadec359c758f0538598b1e
                             id="modal-cancel-btn"
                             data-dismiss="modal">
                     </button>
