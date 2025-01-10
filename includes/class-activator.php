@@ -51,6 +51,7 @@ class WP_Customer_Activator {
             }
 
             self::addVersion();
+            self::setupMembershipDefaults(); // Tambahkan ini
 
             try {
                 $permission_model = new PermissionModel();
@@ -62,6 +63,37 @@ class WP_Customer_Activator {
         } catch (\Exception $e) {
             self::logError('Critical error during activation: ' . $e->getMessage());
             throw $e;
+        }
+    }
+
+    // Tambahkan metode baru ini
+    private static function setupMembershipDefaults() {
+        try {
+            // Periksa apakah settings sudah ada
+            if (!get_option('wp_customer_membership_settings')) {
+                $default_settings = [
+                    'regular_max_staff' => 2,
+                    'regular_can_add_staff' => true,
+                    'regular_can_export' => false,
+                    'regular_can_bulk_import' => false,
+                    
+                    'priority_max_staff' => 5,
+                    'priority_can_add_staff' => true,
+                    'priority_can_export' => true,
+                    'priority_can_bulk_import' => false,
+                    
+                    'utama_max_staff' => -1,
+                    'utama_can_add_staff' => true,
+                    'utama_can_export' => true,
+                    'utama_can_bulk_import' => true,
+                    
+                    'default_level' => 'regular'
+                ];
+
+                add_option('wp_customer_membership_settings', $default_settings);
+            }
+        } catch (\Exception $e) {
+            self::logError('Error setting up membership defaults: ' . $e->getMessage());
         }
     }
 

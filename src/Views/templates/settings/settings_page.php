@@ -35,8 +35,11 @@ $current_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'genera
 
 $tabs = array(
     'general' => __('Pengaturan Umum', 'wp-customer'),
-    'permissions' => __('Hak Akses', 'wp-customer') 
+    'permissions' => __('Hak Akses', 'wp-customer'),
+    'membership' => __('Membership Levels', 'wp-customer')
+
 );
+
 ?>
 
 <div class="wrap">

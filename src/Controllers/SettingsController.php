@@ -26,11 +26,11 @@ namespace WPCustomer\Controllers;
 
 class SettingsController {
     public function init() {
-        //$this->register();
         add_action('admin_init', [$this, 'register_settings']);
     }
 
     public function register_settings() {
+        // General Settings
         register_setting(
             'wp_customer_settings',
             'wp_customer_settings',
@@ -41,11 +41,39 @@ class SettingsController {
                     'enable_cache' => 0,
                     'cache_duration' => 3600,
                     'enable_debug' => 0,
-                    // Pusher defaults
                     'enable_pusher' => 0,
                     'pusher_app_key' => '',
                     'pusher_app_secret' => '',
                     'pusher_cluster' => 'ap1'
+                )
+            )
+        );
+
+        // Membership Settings
+        register_setting(
+            'wp_customer_membership_settings',
+            'wp_customer_membership_settings',
+            array(
+                'sanitize_callback' => [$this, 'sanitize_membership_settings'],
+                'default' => array(
+                    'regular_max_staff' => 2,
+                    'priority_max_staff' => 5,
+                    'utama_max_staff' => -1,
+                    'regular_capabilities' => array(
+                        'can_add_staff' => true,
+                        'max_departments' => 1
+                    ),
+                    'priority_capabilities' => array(
+                        'can_add_staff' => true,
+                        'can_export' => true,
+                        'max_departments' => 3
+                    ),
+                    'utama_capabilities' => array(
+                        'can_add_staff' => true,
+                        'can_export' => true,
+                        'can_bulk_import' => true,
+                        'max_departments' => -1
+                    )
                 )
             )
         );
@@ -54,7 +82,7 @@ class SettingsController {
     public function sanitize_settings($input) {
         $sanitized = array();
 
-        // Existing sanitization
+        // General settings sanitization
         $sanitized['datatables_page_length'] = absint($input['datatables_page_length']);
         $sanitized['enable_cache'] = isset($input['enable_cache']) ? 1 : 0;
         $sanitized['cache_duration'] = absint($input['cache_duration']);
@@ -69,61 +97,32 @@ class SettingsController {
         return $sanitized;
     }
 
-    public function render_general_section() {
-        echo '<p>' . __('Konfigurasi pengaturan umum untuk plugin WP Customer.', 'wp-customer') . '</p>';
-    }
-
-    public function render_datatable_field() {
-        $options = get_option('wp_customer_settings');
-        $value = isset($options['datatables_page_length']) ? $options['datatables_page_length'] : 25;
-        ?>
-        <select name="wp_customer_settings[datatables_page_length]">
-            <option value="10" <?php selected($value, 10); ?>>10</option>
-            <option value="25" <?php selected($value, 25); ?>>25</option>
-            <option value="50" <?php selected($value, 50); ?>>50</option>
-            <option value="100" <?php selected($value, 100); ?>>100</option>
-        </select>
-        <p class="description">
-            <?php _e('Jumlah data yang ditampilkan per halaman dalam tabel', 'wp-customer'); ?>
-        </p>
-        <?php
-    }
-
-    public function render_cache_field() {
-        $options = get_option('wp_customer_settings');
-        $enable_cache = isset($options['enable_cache']) ? $options['enable_cache'] : 0;
-        $cache_duration = isset($options['cache_duration']) ? $options['cache_duration'] : 3600;
-        ?>
-        <label>
-            <input type="checkbox" name="wp_customer_settings[enable_cache]" 
-                   value="1" <?php checked($enable_cache, 1); ?>>
-            <?php _e('Aktifkan caching', 'wp-customer'); ?>
-        </label>
+    public function sanitize_membership_settings($input) {
+        $sanitized = array();
         
-        <div class="cache-options" style="margin-top: 10px;">
-            <label>
-                <?php _e('Durasi Cache (detik):', 'wp-customer'); ?>
-                <input type="number" name="wp_customer_settings[cache_duration]" 
-                       value="<?php echo esc_attr($cache_duration); ?>" 
-                       min="60" step="60">
-            </label>
-        </div>
-        <?php
-    }
+        // Sanitize staff limits
+        $levels = ['regular', 'priority', 'utama'];
+        foreach ($levels as $level) {
+            $max_staff_key = "{$level}_max_staff";
+            $sanitized[$max_staff_key] = intval($input[$max_staff_key]);
+            
+            // Validate max staff value
+            if ($sanitized[$max_staff_key] != -1 && $sanitized[$max_staff_key] < 1) {
+                $sanitized[$max_staff_key] = 1;
+            }
+            
+            // Sanitize capabilities
+            $capabilities_key = "{$level}_capabilities";
+            $sanitized[$capabilities_key] = array();
+            
+            if (isset($input[$capabilities_key]) && is_array($input[$capabilities_key])) {
+                foreach ($input[$capabilities_key] as $cap => $value) {
+                    $sanitized[$capabilities_key][$cap] = (bool) $value;
+                }
+            }
+        }
 
-    public function render_debug_field() {
-        $options = get_option('wp_customer_settings');
-        $enable_debug = isset($options['enable_debug']) ? $options['enable_debug'] : 0;
-        ?>
-        <label>
-            <input type="checkbox" name="wp_customer_settings[enable_debug]" 
-                   value="1" <?php checked($enable_debug, 1); ?>>
-            <?php _e('Aktifkan mode debug', 'wp-customer'); ?>
-        </label>
-        <p class="description">
-            <?php _e('Menampilkan informasi debugging tambahan di console', 'wp-customer'); ?>
-        </p>
-        <?php
+        return $sanitized;
     }
 
     public function renderPage() {
@@ -131,43 +130,26 @@ class SettingsController {
             wp_die(__('Anda tidak memiliki izin untuk mengakses halaman ini.', 'wp-customer'));
         }
 
+        $current_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
+        
         require_once WP_CUSTOMER_PATH . 'src/Views/templates/settings/settings_page.php';
-        //require_once WP_CUSTOMER_PATH . 'src/Views/templates/settings/tab-permissions.php';
-        //require_once WP_CUSTOMER_PATH . 'src/Views/templates/settings/tab-general.php';
-
-        // Load tab content
         $this->loadTabView($current_tab);
-    }    
-
-
-
-private function loadTabView($tab) {
-    // Define allowed tabs and their templates
-    $allowed_tabs = [
-        'general' => 'tab-general.php',
-        'permissions' => 'tab-permissions.php'
-    ];
-    
-    // Validate tab exists
-    if (!isset($allowed_tabs[$tab])) {
-        $tab = 'general'; // Default to general if invalid tab
     }
-    
-    $tab_file = WP_CUSTOMER_PATH . 'src/Views/templates/settings/' . $allowed_tabs[$tab];
-    
-    if (file_exists($tab_file)) {
-        require_once $tab_file;
-    } else {
-        echo sprintf(
-            __('Tab file tidak ditemukan: %s', 'wp-customer'),
-            esc_html($tab_file)
-        );
-    }
-}
 
-/*
     private function loadTabView($tab) {
-        $tab_file = WP_CUSTOMER_PATH . 'src/Views/templates/settings/tab-' . $tab . '.php';
+        // Define allowed tabs and their templates
+        $allowed_tabs = [
+            'general' => 'tab-general.php',
+            'permissions' => 'tab-permissions.php',
+            'membership' => 'tab-membership.php'
+        ];
+        
+        // Validate tab exists
+        if (!isset($allowed_tabs[$tab])) {
+            $tab = 'general';
+        }
+        
+        $tab_file = WP_CUSTOMER_PATH . 'src/Views/templates/settings/' . $allowed_tabs[$tab];
         
         if (file_exists($tab_file)) {
             require_once $tab_file;
@@ -178,6 +160,50 @@ private function loadTabView($tab) {
             );
         }
     }
-*/
 
+    // Render functions for membership fields
+    public function render_membership_section() {
+        echo '<p>' . __('Konfigurasi level keanggotaan dan batasan untuk setiap level.', 'wp-customer') . '</p>';
+    }
+
+    public function render_max_staff_field($level) {
+        $options = get_option('wp_customer_membership_settings');
+        $field_name = "{$level}_max_staff";
+        $value = isset($options[$field_name]) ? $options[$field_name] : 2;
+        ?>
+        <input type="number" 
+               name="wp_customer_membership_settings[<?php echo esc_attr($field_name); ?>]"
+               value="<?php echo esc_attr($value); ?>"
+               min="-1"
+               class="small-text">
+        <p class="description">
+            <?php _e('-1 untuk unlimited', 'wp-customer'); ?>
+        </p>
+        <?php
+    }
+
+    public function render_capabilities_field($level) {
+        $options = get_option('wp_customer_membership_settings');
+        $field_name = "{$level}_capabilities";
+        $capabilities = isset($options[$field_name]) ? $options[$field_name] : array();
+        
+        $available_caps = array(
+            'can_add_staff' => __('Dapat menambah staff', 'wp-customer'),
+            'can_export' => __('Dapat export data', 'wp-customer'),
+            'can_bulk_import' => __('Dapat bulk import', 'wp-customer')
+        );
+
+        foreach ($available_caps as $cap => $label) {
+            $checked = isset($capabilities[$cap]) ? $capabilities[$cap] : false;
+            ?>
+            <label>
+                <input type="checkbox" 
+                       name="wp_customer_membership_settings[<?php echo esc_attr($field_name); ?>][<?php echo esc_attr($cap); ?>]"
+                       value="1"
+                       <?php checked($checked, true); ?>>
+                <?php echo esc_html($label); ?>
+            </label><br>
+            <?php
+        }
+    }
 }

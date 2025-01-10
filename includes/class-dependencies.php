@@ -52,6 +52,10 @@ class WP_Customer_Dependencies {
                 case 'general':
                     wp_enqueue_style('wp-customer-general-tab', WP_CUSTOMER_URL . 'assets/css/settings/general-tab-style.css', [], $this->version);
                     break;
+                // Tambahkan case untuk membership
+                case 'membership':
+                    wp_enqueue_style('wp-customer-membership-tab', WP_CUSTOMER_URL . 'assets/css/settings/membership-tab-style.css', [], $this->version);
+                    break;
             }
             return;
         }
@@ -85,11 +89,22 @@ class WP_Customer_Dependencies {
             wp_enqueue_script('wp-customer-toast', WP_CUSTOMER_URL . 'assets/js/components/toast.js', ['jquery'], $this->version, true);
             wp_enqueue_script('confirmation-modal', WP_CUSTOMER_URL . 'assets/js/components/confirmation-modal.js', ['jquery'], $this->version, true);
             wp_enqueue_script('wp-customer-settings', WP_CUSTOMER_URL . 'assets/js/settings/settings-script.js', ['jquery', 'wp-customer-toast'], $this->version, true);
-
-            if (isset($_GET['tab']) && $_GET['tab'] === 'permission') {
-                wp_enqueue_script('wp-customer-permissions', WP_CUSTOMER_URL . 'assets/js/settings/permissions-script.js', ['jquery', 'wp-customer-toast'], $this->version, true);
+            
+            $current_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
+            switch ($current_tab) {
+                case 'permission':
+                    wp_enqueue_style('wp-customer-permission-tab', WP_CUSTOMER_URL . 'assets/js/settings/permission-tab-script.js', [], $this->version);
+                    break;
+                case 'general':
+                    wp_enqueue_style('wp-customer-general-tab', WP_CUSTOMER_URL . 'assets/js/settings/general-tab-script.js', [], $this->version);
+                    break;
+                // Tambahkan case untuk membership
+                case 'membership':
+                    wp_enqueue_style('wp-customer-membership-tab', WP_CUSTOMER_URL . 'assets/js/settings/membership-tab-script.js', [], $this->version);
+                    break;
             }
             return;
+
         }
 
         // Customer and Branch pages scripts

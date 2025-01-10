@@ -48,10 +48,30 @@ class WP_Customer_Deactivator {
             self::debug("Dropping table: {$table_name}");
         }
 
+        // Hapus semua opsi terkait membership
+        self::cleanupMembershipOptions();
+
         // Bersihkan cache
         wp_cache_delete('wp_customer_customer_list', 'wp_customer');
         wp_cache_delete('wp_customer_branch_list', 'wp_customer');
+        wp_cache_delete('wp_customer_membership_settings', 'wp_customer');
         
         self::debug("Plugin deactivation complete");
+    }
+
+    // Tambahkan metode baru ini
+    private static function cleanupMembershipOptions() {
+        try {
+            // Hapus opsi membership settings
+            delete_option('wp_customer_membership_settings');
+            self::debug("Membership settings deleted");
+
+            // Hapus transients jika ada
+            delete_transient('wp_customer_membership_cache');
+            self::debug("Membership transients cleared");
+
+        } catch (\Exception $e) {
+            self::debug("Error cleaning up membership options: " . $e->getMessage());
+        }
     }
 }

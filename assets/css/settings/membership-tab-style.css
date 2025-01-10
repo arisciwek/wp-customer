@@ -1,0 +1,108 @@
+/**
+ * Membership Tab Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Settings
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/settings/membership-tab-style.css
+ *
+ * Description: Styling untuk tab membership settings
+ *              Termasuk styling untuk:
+ *              - Form fields
+ *              - Level settings sections
+ *              - Capability checkboxes
+ *
+ * Dependencies:
+ * - WordPress Admin CSS
+ * - common-style.css
+ *
+ * Changelog:
+ * 1.0.0 - 2024-01-10
+ * - Initial styling
+ * - Added form field styles
+ * - Added responsive design
+ */
+
+/* Form Layout */
+.form-table th {
+    width: 200px;
+    padding: 20px 10px 20px 0;
+}
+
+.form-table td {
+    padding: 15px 10px;
+}
+
+/* Fieldset Styling */
+fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+fieldset p {
+    margin: 8px 0;
+}
+
+/* Input Fields */
+input[type="number"] {
+    width: 100px;
+}
+
+/* Level Settings */
+.level-settings {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+}
+
+.level-settings legend {
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+/* Capability Checkboxes */
+.capability-group {
+    margin: 10px 0;
+    padding-left: 10px;
+}
+
+.capability-group label {
+    display: block;
+    margin: 5px 0;
+}
+
+/* Description Text */
+.description {
+    color: #666;
+    font-style: italic;
+    margin: 5px 0;
+}
+
+/* Additional Settings Section */
+.additional-settings {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+    .form-table th {
+        width: auto;
+        display: block;
+        padding-bottom: 5px;
+    }
+
+    .form-table td {
+        padding: 0 0 15px 0;
+    }
+    
+    input[type="number"] {
+        width: 80px;
+    }
+}
