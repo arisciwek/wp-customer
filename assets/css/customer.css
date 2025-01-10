@@ -270,3 +270,152 @@ div#customers-table_length select {
     margin: 0;
     color: #2271b1;
 }
+
+#membership-info.active {
+    display: block !important;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/*
+ * membership di tab customer
+ */
+
+/* Container untuk upgrade cards */
+.upgrade-cards-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin: 20px 0;
+}
+
+/* Style untuk setiap card */
+.upgrade-card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 20px;
+    /* Menggunakan flexbox untuk layout vertikal */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Container untuk konten card */
+.plan-features {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    /* Menggunakan flex-grow agar mengisi ruang tersedia */
+    flex-grow: 1;
+}
+
+/* Tombol upgrade */
+.upgrade-button {
+    width: 100%;
+    text-align: center;
+    margin-top: auto; /* Mendorong tombol ke bawah */
+}
+
+/* Responsive design */
+@media screen and (max-width: 1200px) {
+    .upgrade-cards-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media screen and (max-width: 782px) {
+    .upgrade-cards-container {
+        grid-template-columns: 1fr;
+    }
+}
+
+.upgrade-card h4 {
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+    color: #1d2327;
+    background: #ddd;
+    padding: 5px 10px;
+}
+
+/* Status Membership Card */
+.membership-status-card {
+    background: #fff;
+    padding: 20px;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+/* Progress Bar untuk Staff Usage */
+.staff-progress {
+    margin: 10px 0;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #f0f0f1;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #2271b1;
+    transition: width 0.3s ease;
+}
+
+.usage-text {
+    margin-top: 5px;
+    font-size: 13px;
+    color: #666;
+}
+
+/* Upgrade Section */
+.upgrade-section-title {
+    margin: 30px 0 20px;
+}
+
+/* Feature Lists */
+.plan-features {
+    list-style: none;
+    margin: 0 0 15px 0;
+    padding: 0;
+}
+
+.plan-features li {
+    margin-bottom: 8px;
+    padding-left: 20px;
+    position: relative;
+    color: #50575e;
+}
+
+.plan-features li:before {
+    content: "•";
+    position: absolute;
+    left: 5px;
+    color: #2271b1;
+}
+
+/* Upgrade Button */
+.upgrade-button {
+    width: 100%;
+    text-align: center;
+    color: #2271b1;
+    border-color: #2271b1;
+    background: #f6f7f7;
+    margin-top: 10px;
+}
+
+.upgrade-button:hover {
+    background: #f0f0f1;
+    border-color: #0a4b78;
+    color: #0a4b78;
+}

@@ -185,21 +185,82 @@
              if (window.CustomerDataTable) {
                  window.CustomerDataTable.highlightRow(data.customer.id);
              }
+
+            // Tambahkan handling untuk membership data
+            if (data.customer.membership) {
+                // Update membership badge
+                $('#current-level-badge').text(data.customer.membership.level);
+                
+                // Update staff usage
+                const staffUsage = data.customer.staff_count || 0;
+                const staffLimit = data.customer.membership.max_staff;
+                $('#staff-usage-count').text(staffUsage);
+                $('#staff-usage-limit').text(staffLimit === -1 ? 'Unlimited' : staffLimit);
+                
+                // Calculate progress bar percentage
+                if (staffLimit !== -1) {
+                    const percentage = (staffUsage / staffLimit) * 100;
+                    $('#staff-usage-bar').css('width', `${percentage}%`);
+                }
+
+                // Update capabilities list
+                const $capList = $('#active-capabilities').empty();
+                Object.entries(data.customer.membership.capabilities).forEach(([cap, enabled]) => {
+                    if (enabled) {
+                        $capList.append(`<li>${this.getCapabilityLabel(cap)}</li>`);
+                    }
+                });
+
+                // Show/hide upgrade buttons based on current level
+                const currentLevel = data.customer.membership.level;
+                $('.upgrade-card').each(function() {
+                    const cardLevel = $(this).attr('id').replace('-plan', '');
+                    $(this).toggle(this.shouldShowUpgradeOption(currentLevel, cardLevel));
+                });
+            }
+
+
+
          },
 
-         switchTab(tabId) {
-             $('.nav-tab').removeClass('nav-tab-active');
-             $(`.nav-tab[data-tab="${tabId}"]`).addClass('nav-tab-active');
+            // Helper function untuk label capability
+            getCapabilityLabel(cap) {
+                const labels = {
+                    'can_add_staff': 'Dapat menambah staff',
+                    'can_export': 'Dapat export data',
+                    'can_bulk_import': 'Dapat bulk import'
+                };
+                return labels[cap] || cap;
+            },
 
-             $('.tab-content').removeClass('active');
-             $(`#${tabId}`).addClass('active');
+            // Helper function untuk logika tampilan tombol upgrade
+            shouldShowUpgradeOption(currentLevel, targetLevel) {
+                const levels = ['regular', 'priority', 'utama'];
+                const currentIdx = levels.indexOf(currentLevel);
+                const targetIdx = levels.indexOf(targetLevel);
+                return targetIdx > currentIdx;
+            },
 
-             if (tabId === 'branch-list' && this.currentId) {
-                 if (window.BranchDataTable) {
-                     window.BranchDataTable.init(this.currentId);
-                 }
-             }
-         },
+            switchTab(tabId) {
+                $('.nav-tab').removeClass('nav-tab-active');
+                $(`.nav-tab[data-tab="${tabId}"]`).addClass('nav-tab-active');
+
+                $('.tab-content').removeClass('active');
+                $(`#${tabId}`).addClass('active');
+
+                // Tambahkan ini untuk menangani tampilan tab membership
+                if (tabId === 'membership-info') {
+                    $('#membership-info').show();
+                } else {
+                    $('#membership-info').hide();
+                }
+
+                if (tabId === 'branch-list' && this.currentId) {
+                    if (window.BranchDataTable) {
+                        window.BranchDataTable.init(this.currentId);
+                    }
+                }
+            },
 
          closePanel() {
              this.components.container.removeClass('with-right-panel');

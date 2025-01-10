@@ -20,174 +20,83 @@
  * - Added management form
  */
 
+if (!defined('ABSPATH')) {
+    die;
+}
+
 $options = get_option('wp_customer_membership_settings', array());
+
+// Define membership levels structure
+$membership_levels = array(
+    'regular' => array(
+        'title' => __('Level Regular', 'wp-customer'),
+        'default_staff' => 2,
+        'max_staff' => $options['regular_max_staff'] ?? 2,
+        'capabilities' => $options['regular_capabilities'] ?? array()
+    ),
+    'priority' => array(
+        'title' => __('Level Priority', 'wp-customer'),
+        'default_staff' => 5,
+        'max_staff' => $options['priority_max_staff'] ?? 5,
+        'capabilities' => $options['priority_capabilities'] ?? array()
+    ),
+    'utama' => array(
+        'title' => __('Level Utama', 'wp-customer'),
+        'default_staff' => -1,
+        'max_staff' => $options['utama_max_staff'] ?? -1,
+        'capabilities' => $options['utama_capabilities'] ?? array()
+    )
+);
+
+// Available capabilities
+$available_caps = array(
+    'can_add_staff' => __('Dapat menambah staff', 'wp-customer'),
+    'can_export' => __('Dapat export data', 'wp-customer'), 
+    'can_bulk_import' => __('Dapat bulk import', 'wp-customer')
+);
+
 ?>
+
 
 <form method="post" action="options.php">
     <?php settings_fields('wp_customer_membership_settings'); ?>
-    
-    <h3><?php _e('Level Regular', 'wp-customer'); ?></h3>
-    <table class="form-table">
-        <tr>
-            <th scope="row"><?php _e('Batas Staff', 'wp-customer'); ?></th>
-            <td>
-                <input type="number" 
-                       name="wp_customer_membership_settings[regular_max_staff]" 
-                       value="<?php echo esc_attr($options['regular_max_staff'] ?? 2); ?>"
-                       min="-1"
-                       class="small-text">
-                <p class="description"><?php _e('-1 untuk unlimited', 'wp-customer'); ?></p>
-            </td>
-        </tr>
-        <tr>
-            <th scope="row"><?php _e('Capabilities', 'wp-customer'); ?></th>
-            <td>
-                <?php
-                $regular_caps = $options['regular_capabilities'] ?? array();
-                ?>
-                <label>
-                    <input type="checkbox" 
-                           name="wp_customer_membership_settings[regular_capabilities][can_add_staff]" 
-                           value="1"
-                           <?php checked(isset($regular_caps['can_add_staff']) ? $regular_caps['can_add_staff'] : false); ?>>
-                    <?php _e('Dapat menambah staff', 'wp-customer'); ?>
-                </label><br>
-                <label>
-                    <input type="checkbox" 
-                           name="wp_customer_membership_settings[regular_capabilities][can_export]" 
-                           value="1"
-                           <?php checked(isset($regular_caps['can_export']) ? $regular_caps['can_export'] : false); ?>>
-                    <?php _e('Dapat export data', 'wp-customer'); ?>
-                </label>
-            </td>
-        </tr>
-    </table>
 
-    <h3><?php _e('Level Priority', 'wp-customer'); ?></h3>
-    <table class="form-table">
-        <tr>
-            <th scope="row"><?php _e('Batas Staff', 'wp-customer'); ?></th>
-            <td>
-                <input type="number" 
-                       name="wp_customer_membership_settings[priority_max_staff]" 
-                       value="<?php echo esc_attr($options['priority_max_staff'] ?? 5); ?>"
-                       min="-1"
-                       class="small-text">
-                <p class="description"><?php _e('-1 untuk unlimited', 'wp-customer'); ?></p>
-            </td>
-        </tr>
-        <tr>
-            <th scope="row"><?php _e('Capabilities', 'wp-customer'); ?></th>
-            <td>
-                <?php
-                $priority_caps = $options['priority_capabilities'] ?? array();
-                ?>
-                <label>
-                    <input type="checkbox" 
-                           name="wp_customer_membership_settings[priority_capabilities][can_add_staff]" 
-                           value="1"
-                           <?php checked(isset($priority_caps['can_add_staff']) ? $priority_caps['can_add_staff'] : false); ?>>
-                    <?php _e('Dapat menambah staff', 'wp-customer'); ?>
-                </label><br>
-                <label>
-                    <input type="checkbox" 
-                           name="wp_customer_membership_settings[priority_capabilities][can_export]" 
-                           value="1"
-                           <?php checked(isset($priority_caps['can_export']) ? $priority_caps['can_export'] : false); ?>>
-                    <?php _e('Dapat export data', 'wp-customer'); ?>
-                </label><br>
-                <label>
-                    <input type="checkbox" 
-                           name="wp_customer_membership_settings[priority_capabilities][can_bulk_import]" 
-                           value="1"
-                           <?php checked(isset($priority_caps['can_bulk_import']) ? $priority_caps['can_bulk_import'] : false); ?>>
-                    <?php _e('Dapat bulk import', 'wp-customer'); ?>
-                </label>
-            </td>
-        </tr>
-    </table>
+    <div class="membership-grid">
+        <?php foreach ($membership_levels as $level_key => $level): ?>
+            <div class="membership-card">
+                <h3><?php echo esc_html($level['title']); ?></h3>
+                
+                <!-- Staff Limit Section -->
+                <div class="membership-section">
+                    <h4><?php _e('Batas Staff', 'wp-customer'); ?></h4>
+                    <div class="staff-limit">
+                        <input type="number" 
+                               name="wp_customer_membership_settings[<?php echo esc_attr($level_key); ?>_max_staff]" 
+                               value="<?php echo esc_attr($level['max_staff']); ?>"
+                               min="-1"
+                               class="small-text">
+                        <p class="description"><?php _e('-1 untuk unlimited', 'wp-customer'); ?></p>
+                    </div>
+                </div>
 
-    <h3><?php _e('Level Utama', 'wp-customer'); ?></h3>
-    <table class="form-table">
-        <tr>
-            <th scope="row"><?php _e('Batas Staff', 'wp-customer'); ?></th>
-            <td>
-                <input type="number" 
-                       name="wp_customer_membership_settings[utama_max_staff]" 
-                       value="<?php echo esc_attr($options['utama_max_staff'] ?? -1); ?>"
-                       min="-1"
-                       class="small-text">
-                <p class="description"><?php _e('-1 untuk unlimited', 'wp-customer'); ?></p>
-            </td>
-        </tr>
-        <tr>
-            <th scope="row"><?php _e('Capabilities', 'wp-customer'); ?></th>
-            <td>
-                <?php
-                $utama_caps = $options['utama_capabilities'] ?? array();
-                ?>
-                <label>
-                    <input type="checkbox" 
-                           name="wp_customer_membership_settings[utama_capabilities][can_add_staff]" 
-                           value="1"
-                           <?php checked(isset($utama_caps['can_add_staff']) ? $utama_caps['can_add_staff'] : false); ?>>
-                    <?php _e('Dapat menambah staff', 'wp-customer'); ?>
-                </label><br>
-                <label>
-                    <input type="checkbox" 
-                           name="wp_customer_membership_settings[utama_capabilities][can_export]" 
-                           value="1"
-                           <?php checked(isset($utama_caps['can_export']) ? $utama_caps['can_export'] : false); ?>>
-                    <?php _e('Dapat export data', 'wp-customer'); ?>
-                </label><br>
-                <label>
-                    <input type="checkbox" 
-                           name="wp_customer_membership_settings[utama_capabilities][can_bulk_import]" 
-                           value="1"
-                           <?php checked(isset($utama_caps['can_bulk_import']) ? $utama_caps['can_bulk_import'] : false); ?>>
-                    <?php _e('Dapat bulk import', 'wp-customer'); ?>
-                </label>
-            </td>
-        </tr>
-    </table>
+                <!-- Capabilities Section -->
+                <div class="membership-section">
+                    <h4><?php _e('Capabilities', 'wp-customer'); ?></h4>
+                    <div class="capabilities-list">
+                        <?php foreach ($available_caps as $cap_key => $cap_label): ?>
+                            <label>
+                                <input type="checkbox" 
+                                       name="wp_customer_membership_settings[<?php echo esc_attr($level_key); ?>_capabilities][<?php echo esc_attr($cap_key); ?>]" 
+                                       value="1"
+                                       <?php checked(isset($level['capabilities'][$cap_key]) ? $level['capabilities'][$cap_key] : false); ?>>
+                                <span><?php echo esc_html($cap_label); ?></span>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
 
     <?php submit_button(__('Simpan Perubahan', 'wp-customer')); ?>
 </form>
-
-<script>
-jQuery(document).ready(function($) {
-    // Validasi form sebelum submit
-    $('form').on('submit', function(e) {
-        var isValid = true;
-        
-        // Validasi max staff
-        $('input[type="number"]').each(function() {
-            var value = parseInt($(this).val());
-            if (value !== -1 && value < 1) {
-                alert('Batas staff harus -1 atau minimal 1');
-                isValid = false;
-                return false;
-            }
-        });
-        
-        // Validasi capabilities
-        $('.capabilities-group').each(function() {
-            var hasCapability = false;
-            $(this).find('input[type="checkbox"]').each(function() {
-                if ($(this).is(':checked')) {
-                    hasCapability = true;
-                    return false;
-                }
-            });
-            
-            if (!hasCapability) {
-                alert('Setiap level harus memiliki minimal satu capability');
-                isValid = false;
-                return false;
-            }
-        });
-        
-        return isValid;
-    });
-});
-</script>

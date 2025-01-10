@@ -24,85 +24,213 @@
  * - Added form field styles
  * - Added responsive design
  */
+/**
+ * Membership Tab Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Settings
+ * @version     2.0.0
+ */
 
-/* Form Layout */
-.form-table th {
-    width: 200px;
-    padding: 20px 10px 20px 0;
+/* Card Grid Layout */
+.membership-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin: 20px 0;
+    max-width: calc(100% - 20px); /* Prevent right overflow */
 }
 
-.form-table td {
-    padding: 15px 10px;
+/* Card Styling */
+.membership-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
 }
 
-/* Fieldset Styling */
-fieldset {
-    border: none;
-    padding: 0;
-    margin: 0;
+.membership-card:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    border-color: #cbd5e1;
 }
 
-fieldset p {
-    margin: 8px 0;
-}
-
-/* Input Fields */
-input[type="number"] {
-    width: 100px;
-}
-
-/* Level Settings */
-.level-settings {
-    background: #fff;
-    border: 1px solid #ccd0d4;
-    padding: 15px;
-    margin-bottom: 20px;
-    border-radius: 4px;
-}
-
-.level-settings legend {
+/* Card Header */
+.membership-card h3 {
+    margin: 0 0 20px 0;
+    padding: 0 0 12px 0;
+    border-bottom: 2px solid #f1f5f9;
+    font-size: 1.25rem;
     font-weight: 600;
-    margin-bottom: 10px;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-/* Capability Checkboxes */
-.capability-group {
-    margin: 10px 0;
-    padding-left: 10px;
+.membership-card h3 .dashicons {
+    width: 24px;
+    height: 24px;
+    font-size: 24px;
+    color: #3b82f6;
 }
 
-.capability-group label {
-    display: block;
-    margin: 5px 0;
+/* Section Styling */
+.membership-section {
+    margin-bottom: 24px;
+    position: relative;
 }
 
-/* Description Text */
-.description {
-    color: #666;
-    font-style: italic;
-    margin: 5px 0;
+.membership-section:last-child {
+    margin-bottom: 0;
 }
 
-/* Additional Settings Section */
-.additional-settings {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 1px solid #ddd;
+.membership-section h4 {
+    margin: 0 0 12px 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #475569;
+}
+
+/* Staff Limit Input */
+.staff-limit {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.staff-limit input[type="number"] {
+    width: 80px;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #334155;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.staff-limit input[type="number"]:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.staff-limit .description {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+/* Capabilities List */
+.capabilities-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.capabilities-list label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+}
+
+.capabilities-list label:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.capabilities-list input[type="checkbox"] {
+    margin-top: 2px;
+}
+
+.capabilities-list input[type="checkbox"]:checked + span {
+    color: #2563eb;
+    font-weight: 500;
+}
+
+.capabilities-list span {
+    font-size: 0.875rem;
+    color: #475569;
+    line-height: 1.4;
+}
+
+/* Submit Button Enhancement */
+.wp-core-ui .button-primary {
+    background: #2563eb;
+    border-color: #2563eb;
+    padding: 8px 20px;
+    height: auto;
+    line-height: 1.4;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.wp-core-ui .button-primary:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+    transform: translateY(-1px);
+}
+
+/* Level-specific colors */
+.membership-card[data-level="regular"] h3 .dashicons {
+    color: #4f46e5;
+}
+
+.membership-card[data-level="priority"] h3 .dashicons {
+    color: #eab308;
+}
+
+.membership-card[data-level="utama"] h3 .dashicons {
+    color: #06b6d4;
 }
 
 /* Responsive Adjustments */
-@media screen and (max-width: 782px) {
-    .form-table th {
-        width: auto;
-        display: block;
-        padding-bottom: 5px;
+@media screen and (max-width: 1400px) {
+    .membership-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
     }
+}
 
-    .form-table td {
-        padding: 0 0 15px 0;
+@media screen and (max-width: 782px) {
+    .membership-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin: 16px 0;
     }
     
-    input[type="number"] {
-        width: 80px;
+    .membership-card {
+        padding: 16px;
+    }
+
+    .staff-limit {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .staff-limit input[type="number"] {
+        width: 100%;
     }
 }
