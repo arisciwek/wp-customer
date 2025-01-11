@@ -44,7 +44,7 @@ namespace WPCustomer\Database\Tables;
 
 defined('ABSPATH') || exit;
 
-class CustomerEmployees {
+class CustomerEmployeesDB {
     public static function get_schema() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'app_customer_employees';

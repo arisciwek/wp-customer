@@ -1,40 +1,42 @@
 <?php
 /**
- * Branches Table Schema
+ * Customers Table Schema
  *
  * @package     WP_Customer
  * @subpackage  Database/Tables
- * @version     1.0.0
+ * @version     1.0.1
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Database/Tables/Branches.php
+ * Path: /wp-customer/src/Database/Tables/Customers.php
  *
- * Description: Mendefinisikan struktur tabel branches.
+ * Description: Mendefinisikan struktur tabel customers.
  *              Table prefix yang digunakan adalah 'app_'.
  *              Includes field untuk integrasi wilayah.
- *              Menyediakan foreign key ke customers table.
+ *              Menyediakan foreign key untuk customer-branch.
  *
  * Fields:
  * - id             : Primary key
- * - customer_id    : Foreign key ke customer
- * - code           : Kode branch (4 digit)
- * - name           : Nama branch
- * - type           : Tipe wilayah (cabang)
+ * - code           : Kode customer (2 digit)
+ * - name           : Nama customer
+ * - nik            : Nomor Induk Kependudukan
+ * - npwp           : Nomor Pokok Wajib Pajak
  * - provinsi_id    : ID provinsi (nullable)
  * - regency_id     : ID cabang (nullable)
+ * - user_id        : ID User WP sebagai Owner (nullable)
  * - created_by     : User ID pembuat
  * - created_at     : Timestamp pembuatan
  * - updated_at     : Timestamp update terakhir
  *
- * Foreign Keys:
- * - customer_id    : REFERENCES app_customers(id) ON DELETE CASCADE
- *
  * Changelog:
+ * 1.0.1 - 2024-01-11
+ * - Added nik field with unique constraint
+ * - Added npwp field with unique constraint
+ * 
  * 1.0.0 - 2024-01-07
  * - Initial version
- * - Added basic branch fields
+ * - Added basic customer fields
  * - Added wilayah integration fields
- * - Added foreign key constraint to customers
+ * - Added timestamps and audit fields
  */
 
 namespace WPCustomer\Database\Tables;
@@ -43,31 +45,31 @@ defined('ABSPATH') || exit;
 
 namespace WPCustomer\Database\Tables;
 
-class Branches {
+class CustomersDB {
     public static function get_schema() {
         global $wpdb;
-        $table_name = $wpdb->prefix . 'app_branches';
+        $table_name = $wpdb->prefix . 'app_customers';
         $charset_collate = $wpdb->get_charset_collate();
 
         return "CREATE TABLE {$table_name} (
             id bigint(20) UNSIGNED NOT NULL auto_increment,
-            customer_id bigint(20) UNSIGNED NOT NULL,
-            code varchar(4) NOT NULL,
+            code varchar(2) NOT NULL,
             name varchar(100) NOT NULL,
-            type enum('kabupaten','kota') NOT NULL,
+            npwp varchar(20)  NULL,
+            nib varchar(20)  NULL,
+            status enum('inactive','active') NOT NULL DEFAULT 'inactive',
             provinsi_id bigint(20) UNSIGNED NULL,
             regency_id bigint(20) UNSIGNED NULL,
+            user_id bigint(20) UNSIGNED NULL,
             created_by bigint(20) NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
-            UNIQUE KEY customer_name (customer_id, name),
             UNIQUE KEY code (code),
-            KEY created_by_index (created_by),
-            CONSTRAINT `{$wpdb->prefix}app_branches_ibfk_1` 
-                FOREIGN KEY (customer_id) 
-                REFERENCES `{$wpdb->prefix}app_customers` (id) 
-                ON DELETE CASCADE
+            UNIQUE KEY name (name),
+            UNIQUE KEY nib (nib),
+            UNIQUE KEY npwp (npwp),
+            KEY created_by_index (created_by)
         ) $charset_collate;";
     }
 }

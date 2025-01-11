@@ -52,16 +52,18 @@ class Installer {
             $wpdb->query('START TRANSACTION');
 
 	        // Database Tables
-	        require_once WP_CUSTOMER_PATH . 'src/Database/Tables/Customers.php';
-	        require_once WP_CUSTOMER_PATH . 'src/Database/Tables/Branches.php';
-	        require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomerMembershipLevels.php';
-	        require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomerEmployees.php';
+            // Database Tables
+            require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomersDB.php';
+            require_once WP_CUSTOMER_PATH . 'src/Database/Tables/BranchesDB.php';
+            require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomerMembershipLevelsDB.php';
+            require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomerEmployeesDB.php';
 
             // Create tables in correct order (parent tables first)
-            dbDelta(Tables\CustomerMembershipLevels::get_schema());
-            dbDelta(Tables\Customers::get_schema());
-            dbDelta(Tables\Branches::get_schema());
-            dbDelta(Tables\CustomerEmployees::get_schema());
+
+            dbDelta(Tables\CustomerMembershipLevelsDB::get_schema());
+            dbDelta(Tables\CustomersDB::get_schema());
+            dbDelta(Tables\BranchesDB::get_schema());
+            dbDelta(Tables\CustomerEmployeesDB::get_schema());
 
             // Verify tables were created
             foreach (self::$tables as $table) {
