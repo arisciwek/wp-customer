@@ -32,11 +32,103 @@ class WP_Customer_Dependencies {
     public function __construct($plugin_name, $version) {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_assets']);
+
     }
 
+public function enqueue_frontend_assets() {
+    // Ignore admin and ajax requests
+    if (is_admin() || wp_doing_ajax()) {
+        return;
+    }
+
+    if (get_query_var('wp_customer_register') !== '') {
+        error_log('Enqueuing registration assets...');
+
+        // Register page specific style
+        wp_enqueue_style(
+            'wp-customer-register',
+            WP_CUSTOMER_URL . 'assets/css/auth/register.css',
+            [],
+            $this->version
+        );
+
+
+        // Enqueue styles
+        wp_enqueue_style(
+            'wp-customer-form',
+            WP_CUSTOMER_URL . 'assets/css/customer-form.css',
+            [],
+            $this->version
+        );
+
+        wp_enqueue_style(
+            'wp-customer-toast',
+            WP_CUSTOMER_URL . 'assets/css/components/toast.css',
+            [],
+            $this->version
+        );
+
+        // Core scripts
+        wp_enqueue_script('jquery');
+        wp_enqueue_script(
+            'jquery-validate',
+            'https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js',
+            ['jquery'],
+            '1.19.5',
+            true
+        );
+
+        // Toast component
+        wp_enqueue_script(
+            'wp-customer-toast',
+            WP_CUSTOMER_URL . 'assets/js/components/toast.js',
+            ['jquery'],
+            $this->version,
+            true
+        );
+
+        // Registration form handler
+        wp_enqueue_script(
+            'wp-customer-register',
+            WP_CUSTOMER_URL . 'assets/js/auth/register.js',
+            ['jquery', 'jquery-validate', 'wp-customer-toast'],
+            $this->version,
+            true
+        );
+
+        // Localize script
+        wp_localize_script(
+            'wp-customer-register',
+            'wpCustomerData',
+            [
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('wp_customer_register'),
+                'i18n' => [
+                    'registering' => __('Mendaftar...', 'wp-customer'),
+                    'register' => __('Daftar', 'wp-customer'),
+                    'error' => __('Terjadi kesalahan. Silakan coba lagi.', 'wp-customer')
+                ]
+            ]
+        );
+        error_log('Registration assets enqueued');
+    }
+}
+
+
+
     public function enqueue_styles() {
+
         $screen = get_current_screen();
         if (!$screen) return;
+        // Check if we're on the registration page
+        if (get_query_var('wp_customer_register')) {
+            // Enqueue registration-specific styles
+            wp_enqueue_style('wp-customer-register', WP_CUSTOMER_URL . 'assets/css/auth/register.css', [], $this->version);
+            wp_enqueue_style('wp-customer-toast', WP_CUSTOMER_URL . 'assets/css/components/toast.css', [], $this->version);
+            return;
+        }
+
 
         // Settings page styles
         if ($screen->id === 'wp-customer_page_wp-customer-settings') {
@@ -83,6 +175,21 @@ class WP_Customer_Dependencies {
     public function enqueue_scripts() {
         $screen = get_current_screen();
         if (!$screen) return;
+
+        // Check if we're on the registration page
+        if (get_query_var('wp_customer_register')) {
+            // Enqueue registration-specific scripts
+            wp_enqueue_script('jquery-validate', 'https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js', ['jquery'], '1.19.5', true);
+            wp_enqueue_script('wp-customer-toast', WP_CUSTOMER_URL . 'assets/js/components/toast.js', ['jquery'], $this->version, true);
+            wp_enqueue_script('wp-customer-register', WP_CUSTOMER_URL . 'assets/js/auth/register.js', ['jquery', 'jquery-validate', 'wp-customer-toast'], $this->version, true);
+            
+            // Localize script
+            wp_localize_script('wp-customer-register', 'wpCustomerData', [
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('wp_customer_register')
+            ]);
+            return;
+        }
 
         // Settings page scripts
         if ($screen->id === 'wp-customer_page_wp-customer-settings') {

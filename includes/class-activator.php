@@ -50,6 +50,27 @@ class WP_Customer_Activator {
                 return;
             }
 
+            // Add customer role if it doesn't exist
+            if (!get_role('customer')) {
+                add_role(
+                    'customer',
+                    __('Customer', 'wp-customer'),
+                    [
+                        'view_customer_list' => true,
+                        'add_customer' => true,
+                        'view_own_customer' => true,
+                        'edit_own_customer' => true,
+                        'view_own_customer' => true,
+                        'view_branch_list' => true,
+                        'view_own_branch' => true
+                    ]
+                );
+            }
+
+            // Inisialisasi permission model untuk set semua capabilities
+            $permission_model = new \WPCustomer\Models\Settings\PermissionModel();
+            $permission_model->addCapabilities();
+
             self::addVersion();
             self::setupMembershipDefaults(); // Tambahkan ini
 
@@ -59,6 +80,16 @@ class WP_Customer_Activator {
             } catch (\Exception $e) {
                 self::logError('Error adding capabilities: ' . $e->getMessage());
             }
+
+            // Add rewrite rule untuk halaman registrasi
+            add_rewrite_rule(
+                'customer-register/?$',
+                'index.php?wp_customer_register=1',
+                'top'
+            );
+
+            // Flush rewrite rules
+            flush_rewrite_rules();
 
         } catch (\Exception $e) {
             self::logError('Critical error during activation: ' . $e->getMessage());

@@ -1,0 +1,130 @@
+/* Menyusun form registrasi dengan grid */
+.wp-customer-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Dua kolom */
+    gap: 20px; /* Jarak antar kolom */
+    max-width: 1200px; /* Maksimal lebar form */
+    margin: 0 auto; /* Pusatkan grid */
+    padding: 40px;
+}
+
+/* Pusatkan judul "Daftar Customer Baru" */
+h2 {
+    text-align: center; /* Menyelaraskan teks ke tengah */
+    font-size: 30px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 40px; /* Memberikan ruang bawah antara judul dan form */
+}
+
+/* Styling Card untuk Informasi Login dan Informasi Perusahaan */
+.wp-customer-card {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* Header Card */
+.wp-customer-card-header h3 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #333;
+}
+
+/* Form Group (input dan label) */
+.wp-customer-form .form-group {
+    margin-bottom: 20px;
+}
+
+/* Label styling */
+.wp-customer-form label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* Styling untuk input text, email, password */
+.wp-customer-form input[type="text"],
+.wp-customer-form input[type="email"],
+.wp-customer-form input[type="password"] {
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 14px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-sizing: border-box; /* Agar padding tidak menambah ukuran total */
+    transition: border 0.3s ease-in-out;
+}
+
+.wp-customer-form input[type="text"]:focus,
+.wp-customer-form input[type="email"]:focus,
+.wp-customer-form input[type="password"]:focus {
+    border-color: #3b82f6; /* Fokus dengan warna biru */
+    outline: none;
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.2);
+}
+
+/* Deskripsi */
+.wp-customer-form .description {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 6px;
+}
+
+/* Tombol submit */
+.wp-customer-form .form-submit {
+    margin-top: 30px;
+    display: flex;
+    justify-content: center; /* Pusatkan tombol submit */
+}
+
+.wp-customer-form .button {
+    background-color: #3b82f6; /* Warna biru tombol */
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 12px 30px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.wp-customer-form .button:hover {
+    background-color: #2563eb; /* Warna saat hover */
+    transform: translateY(-2px); /* Efek sedikit naik */
+}
+
+.wp-customer-form .button:focus {
+    outline: none;
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
+}
+
+/* Responsive: Mengubah layout menjadi satu kolom pada perangkat kecil */
+@media (max-width: 768px) {
+    .wp-customer-form {
+        grid-template-columns: 1fr; /* Hanya satu kolom */
+        padding: 20px;
+    }
+
+    .wp-customer-card {
+        margin-bottom: 20px;
+    }
+
+    .wp-customer-card-header h3 {
+        font-size: 18px;
+    }
+}
+
+.wp-customer-submit {
+    grid-column: 1 / -1;  /* Span full width dalam grid */
+    text-align: center;
+}

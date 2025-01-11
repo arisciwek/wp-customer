@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Tables
- * @version     1.0.0
+ * @version     1.0.1
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Tables/Customers.php
@@ -18,6 +18,8 @@
  * - id             : Primary key
  * - code           : Kode customer (2 digit)
  * - name           : Nama customer
+ * - nik            : Nomor Induk Kependudukan
+ * - npwp           : Nomor Pokok Wajib Pajak
  * - provinsi_id    : ID provinsi (nullable)
  * - regency_id     : ID cabang (nullable)
  * - user_id        : ID User WP sebagai Owner (nullable)
@@ -26,6 +28,10 @@
  * - updated_at     : Timestamp update terakhir
  *
  * Changelog:
+ * 1.0.1 - 2024-01-11
+ * - Added nik field with unique constraint
+ * - Added npwp field with unique constraint
+ * 
  * 1.0.0 - 2024-01-07
  * - Initial version
  * - Added basic customer fields
@@ -49,6 +55,9 @@ class Customers {
             id bigint(20) UNSIGNED NOT NULL auto_increment,
             code varchar(2) NOT NULL,
             name varchar(100) NOT NULL,
+            npwp varchar(20)  NULL,
+            nib varchar(20)  NULL,
+            status enum('inactive','active') NOT NULL DEFAULT 'inactive',
             provinsi_id bigint(20) UNSIGNED NULL,
             regency_id bigint(20) UNSIGNED NULL,
             user_id bigint(20) UNSIGNED NULL,
@@ -58,6 +67,8 @@ class Customers {
             PRIMARY KEY  (id),
             UNIQUE KEY code (code),
             UNIQUE KEY name (name),
+            UNIQUE KEY nib (nib),
+            UNIQUE KEY npwp (npwp),
             KEY created_by_index (created_by)
         ) $charset_collate;";
     }
