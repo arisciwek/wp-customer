@@ -284,7 +284,7 @@ class BranchController {
                 return;
             }
 
-            $this->debug_log('Branch created with ID: ' . $id);
+            //$this->debug_log('Branch created with ID: ' . $id);
 
             // Get fresh data for response
             $branch = $this->model->find($id);
@@ -404,7 +404,7 @@ class BranchController {
             }
 
             wp_send_json_success([
-                'message' => __('Data Kabupaten / kota berhasil dihapus', 'wp-customer')
+                'message' => __('Data Cabang berhasil dihapus', 'wp-customer')
             ]);
 
         } catch (\Exception $e) {

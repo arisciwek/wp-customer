@@ -131,11 +131,18 @@
         }
 
         // Check for user-specific view permission
-        if (!current_user_can('view_customer_list') && current_user_can('view_own_customer')) {
+        if (current_user_can('view_customer_list') && current_user_can('edit_own_customer')) {
             $current_user_id = get_current_user_id();
             $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
         }
 
+
+        if (!current_user_can('view_customer_list') && current_user_can('view_own_customer')) {
+            //$current_user_id = get_current_user_id();
+            //$where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
+        }
+
+        
         // Validate order column
         $validColumns = ['code', 'name', 'branch_count', 'owner_name'];
         if (!in_array($orderColumn, $validColumns)) {

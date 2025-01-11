@@ -247,6 +247,61 @@ class CustomerController {
         }
     }
 
+private function generateActionButtons($customer) {
+    $actions = '';
+
+    // Debug log untuk melihat data customer dan capabilities
+    $this->debug_log("Customer data for ID {$customer->id}:");
+    $this->debug_log([
+        'user_id' => $customer->user_id,
+        'current_user' => get_current_user_id(),
+        'capabilities' => [
+            'edit_all' => current_user_can('edit_all_customers'),
+            'edit_own' => current_user_can('edit_own_customer')
+        ]
+    ]);
+
+    if (current_user_can('view_customer_detail')) {
+        $actions .= sprintf(
+            '<button type="button" class="button view-customer" data-id="%d" title="%s"><i class="dashicons dashicons-visibility"></i></button> ',
+            $customer->id,
+            __('Lihat', 'wp-customer')
+        );
+    }
+
+    // Debug log sebelum pengecekan edit button
+    $this->debug_log("Checking edit button conditions:");
+    $this->debug_log([
+        'is_edit_all' => current_user_can('edit_all_customers'),
+        'is_edit_own' => current_user_can('edit_own_customer'),
+        'user_match' => $customer->user_id === get_current_user_id(),
+        'condition_result' => current_user_can('edit_all_customers') || 
+                            (current_user_can('edit_own_customer') && 
+                             $customer->user_id === get_current_user_id())
+    ]);
+
+    if (current_user_can('edit_all_customers') ||
+        (current_user_can('edit_own_customer') && (int)$customer->user_id === get_current_user_id())) {
+        $actions .= sprintf(
+            '<button type="button" class="button edit-customer" data-id="%d" title="%s"><i class="dashicons dashicons-edit"></i></button> ',
+            $customer->id,
+            __('Edit', 'wp-customer')
+        );
+        // Debug log jika tombol edit ditambahkan
+        $this->debug_log("Edit button added for customer {$customer->id}");
+    } else {
+        // Debug log jika tombol edit tidak ditambahkan
+        $this->debug_log("Edit button NOT added for customer {$customer->id}");
+    }
+
+    // Debug log final actions HTML
+    $this->debug_log("Final actions HTML:");
+    $this->debug_log($actions);
+
+    return $actions;
+}
+
+/*
     private function generateActionButtons($customer) {
         $actions = '';
 
@@ -259,7 +314,7 @@ class CustomerController {
         }
 
         if (current_user_can('edit_all_customers') ||
-            (current_user_can('edit_own_customer') && $customer->created_by === get_current_user_id())) {
+            (current_user_can('edit_own_customer') && $customer->user_id === get_current_user_id())) {
             $actions .= sprintf(
                 '<button type="button" class="button edit-customer" data-id="%d" title="%s"><i class="dashicons dashicons-edit"></i></button> ',
                 $customer->id,
@@ -277,7 +332,7 @@ class CustomerController {
 
         return $actions;
     }
-
+*/
     public function store() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
