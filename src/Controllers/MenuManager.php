@@ -33,10 +33,10 @@ class MenuManager {
         add_menu_page(
             __('WP Customer', 'wp-customer'),
             __('WP Customer', 'wp-customer'),
-            'manage_options',
+            'view_customer_detail',
             'wp-customer',
             [$this, 'renderMainPage'],
-            'dashicons-location',
+            'dashicons-businessperson',
             30
         );
 
@@ -51,7 +51,9 @@ class MenuManager {
     }
 
     public function renderMainPage() {
-        if (!current_user_can('manage_options')) {
+
+        // Cek multiple capabilities di sini
+        if (!current_user_can('view_customer_list') || !current_user_can('view_customer_detail')) {
             wp_die(__('Anda tidak memiliki izin untuk mengakses halaman ini.', 'wp-customer'));
         }
 
