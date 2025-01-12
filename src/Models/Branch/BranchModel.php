@@ -175,6 +175,9 @@ class BranchModel {
             "SELECT COUNT(*) FROM {$this->table} WHERE customer_id = %d",
             $customer_id
         ));
+        // Di function getDataTableData()
+        $datatable_query = (!empty($params)) ? $wpdb->prepare($sql, $params) : $sql;
+        error_log('DataTable Query: ' . $datatable_query);
 
         return [
             'data' => $results,
@@ -183,8 +186,66 @@ class BranchModel {
         ];
     }
 
-    public function getTotalCount(): int {
+    /**
+     * Get total branch count based on user permission
+     * Only users with 'view_branch_list' capability can see all branches
+     * 
+     * @param int|null $id Optional customer ID for filtering
+     * @return int Total number of branches
+     */
+
+    public function getTotalCount($customer_id): int {
         global $wpdb;
-        return (int) $wpdb->get_var("SELECT COUNT(*) FROM {$this->table}");
+
+        // Debug capabilities
+        error_log('--- Debug User Capabilities ---');
+        error_log('User ID: ' . get_current_user_id());
+        error_log('Can view_branch_list: ' . (current_user_can('view_branch_list') ? 'yes' : 'no'));
+        error_log('Can view_own_branch: ' . (current_user_can('view_own_branch') ? 'yes' : 'no'));
+        error_log('Can view_own_branch: ' . (current_user_can('view_own_customer') ? 'yes' : 'no'));
+        error_log('Customer ID param: ' . $customer_id);
+
+        // Base query parts
+        $select = "SELECT SQL_CALC_FOUND_ROWS r.*, p.name as customer_name";
+        $from = " FROM {$this->table} r";
+        $join = " LEFT JOIN {$this->customer_table} p ON r.customer_id = p.id";
+        
+        // Default where clause
+        $where = " WHERE 1=1";
+        $params = [];
+
+        // Debug query building process
+        error_log('Building WHERE clause:');
+        error_log('Initial WHERE: ' . $where);
+
+        if (!current_user_can('view_own_customer') && current_user_can('view_own_branch')) {
+            $where .= " AND p.user_id = %d";
+            $params[] = get_current_user_id();
+            error_log('Added user restriction: ' . $where);
+        }
+
+        if ($customer_id) {
+            $where .= " AND r.customer_id = %d";
+            $params[] = $customer_id;
+            error_log('Added customer restriction: ' . $where);
+        }
+
+        // Complete query
+        $query = $select . $from . $join . $where;
+        $final_query = !empty($params) ? $wpdb->prepare($query, $params) : $query;
+        
+        error_log('Final Query: ' . $final_query);
+        
+        // Execute query
+        $wpdb->get_results($final_query);
+        
+        // Get total and log
+        $total = (int) $wpdb->get_var("SELECT FOUND_ROWS()");
+        error_log('Total count result: ' . $total);
+        error_log('--- End Debug ---');
+
+        return $total;
     }
+
+
 }

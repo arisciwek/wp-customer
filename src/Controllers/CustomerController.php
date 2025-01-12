@@ -562,20 +562,19 @@ private function generateActionButtons($customer) {
         }
     }
 
+    // Di CustomerController
     public function getStats() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            if (!current_user_can('view_customer_list')) {
-                wp_send_json_error([
-                    'message' => __('Insufficient permissions', 'wp-customer')
-                ]);
-                return;
-            }
+            // Get customer_id from query param
+            $customer_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+
+            error_log('Query param customer_id: ' . $customer_id);
 
             $stats = [
                 'total_customers' => $this->model->getTotalCount(),
-                'total_branches' => $this->branchModel->getTotalCount()
+                'total_branches' => $this->branchModel->getTotalCount($customer_id)
             ];
 
             wp_send_json_success($stats);
@@ -586,6 +585,5 @@ private function generateActionButtons($customer) {
             ]);
         }
     }
-
 
 }

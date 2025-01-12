@@ -310,13 +310,22 @@
              }
          },
 
-         loadStats() {
+
+        // Di customer.js
+        loadStats() {
+            const urlHash = window.location.hash;
+            const customerId = urlHash ? parseInt(urlHash.substring(1)) : 0;
+
+            console.log(urlHash); // Misalnya "#2"
+
+            console.log('Loading stats, customerId:', customerId);            
             $.ajax({
                 url: wpCustomerData.ajaxUrl,
                 type: 'POST',
                 data: {
                     action: 'get_customer_stats',
-                    nonce: wpCustomerData.nonce
+                    nonce: wpCustomerData.nonce,
+                    id: customerId  // Kirim ID dari hash URL
                 },
                 success: (response) => {
                     if (response.success) {
