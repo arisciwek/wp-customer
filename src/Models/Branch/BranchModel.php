@@ -217,18 +217,26 @@ class BranchModel {
         // Debug query building process
         error_log('Building WHERE clause:');
         error_log('Initial WHERE: ' . $where);
+        // Cek dulu current_user_id untuk berbagai keperluan 
+        $current_user_id = get_current_user_id();
 
-        if (!current_user_can('view_own_customer') && current_user_can('view_own_branch')) {
+        // Dapatkan relasi User ID wordpress dengan customer User ID
+        $has_customer = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$this->customer_table} WHERE user_id = %d",
+            $current_user_id
+        ));
+        error_log('User has customer: ' . ($has_customer > 0 ? 'yes' : 'no'));
+
+        if ($has_customer > 0 && current_user_can('view_own_customer') && current_user_can('view_own_branch')) {
             $where .= " AND p.user_id = %d";
             $params[] = get_current_user_id();
             error_log('Added user restriction: ' . $where);
         }
 
-        if ($customer_id) {
-            $where .= " AND r.customer_id = %d";
-            $params[] = $customer_id;
-            error_log('Added customer restriction: ' . $where);
+        if (current_user_can('edit_all_customer') && current_user_can('edit_all_branch')) {
+            error_log('Added user restriction: ' . $where);
         }
+
 
         // Complete query
         $query = $select . $from . $join . $where;
@@ -245,6 +253,23 @@ class BranchModel {
         error_log('--- End Debug ---');
 
         return $total;
+    }
+
+    public function getByCustomer($customer_id) {
+        global $wpdb;
+        
+        $table = $wpdb->prefix . 'app_branches';
+        
+        $query = $wpdb->prepare(
+            "SELECT id, name, address, phone, email, status 
+             FROM {$table} 
+             WHERE customer_id = %d 
+             AND status = 'active'
+             ORDER BY name ASC",
+            $customer_id
+        );
+        
+        return $wpdb->get_results($query);
     }
 
 
