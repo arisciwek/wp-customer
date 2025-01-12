@@ -5,7 +5,6 @@
  * Description: Plugin untuk mengelola data Customer dan Cabangnya
  *   
  * @package     WPCustomer
- * @subpackage  Views/Settings
  * @version     1.0.0
  * @author      arisciwek
  * 
