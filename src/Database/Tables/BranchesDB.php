@@ -41,8 +41,6 @@ namespace WPCustomer\Database\Tables;
 
 defined('ABSPATH') || exit;
 
-namespace WPCustomer\Database\Tables;
-
 class BranchesDB {
     public static function get_schema() {
         global $wpdb;
@@ -55,11 +53,16 @@ class BranchesDB {
             code varchar(4) NOT NULL,
             name varchar(100) NOT NULL,
             type enum('kabupaten','kota') NOT NULL,
+            address text NULL,
+            phone varchar(20) NULL,
+            email varchar(100) NULL,
             provinsi_id bigint(20) UNSIGNED NULL,
             regency_id bigint(20) UNSIGNED NULL,
+            user_id bigint(20) UNSIGNED NULL,
             created_by bigint(20) NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            status enum('active','inactive') DEFAULT 'active',
             PRIMARY KEY  (id),
             UNIQUE KEY customer_name (customer_id, name),
             UNIQUE KEY code (code),

@@ -33,33 +33,70 @@ class WP_Customer_Deactivator {
     public static function deactivate() {
         global $wpdb;
 
-        // Daftar tabel yang akan dihapus
-        $tables = [
-            'app_customer_employees',
-            'app_branches',
-            'app_customer_membership_levels',
-            'app_customers'
-        ];
+        try {
+            // Start transaction
+            $wpdb->query('START TRANSACTION');
 
-        // Hapus tabel secara terurut (child tables first)
-        foreach ($tables as $table) {
-            $table_name = $wpdb->prefix . $table;
-            $wpdb->query("DROP TABLE IF EXISTS {$table_name}");
-            self::debug("Dropping table: {$table_name}");
+            // Delete demo users (starting from ID 11)
+            self::delete_demo_users();
+
+            // Daftar tabel yang akan dihapus
+            $tables = [
+                'app_customer_employees',
+                'app_branches',
+                'app_customer_membership_levels',
+                'app_customers'
+            ];
+
+            // Hapus tabel secara terurut (child tables first)
+            foreach ($tables as $table) {
+                $table_name = $wpdb->prefix . $table;
+                $wpdb->query("DROP TABLE IF EXISTS {$table_name}");
+                self::debug("Dropping table: {$table_name}");
+            }
+
+            // Hapus semua opsi terkait membership
+            self::cleanupMembershipOptions();
+
+            // Bersihkan cache
+            wp_cache_delete('wp_customer_customer_list', 'wp_customer');
+            wp_cache_delete('wp_customer_branch_list', 'wp_customer');
+            wp_cache_delete('wp_customer_employee_list', 'wp_customer');
+            wp_cache_delete('wp_customer_membership_settings', 'wp_customer');
+
+            // Commit transaction
+            $wpdb->query('COMMIT');
+            
+            self::debug("Plugin deactivation complete");
+
+        } catch (\Exception $e) {
+            $wpdb->query('ROLLBACK');
+            self::debug("Error during deactivation: " . $e->getMessage());
         }
-
-        // Hapus semua opsi terkait membership
-        self::cleanupMembershipOptions();
-
-        // Bersihkan cache
-        wp_cache_delete('wp_customer_customer_list', 'wp_customer');
-        wp_cache_delete('wp_customer_branch_list', 'wp_customer');
-        wp_cache_delete('wp_customer_membership_settings', 'wp_customer');
-        
-        self::debug("Plugin deactivation complete");
     }
 
-    // Tambahkan metode baru ini
+    private static function delete_demo_users() {
+        global $wpdb;
+        
+        try {
+            // Start transaction
+            $wpdb->query('START TRANSACTION');
+            
+            // Delete users created by plugin (ID >= 2)
+            $wpdb->query("DELETE FROM {$wpdb->prefix}users WHERE ID >= 2");
+            
+            // Reset auto increment to 11 for next activation
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}users AUTO_INCREMENT = 2");
+            
+            $wpdb->query('COMMIT');
+            
+            self::debug("Deleted WP users created by plugin and reset auto increment.");
+        } catch (\Exception $e) {
+            $wpdb->query('ROLLBACK');
+            self::debug("Error managing users: " . $e->getMessage());
+        }
+    }
+
     private static function cleanupMembershipOptions() {
         try {
             // Hapus opsi membership settings
@@ -72,6 +109,7 @@ class WP_Customer_Deactivator {
 
         } catch (\Exception $e) {
             self::debug("Error cleaning up membership options: " . $e->getMessage());
+            throw $e;
         }
     }
 }

@@ -26,6 +26,7 @@
  * - Added branch demo data
  * - Added employee demo data
  */
+
 namespace WPCustomer\Database;
 
 defined('ABSPATH') || exit;
@@ -52,21 +53,34 @@ class Demo_Data {
 
             // Demo customers (10 records)
             $customers = [
-                ['code' => '01', 'name' => 'PT Maju Bersama', 'created_by' => 1],
-                ['code' => '02', 'name' => 'CV Teknologi Nusantara', 'created_by' => 1],
-                ['code' => '03', 'name' => 'PT Sinar Abadi', 'created_by' => 1],
-                ['code' => '04', 'name' => 'PT Global Teknindo', 'created_by' => 1],
-                ['code' => '05', 'name' => 'CV Mitra Solusi', 'created_by' => 1],
-                ['code' => '06', 'name' => 'PT Karya Digital', 'created_by' => 1],
-                ['code' => '07', 'name' => 'PT Bumi Perkasa', 'created_by' => 1],
-                ['code' => '08', 'name' => 'CV Cipta Kreasi', 'created_by' => 1],
-                ['code' => '09', 'name' => 'PT Meta Inovasi', 'created_by' => 1],
-                ['code' => '10', 'name' => 'PT Delta Sistem', 'created_by' => 1]
+                ['code' => '02', 'name' => 'PT Maju Bersama', 'created_by' => 1],
+                ['code' => '03', 'name' => 'CV Teknologi Nusantara', 'created_by' => 1],
+                ['code' => '04', 'name' => 'PT Sinar Abadi', 'created_by' => 1],
+                ['code' => '05', 'name' => 'PT Global Teknindo', 'created_by' => 1],
+                ['code' => '06', 'name' => 'CV Mitra Solusi', 'created_by' => 1],
+                ['code' => '07', 'name' => 'PT Karya Digital', 'created_by' => 1],
+                ['code' => '08', 'name' => 'PT Bumi Perkasa', 'created_by' => 1],
+                ['code' => '09', 'name' => 'CV Cipta Kreasi', 'created_by' => 1],
+                ['code' => '10', 'name' => 'PT Meta Inovasi', 'created_by' => 1],
+                ['code' => '11', 'name' => 'PT Delta Sistem', 'created_by' => 1]
             ];
 
             $customer_ids = [];
+            $user_ids = []; // Array untuk menyimpan user_id
+
             foreach ($customers as $customer) {
-                $wpdb->insert($wpdb->prefix . 'app_customers', $customer);
+                // Create WP user for each customer with 'customer' role
+                $user_id = self::create_wp_user($customer['name'], 'customer'); 
+                $user_ids[$customer['code']] = $user_id;
+
+                // Insert customer data with user_id
+                $customer_data = [
+                    'code' => $customer['code'],
+                    'name' => $customer['name'],
+                    'created_by' => $customer['created_by'],
+                    'user_id' => $user_id
+                ];
+                $wpdb->insert($wpdb->prefix . 'app_customers', $customer_data);
                 if ($wpdb->last_error) throw new \Exception($wpdb->last_error);
                 $customer_ids[] = $wpdb->insert_id;
             }
@@ -75,16 +89,22 @@ class Demo_Data {
             $branch_types = ['kabupaten', 'kota'];
             $branch_data = [];
             
-            foreach ($customer_ids as $customer_id) {
+            foreach ($customer_ids as $index => $customer_id) {
                 // Each customer gets 3 branches
                 $customer_code = str_pad($customer_id, 2, '0', STR_PAD_LEFT);
                 for ($i = 1; $i <= 3; $i++) {
+                    $city = self::generateCityName();
                     $branch_data[] = [
                         'customer_id' => $customer_id,
                         'code' => $customer_code . str_pad($i, 2, '0', STR_PAD_LEFT),
-                        'name' => "Cabang " . self::generateCityName() . " " . $i,
+                        'name' => "Cabang " . $city . " " . $i,
                         'type' => $branch_types[array_rand($branch_types)],
-                        'created_by' => 1
+                        'address' => 'Jl. ' . $city . ' No. ' . rand(1, 100),
+                        'phone' => '08' . rand(100000000, 999999999),
+                        'email' => strtolower(str_replace(' ', '', $city)) . $i . '@example.com',
+                        'created_by' => 1,
+                        'status' => 'active',
+                        'user_id' => $user_ids[$customers[$index]['code']]
                     ];
                 }
             }
@@ -101,11 +121,13 @@ class Demo_Data {
 
             for ($i = 1; $i <= 20; $i++) {
                 $random_customer = $customer_ids[array_rand($customer_ids)];
-                // Get random branch for this customer
                 $branch_id = $wpdb->get_var($wpdb->prepare(
                     "SELECT id FROM {$wpdb->prefix}app_branches WHERE customer_id = %d ORDER BY RAND() LIMIT 1",
                     $random_customer
                 ));
+
+                // Create WP user for each employee with 'customer' role
+                $user_id = self::create_wp_user("Employee {$i}", 'customer');
 
                 $employee_data[] = [
                     'customer_id' => $random_customer,
@@ -116,7 +138,8 @@ class Demo_Data {
                     'email' => "employee{$i}@example.com",
                     'phone' => '08' . rand(100000000, 999999999),
                     'created_by' => 1,
-                    'status' => 'active'
+                    'status' => 'active',
+                    'user_id' => $user_id
                 ];
             }
 
@@ -133,6 +156,41 @@ class Demo_Data {
             error_log('Demo data insertion failed: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Create WP user with specified role
+     * 
+     * @param string $username Username for the new user
+     * @param string $role Role to assign ('customer' or 'surveyor')
+     * @return int User ID
+     * @throws \Exception on failure
+     */
+    private static function create_wp_user($username, $role = 'customer') {
+        $sanitized_username = sanitize_user($username);
+        $email = sanitize_email($sanitized_username . '@example.com');
+        $password = 'Demo_Data-2025';
+
+        // Create user
+        $user_id = wp_create_user($sanitized_username, $password, $email);
+        
+        if (is_wp_error($user_id)) {
+            throw new \Exception('Failed to create WP user: ' . $user_id->get_error_message());
+        }
+
+        // Get user object
+        $user = new \WP_User($user_id);
+
+        // Remove default role
+        $user->remove_role('subscriber');
+
+        // Add specified role
+        $user->add_role($role);
+
+        // Log success
+        error_log("Created user {$sanitized_username} with role {$role}");
+
+        return $user_id;
     }
 
     private static function generateCityName() {

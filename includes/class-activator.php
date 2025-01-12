@@ -62,7 +62,9 @@ class WP_Customer_Activator {
                         'edit_own_customer' => true,
                         'view_own_customer' => true,
                         'view_branch_list' => true,
-                        'view_own_branch' => true
+                        'view_own_branch' => true,
+                        'view_employee_list' => true,
+                        'view_own_employee' => true
                     ]
                 );
             }
