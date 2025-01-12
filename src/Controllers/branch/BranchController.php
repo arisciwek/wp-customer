@@ -54,6 +54,7 @@ class BranchController {
         // Register AJAX handlers
         add_action('wp_ajax_handle_branch_datatable', [$this, 'handleDataTableRequest']);
         add_action('wp_ajax_nopriv_handle_branch_datatable', [$this, 'handleDataTableRequest']);
+        add_action('wp_ajax_get_customer_branches', [$this, 'getCustomerBranches']);
 
         // Register other endpoints
         add_action('wp_ajax_get_branch', [$this, 'show']);
@@ -411,4 +412,30 @@ class BranchController {
             wp_send_json_error(['message' => $e->getMessage()]);
         }
     }
+
+    public function getCustomerBranches() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+
+            $customer_id = isset($_POST['customer_id']) ? (int) $_POST['customer_id'] : 0;
+            if (!$customer_id) {
+                throw new \Exception('ID Customer tidak valid');
+            }
+
+            // Periksa permission
+            if (!current_user_can('view_branch_list') && !current_user_can('view_own_branch')) {
+                throw new \Exception('Anda tidak memiliki akses untuk melihat data cabang');
+            }
+
+            $branches = $this->model->getByCustomer($customer_id);
+
+            wp_send_json_success($branches);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
 }
