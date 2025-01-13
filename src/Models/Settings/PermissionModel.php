@@ -42,7 +42,16 @@ class PermissionModel {
         'add_branch' => 'Tambah Cabang',
         'edit_all_branches' => 'Edit Semua Cabang',
         'edit_own_branch' => 'Edit Cabang Sendiri',
-        'delete_branch' => 'Hapus Cabang'
+        'delete_branch' => 'Hapus Cabang',
+
+        // Employee capabilities
+        'view_employee_list' => 'Lihat Daftar Karyawan',
+        'view_employee_detail' => 'Lihat Detail Karyawan', 
+        'view_own_employee' => 'Lihat Karyawan Sendiri',
+        'add_employee' => 'Tambah Karyawan',
+        'edit_employee' => 'Edit Karyawan',
+        'edit_own_employee' => 'Edit Karyawan Sendiri',
+        'delete_employee' => 'Hapus Karyawan'        
     ];
 
     private $default_role_caps = [

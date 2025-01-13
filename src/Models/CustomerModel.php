@@ -160,12 +160,12 @@
         }
 
         // Kondisi 2: Edit all customers
-        if (current_user_can('view_customer_list') && current_user_can('edit_all_customers')) {
+        if (current_user_can('edit_all_customers')) {
             // Tidak perlu tambahan WHERE karena bisa lihat semua
             error_log('User can edit all customers - no additional restrictions');
         }
 
-        // Kondisi 3: Search filter
+        // Kondisi 4: Search filter
         if (!empty($search)) {
             $where .= $wpdb->prepare(
                 " AND (p.name LIKE %s OR p.code LIKE %s OR u.display_name LIKE %s)",

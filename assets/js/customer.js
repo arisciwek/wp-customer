@@ -30,7 +30,7 @@
  * - Improved error handling
  * - Added loading states
  *
- * Last modified: 2024-12-03 16:45:00
+ * Last modified: 2025-01-12 16:45:00
  */
  (function($) {
      'use strict';
@@ -69,7 +69,9 @@
                 .on('customer:created.Customer', () => this.loadStats())
                 .on('customer:deleted.Customer', () => this.loadStats())
                 .on('branch:created.Customer', () => this.loadStats())
-                .on('branch:deleted.Customer', () => this.loadStats());
+                .on('branch:deleted.Customer', () => this.loadStats())
+                .on('employee:created.Customer', () => this.loadStats())
+                .on('employee:deleted.Customer', () => this.loadStats());
 
          },
 
@@ -179,6 +181,7 @@
              $('#customer-header-name').text(data.customer.name);
              $('#customer-name').text(data.customer.name);
              $('#customer-branch-count').text(data.branch_count);
+             $('#customer-employee-count').text(data.employee_count);
              $('#customer-created-at').text(createdAt);
              $('#customer-updated-at').text(updatedAt);
 
@@ -260,6 +263,11 @@
                         window.BranchDataTable.init(this.currentId);
                     }
                 }
+                if (tabId === 'employee-list' && this.currentId) {
+                    if (window.EmployeeDataTable) {
+                        window.EmployeeDataTable.init(this.currentId);
+                    }
+                }
             },
 
          closePanel() {
@@ -338,6 +346,7 @@
         updateStats(stats) {
             $('#total-customers').text(stats.total_customers);
             $('#total-branches').text(stats.total_branches);
+            $('#total-employees').text(stats.total_employees);
         }
 
      };

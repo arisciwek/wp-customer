@@ -169,6 +169,11 @@ public function enqueue_frontend_assets() {
 
             // Branch styles
             wp_enqueue_style('wp-customer-branch', WP_CUSTOMER_URL . 'assets/css/branch/branch.css', [], $this->version);
+
+            // Tambahkan Employee styles
+            wp_enqueue_style('wp-customer-employee', WP_CUSTOMER_URL . 'assets/css/employee/employee.css', [], $this->version);
+            wp_enqueue_style('employee-toast', WP_CUSTOMER_URL . 'assets/css/employee/employee-toast.css', [], $this->version);
+
         }
     }
 
@@ -231,6 +236,12 @@ public function enqueue_frontend_assets() {
             wp_enqueue_script('create-customer-form', WP_CUSTOMER_URL . 'assets/js/components/create-customer-form.js', ['jquery', 'jquery-validate', 'customer-toast'], $this->version, true);
             wp_enqueue_script('edit-customer-form', WP_CUSTOMER_URL . 'assets/js/components/edit-customer-form.js', ['jquery', 'jquery-validate', 'customer-toast'], $this->version, true);
 
+            // Employee scripts - mengikuti pola branch yang sudah berhasil
+            wp_enqueue_script('employee-datatable', WP_CUSTOMER_URL . 'assets/js/employee/employee-datatable.js', ['jquery', 'datatables', 'customer-toast', 'customer'], $this->version, true);
+            wp_enqueue_script('employee-toast', WP_CUSTOMER_URL . 'assets/js/employee/employee-toast.js', ['jquery'], $this->version, true);
+            wp_enqueue_script('create-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/create-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
+            wp_enqueue_script('edit-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/edit-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
+
             wp_enqueue_script('customer',
                 WP_CUSTOMER_URL . 'assets/js/customer.js',
                 [
@@ -251,7 +262,6 @@ public function enqueue_frontend_assets() {
                 'nonce' => $customer_nonce,
                 'debug' => true
             ]);
-
 
             // Branch scripts
             wp_enqueue_script('branch-datatable', WP_CUSTOMER_URL . 'assets/js/branch/branch-datatable.js', ['jquery', 'datatables', 'customer-toast', 'customer'], $this->version, true);

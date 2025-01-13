@@ -9,6 +9,7 @@
     <a href="#" class="nav-tab nav-tab-customer-details nav-tab-active" data-tab="customer-details">Data Customer</a>
     <a href="#" class="nav-tab" data-tab="membership-info">Membership</a>
     <a href="#" class="nav-tab" data-tab="branch-list">Cabang</a>
+    <a href="#" class="nav-tab" data-tab="employee-list">Staff</a>
 </div>
 
     <?php
@@ -16,5 +17,6 @@
     include WP_CUSTOMER_PATH . 'src/Views/templates/customer/partials/_customer_details.php';
     include WP_CUSTOMER_PATH . 'src/Views/templates/customer/partials/_customer_membership.php';
     include WP_CUSTOMER_PATH . 'src/Views/templates/branch/partials/_branch_list.php';
+    include WP_CUSTOMER_PATH . 'src/Views/templates/employee/partials/_employee_list.php';
     ?>
 </div>

@@ -1,0 +1,139 @@
+/**
+ * Employee Toast Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Employee
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/employee/employee-toast.css
+ *
+ * Description: Styling untuk toast notifications khusus employee.
+ *              Includes animation, positioning, dan variasi tipe.
+ *              Terintegrasi dengan tema WordPress admin.
+ *
+ * Changelog:
+ * 1.0.0 - 2024-01-12
+ * - Initial styling
+ * - Added toast variations
+ * - Added animations
+ */
+
+/* Container */
+#employee-toast-container {
+    position: fixed;
+    top: 32px;           /* WP Admin bar height */
+    right: 20px;
+    z-index: 160002;     /* Higher than branch toast */
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 100%;
+    pointer-events: none;
+}
+
+/* Base Toast Style */
+.employee-toast {
+    position: relative;
+    padding: 12px 35px 12px 15px;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 14px;
+    min-width: 250px;
+    max-width: 400px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    margin-bottom: 10px;
+    opacity: 0;
+    transform: translateX(100%);
+    transition: all 0.3s ease;
+    pointer-events: auto;
+}
+
+/* Toast Variations */
+.employee-toast-success {
+    background-color: #1e8449;  /* Darker green for employee */
+    border-left: 4px solid #27ae60;
+}
+
+.employee-toast-error {
+    background-color: #c0392b;  /* Darker red for employee */
+    border-left: 4px solid #e74c3c;
+}
+
+.employee-toast-warning {
+    background-color: #d35400;  /* Darker orange for employee */
+    border-left: 4px solid #e67e22;
+}
+
+.employee-toast-info {
+    background-color: #2980b9;  /* Darker blue for employee */
+    border-left: 4px solid #3498db;
+}
+
+/* Toast Content */
+.employee-toast p {
+    margin: 5px 0;
+    color: #fff;
+    line-height: 1.4;
+}
+
+/* Close Button */
+.employee-toast .close-toast {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 18px;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.employee-toast .close-toast:hover {
+    opacity: 1;
+}
+
+/* Toast Animation States */
+.employee-toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.employee-toast.hide {
+    opacity: 0;
+    transform: translateX(100%);
+}
+
+/* Multiple Line Message Support */
+.employee-toast-message {
+    padding-right: 20px; /* Space for close button */
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+    #employee-toast-container {
+        top: 46px; /* WP Admin mobile bar height */
+        right: 10px;
+        left: 10px;
+    }
+
+    .employee-toast {
+        min-width: 0;
+        width: 100%;
+    }
+}
+
+/* Print Styles */
+@media print {
+    #employee-toast-container {
+        display: none !important;
+    }
+}

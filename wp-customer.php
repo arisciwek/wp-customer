@@ -44,42 +44,6 @@ class WPCustomer {
         $this->initHooks();
     }
 
-    private function initHooks() {
-        register_activation_hook(__FILE__, array('WP_Customer_Activator', 'activate'));
-        register_deactivation_hook(__FILE__, array('WP_Customer_Deactivator', 'deactivate'));
-
-        // Inisialisasi dependencies
-        $dependencies = new WP_Customer_Dependencies($this->plugin_name, $this->version);
-
-        // Register hooks
-        $this->loader->add_action('admin_enqueue_scripts', $dependencies, 'enqueue_styles');
-        $this->loader->add_action('admin_enqueue_scripts', $dependencies, 'enqueue_scripts');
-
-        // Inisialisasi menu
-        $menu_manager = new \WPCustomer\Controllers\MenuManager($this->plugin_name, $this->version);
-        $this->loader->add_action('init', $menu_manager, 'init');
-
-        $this->initControllers(); 
-
-          new \WPCustomer\Controllers\Branch\BranchController();
-
-        $init_hooks = new WP_Customer_Init_Hooks();
-        $init_hooks->init();          
-    }
-
-    private function initControllers() {
-        // Inisialisasi controllers
-        $this->customer_controller = new \WPCustomer\Controllers\CustomerController();
-
-        // Register AJAX hooks SEBELUM init
-
-        // Tambahkan handler untuk stats
-        add_action('wp_ajax_get_customer_stats', [$this->customer_controller, 'getStats']);
-
-        add_action('wp_ajax_handle_customer_datatable', [$this->customer_controller, 'handleDataTableRequest']);
-        add_action('wp_ajax_get_customer', [$this->customer_controller, 'show']);
-    }
-
     private function includeDependencies() {
         require_once WP_CUSTOMER_PATH . 'includes/class-loader.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-activator.php';
@@ -97,8 +61,6 @@ class WPCustomer {
         require_once WP_CUSTOMER_PATH . 'src/Models/Settings/SettingsModel.php';
         require_once WP_CUSTOMER_PATH . 'src/Models/Settings/PermissionModel.php';
 
-        new \WPCustomer\Controllers\SettingsController();
-
         require_once WP_CUSTOMER_PATH . 'src/Controllers/CustomerController.php';
         require_once WP_CUSTOMER_PATH . 'src/Models/CustomerModel.php';
 
@@ -112,7 +74,10 @@ class WPCustomer {
         require_once WP_CUSTOMER_PATH . 'src/Models/Branch/BranchModel.php';
         require_once WP_CUSTOMER_PATH . 'src/Validators/Branch/BranchValidator.php';
 
-        $this->loader = new WP_Customer_Loader();
+        // Employee
+        require_once WP_CUSTOMER_PATH . 'src/Controllers/Employee/CustomerEmployeeController.php';
+        require_once WP_CUSTOMER_PATH . 'src/Models/Employee/CustomerEmployeeModel.php';
+        require_once WP_CUSTOMER_PATH . 'src/Validators/Employee/CustomerEmployeeValidator.php';
 
         // Add autoloader
         spl_autoload_register(function ($class) {
@@ -129,7 +94,61 @@ class WPCustomer {
                 require $file;
             }
         });
+
+        $this->loader = new WP_Customer_Loader();
+
+        new \WPCustomer\Controllers\SettingsController();
+
     }
+
+    private function initHooks() {
+        register_activation_hook(__FILE__, array('WP_Customer_Activator', 'activate'));
+        register_deactivation_hook(__FILE__, array('WP_Customer_Deactivator', 'deactivate'));
+
+        // Inisialisasi dependencies
+        $dependencies = new WP_Customer_Dependencies($this->plugin_name, $this->version);
+
+        // Register hooks
+        $this->loader->add_action('admin_enqueue_scripts', $dependencies, 'enqueue_styles');
+        $this->loader->add_action('admin_enqueue_scripts', $dependencies, 'enqueue_scripts');
+
+        // Inisialisasi menu
+        $menu_manager = new \WPCustomer\Controllers\MenuManager($this->plugin_name, $this->version);
+        $this->loader->add_action('init', $menu_manager, 'init');
+
+        register_activation_hook(__FILE__, array('WP_Customer_Activator', 'activate'));
+        register_deactivation_hook(__FILE__, array('WP_Customer_Deactivator', 'deactivate'));
+        
+        // Set auto increment untuk user ID
+        register_activation_hook(__FILE__, function() {
+            global $wpdb;
+            $wpdb->query("ALTER TABLE {$wpdb->prefix}users AUTO_INCREMENT = 11");
+        });
+
+        $this->initControllers(); 
+
+          new \WPCustomer\Controllers\Branch\BranchController();
+
+        $init_hooks = new WP_Customer_Init_Hooks();
+        $init_hooks->init();          
+    }
+
+    private function initControllers() {
+        // Inisialisasi controllers
+        $this->customer_controller = new \WPCustomer\Controllers\CustomerController();
+
+        // Inisialisasi Employee Controller
+        new \WPCustomer\Controllers\Employee\CustomerEmployeeController();
+
+        // Register AJAX hooks SEBELUM init
+
+        // Tambahkan handler untuk stats
+        add_action('wp_ajax_get_customer_stats', [$this->customer_controller, 'getStats']);
+
+        add_action('wp_ajax_handle_customer_datatable', [$this->customer_controller, 'handleDataTableRequest']);
+        add_action('wp_ajax_get_customer', [$this->customer_controller, 'show']);
+    }
+
 
     public function run() {
         $this->loader->run();

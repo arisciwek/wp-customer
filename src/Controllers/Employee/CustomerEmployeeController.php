@@ -1,0 +1,453 @@
+<?php
+/**
+ * Customer Employee Controller Class
+ *
+ * @package     WP_Customer
+ * @subpackage  Controllers/Employee
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/src/Controllers/Employee/CustomerEmployeeController.php
+ *
+ * Description: Controller untuk mengelola data karyawan customer.
+ *              Menangani operasi CRUD dengan integrasi cache.
+ *              Includes validasi input, permission checks,
+ *              dan response formatting untuk panel kanan.
+ *              Menyediakan endpoints untuk DataTables server-side.
+ *
+ * Changelog:
+ * 1.0.0 - 2024-01-12
+ * - Initial release
+ * - Added CRUD operations
+ * - Added DataTable integration
+ * - Added permission handling
+ */
+
+namespace WPCustomer\Controllers\Employee;
+
+use WPCustomer\Models\Employee\CustomerEmployeeModel;
+use WPCustomer\Validators\Employee\CustomerEmployeeValidator;
+use WPCustomer\Cache\CacheManager;
+
+class CustomerEmployeeController {
+    private CustomerEmployeeModel $model;
+    private CustomerEmployeeValidator $validator;
+    private CacheManager $cache;
+    private string $log_file;
+
+    /**
+     * Default log file path
+     */
+    private const DEFAULT_LOG_FILE = 'logs/employee.log';
+
+    public function __construct() {
+        $this->model = new CustomerEmployeeModel();
+        $this->validator = new CustomerEmployeeValidator();
+        $this->cache = new CacheManager();
+
+        // Initialize log file in plugin directory
+        $this->log_file = WP_CUSTOMER_PATH . self::DEFAULT_LOG_FILE;
+
+        // Ensure logs directory exists
+        $this->initLogDirectory();
+
+        // Register AJAX endpoints
+        add_action('wp_ajax_handle_employee_datatable', [$this, 'handleDataTableRequest']);
+        add_action('wp_ajax_get_employee', [$this, 'show']);
+        add_action('wp_ajax_create_employee', [$this, 'store']);
+        add_action('wp_ajax_update_employee', [$this, 'update']);
+        add_action('wp_ajax_delete_employee', [$this, 'delete']);
+        add_action('wp_ajax_change_employee_status', [$this, 'changeStatus']);
+        
+    }
+
+    /**
+     * Initialize log directory if it doesn't exist
+     */
+    private function initLogDirectory(): void {
+        // Get WordPress uploads directory information
+        $upload_dir = wp_upload_dir();
+        $customer_base_dir = $upload_dir['basedir'] . '/wp-customer';
+        $customer_log_dir = $customer_base_dir . '/logs';
+        
+        // Update log file path with monthly rotation
+        $this->log_file = $customer_log_dir . '/employee-' . date('Y-m') . '.log';
+
+        // Create directories if needed
+        if (!file_exists($customer_base_dir)) {
+            wp_mkdir_p($customer_base_dir);
+        }
+
+        if (!file_exists($customer_log_dir)) {
+            wp_mkdir_p($customer_log_dir);
+        }
+
+        // Create log file if it doesn't exist
+        if (!file_exists($this->log_file)) {
+            touch($this->log_file);
+            chmod($this->log_file, 0644);
+        }
+    }
+
+    /**
+     * Log debug messages
+     */
+    private function debug_log($message): void {
+        if (!defined('WP_DEBUG') || !WP_DEBUG) {
+            return;
+        }
+
+        $timestamp = current_time('mysql');
+        if (is_array($message) || is_object($message)) {
+            $message = print_r($message, true);
+        }
+
+        $log_message = "[{$timestamp}] {$message}\n";
+        error_log($log_message, 3, $this->log_file);
+    }
+
+    /**
+     * Handle DataTable AJAX request
+     */
+    public function handleDataTableRequest() {
+        try {
+            // Verify nonce
+            if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
+                throw new \Exception('Security check failed');
+            }
+
+            // Get and validate parameters
+            $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
+            $start = isset($_POST['start']) ? intval($_POST['start']) : 0;
+            $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
+            $search = isset($_POST['search']['value']) ? sanitize_text_field($_POST['search']['value']) : '';
+            $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
+
+            if (!$customer_id) {
+                throw new \Exception('Customer ID is required');
+            }
+
+            // Get order parameters
+            $orderColumn = isset($_POST['order'][0]['column']) ? intval($_POST['order'][0]['column']) : 0;
+            $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
+
+            // Map column index to column name
+            $columns = ['name', 'position', 'department', 'email', 'branch_name', 'status', 'actions'];
+            $orderBy = isset($columns[$orderColumn]) ? $columns[$orderColumn] : 'name';
+
+            if ($orderBy === 'actions') {
+                $orderBy = 'name'; // Default sort if actions column
+            }
+
+            try {
+                $result = $this->model->getDataTableData($customer_id, $start, $length, $search, $orderBy, $orderDir);
+
+                $data = [];
+                foreach ($result['data'] as $employee) {
+                    $data[] = [
+                        'id' => $employee->id,
+                        'name' => esc_html($employee->name),
+                        'position' => esc_html($employee->position),
+                        'department' => esc_html($employee->department),
+                        'email' => esc_html($employee->email),
+                        'branch_name' => esc_html($employee->branch_name),
+                        'status' => esc_html($employee->status),
+                        'actions' => $this->generateActionButtons($employee)
+                    ];
+                }
+
+                wp_send_json([
+                    'draw' => $draw,
+                    'recordsTotal' => $result['total'],
+                    'recordsFiltered' => $result['filtered'],
+                    'data' => $data
+                ]);
+
+            } catch (\Exception $modelException) {
+                throw new \Exception('Database error: ' . $modelException->getMessage());
+            }
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage(),
+                'code' => $e->getCode()
+            ], 400);
+        }
+    }
+
+    /**
+     * Generate action buttons HTML
+     */
+    private function generateActionButtons($employee) {
+        $actions = '';
+
+        // View button
+        if (current_user_can('view_employee_detail')) {
+            $actions .= sprintf(
+                '<button type="button" class="button view-employee" data-id="%d" title="%s">
+                    <i class="dashicons dashicons-visibility"></i>
+                </button> ',
+                $employee->id,
+                __('Lihat', 'wp-customer')
+            );
+        }
+
+        // Edit button
+        if (current_user_can('edit_employee') ||
+            (current_user_can('edit_own_employee') && $employee->created_by === get_current_user_id())) {
+            $actions .= sprintf(
+                '<button type="button" class="button edit-employee" data-id="%d" title="%s">
+                    <i class="dashicons dashicons-edit"></i>
+                </button> ',
+                $employee->id,
+                __('Edit', 'wp-customer')
+            );
+        }
+
+        // Delete button
+        if (current_user_can('delete_employee')) {
+            $actions .= sprintf(
+                '<button type="button" class="button delete-employee" data-id="%d" title="%s">
+                    <i class="dashicons dashicons-trash"></i>
+                </button> ',
+                $employee->id,
+                __('Hapus', 'wp-customer')
+            );
+        }
+
+        // Status toggle button
+        if (current_user_can('edit_employee')) {
+            $newStatus = $employee->status === 'active' ? 'inactive' : 'active';
+            $statusTitle = $employee->status === 'active' ? __('Nonaktifkan', 'wp-customer') : __('Aktifkan', 'wp-customer');
+            $statusIcon = $employee->status === 'active' ? 'remove' : 'yes';
+            
+            $actions .= sprintf(
+                '<button type="button" class="button toggle-status" data-id="%d" data-status="%s" title="%s">
+                    <i class="dashicons dashicons-%s"></i>
+                </button>',
+                $employee->id,
+                $newStatus,
+                $statusTitle,
+                $statusIcon
+            );
+        }
+
+        return $actions;
+    }
+
+    /**
+     * Show employee details
+     */
+    public function show() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+
+            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+            if (!$id) {
+                throw new \Exception('Invalid employee ID');
+            }
+
+            // Validate view permission
+            $errors = $this->validator->validateView($id);
+            if (!empty($errors)) {
+                throw new \Exception(reset($errors));
+            }
+
+            $employee = $this->model->find($id);
+            if (!$employee) {
+                throw new \Exception('Employee not found');
+            }
+
+            wp_send_json_success($employee);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Store new employee
+     */
+    public function store() {
+        try {
+            error_log('Received POST data: ' . print_r($_POST, true));
+
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+
+            // Basic data sanitization
+            $data = [
+                'customer_id' => isset($_POST['customer_id']) ? (int) $_POST['customer_id'] : 0,
+                'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0,
+                'name' => sanitize_text_field($_POST['name'] ?? ''),
+                'position' => sanitize_text_field($_POST['position'] ?? ''),
+                'department' => sanitize_text_field($_POST['department'] ?? ''),
+                'email' => sanitize_email($_POST['email'] ?? ''),
+                'phone' => sanitize_text_field($_POST['phone'] ?? ''),
+            ];
+    
+            error_log('Sanitized data: ' . print_r($data, true));
+
+            // Validate input
+            $errors = $this->validator->validateCreate($data);
+            if (!empty($errors)) {
+                throw new \Exception(implode(', ', $errors));
+            }
+
+            // Create employee
+            $id = $this->model->create($data);
+            if (!$id) {
+                throw new \Exception('Failed to create employee');
+            }
+
+            // Get fresh data
+            $employee = $this->model->find($id);
+            if (!$employee) {
+                throw new \Exception('Failed to retrieve created employee');
+            }
+
+            wp_send_json_success([
+                'message' => __('Karyawan berhasil ditambahkan', 'wp-customer'),
+                'employee' => $employee
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Update employee
+     */
+    public function update() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+
+            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+            if (!$id) {
+                throw new \Exception('Invalid employee ID');
+            }
+
+            // Basic data sanitization
+            $data = [
+                'name' => sanitize_text_field($_POST['name'] ?? ''),
+                'position' => sanitize_text_field($_POST['position'] ?? ''),
+                'department' => sanitize_text_field($_POST['department'] ?? ''),
+                'email' => sanitize_email($_POST['email'] ?? ''),
+                'phone' => sanitize_text_field($_POST['phone'] ?? ''),
+                'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0
+            ];
+
+            // Validate input
+            $errors = $this->validator->validateUpdate($data, $id);
+            if (!empty($errors)) {
+                throw new \Exception(implode(', ', $errors));
+            }
+
+            // Update employee
+            if (!$this->model->update($id, $data)) {
+                throw new \Exception('Failed to update employee');
+            }
+
+            // Get fresh data
+            $employee = $this->model->find($id);
+            if (!$employee) {
+                throw new \Exception('Failed to retrieve updated employee');
+            }
+
+            wp_send_json_success([
+                'message' => __('Data karyawan berhasil diperbarui', 'wp-customer'),
+                'employee' => $employee
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Delete employee
+     */
+    public function delete() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+
+            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+            if (!$id) {
+                throw new \Exception('Invalid employee ID');
+            }
+
+            // Validate delete operation
+            $errors = $this->validator->validateDelete($id);
+            if (!empty($errors)) {
+                throw new \Exception(reset($errors));
+            }
+
+            if (!$this->model->delete($id)) {
+                throw new \Exception('Failed to delete employee');
+            }
+
+            wp_send_json_success([
+                'message' => __('Karyawan berhasil dihapus', 'wp-customer')
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Change employee status
+     */
+    public function changeStatus() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+
+            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+            if (!$id) {
+                throw new \Exception('Invalid employee ID');
+            }
+
+            $status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
+            if (!in_array($status, ['active', 'inactive'])) {
+                throw new \Exception('Invalid status');
+            }
+
+            // Validate edit permission
+            if (!current_user_can('edit_employee')) {
+                throw new \Exception(__('Anda tidak memiliki izin untuk mengubah status karyawan.', 'wp-customer'));
+            }
+
+            // Get employee data
+            $employee = $this->model->find($id);
+            if (!$employee) {
+                throw new \Exception('Employee not found');
+            }
+
+            // Update status
+            if (!$this->model->changeStatus($id, $status)) {
+                throw new \Exception('Failed to update employee status');
+            }
+
+            // Get fresh data
+            $employee = $this->model->find($id);
+
+            wp_send_json_success([
+                'message' => __('Status karyawan berhasil diperbarui', 'wp-customer'),
+                'employee' => $employee
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+}
