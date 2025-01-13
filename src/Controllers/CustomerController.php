@@ -216,11 +216,17 @@ class CustomerController {
 
                 $data = [];
                 foreach ($result['data'] as $customer) {
+                    $owner_name = '-';
+                    if (!empty($customer->user_id)) {
+                        $user = get_userdata($customer->user_id);
+                        $owner_name = $user ? $user->display_name : '-';
+                    }
+
                     $data[] = [
                         'id' => $customer->id,
                         'code' => esc_html($customer->code),
                         'name' => esc_html($customer->name),
-                        'owner_name' => esc_html($customer->owner_name ?? '-'), // tambah owner_name
+                        'owner_name' => esc_html($owner_name), // Tambahkan ini
                         'branch_count' => intval($customer->branch_count),
                         'actions' => $this->generateActionButtons($customer)
                     ];
@@ -322,7 +328,8 @@ private function generateActionButtons($customer) {
             );
         }
 
-        if (current_user_can('delete_customer')) {
+        if (current_user_can('delete_customer') ||
+            (current_user_can('delete_own_customer') && $customer->user_id === get_current_user_id())) {
             $actions .= sprintf(
                 '<button type="button" class="button delete-customer" data-id="%d" title="%s"><i class="dashicons dashicons-trash"></i></button>',
                 $customer->id,
@@ -473,6 +480,9 @@ private function generateActionButtons($customer) {
                 throw new \Exception('Failed to update customer');
             }
 
+            // Invalidate cache
+            $this->cache->invalidateCustomerCache($id);
+
             // Get updated data
             $customer = $this->model->find($id);
             if (!$customer) {
@@ -501,18 +511,25 @@ private function generateActionButtons($customer) {
                 throw new \Exception('Invalid customer ID');
             }
 
-            $customer = $this->model->find($id);
+            // Cek cache menggunakan method yang sudah ada
+            $customer = $this->cache->getCustomer($id);
+            
             if (!$customer) {
-                throw new \Exception('Customer not found');
+                $customer = $this->model->find($id);
+                if (!$customer) {
+                    throw new \Exception('Customer not found');
+                }
+                // Set cache
+                $this->cache->setCustomer($id, $customer);
             }
 
-            // Add user permission check
+            // Permission check setelah data didapat
             if (!current_user_can('view_customer_detail') && 
                 (!current_user_can('view_own_customer') || $customer->user_id !== get_current_user_id())) {
                 throw new \Exception('You do not have permission to view this customer');
             }
 
-            // Add owner information to response
+            // Add owner information
             if ($customer->user_id) {
                 $user = get_userdata($customer->user_id);
                 if ($user) {
@@ -529,7 +546,6 @@ private function generateActionButtons($customer) {
             wp_send_json_error(['message' => $e->getMessage()]);
         }
     }
-
     public function delete() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');

@@ -21,7 +21,11 @@ class CacheManager {
     private const KEY_CUSTOMER_LIST = 'customer_list';
 
     public function getCustomer(int $id): ?object {
-        return wp_cache_get(self::KEY_CUSTOMER . $id, self::CACHE_GROUP);
+        $result = wp_cache_get(self::KEY_CUSTOMER . $id, self::CACHE_GROUP);
+        if ($result === false) {
+            return null;
+        }
+        return $result;
     }
 
     public function setCustomer(int $id, object $data): bool {
