@@ -141,6 +141,11 @@ class BranchController {
                 throw new \Exception('Security check failed');
             }
 
+            // Add this check
+            if (!current_user_can('view_branch_list')) {
+                throw new \Exception('Insufficient permissions');
+            }
+            
             // Get and validate customer_id
             $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
             if (!$customer_id) {

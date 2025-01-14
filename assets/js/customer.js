@@ -99,15 +99,47 @@
              $(window).off('hashchange.Customer').on('hashchange.Customer', () => this.handleHashChange());
          },
 
-         handleInitialState() {
-             const hash = window.location.hash;
-             if (hash && hash.startsWith('#')) {
-                 const id = hash.substring(1);
-                 if (id && id !== this.currentId) {
-                     this.loadCustomerData(id);
-                 }
-             }
-         },
+            validateCustomerAccess(customerId, onSuccess, onError) {
+                $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'validate_customer_access',
+                        id: customerId,
+                        nonce: wpCustomerData.nonce
+                    },
+                    success: (response) => {
+                        if (response.success) {
+                            if (onSuccess) onSuccess(response.data);
+                        } else {
+                            if (onError) onError(response.data);
+                        }
+                    },
+                    error: (xhr) => {
+                        if (onError) onError({
+                            message: 'Terjadi kesalahan saat validasi akses',
+                            code: 'server_error'
+                        });
+                    }
+                });
+            },
+            
+        handleInitialState() {
+            const hash = window.location.hash;
+            if (hash && hash.startsWith('#')) {
+                const customerId = parseInt(hash.substring(1));
+                if (customerId) {
+                    this.validateCustomerAccess(
+                        customerId,
+                        (data) => this.loadCustomerData(customerId),
+                        (error) => {
+                            window.location.href = 'admin.php?page=wp-customer';
+                            CustomerToast.error(error.message);
+                        }
+                    );
+                }
+            }
+        },
 
          handleHashChange() {
              const hash = window.location.hash;

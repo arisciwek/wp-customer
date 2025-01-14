@@ -38,12 +38,24 @@ use WPCustomer\Validators\CustomerValidator;
 use WPCustomer\Cache\CacheManager;
 
 class CustomerController {
+    private $error_messages;
     private CustomerModel $model;
     private CustomerValidator $validator;
     private CacheManager $cache;
     private BranchModel $branchModel;  // Tambahkan ini
 
     private string $log_file;
+
+    private function logPermissionCheck($action, $user_id, $customer_id, $branch_id = null, $result) {
+        $this->debug_log(sprintf(
+            'Permission check for %s - User: %d, Customer: %d, Branch: %s, Result: %s',
+            $action,
+            $user_id,
+            $customer_id,
+            $branch_id ?? 'none',  // Gunakan null coalescing untuk handle null branch_id
+            $result ? 'granted' : 'denied'
+        ));
+    }
 
     /**
      * Default log file path
@@ -55,6 +67,15 @@ class CustomerController {
         $this->branchModel = new BranchModel();  // Inisialisasi di constructor
         $this->validator = new CustomerValidator();
         $this->cache = new CacheManager();
+
+        // Inisialisasi error messages
+        $this->error_messages = [
+            'insufficient_permissions' => __('Anda tidak memiliki izin untuk melakukan operasi ini', 'wp-customer'),
+            'view_denied' => __('Anda tidak memiliki izin untuk melihat data ini', 'wp-customer'),
+            'edit_denied' => __('Anda tidak memiliki izin untuk mengubah data ini', 'wp-customer'),
+            'delete_denied' => __('Anda tidak memiliki izin untuk menghapus data ini', 'wp-customer'),
+        ];
+
 
         // Inisialisasi log file di dalam direktori plugin
         $this->log_file = WP_CUSTOMER_PATH . self::DEFAULT_LOG_FILE;
@@ -73,7 +94,99 @@ class CustomerController {
         add_action('wp_ajax_get_customer', [$this, 'show']);
         add_action('wp_ajax_create_customer', [$this, 'store']);
         add_action('wp_ajax_delete_customer', [$this, 'delete']);
+        add_action('wp_ajax_validate_customer_access', [$this, 'validateCustomerAccess']);
 
+    }
+
+
+    /**
+     * Validate customer access - public endpoint untuk AJAX
+     * @since 1.0.0
+     */
+    public function validateCustomerAccess() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+
+            $customer_id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+            if (!$customer_id) {
+                throw new \Exception('Invalid customer ID');
+            }
+
+            // Gunakan method private untuk validasi internal
+            $access = $this->checkCustomerAccess($customer_id);
+            
+            if (!$access['has_access']) {
+                wp_send_json_error([
+                    'message' => __('Anda tidak memiliki akses ke customer ini', 'wp-customer'),
+                    'code' => 'access_denied'
+                ]);
+                return;
+            }
+
+            wp_send_json_success([
+                'message' => 'Akses diberikan',
+                'customer_id' => $customer_id,
+                'access_type' => $access['access_type']
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage(),
+                'code' => 'error'
+            ]);
+        }
+    }
+
+
+    /**
+     * Internal method untuk validasi akses customer
+     * @param int $customer_id
+     * @return array
+     */
+    private function checkCustomerAccess($customer_id) {
+        global $wpdb;
+        $current_user_id = get_current_user_id();
+
+        // 1. Admin Check
+        if (current_user_can('edit_all_customers')) {
+            return [
+                'has_access' => true,
+                'access_type' => 'admin'
+            ];
+        }
+
+        // 2. Owner Check  
+        $is_owner = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers 
+             WHERE id = %d AND user_id = %d",
+            $customer_id, $current_user_id
+        ));
+
+        if ($is_owner && current_user_can('view_own_customer')) {
+            return [
+                'has_access' => true,
+                'access_type' => 'owner'
+            ];
+        }
+
+        // 3. Employee Check
+        $is_employee = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
+             WHERE customer_id = %d AND user_id = %d",
+            $customer_id, $current_user_id
+        ));
+
+        if ($is_employee && current_user_can('view_own_customer')) {
+            return [
+                'has_access' => true,
+                'access_type' => 'employee'
+            ];
+        }
+
+        return [
+            'has_access' => false,
+            'access_type' => null
+        ];
     }
 
     /**
@@ -187,6 +300,20 @@ class CustomerController {
             if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
                 throw new \Exception('Security check failed');
             }
+        
+            $hasPermission = current_user_can('view_customer_list');
+            $this->logPermissionCheck(
+                'view_customer_list',
+                get_current_user_id(),
+                0,  // No specific customer
+                null, // No specific branch
+                $hasPermission
+            );
+
+            if (!$hasPermission) {
+                wp_send_json_error(['message' => 'Insufficient permissions']);
+                return;
+            }
 
             // Get and validate parameters
             $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
@@ -267,7 +394,8 @@ private function generateActionButtons($customer) {
         ]
     ]);
 
-    if (current_user_can('view_customer_detail')) {
+    if (current_user_can('view_customer_detail') || 
+        (current_user_can('view_own_customer') && $customer->user_id === get_current_user_id())) {
         $actions .= sprintf(
             '<button type="button" class="button view-customer" data-id="%d" title="%s"><i class="dashicons dashicons-visibility"></i></button> ',
             $customer->id,
@@ -344,7 +472,7 @@ private function generateActionButtons($customer) {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            if (!current_user_can('create_customer')) {
+            if (!current_user_can('add_customer')) {
                 wp_send_json_error([
                     'message' => __('Insufficient permissions', 'wp-customer')
                 ]);
@@ -511,30 +639,33 @@ private function generateActionButtons($customer) {
                 throw new \Exception('Invalid customer ID');
             }
 
-            // Cek cache menggunakan method yang sudah ada
+            // Coba ambil dari cache dulu
             $customer = $this->cache->getCustomer($id);
             
+            // Jika tidak ada di cache, ambil dari database
             if (!$customer) {
                 $customer = $this->model->find($id);
                 if (!$customer) {
                     throw new \Exception('Customer not found');
                 }
-                // Set cache
-                $this->cache->setCustomer($id, $customer);
             }
 
-            // Permission check setelah data didapat
-            if (!current_user_can('view_customer_detail') && 
-                (!current_user_can('view_own_customer') || $customer->user_id !== get_current_user_id())) {
+            // Cek permission
+            $current_user_id = get_current_user_id();
+            $hasViewPermission = 
+                current_user_can('view_customer_detail') || 
+                (current_user_can('view_own_customer') && (int)$customer->user_id === $current_user_id);
+
+            $this->logPermissionCheck(
+                'view_customer_detail',
+                $current_user_id, 
+                $id,
+                null,
+                $hasViewPermission
+            );
+
+            if (!$hasViewPermission) {
                 throw new \Exception('You do not have permission to view this customer');
-            }
-
-            // Add owner information
-            if ($customer->user_id) {
-                $user = get_userdata($customer->user_id);
-                if ($user) {
-                    $customer->owner_name = $user->display_name;
-                }
             }
 
             wp_send_json_success([
@@ -546,6 +677,7 @@ private function generateActionButtons($customer) {
             wp_send_json_error(['message' => $e->getMessage()]);
         }
     }
+
     public function delete() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
@@ -553,6 +685,11 @@ private function generateActionButtons($customer) {
             $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
             if (!$id) {
                 throw new \Exception('Invalid customer ID');
+            }
+
+            // Add this check
+            if (!current_user_can('delete_customer')) {
+                throw new \Exception('Insufficient permissions');
             }
 
             // Validate delete operation

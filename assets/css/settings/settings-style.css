@@ -208,3 +208,20 @@
     }
 }
 
+
+.permissions-matrix {
+    margin-top: 20px;
+}
+.column-permission {
+    text-align: center;
+    width: auto;
+}
+.tooltip-icon {
+    opacity: 0.7;
+    cursor: help;
+}
+.nav-tab {
+    margin-left: 0;
+    margin-right: 0.5em;
+}
+

@@ -193,7 +193,7 @@ class CustomerEmployeeController {
         }
 
         // Edit button
-        if (current_user_can('edit_employee') ||
+        if (current_user_can('edit_all_employees') ||
             (current_user_can('edit_own_employee') && $employee->created_by === get_current_user_id())) {
             $actions .= sprintf(
                 '<button type="button" class="button edit-employee" data-id="%d" title="%s">
@@ -216,7 +216,8 @@ class CustomerEmployeeController {
         }
 
         // Status toggle button
-        if (current_user_can('edit_employee')) {
+        if (current_user_can('edit_all_employees') ||
+            (current_user_can('edit_own_employee') && $employee->created_by === get_current_user_id())) {
             $newStatus = $employee->status === 'active' ? 'inactive' : 'active';
             $statusTitle = $employee->status === 'active' ? __('Nonaktifkan', 'wp-customer') : __('Aktifkan', 'wp-customer');
             $statusIcon = $employee->status === 'active' ? 'remove' : 'yes';

@@ -27,11 +27,13 @@
  class CustomerModel {
      private $table;
      private $branch_table;
+     private $employee_table;
 
      public function __construct() {
          global $wpdb;
          $this->table = $wpdb->prefix . 'app_customers';
          $this->branch_table = $wpdb->prefix . 'app_branches';
+         $this->employee_table = $wpdb->prefix . 'app_customer_employees';
      }
 
     public function create(array $data): ?int {
@@ -107,118 +109,86 @@
         return $result !== false;
     }
 
-    public function getDataTableData(int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
-        global $wpdb;
+public function getDataTableData(int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
+    global $wpdb;
+    
+    $current_user_id = get_current_user_id();
 
-        // Debug capabilities
-        error_log('--- Debug User Capabilities ---');
-        error_log('User ID: ' . get_current_user_id());
-        error_log('Can view_customer_list: ' . (current_user_can('view_customer_list') ? 'yes' : 'no'));
-        error_log('Can view_own_customer: ' . (current_user_can('view_own_customer') ? 'yes' : 'no'));
-        error_log('Can edit_own_customer: ' . (current_user_can('edit_own_customer') ? 'yes' : 'no'));
-        error_log('Can edit_all_customers: ' . (current_user_can('edit_all_customers') ? 'yes' : 'no'));
+    // Debug capabilities
+    error_log('--- Debug User Capabilities ---');
+    error_log('User ID: ' . $current_user_id);
+    error_log('Can view_customer_list: ' . (current_user_can('view_customer_list') ? 'yes' : 'no'));
+    error_log('Can view_own_customer: ' . (current_user_can('view_own_customer') ? 'yes' : 'no'));
 
-        // Base query
-        $select = "SELECT SQL_CALC_FOUND_ROWS p.*, 
-                         COUNT(r.id) as branch_count";
-        $from = " FROM {$this->table} p";
-        $join = " LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id";
-        $where = " WHERE 1=1";
-        $group = " GROUP BY p.id";
+    // Base query parts
+    $select = "SELECT SQL_CALC_FOUND_ROWS p.*, COUNT(r.id) as branch_count";
+    $from = " FROM {$this->table} p";
+    $join = " LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id";
+    $where = " WHERE 1=1";
 
-        // Debug query building process
-        error_log('Building WHERE clause:');
-        error_log('Initial WHERE: ' . $where);
+    // Debug query building process
+    error_log('Building WHERE clause:');
+    error_log('Initial WHERE: ' . $where);
 
+    // Cek apakah user memiliki akses sebagai owner
+    $has_customer = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$this->table} WHERE user_id = %d",
+        $current_user_id
+    ));
+    error_log('User has customer: ' . ($has_customer > 0 ? 'yes' : 'no'));
 
-        // Cek dulu current_user_id untuk berbagai keperluan 
-        $current_user_id = get_current_user_id();
+    // Cek apakah user adalah employee dari customer
+    $employee_customer = $wpdb->get_var($wpdb->prepare(
+        "SELECT customer_id FROM {$this->employee_table} WHERE user_id = %d",
+        $current_user_id
+    ));
+    error_log('User is employee of customer: ' . ($employee_customer ? $employee_customer : 'no'));
 
-        // dapatkan relasi User ID word press dengan customer User ID
-        // atau p.user_id
-        // disini
-
-
-        // Kondisi 1: View own customer
-        // tambahkan jika user login adalah pemilik customer
-        // nantinya disini akan bertambah dengan user yang berelasi dengan customer seperti staff dari customer
-
-        // Dapatkan relasi User ID wordpress dengan customer User ID
-        $has_customer = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table} WHERE user_id = %d",
-            $current_user_id
-        ));
-        error_log('User has customer: ' . ($has_customer > 0 ? 'yes' : 'no'));
-
-        // Kondisi 1: View own customer
-        if ($has_customer > 0 && current_user_can('view_customer_list') && current_user_can('edit_own_customer')) {
-            $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
-            $select .= ", u.display_name as owner_name";  
-            $join .= " LEFT JOIN {$wpdb->users} u ON p.user_id = u.ID";        
-            error_log('Added own customer restriction: ' . $where);  
-            error_log('Added own customer relation: ' . $join);
-        }
-
-        // Kondisi 2: Edit all customers
-        if (current_user_can('edit_all_customers')) {
-            // Tidak perlu tambahan WHERE karena bisa lihat semua
-            error_log('User can edit all customers - no additional restrictions');
-        }
-
-        // Kondisi 4: Search filter
-        if (!empty($search)) {
-            $where .= $wpdb->prepare(
-                " AND (p.name LIKE %s OR p.code LIKE %s OR u.display_name LIKE %s)",
-                '%' . $wpdb->esc_like($search) . '%',
-                '%' . $wpdb->esc_like($search) . '%',
-                '%' . $wpdb->esc_like($search) . '%'
-            );
-            error_log('Added search filter: ' . $where);
-        }
-        
-        // Map frontend column to actual column - ini sudah ada
-        $orderColumnMap = [
-            'owner_name' => 'u.display_name',
-            'code' => 'p.code',
-            'name' => 'p.name',
-            'branch_count' => 'branch_count'
-        ];
-
-        $orderColumn = $orderColumnMap[$orderColumn] ?? 'p.code';
-        $orderDir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
-
-        // Add order
-        $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
-
-        // Add limit
-        $limit = $wpdb->prepare(" LIMIT %d, %d", $start, $length);
-
-        // Complete query
-        $sql = $select . $from . $join . $where . $group . $order . $limit;
-        
-        error_log('Final Query: ' . $sql);
-        
-        // Execute query
-        $results = $wpdb->get_results($sql);
-        if ($results === null) {
-            error_log('Query Error: ' . $wpdb->last_error);
-        }
-
-        // Get counts
-        $filtered = $wpdb->get_var("SELECT FOUND_ROWS()");
-        $total = $wpdb->get_var("SELECT COUNT(DISTINCT id) FROM {$this->table}");
-
-        error_log('Filtered count: ' . $filtered);
-        error_log('Total count: ' . $total);
-        error_log('--- End Debug ---');
-
-        return [
-            'data' => $results,
-            'total' => (int) $total,
-            'filtered' => (int) $filtered
-        ];
+    // Permission based filtering
+    if (current_user_can('edit_all_customers')) {
+        error_log('User can edit all customers - no additional restrictions');
+    }
+    else if ($has_customer > 0 && current_user_can('view_own_customer')) {
+        // User sebagai owner
+        $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
+        error_log('Added owner restriction: ' . $where);
+    }
+    else if ($employee_customer && current_user_can('view_own_customer')) {
+        // User sebagai employee
+        $where .= $wpdb->prepare(" AND p.id = %d", $employee_customer);
+        error_log('Added employee restriction: ' . $where);
+    }
+    else {
+        // Tidak punya akses
+        $where .= " AND 1=0";
+        error_log('User has no access - restricting all results');
     }
 
+    // Complete query parts
+    $group = " GROUP BY p.id";
+    $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
+    $limit = $wpdb->prepare(" LIMIT %d, %d", $start, $length);
+
+    $sql = $select . $from . $join . $where . $group . $order . $limit;
+    error_log('Final Query: ' . $sql);
+
+    // Execute query
+    $results = $wpdb->get_results($sql);
+    
+    // Get counts  
+    $filtered = $wpdb->get_var("SELECT FOUND_ROWS()");
+    $total = $this->getTotalCount();
+
+    error_log('Filtered count: ' . $filtered);
+    error_log('Total count: ' . $total);
+    error_log('--- End Debug ---');
+
+    return [
+        'data' => $results,
+        'total' => (int) $total,
+        'filtered' => (int) $filtered
+    ];
+}
      public function delete(int $id): bool {
          global $wpdb;
 

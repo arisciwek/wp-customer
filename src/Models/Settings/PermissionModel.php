@@ -22,6 +22,7 @@
  * - Basic permission management
  * - Default capabilities setup
  */
+
 namespace WPCustomer\Models\Settings;
 
 class PermissionModel {
@@ -49,38 +50,62 @@ class PermissionModel {
         'view_employee_detail' => 'Lihat Detail Karyawan', 
         'view_own_employee' => 'Lihat Karyawan Sendiri',
         'add_employee' => 'Tambah Karyawan',
-        'edit_employee' => 'Edit Karyawan',
+        'edit_all_employees' => 'Edit Karyawan',
         'edit_own_employee' => 'Edit Karyawan Sendiri',
         'delete_employee' => 'Hapus Karyawan'        
     ];
 
+    // Add default role capabilities array
     private $default_role_caps = [
-        'editor' => [
-            'view_customer_list',
-            'view_customer_detail',
-            'view_own_customer',
-            'edit_own_customer',
-            'view_branch_list',
-            'view_branch_detail',
-            'view_own_branch',
-            'edit_own_branch'
+        'customer' => [
+            'title' => 'Customer Permissions',
+            'caps' => [
+                'view_customer_list',
+                'add_customer',
+                'view_own_customer',
+                'edit_own_customer',
+                'view_branch_list',
+                'view_own_branch',
+                'add_branch',
+                'edit_own_branch',
+                'view_employee_list',
+                'view_own_employee',
+                'add_employee',
+                'edit_own_employee'
+            ]
         ],
-        'author' => [
-            'view_customer_list',
-            'view_customer_detail',
-            'view_own_customer',
-            'view_branch_list',
-            'view_branch_detail',
-            'view_own_branch'
+        'branch' => [
+            'title' => 'Branch Permissions',
+            'caps' => [
+                'view_branch_list',
+                'view_branch_detail',
+                'view_own_branch',
+                'add_branch',
+                'edit_all_branches',
+                'edit_own_branch',
+                'delete_branch'
+            ]
         ],
-        'contributor' => [
-            'view_own_customer',
-            'view_own_branch'
+        'employee' => [
+            'title' => 'Employee Permissions',
+            'caps' => [
+                'view_employee_list',
+                'view_employee_detail',
+                'view_own_employee',
+                'add_employee',
+                'edit_all_employees',
+                'edit_own_employee',
+                'delete_employee'
+            ]
         ]
     ];
 
     public function getAllCapabilities(): array {
         return $this->default_capabilities;
+    }
+
+    public function getCapabilityGroups(): array {
+        return $this->default_role_caps;
     }
 
     public function roleHasCapability(string $role_name, string $capability): bool {
@@ -89,9 +114,63 @@ class PermissionModel {
             error_log("Role not found: $role_name");
             return false;
         }
+        return $role->has_cap($capability);
+    }
 
-        $has_cap = $role->has_cap($capability);
-        return $has_cap;
+    public function addCapabilities(): void {
+        // Set administrator capabilities
+        $admin = get_role('administrator');
+        if ($admin) {
+            foreach (array_keys($this->default_capabilities) as $cap) {
+                $admin->add_cap($cap);
+            }
+        }
+
+        // Set customer role capabilities
+        $customer = get_role('customer');
+        if ($customer) {
+            foreach (array_keys($this->default_capabilities) as $cap) {
+                $customer->remove_cap($cap);
+            }
+            foreach ($this->default_role_caps['customer']['caps'] as $cap) {
+                $customer->add_cap($cap);
+            }
+        }
+    }
+
+    public function resetToDefault(): bool {
+        try {
+            // Reset all roles to default
+            foreach (get_editable_roles() as $role_name => $role_info) {
+                $role = get_role($role_name);
+                if (!$role) continue;
+
+                // Remove all existing capabilities
+                foreach (array_keys($this->default_capabilities) as $cap) {
+                    $role->remove_cap($cap);
+                }
+
+                // Administrator gets all capabilities
+                if ($role_name === 'administrator') {
+                    foreach (array_keys($this->default_capabilities) as $cap) {
+                        $role->add_cap($cap);
+                    }
+                    continue;
+                }
+
+                // Customer role gets its specific capabilities
+                if ($role_name === 'customer' && isset($this->default_role_caps['customer'])) {
+                    foreach ($this->default_role_caps['customer']['caps'] as $cap) {
+                        $role->add_cap($cap);
+                    }
+                }
+            }
+            return true;
+
+        } catch (\Exception $e) {
+            error_log('Error resetting permissions: ' . $e->getMessage());
+            return false;
+        }
     }
 
     public function updateRoleCapabilities(string $role_name, array $capabilities): bool {
@@ -110,73 +189,12 @@ class PermissionModel {
         }
 
         // Add new capabilities
-        foreach ($this->default_capabilities as $cap => $label) {
-            if (isset($capabilities[$cap]) && $capabilities[$cap]) {
+        foreach ($capabilities as $cap => $enabled) {
+            if ($enabled && isset($this->default_capabilities[$cap])) {
                 $role->add_cap($cap);
             }
         }
 
         return true;
     }
-
-    public function addCapabilities(): void {
-        // Set administrator capabilities
-        $admin = get_role('administrator');
-        if ($admin) {
-            foreach (array_keys($this->default_capabilities) as $cap) {
-                $admin->add_cap($cap);
-            }
-        }
-
-        // Set default role capabilities
-        foreach ($this->default_role_caps as $role_name => $caps) {
-            $role = get_role($role_name);
-            if ($role) {
-                // Reset capabilities first
-                foreach (array_keys($this->default_capabilities) as $cap) {
-                    $role->remove_cap($cap);
-                }
-                // Add default capabilities
-                foreach ($caps as $cap) {
-                    $role->add_cap($cap);
-                }
-            }
-        }
-    }
-
-    public function resetToDefault(): bool {
-    try {
-        // Reset semua role ke default
-        foreach (get_editable_roles() as $role_name => $role_info) {
-            $role = get_role($role_name);
-            if (!$role) continue;
-
-            // Hapus semua capability yang ada
-            foreach (array_keys($this->default_capabilities) as $cap) {
-                $role->remove_cap($cap);
-            }
-
-            // Jika administrator, berikan semua capability
-            if ($role_name === 'administrator') {
-                foreach (array_keys($this->default_capabilities) as $cap) {
-                    $role->add_cap($cap);
-                }
-                continue;
-            }
-
-            // Untuk role lain, berikan sesuai default jika ada
-            if (isset($this->default_role_caps[$role_name])) {
-                foreach ($this->default_role_caps[$role_name] as $cap) {
-                    $role->add_cap($cap);
-                }
-            }
-        }
-
-        return true;
-
-    } catch (\Exception $e) {
-        error_log('Error resetting permissions: ' . $e->getMessage());
-        return false;
-    }
-}
 }

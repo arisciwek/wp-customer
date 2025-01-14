@@ -61,10 +61,20 @@ class WP_Customer_Activator {
                         'view_own_customer' => true,
                         'edit_own_customer' => true,
                         'view_own_customer' => true,
+                        'delete_customer' => false,
+
+                        'add_branch' => true,
                         'view_branch_list' => true,
                         'view_own_branch' => true,
+                        'edit_own_branch' => true,
+                        'delete_branch' => false,
+
+                        'add_employee' => true,
                         'view_employee_list' => true,
-                        'view_own_employee' => true
+                        'view_own_employee' => true,
+                        'edit_own_employee' => true,
+                        'delete_employee' => false
+
                     ]
                 );
             }
@@ -72,6 +82,20 @@ class WP_Customer_Activator {
             // Inisialisasi permission model untuk set semua capabilities
             $permission_model = new \WPCustomer\Models\Settings\PermissionModel();
             $permission_model->addCapabilities();
+
+            // After permissions are set, load demo data
+            try {
+                require_once WP_CUSTOMER_PATH . 'src/Database/DemoData.php';
+                if (class_exists('\WPCustomer\Database\DemoData')) {
+                    \WPCustomer\Database\DemoData::load();
+                    error_log('Demo data loaded successfully');
+                } else {
+                    self::logError('DemoData class not found');
+                }
+            } catch (\Exception $e) {
+                self::logError('Error loading demo data: ' . $e->getMessage());
+            }
+
 
             self::addVersion();
             self::setupMembershipDefaults(); // Tambahkan ini

@@ -44,6 +44,16 @@ class Installer {
         'app_customer_membership_levels'
     ];
 
+    private static function verify_tables() {
+        global $wpdb;
+        foreach (self::$tables as $table) {
+            $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}{$table}'");
+            if (!$table_exists) {
+                throw new \Exception("Failed to create table: {$wpdb->prefix}{$table}");
+            }
+        }
+    }
+    
     public static function run() {
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         global $wpdb;
@@ -51,27 +61,20 @@ class Installer {
         try {
             $wpdb->query('START TRANSACTION');
 
-	        // Database Tables
             // Database Tables
             require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomersDB.php';
             require_once WP_CUSTOMER_PATH . 'src/Database/Tables/BranchesDB.php';
             require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomerMembershipLevelsDB.php';
             require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomerEmployeesDB.php';
 
-            // Create tables in correct order (parent tables first)
-
+            // Create tables in correct order
             dbDelta(Tables\CustomerMembershipLevelsDB::get_schema());
             dbDelta(Tables\CustomersDB::get_schema());
             dbDelta(Tables\BranchesDB::get_schema());
             dbDelta(Tables\CustomerEmployeesDB::get_schema());
 
             // Verify tables were created
-            foreach (self::$tables as $table) {
-                $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}{$table}'");
-                if (!$table_exists) {
-                    throw new \Exception("Failed to create table: {$wpdb->prefix}{$table}");
-                }
-            }
+            self::verify_tables();
 
             // Drop any existing foreign keys for clean slate
             self::ensure_no_foreign_keys();
@@ -79,12 +82,21 @@ class Installer {
             // Add foreign key constraints
             self::add_foreign_keys();
 
-            // Insert default membership levels
-            //Tables\CustomerMembershipLevels::insert_defaults();
+            // Di Installer.php
+            /*
+            $demo_data_file = WP_CUSTOMER_PATH . 'src/Database/DemoData.php';
+            if (file_exists($demo_data_file)) {
+                require_once $demo_data_file;
+                if (class_exists('\WPCustomer\Database\DemoData')) {
+                    DemoData::load();
+                } else {
+                    error_log('DemoData class not found after including file');
+                }
+            } else {
+                error_log('DemoData file not found: ' . $demo_data_file);
+            }
+            */
 
-            // Add demo data - TAMBAHKAN INI
-            require_once WP_CUSTOMER_PATH . 'src/Database/Demo_Data.php';
-            Demo_Data::load();
 
             $wpdb->query('COMMIT');
             return true;
@@ -95,7 +107,6 @@ class Installer {
             return false;
         }
     }
-
 
     private static function ensure_no_foreign_keys() {
         global $wpdb;
