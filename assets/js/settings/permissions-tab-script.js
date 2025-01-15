@@ -46,6 +46,11 @@
         bindEvents() {
             this.form.on('submit', (e) => this.handleSubmit(e));
             this.resetBtn.on('click', (e) => this.handleReset(e));
+
+                if ($.fn.tooltip) {
+                    $('.tooltip-icon').tooltip({
+                    position: { my: "center bottom", at: "center top-10" }
+                }
         },
 
         handleSubmit(e) {

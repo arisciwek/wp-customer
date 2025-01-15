@@ -125,9 +125,3 @@ $options = get_option('wp_customer_settings', array(
 
     <?php submit_button(__('Simpan Perubahan', 'wp-customer')); ?>
 </form>
-
-<style>
-.regular-text {
-    width: 350px;
-}
-</style>

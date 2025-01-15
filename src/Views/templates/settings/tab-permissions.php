@@ -177,12 +177,3 @@ $current_tab = isset($_GET['permission_tab']) ? sanitize_key($_GET['permission_t
     </div>
 </div>
 
-<script>
-jQuery(document).ready(function($) {
-    if ($.fn.tooltip) {
-        $('.tooltip-icon').tooltip({
-            position: { my: "center bottom", at: "center top-10" }
-        });
-    }
-});
-</script>
