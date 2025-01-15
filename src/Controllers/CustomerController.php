@@ -380,58 +380,120 @@ class CustomerController {
         }
     }
 
+
+
 private function generateActionButtons($customer) {
     $actions = '';
-
-    // Debug log untuk melihat data customer dan capabilities
-    $this->debug_log("Customer data for ID {$customer->id}:");
+    (int)$current_user_id = get_current_user_id();
+    
+    // Debug header for this specific customer
+    $this->debug_log("==== Generating Action Buttons for Customer ID: {$customer->id} ====");
+    
+    // Log customer data
+    $this->debug_log("Customer Data:");
     $this->debug_log([
-        'user_id' => $customer->user_id,
-        'current_user' => get_current_user_id(),
-        'capabilities' => [
-            'edit_all' => current_user_can('edit_all_customers'),
-            'edit_own' => current_user_can('edit_own_customer')
-        ]
+        'id' => (int)$customer->id,
+        'user_id' => (int)$customer->user_id,
+        'current_user' => (int)$current_user_id
     ]);
-
-    if (current_user_can('view_customer_detail') || 
-        (current_user_can('view_own_customer') && $customer->user_id === get_current_user_id())) {
-        $actions .= sprintf(
-            '<button type="button" class="button view-customer" data-id="%d" title="%s"><i class="dashicons dashicons-visibility"></i></button> ',
-            $customer->id,
+    
+    // Log all relevant capabilities
+    $capabilities = [
+        'view_customer_detail' => current_user_can('view_customer_detail'),
+        'view_own_customer' => current_user_can('view_own_customer'),
+        'edit_all_customers' => current_user_can('edit_all_customers'),
+        'edit_own_customer' => current_user_can('edit_own_customer'),
+        'delete_customer' => current_user_can('delete_customer'),
+        'delete_own_customer' => current_user_can('delete_own_customer')
+    ];
+    
+    $this->debug_log("User Capabilities:");
+    $this->debug_log($capabilities);
+    
+    // Debug View Button Logic
+    $this->debug_log("=== View Button Check ===");
+    $can_view = current_user_can('view_customer_detail') || 
+                (current_user_can('view_own_customer') && (int)$customer->user_id === (int)$current_user_id);
+    
+    $this->debug_log("View Button Conditions:");
+    $this->debug_log([
+        'has_view_detail_permission' => current_user_can('view_customer_detail'),
+        'has_view_own_permission' => current_user_can('view_own_customer'),
+        'is_owner' => ($customer->user_id === (int)$current_user_id),
+        'final_view_decision' => $can_view
+    ]);
+    
+    if ($can_view) {
+        $view_button = sprintf(
+            '<button type="button" class="button view-customer" data-id="%d" title="%s">' .
+            '<i class="dashicons dashicons-visibility"></i></button> ',
+            (int)$customer->id,
             __('Lihat', 'wp-customer')
         );
+        $actions .= $view_button;
+        $this->debug_log("Added View Button: " . $view_button);
     }
-
-    // Debug log sebelum pengecekan edit button
-    $this->debug_log("Checking edit button conditions:");
+    
+    // Debug Edit Button Logic
+    $this->debug_log("=== Edit Button Check ===");
+    $can_edit = current_user_can('edit_all_customers') ||
+                (current_user_can('edit_own_customer') && (int)$customer->user_id === (int)$current_user_id);
+    
+    $this->debug_log("Edit Button Conditions:");
     $this->debug_log([
-        'is_edit_all' => current_user_can('edit_all_customers'),
-        'is_edit_own' => current_user_can('edit_own_customer'),
-        'user_match' => $customer->user_id === get_current_user_id(),
-        'condition_result' => current_user_can('edit_all_customers') || 
-                            (current_user_can('edit_own_customer') && 
-                             $customer->user_id === get_current_user_id())
+        'has_edit_all_permission' => current_user_can('edit_all_customers'),
+        'has_edit_own_permission' => current_user_can('edit_own_customer'),
+        'is_owner' => ((int)$customer->user_id === (int)$current_user_id),
+        'user_id_comparison' => [
+            'customer_user_id' => (int)$customer->user_id,
+            'current_user_id' => (int)$current_user_id,
+            'matches' => ((int)$customer->user_id === (int)$current_user_id)
+        ],
+        'final_edit_decision' => $can_edit
     ]);
-
-    if (current_user_can('edit_all_customers') ||
-        (current_user_can('edit_own_customer') && (int)$customer->user_id === get_current_user_id())) {
-        $actions .= sprintf(
-            '<button type="button" class="button edit-customer" data-id="%d" title="%s"><i class="dashicons dashicons-edit"></i></button> ',
-            $customer->id,
+    
+    if ($can_edit) {
+        $edit_button = sprintf(
+            '<button type="button" class="button edit-customer" data-id="%d" title="%s">' .
+            '<i class="dashicons dashicons-edit"></i></button> ',
+            (int)$customer->id,
             __('Edit', 'wp-customer')
         );
-        // Debug log jika tombol edit ditambahkan
-        $this->debug_log("Edit button added for customer {$customer->id}");
-    } else {
-        // Debug log jika tombol edit tidak ditambahkan
-        $this->debug_log("Edit button NOT added for customer {$customer->id}");
+        $actions .= $edit_button;
+        $this->debug_log("Added Edit Button: " . $edit_button);
     }
-
-    // Debug log final actions HTML
-    $this->debug_log("Final actions HTML:");
+    
+    // Debug Delete Button Logic
+    $this->debug_log("=== Delete Button Check ===");
+    $can_delete = current_user_can('delete_customer') ||
+                  (current_user_can('delete_own_customer') && (int)$customer->user_id === (int)$current_user_id);
+    
+    $this->debug_log("Delete Button Conditions:");
+    $this->debug_log([
+        'has_delete_permission' => current_user_can('delete_customer'),
+        'has_delete_own_permission' => current_user_can('delete_own_customer'),
+        'is_owner' => ($customer->user_id === (int)$current_user_id),
+        'final_delete_decision' => $can_delete
+    ]);
+    
+    if ($can_delete) {
+        $delete_button = sprintf(
+            '<button type="button" class="button delete-customer" data-id="%d" title="%s">' .
+            '<i class="dashicons dashicons-trash"></i></button>',
+            (int)$customer->id,
+            __('Hapus', 'wp-customer')
+        );
+        $actions .= $delete_button;
+        $this->debug_log("Added Delete Button: " . $delete_button);
+    }
+    
+    // Log final actions HTML
+    $this->debug_log("=== Final Actions HTML ===");
     $this->debug_log($actions);
-
+    
+    // Log separator for readability
+    $this->debug_log("==== End Action Buttons Generation ====\n");
+    
     return $actions;
 }
 
