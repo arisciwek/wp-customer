@@ -1,0 +1,214 @@
+/**
+ * Permissions Tab Specific Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Settings
+ * @version     2.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/settings/permissions-tab-style.css
+ *
+ * Description: Stylesheet specific to the permissions matrix tab.
+ *              Responsible for:
+ *              - Permissions matrix table layout
+ *              - Checkbox styling
+ *              - Tooltip positioning
+ *              - Matrix-specific responsive behavior
+ *              
+ * Dependencies:
+ * - WordPress Admin CSS
+ * - settings-style.css (for tab navigation)
+ * - common-style.css
+ *
+ * Note: This file should only contain styles specific to the permissions
+ * matrix functionality. Common components like tab navigation should be
+ * in settings-style.css
+ *
+ * Changelog:
+ * 2.0.0 - 2024-01-15
+ * - Removed navigation styles (moved to settings-style.css)
+ * - Improved tooltip positioning
+ * - Enhanced table layout and responsiveness
+ * - Better documentation and organization
+ *
+ * 1.0.0 - 2024-01-07
+ * - Initial version
+ */
+
+/* Permission Matrix Container */
+.permissions-section {
+    margin: 20px 0;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Description Text */
+.permissions-section .description {
+    margin: 15px 0;
+    color: #666;
+    font-style: italic;
+    line-height: 1.5;
+    padding: 0 20px;
+}
+
+/* Permission Matrix Table */
+.permissions-matrix {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 20px 0;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+}
+
+/* Table Headers */
+.permissions-matrix thead th {
+    background: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+    font-weight: 600;
+    padding: 16px 12px;
+    text-align: center;
+    color: #334155;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Column Header with Tooltip */
+.permissions-matrix th.column-permission {
+    padding: 16px 12px 40px 12px;  /* Increased bottom padding for tooltip */
+    position: relative;
+    vertical-align: top;
+    min-width: 120px;
+}
+
+/* Tooltip Icon */
+.permissions-matrix .tooltip-icon {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    cursor: help;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    background: #f8fafc;
+    border-radius: 50%;
+    padding: 4px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.permissions-matrix .tooltip-icon:hover {
+    opacity: 1;
+    background: #e2e8f0;
+}
+
+/* Role Column */
+.permissions-matrix .column-role {
+    width: 200px;
+    background: #f8fafc;
+    font-weight: 600;
+    text-align: left;
+    color: #1e293b;
+    border-right: 2px solid #e2e8f0;
+    position: relative;
+}
+
+/* Table Body Cells */
+.permissions-matrix tbody td {
+    padding: 12px;
+    text-align: center;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+    transition: background-color 0.2s ease;
+}
+
+/* Checkbox Styling */
+.permissions-matrix input[type="checkbox"] {
+    margin: 0;
+    border-color: #94a3b8;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    position: relative;
+    z-index: 2;
+}
+
+.permissions-matrix input[type="checkbox"]:checked {
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
+
+.permissions-matrix input[type="checkbox"]:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 1px #2563eb;
+}
+
+/* Row Hover Effects */
+.permissions-matrix tbody tr:hover td {
+    background-color: #f1f5f9;
+}
+
+.permissions-matrix tbody tr:hover .column-role {
+    background-color: #e2e8f0;
+}
+
+/* Submit Button Area */
+.permissions-section .submit {
+    padding: 20px;
+    margin: 20px 0 0;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    text-align: right;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 782px) {
+    .permissions-matrix {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 15px 0;
+    }
+
+    .column-role {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        width: 150px;
+    }
+
+    .permissions-matrix thead th {
+        white-space: normal;
+        padding: 12px 8px;
+    }
+
+    .permissions-matrix td {
+        padding: 10px 8px;
+    }
+
+    .permissions-matrix input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .permissions-matrix {
+        border: 1px solid #000;
+    }
+
+    .permissions-matrix th,
+    .permissions-matrix td {
+        border: 1px solid #000;
+    }
+
+    .submit {
+        display: none;
+    }
+}

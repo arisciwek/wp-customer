@@ -3,33 +3,23 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/CSS/Settings
- * @version     1.0.0
+ * @version     2.0.0
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/css/settings/membership-tab-style.css
  *
- * Description: Styling untuk tab membership settings
- *              Termasuk styling untuk:
- *              - Form fields
- *              - Level settings sections
- *              - Capability checkboxes
+ * Description: Enhanced styling for membership level management.
+ *              Features:
+ *              - Card-based membership level display
+ *              - Capability configuration UI
+ *              - Interactive form elements
+ *              - Status indicators and badges
+ *              - Responsive design system
  *
  * Dependencies:
  * - WordPress Admin CSS
+ * - settings-style.css (for tab navigation)
  * - common-style.css
- *
- * Changelog:
- * 1.0.0 - 2024-01-10
- * - Initial styling
- * - Added form field styles
- * - Added responsive design
- */
-/**
- * Membership Tab Styles
- *
- * @package     WP_Customer
- * @subpackage  Assets/CSS/Settings
- * @version     2.0.0
  */
 
 /* Card Grid Layout */
@@ -38,12 +28,12 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 24px;
     margin: 20px 0;
-    max-width: calc(100% - 20px); /* Prevent right overflow */
+    max-width: calc(100% - 20px);
 }
 
-/* Card Styling */
+/* Membership Card Base */
 .membership-card {
-    background: #ffffff;
+    background: #fff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 24px;
@@ -53,36 +43,61 @@
     overflow: hidden;
 }
 
-.membership-card:hover {
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transform: translateY(-2px);
-    border-color: #cbd5e1;
+/* Level-specific Card Styling */
+.membership-card[data-level="regular"] {
+    border-top: 4px solid #4f46e5;
+}
+
+.membership-card[data-level="priority"] {
+    border-top: 4px solid #eab308;
+}
+
+.membership-card[data-level="utama"] {
+    border-top: 4px solid #06b6d4;
 }
 
 /* Card Header */
 .membership-card h3 {
-    margin: 0 0 20px 0;
-    padding: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 0 24px;
+    padding-bottom: 16px;
     border-bottom: 2px solid #f1f5f9;
     font-size: 1.25rem;
     font-weight: 600;
-    color: #334155;
-    display: flex;
+    color: #0f172a;
+}
+
+/* Level Badge */
+.level-badge {
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-left: auto;
 }
 
-.membership-card h3 .dashicons {
-    width: 24px;
-    height: 24px;
-    font-size: 24px;
-    color: #3b82f6;
+.regular-badge {
+    background: #4f46e5;
+    color: #fff;
 }
 
-/* Section Styling */
+.priority-badge {
+    background: #eab308;
+    color: #fff;
+}
+
+.utama-badge {
+    background: #06b6d4;
+    color: #fff;
+}
+
+/* Section Components */
 .membership-section {
     margin-bottom: 24px;
-    position: relative;
 }
 
 .membership-section:last-child {
@@ -90,18 +105,18 @@
 }
 
 .membership-section h4 {
-    margin: 0 0 12px 0;
-    font-size: 0.875rem;
+    font-size: 1rem;
     font-weight: 600;
     color: #475569;
+    margin: 0 0 12px;
 }
 
-/* Staff Limit Input */
+/* Staff Limit Controls */
 .staff-limit {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px;
+    gap: 16px;
+    padding: 16px;
     background: #f8fafc;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
@@ -112,100 +127,133 @@
     padding: 8px 12px;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 0.875rem;
     color: #334155;
-    background: #ffffff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
 }
 
 .staff-limit input[type="number"]:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
 
-.staff-limit .description {
-    margin: 0;
-    font-size: 0.75rem;
-    color: #64748b;
+/* Usage Stats */
+.usage-stats {
+    margin-top: 16px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
 }
 
-/* Capabilities List */
+.usage-bar {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 8px 0;
+}
+
+.usage-progress {
+    height: 100%;
+    background: #2563eb;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* Capabilities Configuration */
 .capabilities-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     padding: 16px;
     background: #f8fafc;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
 }
 
-.capabilities-list label {
+.capability-item {
     display: flex;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 8px;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #fff;
     border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.15s ease;
-    background: #ffffff;
     border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
 }
 
-.capabilities-list label:hover {
+.capability-item:hover {
     background: #f1f5f9;
     border-color: #cbd5e1;
 }
 
-.capabilities-list input[type="checkbox"] {
-    margin-top: 2px;
-}
-
-.capabilities-list input[type="checkbox"]:checked + span {
-    color: #2563eb;
-    font-weight: 500;
-}
-
-.capabilities-list span {
-    font-size: 0.875rem;
-    color: #475569;
-    line-height: 1.4;
-}
-
-/* Submit Button Enhancement */
-.wp-core-ui .button-primary {
-    background: #2563eb;
-    border-color: #2563eb;
-    padding: 8px 20px;
-    height: auto;
-    line-height: 1.4;
-    font-size: 14px;
-    font-weight: 500;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+.capability-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #cbd5e1;
+    border-radius: 4px;
     transition: all 0.2s ease;
 }
 
-.wp-core-ui .button-primary:hover {
-    background: #1d4ed8;
-    border-color: #1d4ed8;
-    transform: translateY(-1px);
+.capability-item input[type="checkbox"]:checked {
+    background-color: #2563eb;
+    border-color: #2563eb;
 }
 
-/* Level-specific colors */
-.membership-card[data-level="regular"] h3 .dashicons {
-    color: #4f46e5;
+.capability-label {
+    font-size: 0.875rem;
+    color: #475569;
+    flex: 1;
 }
 
-.membership-card[data-level="priority"] h3 .dashicons {
-    color: #eab308;
+/* Upgrade Card */
+.upgrade-card {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 8px;
 }
 
-.membership-card[data-level="utama"] h3 .dashicons {
-    color: #06b6d4;
+.upgrade-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #0369a1;
+    margin-bottom: 8px;
 }
 
-/* Responsive Adjustments */
+.upgrade-features {
+    margin: 12px 0;
+    padding-left: 24px;
+}
+
+.upgrade-features li {
+    color: #0c4a6e;
+    margin-bottom: 8px;
+    font-size: 0.875rem;
+}
+
+.upgrade-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: #0ea5e9;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.upgrade-button:hover {
+    background: #0284c7;
+}
+
+/* Responsive Design */
 @media screen and (max-width: 1400px) {
     .membership-grid {
         grid-template-columns: repeat(2, 1fr);
@@ -216,21 +264,48 @@
 @media screen and (max-width: 782px) {
     .membership-grid {
         grid-template-columns: 1fr;
-        gap: 16px;
-        margin: 16px 0;
+        gap: 24px;
     }
-    
+
     .membership-card {
-        padding: 16px;
+        padding: 20px;
     }
 
     .staff-limit {
         flex-direction: column;
         align-items: flex-start;
-        gap: 8px;
     }
 
     .staff-limit input[type="number"] {
         width: 100%;
+    }
+
+    .capability-item {
+        padding: 10px;
+    }
+}
+
+/* Animation Effects */
+@keyframes levelHighlight {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+}
+
+.membership-card.highlight {
+    animation: levelHighlight 0.3s ease;
+}
+
+/* Print Styles */
+@media print {
+    .membership-card {
+        break-inside: avoid;
+        border: 1px solid #000;
+        box-shadow: none;
+    }
+
+    .upgrade-card,
+    .upgrade-button {
+        display: none;
     }
 }

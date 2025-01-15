@@ -1,179 +1,132 @@
 /**
- * File: settings-style.css
+ * Main Settings Page Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Settings
+ * @version     2.0.0
+ * @author      arisciwek
+ *
  * Path: /wp-customer/assets/css/settings/settings-style.css
- * Description: Styling untuk halaman pengaturan
- * Version: 3.0.0
- * Last modified: 2024-11-28 12:15:00
+ *
+ * Description: Main stylesheet for all settings pages in WP Customer Plugin.
+ *              Handles:
+ *              - Main layout structure
+ *              - Tab navigation for all settings pages
+ *              - Common form elements
+ *              - Shared UI components across settings
+ *
+ * Dependencies:
+ * - WordPress Admin CSS
+ * - common-style.css
+ *
+ * Changelog:
+ * 2.0.0 - 2024-01-15
+ * - Refactored to separate common navigation styles
+ * - Added shared settings components
+ * - Improved documentation
+ *
+ * 1.0.0 - 2024-01-07
+ * - Initial version
  */
 
-/* Tab Navigation */
+/* Tab Navigation - Global Settings */
 .nav-tab-wrapper {
-    margin-bottom: 20px;
+    padding-left: 20px;
+    margin-bottom: 0;
     border-bottom: 1px solid #c3c4c7;
     padding-bottom: 0;
+    clear: both;
 }
 
 .nav-tab {
-    padding: 10px 15px;
+    background: #f8fafc;
+    border: 1px solid #c3c4c7;
+    border-bottom: none;
+    margin: 0 4px -1px 0;
+    padding: 12px 20px;
     font-size: 14px;
     line-height: 1.71428571;
     font-weight: 600;
-    margin-left: 0.5em;
+    color: #50575e;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.nav-tab:hover {
+    background: #f1f5f9;
+    color: #2563eb;
+    border-color: #c3c4c7;
+}
+
+.nav-tab-active,
+.nav-tab-active:hover {
     margin-bottom: -1px;
+    background: #fff;
+    border-bottom: 1px solid #fff;
+    color: #2563eb;
 }
 
-.nav-tab-active {
-    border-bottom: 1px solid #f0f0f1;
-    background: #f0f0f1;
-    color: #000;
-}
-
-/* Tab Content */
+/* Content Areas */
 .tab-content {
     background: #fff;
     border: 1px solid #c3c4c7;
     border-top: none;
-    margin-top: -1px;
     padding: 20px;
-    min-height: 200px;
+    margin-top: -1px;
 }
 
-
-
-.tab-content.hidden {
-    display: none;
+/* Common Settings Components */
+.settings-section {
+    margin: 20px 0;
+    padding: 20px;
+    background: #fff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* Settings Form */
-.form-table th {
-    width: 250px;
+.settings-header {
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+/* Form Elements */
+.settings-form {
+    max-width: 800px;
+}
+
+.settings-form .form-table {
+    margin-top: 0;
+}
+
+.settings-form th {
     padding: 20px 10px 20px 0;
+    width: 200px;
+    vertical-align: top;
 }
 
-.form-table td {
-    padding: 15px 10px;
-}
-
-.description {
+.settings-form .description {
+    margin: 5px 0 0;
     font-style: italic;
     color: #666;
 }
 
-/* Permission Matrix */
-.wp-customer-permissions-wrapper {
-    margin: 20px 0;
-}
-
-.capability-group {
-    background: #fff;
-    border: 1px solid #c3c4c7;
-    margin-bottom: 20px;
-    border-radius: 3px;
-    box-shadow: 0 1px 1px rgba(0,0,0,.04);
-}
-
-.group-title {
-    margin: 0;
-    padding: 15px;
-    border-bottom: 1px solid #c3c4c7;
-    background: #f6f7f7;
-}
-
-.permissions-matrix {
-    margin: 20px 20px 0;
-    background: #fff;
-    border: 1px solid #ccd0d4;
-    table-layout: fixed;
-}
-
-.permissions-matrix th,
-.permissions-matrix td {
-    padding: 12px;
-    text-align: left;
-    border: 1px solid #ccd0d4;
-    vertical-align: top;
-    width: 27px;
-}
-
-.permissions-matrix th {
-    background: #f5f5f5;
-    font-weight: 600;
-    position: relative;
-    padding-bottom: 30px;
-}
-
-.permissions-matrix .column-role {
-    width: 150px;
-}
-
-.permissions-matrix .column-permission {
-    width: 27px;
-    text-align: center;
-}
-
-.permissions-matrix input[type="checkbox"] {
-    margin: 0;
-}
-
-.permissions-matrix .tooltip-icon {
-    display: block;
-    clear: both;
-    position: relative;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-@media screen and (max-width: 782px) {
-    .permissions-matrix .column-permission {
-        width: 40px;
-    }
-    
-    .permissions-matrix th {
-        padding-bottom: 35px;
-    }
-}
-
-.column-role {
-    width: 200px;
-    background: #f6f7f7;
-}
-
-.column-capability {
-    text-align: center;
-    width: auto;
-}
-
-/* Dependency Indicator */
-.dependency-indicator {
-    display: inline-block;
-    margin-left: 5px;
-    color: #007cba;
-    cursor: help;
-}
-
-/* Role Management */
-.roles-table {
-    margin-top: 20px;
-}
-
-.column-actions {
-    width: 200px;
+/* Submit Button Area */
+.settings-submit {
+    padding: 20px;
+    margin: 20px 0 0;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
     text-align: right;
 }
 
-.action {
-    margin-left: 5px !important;
-}
-
-.edit-role {
-    background: #007cba;
-    color: #fff;
-    border-color: #007cba;
-}
-
-.delete-role {
-    color: #b32d2e;
-    border-color: #b32d2e;
+.button-primary {
+    padding: 6px 20px;
+    height: auto;
+    line-height: 1.4;
+    font-size: 14px;
+    transition: all 0.2s ease;
 }
 
 /* Loading States */
@@ -183,45 +136,40 @@
     margin: 4px 10px;
 }
 
+/* Messages & Notifications */
+.settings-error {
+    margin: 0 0 20px 0;
+}
+
 /* Responsive Adjustments */
 @media screen and (max-width: 782px) {
-    .form-table th {
-        width: auto;
+    .nav-tab-wrapper {
+        padding-left: 10px;
+    }
+
+    .nav-tab {
+        padding: 8px 12px;
+        margin: 0 2px -1px;
+        font-size: 13px;
+    }
+
+    .settings-form th {
         padding: 10px 0;
+        width: 100%;
+        display: block;
     }
     
-    .form-table td {
+    .settings-form td {
         padding: 10px 0;
+        display: block;
     }
 
-    .column-role {
-        width: 150px;
+    .tab-content {
+        padding: 15px;
     }
 
-    .capability-group .group-title {
-        padding: 10px;
-    }
-
-    .permission-matrix th,
-    .permission-matrix td {
-        padding: 8px;
+    .settings-section {
+        padding: 15px;
+        margin: 15px 0;
     }
 }
-
-
-.permissions-matrix {
-    margin-top: 20px;
-}
-.column-permission {
-    text-align: center;
-    width: auto;
-}
-.tooltip-icon {
-    opacity: 0.7;
-    cursor: help;
-}
-.nav-tab {
-    margin-left: 0;
-    margin-right: 0.5em;
-}
-

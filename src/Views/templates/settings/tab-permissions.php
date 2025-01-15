@@ -177,52 +177,6 @@ $current_tab = isset($_GET['permission_tab']) ? sanitize_key($_GET['permission_t
     </div>
 </div>
 
-<style>
-.permissions-matrix {
-    margin-top: 20px;
-    border-collapse: collapse;
-}
-.column-role {
-    width: 200px;
-}
-.column-permission {
-    text-align: center;
-    width: 120px;
-}
-.tooltip-icon {
-    opacity: 0.7;
-    cursor: help;
-    vertical-align: middle;
-}
-.nav-tab {
-    margin-left: 0;
-    margin-right: 0.5em;
-}
-.nav-tab-active {
-    background: #fff;
-    border-bottom: 1px solid #fff;
-}
-.permissions-matrix th {
-    padding: 10px;
-    font-weight: 600;
-    text-align: center;
-}
-.permissions-matrix td {
-    padding: 8px;
-    vertical-align: middle;
-}
-.permissions-matrix input[type="checkbox"] {
-    margin: 0;
-}
-.description {
-    margin: 15px 0;
-}
-table.fixed {
-    table-layout: fixed;
-    margin: 2px 0 5px;
-}
-</style>
-
 <script>
 jQuery(document).ready(function($) {
     if ($.fn.tooltip) {

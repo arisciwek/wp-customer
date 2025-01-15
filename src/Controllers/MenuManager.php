@@ -33,7 +33,7 @@ class MenuManager {
         add_menu_page(
             __('WP Customer', 'wp-customer'),
             __('WP Customer', 'wp-customer'),
-            'view_customer_detail',
+            'view_customer_list',
             'wp-customer',
             [$this, 'renderMainPage'],
             'dashicons-businessperson',

@@ -61,17 +61,10 @@ class PermissionModel {
             'title' => 'Customer Permissions',
             'caps' => [
                 'view_customer_list',
-                'add_customer',
                 'view_own_customer',
-                'edit_own_customer',
-                'view_branch_list',
-                'view_own_branch',
-                'add_branch',
-                'edit_own_branch',
-                'view_employee_list',
-                'view_own_employee',
-                'add_employee',
-                'edit_own_employee'
+                'add_customer',
+                'edit_all_customers',
+                'edit_own_customer'
             ]
         ],
         'branch' => [

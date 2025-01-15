@@ -130,26 +130,45 @@ public function enqueue_frontend_assets() {
         }
 
 
-        // Settings page styles
+        // Settings page styles// Settings page styles
         if ($screen->id === 'wp-customer_page_wp-customer-settings') {
-            wp_enqueue_style('wp-customer-common', WP_CUSTOMER_URL . 'assets/css/settings/common-style.css', [], $this->version);
-            wp_enqueue_style('wp-customer-settings', WP_CUSTOMER_URL . 'assets/css/settings/settings-style.css', ['wp-customer-common'], $this->version);
-            wp_enqueue_style('wp-customer-modal', WP_CUSTOMER_URL . 'assets/css/components/confirmation-modal.css', [], $this->version);
+           // Common styles for settings page
+           wp_enqueue_style('wp-customer-common', WP_CUSTOMER_URL . 'assets/css/settings/common-style.css', [], $this->version);
+           wp_enqueue_style('wp-customer-settings', WP_CUSTOMER_URL . 'assets/css/settings/settings-style.css', ['wp-customer-common'], $this->version);
+           wp_enqueue_style('wp-customer-modal', WP_CUSTOMER_URL . 'assets/css/components/confirmation-modal.css', [], $this->version);
 
-            $current_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
-            switch ($current_tab) {
-                case 'permission':
-                    wp_enqueue_style('wp-customer-permission-tab', WP_CUSTOMER_URL . 'assets/css/settings/permission-tab-style.css', [], $this->version);
-                    break;
-                case 'general':
-                    wp_enqueue_style('wp-customer-general-tab', WP_CUSTOMER_URL . 'assets/css/settings/general-tab-style.css', [], $this->version);
-                    break;
-                // Tambahkan case untuk membership
-                case 'membership':
-                    wp_enqueue_style('wp-customer-membership-tab', WP_CUSTOMER_URL . 'assets/css/settings/membership-tab-style.css', [], $this->version);
-                    break;
-            }
-            return;
+           // Get current tab and permission tab
+           $current_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
+           $permission_tab = isset($_GET['permission_tab']) ? sanitize_key($_GET['permission_tab']) : '';
+
+           switch ($current_tab) {
+               case 'permissions':
+                   wp_enqueue_style(
+                       'wp-customer-permissions-tab',
+                       WP_CUSTOMER_URL . 'assets/css/settings/permissions-tab-style.css',
+                       ['wp-customer-settings'],
+                       $this->version
+                   );
+                   break;
+
+               case 'general':
+                   wp_enqueue_style(
+                       'wp-customer-general-tab', 
+                       WP_CUSTOMER_URL . 'assets/css/settings/general-tab-style.css',
+                       ['wp-customer-settings'],
+                       $this->version
+                   );
+                   break;
+
+               case 'membership':
+                   wp_enqueue_style(
+                       'wp-customer-membership-tab',
+                       WP_CUSTOMER_URL . 'assets/css/settings/membership-tab-style.css',
+                       ['wp-customer-settings'],
+                       $this->version
+                   );
+                   break;
+           }
         }
 
         // Customer and Branch pages styles
@@ -198,25 +217,54 @@ public function enqueue_frontend_assets() {
 
         // Settings page scripts
         if ($screen->id === 'wp-customer_page_wp-customer-settings') {
+            // Common scripts for settings page
             wp_enqueue_script('wp-customer-toast', WP_CUSTOMER_URL . 'assets/js/components/toast.js', ['jquery'], $this->version, true);
             wp_enqueue_script('confirmation-modal', WP_CUSTOMER_URL . 'assets/js/components/confirmation-modal.js', ['jquery'], $this->version, true);
             wp_enqueue_script('wp-customer-settings', WP_CUSTOMER_URL . 'assets/js/settings/settings-script.js', ['jquery', 'wp-customer-toast'], $this->version, true);
             
+            // Debug logging
+            error_log('Current screen ID: ' . $screen->id);
+            error_log('Current screen base: ' . $screen->base);
+
+            // Get current tab and permission tab
             $current_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
+            $permission_tab = isset($_GET['permission_tab']) ? sanitize_key($_GET['permission_tab']) : '';
+
+            error_log('Current tab: ' . $current_tab);
+            error_log('Current permission tab: ' . $permission_tab);
+            error_log('Current URL: ' . $_SERVER['REQUEST_URI']);
+
             switch ($current_tab) {
-                case 'permission':
-                    wp_enqueue_style('wp-customer-permission-tab', WP_CUSTOMER_URL . 'assets/js/settings/permission-tab-script.js', [], $this->version);
+                case 'permissions':
+                    wp_enqueue_script(
+                        'wp-customer-permissions-tab',
+                        WP_CUSTOMER_URL . 'assets/js/settings/permissions-tab-script.js',
+                        ['jquery', 'wp-customer-settings'],
+                        $this->version,
+                        true
+                    );
                     break;
+
                 case 'general':
-                    wp_enqueue_style('wp-customer-general-tab', WP_CUSTOMER_URL . 'assets/js/settings/general-tab-script.js', [], $this->version);
+                    wp_enqueue_script(
+                        'wp-customer-general-tab',
+                        WP_CUSTOMER_URL . 'assets/js/settings/general-tab-script.js',
+                        ['jquery', 'wp-customer-settings'],
+                        $this->version,
+                        true
+                    );
                     break;
-                // Tambahkan case untuk membership
+
                 case 'membership':
-                    wp_enqueue_style('wp-customer-membership-tab', WP_CUSTOMER_URL . 'assets/js/settings/membership-tab-script.js', [], $this->version);
+                    wp_enqueue_script(
+                        'wp-customer-membership-tab',
+                        WP_CUSTOMER_URL . 'assets/js/settings/membership-tab-script.js',
+                        ['jquery', 'wp-customer-settings'],
+                        $this->version,
+                        true
+                    );
                     break;
             }
-            return;
-
         }
 
         // Customer and Branch pages scripts

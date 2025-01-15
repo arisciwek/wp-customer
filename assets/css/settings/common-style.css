@@ -1,42 +1,24 @@
-/* File: assets/css/settings/common.css */
+/**
+ * Common Settings Styles
+ * Path: /wp-customer/assets/css/settings/common-style.css
+ */
 
-/* Settings Page Layout */
+/* Global Settings Layout */
 .settings-wrapper {
     margin: 20px 20px 0 0;
     max-width: 1200px;
 }
 
-/* Tab Navigation */
-.nav-tab-wrapper {
-    margin-bottom: 20px;
+/* Form & Table Base Styles */
+.form-table {
+    border-collapse: collapse;
+    margin-top: 0.5em;
+    width: 100%;
 }
 
-.nav-tab {
-    font-size: 14px;
-}
-
-.nav-tab-active {
-    border-bottom-color: #f1f1f1;
-    background: #f1f1f1;
-}
-
-/* Tab Content */
-.tab-content {
-    background: #fff;
-    border: 1px solid #ccd0d4;
-    border-top: none;
-    padding: 20px;
-    margin-top: -1px;
-}
-
-.tab-content:not(.active) {
-    display: none;
-}
-
-/* Form Elements */
 .form-table th {
-    padding: 20px 10px 20px 0;
     width: 200px;
+    padding: 20px 10px 20px 0;
 }
 
 .form-table td {
@@ -47,12 +29,21 @@
 .description {
     font-style: italic;
     color: #666;
-    margin: 5px 0 0;
+    margin: 5px 0;
 }
 
-/* Messages & Notifications */
-.settings-error {
-    margin: 0 0 20px 0;
+table.fixed {
+    table-layout: fixed;
+    margin: 2px 0 5px;
+}
+
+/* Utility Classes */
+.hidden {
+    display: none !important;
+}
+
+.text-center {
+    text-align: center;
 }
 
 /* Submit Button Area */
@@ -62,31 +53,3 @@
     border-top: 1px solid #ddd;
 }
 
-/* Common Utility Classes */
-.hidden {
-    display: none !important;
-}
-
-.text-right {
-    text-align: right;
-}
-
-.text-center {
-    text-align: center;
-}
-
-.full-width {
-    width: 100%;
-}
-
-/* Responsive adjustments */
-@media screen and (max-width: 782px) {
-    .form-table th {
-        width: auto;
-        padding: 10px 0;
-    }
-    
-    .form-table td {
-        padding: 10px 0;
-    }
-}
