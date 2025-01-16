@@ -27,6 +27,41 @@ namespace WPCustomer\Controllers;
 class SettingsController {
     public function init() {
         add_action('admin_init', [$this, 'register_settings']);
+        $this->register_ajax_handlers();
+    }
+
+    // Add this to your SettingsController or appropriate controller class
+    public function register_ajax_handlers() {
+        add_action('wp_ajax_reset_permissions', [$this, 'handle_reset_permissions']);
+    }
+
+    public function handle_reset_permissions() {
+        try {
+            // Verify nonce
+            check_ajax_referer('wp_customer_reset_permissions', 'nonce');
+
+            // Check permissions
+            if (!current_user_can('manage_options')) {
+                throw new \Exception(__('You do not have permission to perform this action.', 'wp-customer'));
+            }
+
+            // Reset permissions using PermissionModel
+            $permission_model = new \WPCustomer\Models\Settings\PermissionModel();
+            $success = $permission_model->resetToDefault();
+
+            if (!$success) {
+                throw new \Exception(__('Failed to reset permissions.', 'wp-customer'));
+            }
+
+            wp_send_json_success([
+                'message' => __('Permissions have been reset to default settings.', 'wp-customer')
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
     }
 
     public function register_settings() {

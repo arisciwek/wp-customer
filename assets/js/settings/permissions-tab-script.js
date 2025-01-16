@@ -35,125 +35,87 @@
 
     const PermissionMatrix = {
         init() {
-            this.form = $('#wp-customer-permissions-form');
-            this.submitBtn = $('#save-permissions');
-            this.resetBtn = $('#reset-permissions');
-            this.spinner = $('.spinner');
-
             this.bindEvents();
+            this.initTooltips();
+            this.initResetButton();
         },
 
         bindEvents() {
-            this.form.on('submit', (e) => this.handleSubmit(e));
-            this.resetBtn.on('click', (e) => this.handleReset(e));
-
-                if ($.fn.tooltip) {
-                    $('.tooltip-icon').tooltip({
-                    position: { my: "center bottom", at: "center top-10" }
-                }
+            // Add any UI event handlers here
+            $('#wp-customer-permissions-form').on('submit', function() {
+                $(this).find('button[type="submit"]').prop('disabled', true);
+            });
         },
 
-        handleSubmit(e) {
-            e.preventDefault();
-
-            // Collect all checkbox data
-            const permissions = {};
-            this.form.find('input[type="checkbox"]').each(function() {
-                const $checkbox = $(this);
-                const name = $checkbox.attr('name');
-                if (name && name.startsWith('permissions[')) {
-                    const matches = name.match(/permissions\[(.*?)\]\[(.*?)\]/);
-                    if (matches) {
-                        const role = matches[1];
-                        const cap = matches[2];
-                        if (!permissions[role]) {
-                            permissions[role] = {};
-                        }
-                        permissions[role][cap] = $checkbox.is(':checked') ? 1 : 0;
-                    }
-                }
+        initTooltips() {
+            if ($.fn.tooltip) {
+                $('.tooltip-icon').tooltip({
+                    position: { my: "center bottom", at: "center top-10" }
+                });
+            }
+        },
+        
+        initResetButton() {
+            const self = this;
+            $('#reset-permissions-btn').on('click', function(e) {
+                e.preventDefault();
+                
+                // Show confirmation modal
+                WIModal.show({
+                    title: 'Reset Permissions?',
+                    message: 'This will restore all permissions to their default settings. This action cannot be undone.',
+                    icon: 'alert-triangle',
+                    type: 'warning',
+                    confirmText: 'Reset Permissions',
+                    confirmClass: 'button-warning',
+                    cancelText: 'Cancel',
+                    onConfirm: () => self.performReset()
+                });
             });
+        },
 
-            // Show spinner and disable submit button
-            this.spinner.addClass('is-active');
-            this.submitBtn.prop('disabled', true);
+        performReset() {
+            const $button = $('#reset-permissions-btn');
+            const $icon = $button.find('.dashicons');
+            const originalText = $button.text();
 
+            // Set loading state
+            $button.addClass('loading')
+                   .prop('disabled', true)
+                   .html(`<i class="dashicons dashicons-update"></i> Resetting...`);
+
+            // Perform AJAX reset
             $.ajax({
-                url: ajaxurl,
+                url: wpCustomerData.ajaxUrl,
                 type: 'POST',
                 data: {
-                    action: 'update_wp_customer_permissions',
-                    security: this.form.find('[name="security"]').val(),
-                    permissions: permissions
+                    action: 'reset_permissions',
+                    nonce: wpCustomerData.nonce  // Changed this line
                 },
-                success: (response) => {
+                success: function(response) {
                     if (response.success) {
-                        wpCustomerToast.success(response.data.message || 'Hak akses berhasil diperbarui');
-
-                        if (response.data.reload) {
+                        wpCustomerToast.success(response.data.message || 'Permissions reset successfully');
+                        // Reload page after short delay
+                        setTimeout(() => {
                             window.location.reload();
-                        }
+                        }, 1500);
                     } else {
-                        wpCustomerToast.error(response.data.message || 'Terjadi kesalahan saat memperbarui hak akses');
+                        wpCustomerToast.error(response.data.message || 'Failed to reset permissions');
+                        // Reset button state
+                        $button.removeClass('loading')
+                               .prop('disabled', false)
+                               .html(`<i class="dashicons dashicons-image-rotate"></i> ${originalText}`);
                     }
                 },
-                error: (xhr, status, error) => {
-                    console.error('AJAX Error:', {xhr, status, error}); // Debug log
-                    wpCustomerToast.error('Gagal menghubungi server. Silakan coba lagi.');
-                },
-                complete: () => {
-                    this.spinner.removeClass('is-active');
-                    this.submitBtn.prop('disabled', false);
-                }
-            });
-        },
-
-        handleReset(e) {
-            e.preventDefault();
-
-            WIModal.show({
-                title: 'Konfirmasi Reset',
-                message: 'Yakin ingin mereset semua hak akses ke default? Aksi ini tidak dapat dibatalkan.',
-                icon: 'warning',
-                type: 'warning',
-                confirmText: 'Reset',
-                confirmClass: 'button-danger',
-                cancelText: 'Batal',
-                onConfirm: () => {
-                    this.spinner.addClass('is-active');
-                    this.resetBtn.prop('disabled', true);
-
-                    $.ajax({
-                        url: ajaxurl,
-                        type: 'POST',
-                        data: {
-                            action: 'update_wp_customer_permissions',
-                            security: this.form.find('[name="security"]').val(),
-                            reset_permissions: 1
-                        },
-                        success: (response) => {
-                            if (response.success) {
-                                wpCustomerToast.success(response.data.message || 'Hak akses berhasil direset');
-                                if (response.data.reload) {
-                                    window.location.reload();
-                                }
-                            } else {
-                                wpCustomerToast.error(response.data.message || 'Terjadi kesalahan saat mereset hak akses');
-                            }
-                        },
-                        error: (xhr, status, error) => {
-                            console.error('Reset Error:', {xhr, status, error});
-                            wpCustomerToast.error('Gagal menghubungi server. Silakan coba lagi.');
-                        },
-                        complete: () => {
-                            this.spinner.removeClass('is-active');
-                            this.resetBtn.prop('disabled', false);
-                        }
-                    });
+                error: function() {
+                    wpCustomerToast.error('Server error while resetting permissions');
+                    // Reset button state
+                    $button.removeClass('loading')
+                           .prop('disabled', false)
+                           .html(`<i class="dashicons dashicons-image-rotate"></i> ${originalText}`);
                 }
             });
         }
-
     };
 
     // Initialize when document is ready

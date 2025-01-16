@@ -141,11 +141,6 @@ class BranchController {
                 throw new \Exception('Security check failed');
             }
 
-            // Add this check
-            if (!current_user_can('view_branch_list')) {
-                throw new \Exception('Insufficient permissions');
-            }
-            
             // Get and validate customer_id
             $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
             if (!$customer_id) {
@@ -317,13 +312,133 @@ class BranchController {
         }
     }
 
+
+/**
+ * Branch Permission Logic
+ * 
+ * Permission hierarchy for branch management follows these rules:
+ * 
+ * 1. Customer Owner Rights:
+ *    - Owner (user_id in customers table) has full control of ALL entities under their customer
+ *    - No need for *_all_* capabilities
+ *    - Can edit/delete any branch within their customer scope
+ *    - This is ownership-based permission, not capability-based
+ * 
+ * 2. Regular User Rights:
+ *    - Users with edit_own_branch can only edit branches they created
+ *    - Created_by field determines ownership for regular users
+ * 
+ * 3. Staff Rights:
+ *    - Staff members (in customer_employees table) can view but not edit
+ *    - View rights are automatic for customer scope
+ * 
+ * 4. Administrator Rights:
+ *    - Only administrators use edit_all_branches capability
+ *    - This is for system-wide access, not customer-scope access
+ *    
+ * Example:
+ * - If user is customer owner: Can edit all branches under their customer
+ * - If user has edit_own_branch: Can only edit branches where created_by matches
+ * - If user has edit_all_branches: System administrator with full access
+ */
+
+private function canEditBranch($branch, $customer) {
+    $current_user_id = get_current_user_id();
+    
+    // Debug logging
+    $this->debug_log("=== Branch Edit Permission Check ===");
+    $this->debug_log([
+        'branch_id' => (int)$branch->id,
+        'customer_id' => (int)$branch->customer_id,
+        'customer_owner_id' => (int)$customer->user_id,
+        'current_user_id' => (int)$current_user_id,
+        'branch_created_by' => (int)$branch->created_by
+    ]);
+
+    // 1. Customer Owner Check - highest priority
+    $is_customer_owner = ((int)$customer->user_id === (int)$current_user_id);
+    if ($is_customer_owner) {
+        $this->debug_log("Permission granted: User is customer owner");
+        return true;
+    }
+
+    // 2. System Admin Check - for super admins
+    if (current_user_can('edit_all_branches')) {
+        $this->debug_log("Permission granted: User has edit_all_branches capability");
+        return true;
+    }
+
+    // 3. Regular User Check - for branch creators
+    if (current_user_can('edit_own_branch') && (int)$branch->created_by === (int)$current_user_id) {
+        $this->debug_log("Permission granted: User created this branch");
+        return true;
+    }
+
+    $this->debug_log("Permission denied: No matching criteria");
+    return false;
+}
+
+    /**
+     * Implementation in update() method
+     */
+
     public function update() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
             if (!$id) {
                 throw new \Exception('Invalid branch ID');
+            }
+
+            // Get existing branch data
+            $branch = $this->model->find($id);
+            if (!$branch) {
+                throw new \Exception('Branch not found');
+            }
+
+            // Get customer data untuk check ownership
+            $customer = $this->customerModel->find($branch->customer_id);
+            if (!$customer) {
+                throw new \Exception('Customer not found');
+            }
+
+            // Check edit permission
+            if (!$this->canEditBranch($branch, $customer)) {
+                throw new \Exception('Anda tidak memiliki izin untuk mengedit cabang ini');
+            }
+
+            $current_user_id = get_current_user_id();
+
+            // Debug log for permission checking
+            $this->debug_log("=== Branch Update Permission Check ===");
+            $this->debug_log([
+                'branch_id' => $id,
+                'customer_id' => $branch->customer_id,
+                'customer_owner_id' => $customer->user_id,
+                'current_user_id' => $current_user_id,
+                'branch_created_by' => $branch->created_by
+            ]);
+
+            // Check if user is customer owner
+            $is_customer_owner = ((int)$customer->user_id === (int)$current_user_id);
+            
+            $this->debug_log("Permission Context:");
+            $this->debug_log([
+                'is_customer_owner' => $is_customer_owner,
+                'edit_all_branches' => current_user_can('edit_all_branches'),
+                'edit_own_branch' => current_user_can('edit_own_branch')
+            ]);
+
+            // Permission check
+            $can_edit = $is_customer_owner || 
+                       current_user_can('edit_all_branches') ||
+                       (current_user_can('edit_own_branch') && (int)$branch->created_by === (int)$current_user_id);
+
+            $this->debug_log("Final Edit Permission: " . ($can_edit ? 'Granted' : 'Denied'));
+
+            if (!$can_edit) {
+                throw new \Exception('Anda tidak memiliki izin untuk mengedit cabang ini');
             }
 
             // Validate input
@@ -334,8 +449,7 @@ class BranchController {
 
             $errors = $this->validator->validateUpdate($data, $id);
             if (!empty($errors)) {
-                wp_send_json_error(['message' => implode(', ', $errors)]);
-                return;
+                throw new \Exception(implode(', ', $errors));
             }
 
             // Update data
@@ -344,7 +458,7 @@ class BranchController {
                 throw new \Exception('Failed to update branch');
             }
 
-            // Get updated data
+            // Get updated branch data
             $branch = $this->model->find($id);
             if (!$branch) {
                 throw new \Exception('Failed to retrieve updated branch');
@@ -444,3 +558,4 @@ class BranchController {
     }
 
 }
+

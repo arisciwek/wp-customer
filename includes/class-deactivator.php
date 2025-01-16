@@ -34,6 +34,10 @@ class WP_Customer_Deactivator {
         global $wpdb;
 
         try {
+
+            // Add this new method call at the start
+            self::remove_capabilities();
+
             // Start transaction
             $wpdb->query('START TRANSACTION');
 
@@ -75,6 +79,33 @@ class WP_Customer_Deactivator {
         }
     }
 
+    // Add this new private method
+    private static function remove_capabilities() {
+        try {
+            // Get the list of all capabilities from PermissionModel
+            $permission_model = new \WPCustomer\Models\Settings\PermissionModel();
+            $capabilities = array_keys($permission_model->getAllCapabilities());
+
+            // Remove capabilities from all roles
+            foreach (get_editable_roles() as $role_name => $role_info) {
+                $role = get_role($role_name);
+                if (!$role) continue;
+
+                foreach ($capabilities as $cap) {
+                    $role->remove_cap($cap);
+                }
+            }
+
+            // Also remove the customer role entirely since we created it
+            remove_role('customer');
+
+            self::debug("Capabilities and customer role removed successfully");
+        } catch (\Exception $e) {
+            self::debug("Error removing capabilities: " . $e->getMessage());
+            throw $e;
+        }
+    }
+    
     private static function delete_demo_users() {
         global $wpdb;
         

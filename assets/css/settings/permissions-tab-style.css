@@ -212,3 +212,51 @@
         display: none;
     }
 }
+
+/* Reset Permissions Section */
+.reset-permissions-section {
+    padding: 20px;
+    margin-bottom: 20px;
+    background: #fff8e5;
+    border-left: 4px solid #ffb900;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.reset-permissions-section form {
+    margin: 0;
+}
+
+#reset-permissions-btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+#reset-permissions-btn .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    margin-top: 3px;
+}
+
+.reset-permissions-section .description {
+    margin: 0;
+    padding: 0;
+    color: #666;
+}
+
+/* Add loading state */
+#reset-permissions-btn.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+#reset-permissions-btn.loading .dashicons {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    100% { transform: rotate(360deg); }
+}

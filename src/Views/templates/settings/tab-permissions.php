@@ -49,7 +49,7 @@ function get_capability_description($capability) {
         'view_employee_detail' => __('Memungkinkan melihat detail informasi karyawan', 'wp-customer'),
         'view_own_employee' => __('Memungkinkan melihat karyawan yang ditugaskan', 'wp-customer'),
         'add_employee' => __('Memungkinkan menambahkan data karyawan baru', 'wp-customer'),
-        'edit_employee' => __('Memungkinkan mengedit semua data karyawan', 'wp-customer'),
+        'edit_all_employees' => __('Memungkinkan mengedit semua data karyawan', 'wp-customer'),
         'edit_own_employee' => __('Memungkinkan mengedit hanya karyawan yang ditugaskan', 'wp-customer'),
         'delete_employee' => __('Memungkinkan menghapus data karyawan', 'wp-customer')
     ];
@@ -60,14 +60,25 @@ function get_capability_description($capability) {
 // Get permission model instance 
 $permission_model = new \WPCustomer\Models\Settings\PermissionModel();
 $permission_labels = $permission_model->getAllCapabilities();
-$capability_groups = $permission_model->getCapabilityGroups(); // Changed from default_role_caps()
+$capability_groups = $permission_model->getCapabilityGroups();
 $all_roles = get_editable_roles();
+
+// Get current active tab
+$current_tab = isset($_GET['permission_tab']) ? sanitize_key($_GET['permission_tab']) : 'customer';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_role_permissions') {
     if (!check_admin_referer('wp_customer_permissions')) {
         wp_die(__('Security check failed.', 'wp-customer'));
     }
+
+    $current_tab = sanitize_key($_POST['current_tab']);
+    $capability_groups = $permission_model->getCapabilityGroups();
+    
+    // Only get capabilities for current tab
+    $current_tab_caps = isset($capability_groups[$current_tab]['caps']) ? 
+                       $capability_groups[$current_tab]['caps'] : 
+                       [];
 
     $updated = false;
     foreach ($all_roles as $role_name => $role_info) {
@@ -77,7 +88,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         $role = get_role($role_name);
         if ($role) {
-            foreach ($permission_labels as $cap => $label) {
+            // Only process capabilities from current tab
+            foreach ($current_tab_caps as $cap) {
                 $has_cap = isset($_POST['permissions'][$role_name][$cap]);
                 if ($role->has_cap($cap) !== $has_cap) {
                     if ($has_cap) {
@@ -95,14 +107,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         add_settings_error(
             'wp_customer_messages', 
             'permissions_updated', 
-            __('Hak akses role berhasil diperbarui.', 'wp-customer'), 
+            sprintf(
+                __('Hak akses %s berhasil diperbarui.', 'wp-customer'),
+                $capability_groups[$current_tab]['title']
+            ), 
             'success'
         );
     }
 }
-
-// Get current active tab
-$current_tab = isset($_GET['permission_tab']) ? sanitize_key($_GET['permission_tab']) : 'customer';
 ?>
 
 <div class="wrap">
@@ -120,8 +132,24 @@ $current_tab = isset($_GET['permission_tab']) ? sanitize_key($_GET['permission_t
     </h2>
 
     <div class="permissions-section">
-        <form method="post" action="<?php echo add_query_arg(['tab' => 'permissions', 'permission_tab' => $current_tab]); ?>">
+        <!-- Add reset button section before the form -->
+        <div class="reset-permissions-section">
+            <form id="wp-customer-permissions-form" method="post" action="<?php echo add_query_arg(['tab' => 'permissions', 'permission_tab' => $current_tab]); ?>" id="reset-permissions-form">
+                <?php wp_nonce_field('wp_customer_reset_permissions', 'reset_permissions_nonce'); ?>
+                <input type="hidden" name="action" value="reset_permissions">
+                <button type="button" id="reset-permissions-btn" class="button button-secondary">
+                    <i class="dashicons dashicons-image-rotate"></i>
+                    <?php _e('Reset to Default', 'wp-customer'); ?>
+                </button>
+            </form>
+            <p class="description">
+                <?php _e('Reset permissions to plugin defaults. This will restore the original capability settings for all roles.', 'wp-customer'); ?>
+            </p>
+        </div>
+
+        <form id="wp-customer-permissions-form" method="post" action="<?php echo add_query_arg(['tab' => 'permissions', 'permission_tab' => $current_tab]); ?>">
             <?php wp_nonce_field('wp_customer_permissions'); ?>
+            <input type="hidden" name="current_tab" value="<?php echo esc_attr($current_tab); ?>">
             <input type="hidden" name="action" value="update_role_permissions">
 
             <p class="description">
@@ -154,13 +182,6 @@ $current_tab = isset($_GET['permission_tab']) ? sanitize_key($_GET['permission_t
                             </td>
                             <?php foreach ($capability_groups[$current_tab]['caps'] as $cap): ?>
                                 <td class="column-permission">
-                                    <label class="screen-reader-text">
-                                        <?php echo esc_html(sprintf(
-                                            __('%1$s for role %2$s', 'wp-customer'),
-                                            $permission_labels[$cap],
-                                            $role_info['name']
-                                        )); ?>
-                                    </label>
                                     <input type="checkbox" 
                                            name="permissions[<?php echo esc_attr($role_name); ?>][<?php echo esc_attr($cap); ?>]" 
                                            value="1"
@@ -177,3 +198,8 @@ $current_tab = isset($_GET['permission_tab']) ? sanitize_key($_GET['permission_t
     </div>
 </div>
 
+<!-- Modal Templates -->
+<?php
+if (function_exists('wp_customer_render_confirmation_modal')) {
+    wp_customer_render_confirmation_modal();
+}

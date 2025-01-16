@@ -26,7 +26,7 @@
 namespace WPCustomer\Models\Settings;
 
 class PermissionModel {
-    private $default_capabilities = [
+    private $available_capabilities = [
         // Customer capabilities
         'view_customer_list' => 'Lihat Daftar Customer',
         'view_customer_detail' => 'Lihat Detail Customer',
@@ -55,16 +55,17 @@ class PermissionModel {
         'delete_employee' => 'Hapus Karyawan'        
     ];
 
-    // Add default role capabilities array
-    private $default_role_caps = [
+    // Define base capabilities untuk setiap role beserta nilai default-nya
+    private $displayed_capabilities_in_tabs = [
         'customer' => [
             'title' => 'Customer Permissions',
             'caps' => [
+                // Customer capabilities
                 'view_customer_list',
-                'view_own_customer',
+                'view_own_customer', 
                 'add_customer',
-                'edit_all_customers',
-                'edit_own_customer'
+                'edit_own_customer',
+                'edit_all_customers'
             ]
         ],
         'branch' => [
@@ -93,12 +94,21 @@ class PermissionModel {
         ]
     ];
 
+    private function getDisplayedCapabiities(): array{
+       return array_merge(
+            $this->displayed_capabilities_in_tabs['customer']['caps'],
+            $this->displayed_capabilities_in_tabs['branch']['caps'],
+            $this->displayed_capabilities_in_tabs['employee']['caps']
+        );
+    } 
+
+
     public function getAllCapabilities(): array {
-        return $this->default_capabilities;
+        return $this->available_capabilities;
     }
 
     public function getCapabilityGroups(): array {
-        return $this->default_role_caps;
+        return $this->displayed_capabilities_in_tabs;
     }
 
     public function roleHasCapability(string $role_name, string $capability): bool {
@@ -110,11 +120,12 @@ class PermissionModel {
         return $role->has_cap($capability);
     }
 
+
     public function addCapabilities(): void {
         // Set administrator capabilities
         $admin = get_role('administrator');
         if ($admin) {
-            foreach (array_keys($this->default_capabilities) as $cap) {
+            foreach (array_keys($this->available_capabilities) as $cap) {
                 $admin->add_cap($cap);
             }
         }
@@ -122,11 +133,36 @@ class PermissionModel {
         // Set customer role capabilities
         $customer = get_role('customer');
         if ($customer) {
-            foreach (array_keys($this->default_capabilities) as $cap) {
-                $customer->remove_cap($cap);
-            }
-            foreach ($this->default_role_caps['customer']['caps'] as $cap) {
-                $customer->add_cap($cap);
+            $default_capabiities = [
+                // Customer capabilities
+                'view_customer_list' => true,
+                'add_customer' => true,
+                'view_own_customer' => true,
+                'edit_own_customer' => true,
+                'view_own_customer' => true,
+                'delete_customer' => false,
+
+                // Branch capabilities  
+                'add_branch' => true,
+                'view_branch_list' => true,
+                'view_own_branch' => true,
+                'edit_own_branch' => true,
+                'delete_branch' => false,
+
+                // Employee capabilities
+                'add_employee' => true,
+                'view_employee_list' => true,
+                'view_own_employee' => true,
+                'edit_own_employee' => true,
+                'delete_employee' => false
+            ];
+
+            foreach ($default_capabiities as $cap => $enabled) {
+                if ($enabled) {
+                    $customer->add_cap($cap);
+                } else {
+                    $customer->remove_cap($cap);
+                }
             }
         }
     }
@@ -138,24 +174,22 @@ class PermissionModel {
                 $role = get_role($role_name);
                 if (!$role) continue;
 
-                // Remove all existing capabilities
-                foreach (array_keys($this->default_capabilities) as $cap) {
+                // Remove all existing capabilities first
+                foreach (array_keys($this->available_capabilities) as $cap) {
                     $role->remove_cap($cap);
                 }
 
                 // Administrator gets all capabilities
                 if ($role_name === 'administrator') {
-                    foreach (array_keys($this->default_capabilities) as $cap) {
+                    foreach (array_keys($this->available_capabilities) as $cap) {
                         $role->add_cap($cap);
                     }
                     continue;
                 }
 
-                // Customer role gets its specific capabilities
-                if ($role_name === 'customer' && isset($this->default_role_caps['customer'])) {
-                    foreach ($this->default_role_caps['customer']['caps'] as $cap) {
-                        $role->add_cap($cap);
-                    }
+                // Customer role gets its specific default capabilities
+                if ($role_name === 'customer') {
+                    $this->addCapabilities(); // Gunakan method yang sudah ada
                 }
             }
             return true;
@@ -176,15 +210,32 @@ class PermissionModel {
             return false;
         }
 
-        // Reset existing capabilities
-        foreach (array_keys($this->default_capabilities) as $cap) {
+        // Get default caps for customer role
+        $default_customer_caps = [];
+        if ($role_name === 'customer') {
+            $default_customer_caps = $this->displayed_capabilities_in_tabs['customer']['caps'];
+        }
+
+        // Reset existing capabilities while respecting defaults for customer
+        foreach (array_keys($this->available_capabilities) as $cap) {
+            if ($role_name === 'customer' && isset($default_customer_caps[$cap])) {
+                // For customer role, keep default value
+                if ($default_customer_caps[$cap]) {
+                    $role->add_cap($cap);
+                } else {
+                    $role->remove_cap($cap);
+                }
+                continue;
+            }
             $role->remove_cap($cap);
         }
 
-        // Add new capabilities
+        // Add new capabilities (only for non-customer roles or non-default capabilities)
         foreach ($capabilities as $cap => $enabled) {
-            if ($enabled && isset($this->default_capabilities[$cap])) {
-                $role->add_cap($cap);
+            if ($enabled && isset($this->available_capabilities[$cap])) {
+                if ($role_name !== 'customer' || !isset($default_customer_caps[$cap])) {
+                    $role->add_cap($cap);
+                }
             }
         }
 

@@ -44,70 +44,35 @@ class WP_Customer_Activator {
 
     public static function activate() {
         try {
+            // 1. Run database installation first
             $installer = new Installer();
             if (!$installer->run()) {
                 self::logError('Failed to install database tables');
                 return;
             }
 
-            // Add customer role if it doesn't exist
+            // 2. Create customer role first if it doesn't exist
             if (!get_role('customer')) {
                 add_role(
                     'customer',
                     __('Customer', 'wp-customer'),
-                    [
-                        'view_customer_list' => true,
-                        'add_customer' => true,
-                        'view_own_customer' => true,
-                        'edit_own_customer' => true,
-                        'view_own_customer' => true,
-                        'delete_customer' => false,
-
-                        'add_branch' => true,
-                        'view_branch_list' => true,
-                        'view_own_branch' => true,
-                        'edit_own_branch' => true,
-                        'delete_branch' => false,
-
-                        'add_employee' => true,
-                        'view_employee_list' => true,
-                        'view_own_employee' => true,
-                        'edit_own_employee' => true,
-                        'delete_employee' => false
-
-                    ]
+                    [] // Start with empty capabilities
                 );
             }
 
-            // Inisialisasi permission model untuk set semua capabilities
-            $permission_model = new \WPCustomer\Models\Settings\PermissionModel();
-            $permission_model->addCapabilities();
-
-            // After permissions are set, load demo data
-            try {
-                require_once WP_CUSTOMER_PATH . 'src/Database/DemoData.php';
-                if (class_exists('\WPCustomer\Database\DemoData')) {
-                    \WPCustomer\Database\DemoData::load();
-                    error_log('Demo data loaded successfully');
-                } else {
-                    self::logError('DemoData class not found');
-                }
-            } catch (\Exception $e) {
-                self::logError('Error loading demo data: ' . $e->getMessage());
-            }
-
-
-            self::addVersion();
-            self::setupMembershipDefaults(); // Tambahkan ini
-
+            // 3. Now initialize permission model and add capabilities
             try {
                 $permission_model = new PermissionModel();
-                $permission_model->addCapabilities();
+                $permission_model->addCapabilities(); // This will add caps to both admin and customer roles
             } catch (\Exception $e) {
                 self::logError('Error adding capabilities: ' . $e->getMessage());
             }
 
-            // Add rewrite rule untuk halaman registrasi
+            // 4. Continue with rest of activation (demo data, version, etc)
+            self::addVersion();
+            self::setupMembershipDefaults();
+
+            // Add rewrite rules
             add_rewrite_rule(
                 'customer-register/?$',
                 'index.php?wp_customer_register=1',
