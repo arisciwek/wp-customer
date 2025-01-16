@@ -133,7 +133,61 @@ class BranchController {
             error_log('WP Customer Plugin: ' . $log_message);
         }
     }
-    
+public function getCheckCustomerAccess($customer_id) {
+    global $wpdb;
+    $current_user_id = get_current_user_id();
+
+    // Debug logging
+    error_log("=== Branch Access Check ===");
+    error_log("Customer ID: $customer_id");
+    error_log("Current User ID: $current_user_id");
+
+    // 1. Admin Check
+    if (current_user_can('edit_all_customers')) {
+        error_log("User has admin access");
+        return [
+            'has_access' => true,
+            'access_type' => 'admin'
+        ];
+    }
+
+    // 2. Owner Check
+    $is_owner = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers 
+         WHERE id = %d AND user_id = %d",
+        $customer_id, $current_user_id
+    ));
+
+    if ($is_owner && current_user_can('view_own_customer')) {
+        error_log("User is owner");
+        return [
+            'has_access' => true,
+            'access_type' => 'owner'
+        ];
+    }
+
+    // 3. Employee Check
+    $is_employee = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
+         WHERE customer_id = %d AND user_id = %d AND status = 'active'",
+        $customer_id, $current_user_id
+    ));
+
+    if ($is_employee && current_user_can('view_own_customer')) {
+        error_log("User is employee");
+        return [
+            'has_access' => true,
+            'access_type' => 'employee'
+        ];
+    }
+
+    error_log("No access found");
+    return [
+        'has_access' => false,
+        'access_type' => null
+    ];
+}
+
     public function handleDataTableRequest() {
         try {
             // Verify nonce
@@ -212,39 +266,147 @@ class BranchController {
         }
     }
 
-    private function generateActionButtons($branch) {
-        $actions = '';
+    // Contoh implementasi yang lebih sesuai untuk tombol tambah
+    private function generateAddBranchButton($customer) {
+        $current_user_id = get_current_user_id();
 
-        if (current_user_can('view_branch_detail')) {
-            $actions .= sprintf(
-                '<button type="button" class="button view-branch" data-id="%d" title="%s">' .
-                '<i class="dashicons dashicons-visibility"></i></button> ',
-                $branch->id,
-                __('Lihat', 'wp-customer')
+        // Debug logging
+        $this->debug_log("=== Add Branch Button Permission Check ===");
+        $this->debug_log([
+            'customer_id' => (int)$customer->id,
+            'customer_owner_id' => (int)$customer->user_id,
+            'current_user_id' => $current_user_id
+        ]);
+
+        // 1. Check if user is owner
+        $is_owner = ((int)$customer->user_id === $current_user_id);
+
+        // 2. Permission check
+        $can_add = current_user_can('add_branch') && $is_owner;
+
+        $this->debug_log([
+            'is_owner' => $is_owner,
+            'has_add_permission' => current_user_can('add_branch'),
+            'final_decision' => $can_add
+        ]);
+
+        if ($can_add) {
+            return sprintf(
+                '<button type="button" class="button button-primary" id="add-branch-btn">
+                    <span class="dashicons dashicons-plus-alt"></span>
+                    %s
+                </button>',
+                __('Tambah Cabang', 'wp-customer')
             );
         }
 
-        if (current_user_can('edit_all_branches') ||
-            (current_user_can('edit_own_branch') && $branch->created_by === get_current_user_id())) {
-            $actions .= sprintf(
-                '<button type="button" class="button edit-branch" data-id="%d" title="%s">' .
-                '<i class="dashicons dashicons-edit"></i></button> ',
-                $branch->id,
-                __('Edit', 'wp-customer')
-            );
-        }
-
-        if (current_user_can('delete_branch')) {
-            $actions .= sprintf(
-                '<button type="button" class="button delete-branch" data-id="%d" title="%s">' .
-                '<i class="dashicons dashicons-trash"></i></button>',
-                $branch->id,
-                __('Hapus', 'wp-customer')
-            );
-        }
-
-        return $actions;
+        return '';
     }
+
+    private function generateActionButtons($branch) {
+            $actions = '';
+            $current_user_id = get_current_user_id();
+
+            // Debug logging untuk transparansi
+            $this->debug_log("==== Generating Action Buttons for Branch ID: {$branch->id} ====");
+            
+            // 1. Dapatkan data customer untuk cek ownership
+            global $wpdb;
+            $customer = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}app_customers WHERE id = %d",
+                $branch->customer_id
+            ));
+
+            // Log customer data
+            $this->debug_log([
+                'branch_id' => (int)$branch->id,
+                'customer_id' => (int)$branch->customer_id,
+                'customer_owner_id' => $customer ? (int)$customer->user_id : 'not found',
+                'current_user_id' => (int)$current_user_id,
+                'branch_created_by' => (int)$branch->created_by
+            ]);
+
+            // 2. Cek apakah user adalah owner
+            $is_owner = $customer && ((int)$customer->user_id === (int)$current_user_id);
+            
+            // 3. Cek apakah user adalah staff
+            $is_staff = (bool)$wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
+                 WHERE customer_id = %d AND user_id = %d",
+                $branch->customer_id, 
+                $current_user_id
+            ));
+
+            // Log permission context
+            $this->debug_log("Permission Context:");
+            $this->debug_log([
+                'is_owner' => $is_owner,
+                'is_staff' => $is_staff,
+                'is_creator' => ((int)$branch->created_by === (int)$current_user_id),
+                'has_view_detail' => current_user_can('view_branch_detail'),
+                'has_edit_all' => current_user_can('edit_all_branches'),
+                'has_edit_own' => current_user_can('edit_own_branch'),
+                'has_delete' => current_user_can('delete_branch')
+            ]);
+
+            // 4. View Button Logic
+            // - Owner selalu bisa lihat
+            // - Staff bisa lihat semua dalam customernya
+            // - Admin dengan view_branch_detail bisa lihat semua
+            if ($is_owner || $is_staff || current_user_can('view_branch_detail')) {
+                $actions .= sprintf(
+                    '<button type="button" class="button view-branch" data-id="%d" title="%s">
+                        <i class="dashicons dashicons-visibility"></i>
+                    </button> ',
+                    $branch->id,
+                    __('Lihat', 'wp-customer')
+                );
+                $this->debug_log("Added View Button");
+            }
+
+            // 5. Edit Button Logic
+            // - Owner bisa edit semua cabang dalam customernya
+            // - Staff hanya bisa edit cabang yang dia buat
+            // - Admin dengan edit_all_branches bisa edit semua
+            if (current_user_can('edit_all_branches') || 
+                $is_owner || 
+                (current_user_can('edit_own_branch') && (int)$branch->created_by === (int)$current_user_id)) {
+                
+                $actions .= sprintf(
+                    '<button type="button" class="button edit-branch" data-id="%d" title="%s">
+                        <i class="dashicons dashicons-edit"></i>
+                    </button> ',
+                    $branch->id,
+                    __('Edit', 'wp-customer')
+                );
+                $this->debug_log("Added Edit Button");
+            }
+
+            // 6. Delete Button Logic
+            // - Owner bisa hapus semua cabang dalam customernya
+            // - Staff hanya bisa hapus cabang yang dia buat
+            // - Admin dengan delete_branch bisa hapus semua
+            if (current_user_can('delete_branch') || 
+                $is_owner || 
+                (current_user_can('delete_branch') && (int)$branch->created_by === (int)$current_user_id)) {
+                
+                $actions .= sprintf(
+                    '<button type="button" class="button delete-branch" data-id="%d" title="%s">
+                        <i class="dashicons dashicons-trash"></i>
+                    </button>',
+                    $branch->id,
+                    __('Hapus', 'wp-customer')
+                );
+                $this->debug_log("Added Delete Button");
+            }
+
+            // Log final buttons
+            $this->debug_log("Final action buttons HTML: " . $actions);
+            $this->debug_log("==== End Action Buttons Generation ====\n");
+
+            return $actions;
+        }
+
 
     public function store() {
         try {

@@ -179,62 +179,134 @@ class CustomerEmployeeController {
      * Generate action buttons HTML
      */
     private function generateActionButtons($employee) {
-        $actions = '';
+            $actions = '';
+            $current_user_id = get_current_user_id();
 
-        // View button
-        if (current_user_can('view_employee_detail')) {
-            $actions .= sprintf(
-                '<button type="button" class="button view-employee" data-id="%d" title="%s">
-                    <i class="dashicons dashicons-visibility"></i>
-                </button> ',
-                $employee->id,
-                __('Lihat', 'wp-customer')
-            );
-        }
-
-        // Edit button
-        if (current_user_can('edit_all_employees') ||
-            (current_user_can('edit_own_employee') && $employee->created_by === get_current_user_id())) {
-            $actions .= sprintf(
-                '<button type="button" class="button edit-employee" data-id="%d" title="%s">
-                    <i class="dashicons dashicons-edit"></i>
-                </button> ',
-                $employee->id,
-                __('Edit', 'wp-customer')
-            );
-        }
-
-        // Delete button
-        if (current_user_can('delete_employee')) {
-            $actions .= sprintf(
-                '<button type="button" class="button delete-employee" data-id="%d" title="%s">
-                    <i class="dashicons dashicons-trash"></i>
-                </button> ',
-                $employee->id,
-                __('Hapus', 'wp-customer')
-            );
-        }
-
-        // Status toggle button
-        if (current_user_can('edit_all_employees') ||
-            (current_user_can('edit_own_employee') && $employee->created_by === get_current_user_id())) {
-            $newStatus = $employee->status === 'active' ? 'inactive' : 'active';
-            $statusTitle = $employee->status === 'active' ? __('Nonaktifkan', 'wp-customer') : __('Aktifkan', 'wp-customer');
-            $statusIcon = $employee->status === 'active' ? 'remove' : 'yes';
+            // Debug header untuk karyawan ini
+            $this->debug_log("==== Generating Action Buttons for Employee ID: {$employee->id} ====");
             
-            $actions .= sprintf(
-                '<button type="button" class="button toggle-status" data-id="%d" data-status="%s" title="%s">
-                    <i class="dashicons dashicons-%s"></i>
-                </button>',
-                $employee->id,
-                $newStatus,
-                $statusTitle,
-                $statusIcon
-            );
-        }
+            // 1. Dapatkan data customer untuk cek ownership
+            global $wpdb;
+            $customer = $wpdb->get_row($wpdb->prepare(
+                "SELECT * FROM {$wpdb->prefix}app_customers WHERE id = %d",
+                $employee->customer_id
+            ));
 
-        return $actions;
-    }
+            // Log employee data
+            $this->debug_log([
+                'employee_id' => (int)$employee->id,
+                'customer_id' => (int)$employee->customer_id,
+                'customer_owner_id' => $customer ? (int)$customer->user_id : 'not found',
+                'current_user_id' => (int)$current_user_id,
+                'employee_created_by' => (int)$employee->created_by
+            ]);
+
+            // 2. Cek apakah user adalah owner
+            $is_owner = $customer && ((int)$customer->user_id === (int)$current_user_id);
+            
+            // 3. Cek apakah user adalah staff
+            $is_staff = (bool)$wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
+                 WHERE customer_id = %d AND user_id = %d",
+                $employee->customer_id, 
+                $current_user_id
+            ));
+
+            // Log permission context
+            $this->debug_log("Permission Context:");
+            $this->debug_log([
+                'is_owner' => $is_owner,
+                'is_staff' => $is_staff,
+                'is_creator' => ((int)$employee->created_by === (int)$current_user_id),
+                'has_view_detail' => current_user_can('view_employee_detail'),
+                'has_edit_all' => current_user_can('edit_all_employees'),
+                'has_edit_own' => current_user_can('edit_own_employee'),
+                'has_delete' => current_user_can('delete_employee')
+            ]);
+
+            // 4. View Button Logic
+            // - Owner selalu bisa lihat
+            // - Staff bisa lihat semua dalam customernya
+            // - Admin dengan view_employee_detail bisa lihat semua
+            if ($is_owner || $is_staff || current_user_can('view_employee_detail')) {
+                $actions .= sprintf(
+                    '<button type="button" class="button view-employee" data-id="%d" title="%s">
+                        <i class="dashicons dashicons-visibility"></i>
+                    </button> ',
+                    $employee->id,
+                    __('Lihat', 'wp-customer')
+                );
+                $this->debug_log("Added View Button");
+            }
+
+            // 5. Edit Button Logic
+            // - Owner bisa edit semua karyawan dalam customernya
+            // - Staff hanya bisa edit karyawan yang dia tambahkan
+            // - Admin dengan edit_all_employees bisa edit semua
+            if (current_user_can('edit_all_employees') || 
+                $is_owner || 
+                (current_user_can('edit_own_employee') && (int)$employee->created_by === (int)$current_user_id)) {
+                
+                $actions .= sprintf(
+                    '<button type="button" class="button edit-employee" data-id="%d" title="%s">
+                        <i class="dashicons dashicons-edit"></i>
+                    </button> ',
+                    $employee->id,
+                    __('Edit', 'wp-customer')
+                );
+                $this->debug_log("Added Edit Button");
+            }
+
+            // 6. Delete Button Logic
+            // - Owner bisa hapus semua karyawan dalam customernya
+            // - Staff hanya bisa hapus karyawan yang dia tambahkan
+            // - Admin dengan delete_employee bisa hapus semua
+            if (current_user_can('delete_employee') || 
+                $is_owner || 
+                (current_user_can('delete_employee') && (int)$employee->created_by === (int)$current_user_id)) {
+                
+                $actions .= sprintf(
+                    '<button type="button" class="button delete-employee" data-id="%d" title="%s">
+                        <i class="dashicons dashicons-trash"></i>
+                    </button>',
+                    $employee->id,
+                    __('Hapus', 'wp-customer')
+                );
+                $this->debug_log("Added Delete Button");
+            }
+
+            // 7. Status Toggle Button (Aktif/Nonaktif)
+            // - Owner bisa mengubah status semua karyawan
+            // - Staff hanya bisa mengubah status karyawan yang dia tambahkan
+            // - Admin dengan edit_all_employees bisa mengubah semua
+            if (current_user_can('edit_all_employees') || 
+                $is_owner || 
+                (current_user_can('edit_own_employee') && (int)$employee->created_by === (int)$current_user_id)) {
+                
+                $newStatus = $employee->status === 'active' ? 'inactive' : 'active';
+                $statusTitle = $employee->status === 'active' ? 
+                    __('Nonaktifkan', 'wp-customer') : 
+                    __('Aktifkan', 'wp-customer');
+                $statusIcon = $employee->status === 'active' ? 'remove' : 'yes';
+                
+                $actions .= sprintf(
+                    '<button type="button" class="button toggle-status" data-id="%d" data-status="%s" title="%s">
+                        <i class="dashicons dashicons-%s"></i>
+                    </button>',
+                    $employee->id,
+                    $newStatus,
+                    $statusTitle,
+                    $statusIcon
+                );
+                $this->debug_log("Added Status Toggle Button");
+            }
+
+            // Log final buttons
+            $this->debug_log("Final action buttons HTML: " . $actions);
+            $this->debug_log("==== End Action Buttons Generation ====\n");
+
+            return $actions;
+        }
 
     /**
      * Show employee details

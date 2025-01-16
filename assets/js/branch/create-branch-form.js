@@ -198,6 +198,11 @@
                     if (window.BranchDataTable) {
                         window.BranchDataTable.refresh();
                     }
+
+                    if (window.CustomerDataTable) {
+                        window.CustomerDataTable.refresh();
+                    }
+                                        
                 } else {
                     BranchToast.error(response.data?.message || 'Gagal menambah cabang');
                 }

@@ -7,9 +7,14 @@
 <div id="wp-customer-left-panel" class="wp-customer-left-panel">
     <div class="wi-panel-header">
         <h2>Daftar Customer</h2>
-        <button type="button" class="button button-primary" id="add-customer-btn">
-            Tambah Customer
-        </button>
+
+        <?php if (current_user_can('add_customer')): ?>
+            <button type="button" class="button button-primary" id="add-customer-btn">
+                Tambah Customer
+            </button>
+        <?php endif; ?>
+
+
     </div>
     
     <div class="wi-panel-content">

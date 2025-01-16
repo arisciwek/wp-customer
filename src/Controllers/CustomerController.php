@@ -147,34 +147,54 @@ class CustomerController {
         global $wpdb;
         $current_user_id = get_current_user_id();
 
+        // Debug log
+        $this->debug_log("Checking access for customer $customer_id by user $current_user_id");
+
         // 1. Admin Check
         if (current_user_can('edit_all_customers')) {
+            $this->debug_log("User has admin access");
             return [
                 'has_access' => true,
                 'access_type' => 'admin'
             ];
         }
 
-        // 2. Owner Check  
-        $is_owner = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers 
-             WHERE id = %d AND user_id = %d",
-            $customer_id, $current_user_id
-        ));
+// 2. Owner Check  
+$is_owner = $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers 
+     WHERE id = %d AND user_id = %d",
+    $customer_id, $current_user_id
+));
+$this->debug_log("Owner check result: " . ($is_owner ? 'true' : 'false'));
 
-        if ($is_owner && current_user_can('view_own_customer')) {
-            return [
-                'has_access' => true,
-                'access_type' => 'owner'
-            ];
-        }
+if ($is_owner && current_user_can('view_own_customer')) {
+    $this->debug_log("User is owner");
+    
+    // Branch permission check untuk owner
+    $branch_access = [
+        'view_branch' => current_user_can('view_branch_list') || current_user_can('view_own_branch'),
+        'add_branch' => current_user_can('add_branch'),
+        'edit_branch' => current_user_can('edit_own_branch'),
+        'delete_branch' => current_user_can('delete_branch')
+    ];
+    
+    $this->debug_log("Branch permissions for owner:");
+    $this->debug_log($branch_access);
 
+    return [
+        'has_access' => true,
+        'access_type' => 'owner',
+        'branch_access' => $branch_access
+    ];
+}
         // 3. Employee Check
         $is_employee = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
-             WHERE customer_id = %d AND user_id = %d",
+             WHERE customer_id = %d AND user_id = %d AND status = 'active'",
             $customer_id, $current_user_id
         ));
+
+        $this->debug_log("Employee check result: " . ($is_employee ? 'true' : 'false'));
 
         if ($is_employee && current_user_can('view_own_customer')) {
             return [
@@ -183,10 +203,31 @@ class CustomerController {
             ];
         }
 
+        $this->debug_log("No access found");
         return [
             'has_access' => false,
             'access_type' => null
         ];
+    }
+    
+    public function getCheckCustomerAccess($customer_id) {
+        $access = $this->checkCustomerAccess($customer_id);
+        
+        // Add branch-specific permissions
+        if ($access['has_access']) {
+            $access['branch_access'] = [
+                'view_branch' => current_user_can('view_branch_list') || current_user_can('view_own_branch'),
+                'add_branch' => current_user_can('add_branch'),
+                'edit_branch' => current_user_can('edit_own_branch'),
+                'delete_branch' => current_user_can('delete_branch')
+            ];
+        }
+        
+    $result = $this->checkCustomerAccess($customer_id);
+    error_log('getCheckCustomerAccess result: ' . print_r($result, true));
+    return $result;
+                    
+        return $access;
     }
 
     /**
@@ -380,156 +421,84 @@ class CustomerController {
         }
     }
 
-
-
-private function generateActionButtons($customer) {
-    $actions = '';
-    (int)$current_user_id = get_current_user_id();
-    
-    // Debug header for this specific customer
-    $this->debug_log("==== Generating Action Buttons for Customer ID: {$customer->id} ====");
-    
-    // Log customer data
-    $this->debug_log("Customer Data:");
-    $this->debug_log([
-        'id' => (int)$customer->id,
-        'user_id' => (int)$customer->user_id,
-        'current_user' => (int)$current_user_id
-    ]);
-    
-    // Log all relevant capabilities
-    $capabilities = [
-        'view_customer_detail' => current_user_can('view_customer_detail'),
-        'view_own_customer' => current_user_can('view_own_customer'),
-        'edit_all_customers' => current_user_can('edit_all_customers'),
-        'edit_own_customer' => current_user_can('edit_own_customer'),
-        'delete_customer' => current_user_can('delete_customer'),
-        'delete_own_customer' => current_user_can('delete_own_customer')
-    ];
-    
-    $this->debug_log("User Capabilities:");
-    $this->debug_log($capabilities);
-    
-    // Debug View Button Logic
-    $this->debug_log("=== View Button Check ===");
-    $can_view = current_user_can('view_customer_detail') || 
-                (current_user_can('view_own_customer') && (int)$customer->user_id === (int)$current_user_id);
-    
-    $this->debug_log("View Button Conditions:");
-    $this->debug_log([
-        'has_view_detail_permission' => current_user_can('view_customer_detail'),
-        'has_view_own_permission' => current_user_can('view_own_customer'),
-        'is_owner' => ($customer->user_id === (int)$current_user_id),
-        'final_view_decision' => $can_view
-    ]);
-    
-    if ($can_view) {
-        $view_button = sprintf(
-            '<button type="button" class="button view-customer" data-id="%d" title="%s">' .
-            '<i class="dashicons dashicons-visibility"></i></button> ',
-            (int)$customer->id,
-            __('Lihat', 'wp-customer')
-        );
-        $actions .= $view_button;
-        $this->debug_log("Added View Button: " . $view_button);
-    }
-    
-    // Debug Edit Button Logic
-    $this->debug_log("=== Edit Button Check ===");
-    $can_edit = current_user_can('edit_all_customers') ||
-                (current_user_can('edit_own_customer') && (int)$customer->user_id === (int)$current_user_id);
-    
-    $this->debug_log("Edit Button Conditions:");
-    $this->debug_log([
-        'has_edit_all_permission' => current_user_can('edit_all_customers'),
-        'has_edit_own_permission' => current_user_can('edit_own_customer'),
-        'is_owner' => ((int)$customer->user_id === (int)$current_user_id),
-        'user_id_comparison' => [
-            'customer_user_id' => (int)$customer->user_id,
-            'current_user_id' => (int)$current_user_id,
-            'matches' => ((int)$customer->user_id === (int)$current_user_id)
-        ],
-        'final_edit_decision' => $can_edit
-    ]);
-    
-    if ($can_edit) {
-        $edit_button = sprintf(
-            '<button type="button" class="button edit-customer" data-id="%d" title="%s">' .
-            '<i class="dashicons dashicons-edit"></i></button> ',
-            (int)$customer->id,
-            __('Edit', 'wp-customer')
-        );
-        $actions .= $edit_button;
-        $this->debug_log("Added Edit Button: " . $edit_button);
-    }
-    
-    // Debug Delete Button Logic
-    $this->debug_log("=== Delete Button Check ===");
-    $can_delete = current_user_can('delete_customer') ||
-                  (current_user_can('delete_own_customer') && (int)$customer->user_id === (int)$current_user_id);
-    
-    $this->debug_log("Delete Button Conditions:");
-    $this->debug_log([
-        'has_delete_permission' => current_user_can('delete_customer'),
-        'has_delete_own_permission' => current_user_can('delete_own_customer'),
-        'is_owner' => ($customer->user_id === (int)$current_user_id),
-        'final_delete_decision' => $can_delete
-    ]);
-    
-    if ($can_delete) {
-        $delete_button = sprintf(
-            '<button type="button" class="button delete-customer" data-id="%d" title="%s">' .
-            '<i class="dashicons dashicons-trash"></i></button>',
-            (int)$customer->id,
-            __('Hapus', 'wp-customer')
-        );
-        $actions .= $delete_button;
-        $this->debug_log("Added Delete Button: " . $delete_button);
-    }
-    
-    // Log final actions HTML
-    $this->debug_log("=== Final Actions HTML ===");
-    $this->debug_log($actions);
-    
-    // Log separator for readability
-    $this->debug_log("==== End Action Buttons Generation ====\n");
-    
-    return $actions;
-}
-
-/*
     private function generateActionButtons($customer) {
         $actions = '';
+        $current_user_id = (int)get_current_user_id();
+        
+        // Debug logging
+        $this->debug_log("==== Generating Action Buttons for Customer ID: {$customer->id} ====");
+        
+        // Log customer data
+        $this->debug_log("Customer Data:");
+        $this->debug_log([
+            'id' => (int)$customer->id,
+            'user_id' => (int)$customer->user_id,
+            'current_user' => $current_user_id
+        ]);
+        
+        // View Button Check
 
-        if (current_user_can('view_customer_detail')) {
+        $can_view = current_user_can('view_customer_list') || 
+                    (current_user_can('view_own_customer') && (int)$customer->user_id === $current_user_id) ||
+                    ($is_employee > 0 && current_user_can('view_customer_list'));
+
+        $this->debug_log("View Button Conditions:");
+        $access = $this->checkCustomerAccess($customer->id);
+        $can_view = $access['has_access'];
+
+        $this->debug_log("View Button Conditions:");
+        $this->debug_log([
+            'has_view_list_permission' => current_user_can('view_customer_list'),
+            'has_view_own_permission' => current_user_can('view_own_customer'),
+            'is_owner' => ((int)$customer->user_id === $current_user_id),
+            'is_employee' => $access['access_type'] === 'employee',
+            'access_type' => $access['access_type'],
+            'final_view_decision' => $can_view
+        ]);
+
+        if ($can_view) {
             $actions .= sprintf(
-                '<button type="button" class="button view-customer" data-id="%d" title="%s"><i class="dashicons dashicons-visibility"></i></button> ',
-                $customer->id,
+                '<button type="button" class="button view-customer" data-id="%d" title="%s">' .
+                '<i class="dashicons dashicons-visibility"></i></button> ',
+                (int)$customer->id,
                 __('Lihat', 'wp-customer')
             );
         }
-
-        if (current_user_can('edit_all_customers') ||
-            (current_user_can('edit_own_customer') && $customer->user_id === get_current_user_id())) {
+        
+        // Edit Button Check - based on edit_own_customer
+        $can_edit = (current_user_can('edit_own_customer') && 
+                     (int)$customer->user_id === $current_user_id);
+        
+        $this->debug_log("Edit Button Conditions:");
+        $this->debug_log([
+            'has_edit_own_permission' => current_user_can('edit_own_customer'),
+            'is_owner' => ((int)$customer->user_id === $current_user_id),
+            'final_edit_decision' => $can_edit
+        ]);
+        
+        if ($can_edit) {
             $actions .= sprintf(
-                '<button type="button" class="button edit-customer" data-id="%d" title="%s"><i class="dashicons dashicons-edit"></i></button> ',
-                $customer->id,
+                '<button type="button" class="button edit-customer" data-id="%d" title="%s">' .
+                '<i class="dashicons dashicons-edit"></i></button> ',
+                (int)$customer->id,
                 __('Edit', 'wp-customer')
             );
         }
-
-        if (current_user_can('delete_customer') ||
-            (current_user_can('delete_own_customer') && $customer->user_id === get_current_user_id())) {
+        
+        // Delete Button Check - false by default for customer role
+        if (current_user_can('delete_customer')) {
             $actions .= sprintf(
-                '<button type="button" class="button delete-customer" data-id="%d" title="%s"><i class="dashicons dashicons-trash"></i></button>',
-                $customer->id,
+                '<button type="button" class="button delete-customer" data-id="%d" title="%s">' .
+                '<i class="dashicons dashicons-trash"></i></button>',
+                (int)$customer->id,
                 __('Hapus', 'wp-customer')
             );
         }
-
+        
+        $this->debug_log("Final Actions HTML: " . $actions);
         return $actions;
     }
-*/
+
     public function store() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
@@ -712,27 +681,27 @@ private function generateActionButtons($customer) {
                 }
             }
 
-            // Cek permission
-            $current_user_id = get_current_user_id();
-            $hasViewPermission = 
-                current_user_can('view_customer_detail') || 
-                (current_user_can('view_own_customer') && (int)$customer->user_id === $current_user_id);
-
+            // Gunakan checkCustomerAccess untuk konsistensi
+            $access = $this->checkCustomerAccess($id);
             $this->logPermissionCheck(
                 'view_customer_detail',
-                $current_user_id, 
+                get_current_user_id(), 
                 $id,
                 null,
-                $hasViewPermission
+                $access['has_access']
             );
 
-            if (!$hasViewPermission) {
+            if (!$access['has_access']) {
                 throw new \Exception('You do not have permission to view this customer');
             }
 
+            $customer->access_type = $access['access_type'];
+            $customer->has_access = $access['has_access'];
+
             wp_send_json_success([
                 'customer' => $customer,
-                'branch_count' => $this->model->getBranchCount($id)
+                'branch_count' => $this->model->getBranchCount($id),
+                'access_type' => $access['access_type'] // berguna untuk UI
             ]);
 
         } catch (\Exception $e) {
@@ -799,6 +768,77 @@ private function generateActionButtons($customer) {
                 'message' => $e->getMessage()
             ]);
         }
+    }
+
+        
+    public function renderMainPage() {
+        global $wpdb;
+        $current_user_id = get_current_user_id();
+
+        error_log('--- Debug MenuManager renderMainPage ---');
+        error_log('User ID: ' . $current_user_id);
+
+        // Dapatkan customer_id dari query parameter
+
+        $customer_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+
+        error_log('Query param customer_id: ' . $customer_id);
+
+        // Cek relasi sebagai employee dengan customer spesifik
+        $customer_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT DISTINCT customer_id 
+             FROM {$wpdb->prefix}app_customer_employees 
+             WHERE user_id = %d",
+            $current_user_id
+        ));
+        
+        error_log('Employee customer IDs: ' . print_r($customer_ids, true));
+
+
+        // Cek akses ke plugin
+        error_log('Checking basic plugin access:');
+        error_log('Can view_customer_list: ' . (current_user_can('view_customer_list') ? 'yes' : 'no'));
+
+        if (!current_user_can('view_customer_list')) {
+            error_log('Basic access check failed - user cannot view customer list');
+            wp_die(__('Anda tidak memiliki izin untuk mengakses halaman ini.', 'wp-customer'));
+        }
+
+        // Admin check
+        error_log('Checking admin access:');
+        error_log('Can edit_all_customers: ' . (current_user_can('edit_all_customers') ? 'yes' : 'no'));
+
+        if (current_user_can('edit_all_customers')) {
+            error_log('Admin access granted - showing full dashboard');
+            require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-dashboard.php';
+            return;
+        }
+
+        // Cek relasi sebagai owner
+        $has_customer = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers WHERE user_id = %d",
+            $current_user_id
+        ));
+        error_log('Checking owner relationship:');
+        error_log('Has customer records: ' . ($has_customer > 0 ? 'yes' : 'no'));
+
+        // Jika user adalah owner, berikan akses
+        if ($has_customer > 0 && current_user_can('view_own_customer')) {
+            error_log('Owner access granted - showing customer dashboard');
+            require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-dashboard.php';
+            return;
+        }
+
+        // Jika customer_id dari query parameter ada dalam daftar customer_ids employee
+        if (!empty($customer_ids) && ($customer_id === 0 || in_array($customer_id, $customer_ids))) {
+            error_log('Employee access granted for customer_id: ' . $customer_id);
+            require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-dashboard.php';
+            return;
+        }
+
+        error_log('All checks failed - showing no access template');
+        error_log('--- End Debug MenuManager renderMainPage ---');
+        require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-no-access.php';
     }
 
 }

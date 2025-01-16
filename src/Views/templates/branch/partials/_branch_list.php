@@ -22,21 +22,51 @@
  */
 
 defined('ABSPATH') || exit;
+
+use WPCustomer\Controllers\CustomerController;
+
+$controller = new CustomerController();
+$customer_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+$access = $controller->getCheckCustomerAccess($customer_id);
+
+if (WP_DEBUG) {
+    error_log('Branch List Template Access Debug:');
+    error_log('Access Info: ' . print_r($customer, true));
+    error_log('Access add_branch : ' . print_r($access['add_branch'], true));
+    error_log('access access_type : ' . print_r($access['access_type'], true));
+}
+
+
 ?>
 
 <div id="branch-list" class="tab-content">
+
     <div class="wp-customer-branch-header">
         <div class="branch-header-title">
             <h3><?php _e('Daftar Cabang', 'wp-customer'); ?></h3>
         </div>
+
+
         <div class="branch-header-actions">
-            <?php if (current_user_can('add_branch')): ?>
+            <?php 
+            // Show Add Branch button based on permissions
+            if ($access['access_type'] === 'owner' && current_user_can('add_branch')) : 
+            ?>
                 <button type="button" class="button button-primary" id="add-branch-btn">
                     <span class="dashicons dashicons-plus-alt"></span>
                     <?php _e('Tambah Cabang', 'wp-customer'); ?>
                 </button>
             <?php endif; ?>
         </div>
+
+        <div class="branch-header-actions">
+            <?php 
+            if (isset($customer) && is_object($customer)) {
+                echo $controller->generateAddBranchButton($customer);
+            }
+            ?>
+        </div>
+
     </div>
 
     <div class="wp-customer-branch-content">
