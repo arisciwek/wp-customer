@@ -37,6 +37,8 @@ class DemoData {
     private static $user_ids = [];
     private static $used_names = [];
     private static $used_emails = [];
+    private static $used_npwp = [];
+    private static $used_nib = [];
 
     /**
      * Main method to load all demo data
@@ -74,6 +76,33 @@ class DemoData {
         $wpdb->query("DELETE FROM {$wpdb->prefix}app_customers");
     }
 
+    private static function generateNPWP() {
+        do {
+            // Format: XX.XXX.XXX.X-XXX.XXX (15 digits + formatting)
+            $npwp = sprintf("%02d.%03d.%03d.%d-%03d.%03d",
+                rand(0, 99),
+                rand(0, 999),
+                rand(0, 999),
+                rand(0, 9),
+                rand(0, 999),
+                rand(0, 999)
+            );
+        } while (in_array($npwp, self::$used_npwp));
+        
+        self::$used_npwp[] = $npwp;
+        return $npwp;
+    }
+
+    private static function generateNIB() {
+        do {
+            // Format: 13 digits
+            $nib = sprintf("%013d", rand(1000000000000, 9999999999999));
+        } while (in_array($nib, self::$used_nib));
+        
+        self::$used_nib[] = $nib;
+        return $nib;
+    }
+
     /**
      * Generate customer data
      */
@@ -105,6 +134,8 @@ class DemoData {
             $customer_data = [
                 'code' => $customer['code'],
                 'name' => $customer['name'],
+                'npwp' => self::generateNPWP(),
+                'nib' => self::generateNIB(),
                 'created_by' => 1,
                 'user_id' => $user_id,
                 'status' => 'active'
