@@ -143,100 +143,84 @@ class CustomerController {
      * @param int $customer_id
      * @return array
      */
-    private function checkCustomerAccess($customer_id) {
-        global $wpdb;
-        $current_user_id = get_current_user_id();
+private function checkCustomerAccess($customer_id) {
+    global $wpdb;
+    $current_user_id = get_current_user_id();
 
-        $this->debug_log("Checking access for customer $customer_id by user $current_user_id");
+    $this->debug_log("Checking access for customer $customer_id by user $current_user_id");
 
-        // 1. Admin Check
-        if (current_user_can('edit_all_customers')) {
-            $this->debug_log("User has admin access");
-            return [
-                'has_access' => true,
-                'access_type' => 'admin',
-                'branch_access' => [
-                    'view_branch' => true,
-                    'add_branch' => true,
-                    'edit_branch' => true,
-                    'delete_branch' => true
-                ]
-            ];
-        }
+    // Prepare access array structure
+    // Prepare access array structure
+    $access = [
+        'has_access' => false,
+        'access_type' => null,
+        'customer_access' => [
+            'view_customer_list' => current_user_can('view_customer_list'),
+            'view_own_customer' => current_user_can('view_own_customer'),
+            'add_customer' => current_user_can('add_customer'),
+            'edit_own_customer' => current_user_can('edit_own_customer'),
+            'edit_all_customers' => current_user_can('edit_all_customers')
+        ],
+        'branch_access' => [
+            'view_branch_list' => current_user_can('view_branch_list'),
+            'view_branch_detail' => current_user_can('view_branch_detail'),
+            'view_own_branch' => current_user_can('view_own_branch'),
+            'add_branch' => current_user_can('add_branch'),
+            'edit_all_branches' => current_user_can('edit_all_branches'),
+            'edit_own_branch' => current_user_can('edit_own_branch'),
+            'delete_branch' => current_user_can('delete_branch')
+        ],
+        'employee_access' => [
+            'view_employee_list' => current_user_can('view_employee_list'),
+            'view_employee_detail' => current_user_can('view_employee_detail'),
+            'view_own_employee' => current_user_can('view_own_employee'),
+            'add_employee' => current_user_can('add_employee'),
+            'edit_all_employees' => current_user_can('edit_all_employees'),
+            'edit_own_employee' => current_user_can('edit_own_employee'),
+            'delete_employee' => current_user_can('delete_employee')
+        ]
+    ];
 
-        // 2. Owner Check - Modified to handle both specific and general access
-        $owner_query = $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers 
-             WHERE " . ($customer_id > 0 ? "id = %d AND " : "") . "user_id = %d",
-            ...($customer_id > 0 ? [$customer_id, $current_user_id] : [$current_user_id])
-        );
-        
-        $is_owner = (int)$wpdb->get_var($owner_query) > 0;
-        $this->debug_log("Owner check result: " . ($is_owner ? 'true' : 'false'));
-
-        if ($is_owner && current_user_can('view_own_customer')) {
-            $this->debug_log("User is owner");
-            
-            // Set branch permissions for owner
-            $branch_access = [
-                'view_branch' => current_user_can('view_branch_list') || current_user_can('view_own_branch'),
-                'add_branch' => current_user_can('add_branch'),
-                'edit_branch' => current_user_can('edit_own_branch'),
-                'delete_branch' => current_user_can('delete_branch')
-            ];
-            
-            $this->debug_log("Branch permissions for owner:");
-            $this->debug_log($branch_access);
-
-            return [
-                'has_access' => true,
-                'access_type' => 'owner',
-                'branch_access' => $branch_access
-            ];
-        }
-
-        // 3. Employee Check - Modified to handle both specific and general access
-        $employee_query = $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
-             WHERE " . ($customer_id > 0 ? "customer_id = %d AND " : "") . "user_id = %d 
-             AND status = 'active'",
-            ...($customer_id > 0 ? [$customer_id, $current_user_id] : [$current_user_id])
-        );
-        
-        $is_employee = (int)$wpdb->get_var($employee_query) > 0;
-        $this->debug_log("Employee check result: " . ($is_employee ? 'true' : 'false'));
-
-        if ($is_employee && current_user_can('view_own_customer')) {
-            $this->debug_log("User is employee");
-            
-            // Set branch permissions for employee
-            $branch_access = [
-                'view_branch' => current_user_can('view_branch_list'),
-                'add_branch' => false, // Employees typically can't add branches
-                'edit_branch' => false,
-                'delete_branch' => false
-            ];
-
-            return [
-                'has_access' => true,
-                'access_type' => 'employee',
-                'branch_access' => $branch_access
-            ];
-        }
-
-        $this->debug_log("No access found");
-        return [
-            'has_access' => false,
-            'access_type' => null,
-            'branch_access' => [
-                'view_branch' => false,
-                'add_branch' => false,
-                'edit_branch' => false,
-                'delete_branch' => false
-            ]
-        ];
+    // 1. Admin Check
+    if (current_user_can('edit_all_customers')) {
+        $access['has_access'] = true;
+        $access['access_type'] = 'admin';
+        return $access;
     }
+
+    // 2. Owner Check
+    $owner_query = $wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers 
+         WHERE " . ($customer_id > 0 ? "id = %d AND " : "") . "user_id = %d",
+        ...($customer_id > 0 ? [$customer_id, $current_user_id] : [$current_user_id])
+    );
     
+    $is_owner = (int)$wpdb->get_var($owner_query) > 0;
+    
+    if ($is_owner && current_user_can('view_own_customer')) {
+        $access['has_access'] = true;
+        $access['access_type'] = 'owner';
+        return $access;
+    }
+
+    // 3. Employee Check
+    $employee_query = $wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
+         WHERE " . ($customer_id > 0 ? "customer_id = %d AND " : "") . "user_id = %d 
+         AND status = 'active'",
+        ...($customer_id > 0 ? [$customer_id, $current_user_id] : [$current_user_id])
+    );
+    
+    $is_employee = (int)$wpdb->get_var($employee_query) > 0;
+    
+    if ($is_employee && current_user_can('view_own_customer')) {
+        $access['has_access'] = true;
+        $access['access_type'] = 'employee';
+        return $access;
+    }
+
+    return $access;
+}    
     public function getCheckCustomerAccess($customer_id) {
         $access = $this->checkCustomerAccess($customer_id);
         error_log('getCheckCustomerAccess result: ' . print_r($access, true));
