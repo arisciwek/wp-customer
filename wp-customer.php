@@ -80,6 +80,7 @@ class WPCustomer {
         require_once WP_CUSTOMER_PATH . 'src/Validators/Employee/CustomerEmployeeValidator.php';
 
         // Add autoloader
+        /*
         spl_autoload_register(function ($class) {
             $prefix = 'WPCustomer\\';
             $base_dir = __DIR__ . '/src/';
@@ -94,6 +95,7 @@ class WPCustomer {
                 require $file;
             }
         });
+        */
 
         $this->loader = new WP_Customer_Loader();
 

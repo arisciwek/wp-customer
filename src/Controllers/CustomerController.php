@@ -147,7 +147,6 @@ class CustomerController {
         global $wpdb;
         $current_user_id = get_current_user_id();
 
-        // Debug log
         $this->debug_log("Checking access for customer $customer_id by user $current_user_id");
 
         // 1. Admin Check
@@ -155,78 +154,92 @@ class CustomerController {
             $this->debug_log("User has admin access");
             return [
                 'has_access' => true,
-                'access_type' => 'admin'
+                'access_type' => 'admin',
+                'branch_access' => [
+                    'view_branch' => true,
+                    'add_branch' => true,
+                    'edit_branch' => true,
+                    'delete_branch' => true
+                ]
             ];
         }
 
-// 2. Owner Check  
-$is_owner = $wpdb->get_var($wpdb->prepare(
-    "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers 
-     WHERE id = %d AND user_id = %d",
-    $customer_id, $current_user_id
-));
-$this->debug_log("Owner check result: " . ($is_owner ? 'true' : 'false'));
+        // 2. Owner Check - Modified to handle both specific and general access
+        $owner_query = $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers 
+             WHERE " . ($customer_id > 0 ? "id = %d AND " : "") . "user_id = %d",
+            ...($customer_id > 0 ? [$customer_id, $current_user_id] : [$current_user_id])
+        );
+        
+        $is_owner = (int)$wpdb->get_var($owner_query) > 0;
+        $this->debug_log("Owner check result: " . ($is_owner ? 'true' : 'false'));
 
-if ($is_owner && current_user_can('view_own_customer')) {
-    $this->debug_log("User is owner");
-    
-    // Branch permission check untuk owner
-    $branch_access = [
-        'view_branch' => current_user_can('view_branch_list') || current_user_can('view_own_branch'),
-        'add_branch' => current_user_can('add_branch'),
-        'edit_branch' => current_user_can('edit_own_branch'),
-        'delete_branch' => current_user_can('delete_branch')
-    ];
-    
-    $this->debug_log("Branch permissions for owner:");
-    $this->debug_log($branch_access);
+        if ($is_owner && current_user_can('view_own_customer')) {
+            $this->debug_log("User is owner");
+            
+            // Set branch permissions for owner
+            $branch_access = [
+                'view_branch' => current_user_can('view_branch_list') || current_user_can('view_own_branch'),
+                'add_branch' => current_user_can('add_branch'),
+                'edit_branch' => current_user_can('edit_own_branch'),
+                'delete_branch' => current_user_can('delete_branch')
+            ];
+            
+            $this->debug_log("Branch permissions for owner:");
+            $this->debug_log($branch_access);
 
-    return [
-        'has_access' => true,
-        'access_type' => 'owner',
-        'branch_access' => $branch_access
-    ];
-}
-        // 3. Employee Check
-        $is_employee = $wpdb->get_var($wpdb->prepare(
+            return [
+                'has_access' => true,
+                'access_type' => 'owner',
+                'branch_access' => $branch_access
+            ];
+        }
+
+        // 3. Employee Check - Modified to handle both specific and general access
+        $employee_query = $wpdb->prepare(
             "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
-             WHERE customer_id = %d AND user_id = %d AND status = 'active'",
-            $customer_id, $current_user_id
-        ));
-
+             WHERE " . ($customer_id > 0 ? "customer_id = %d AND " : "") . "user_id = %d 
+             AND status = 'active'",
+            ...($customer_id > 0 ? [$customer_id, $current_user_id] : [$current_user_id])
+        );
+        
+        $is_employee = (int)$wpdb->get_var($employee_query) > 0;
         $this->debug_log("Employee check result: " . ($is_employee ? 'true' : 'false'));
 
         if ($is_employee && current_user_can('view_own_customer')) {
+            $this->debug_log("User is employee");
+            
+            // Set branch permissions for employee
+            $branch_access = [
+                'view_branch' => current_user_can('view_branch_list'),
+                'add_branch' => false, // Employees typically can't add branches
+                'edit_branch' => false,
+                'delete_branch' => false
+            ];
+
             return [
                 'has_access' => true,
-                'access_type' => 'employee'
+                'access_type' => 'employee',
+                'branch_access' => $branch_access
             ];
         }
 
         $this->debug_log("No access found");
         return [
             'has_access' => false,
-            'access_type' => null
+            'access_type' => null,
+            'branch_access' => [
+                'view_branch' => false,
+                'add_branch' => false,
+                'edit_branch' => false,
+                'delete_branch' => false
+            ]
         ];
     }
     
     public function getCheckCustomerAccess($customer_id) {
         $access = $this->checkCustomerAccess($customer_id);
-        
-        // Add branch-specific permissions
-        if ($access['has_access']) {
-            $access['branch_access'] = [
-                'view_branch' => current_user_can('view_branch_list') || current_user_can('view_own_branch'),
-                'add_branch' => current_user_can('add_branch'),
-                'edit_branch' => current_user_can('edit_own_branch'),
-                'delete_branch' => current_user_can('delete_branch')
-            ];
-        }
-        
-    $result = $this->checkCustomerAccess($customer_id);
-    error_log('getCheckCustomerAccess result: ' . print_r($result, true));
-    return $result;
-                    
+        error_log('getCheckCustomerAccess result: ' . print_r($access, true));
         return $access;
     }
 
@@ -775,7 +788,7 @@ if ($is_owner && current_user_can('view_own_customer')) {
         global $wpdb;
         $current_user_id = get_current_user_id();
 
-        error_log('--- Debug MenuManager renderMainPage ---');
+        error_log('--- Debug Controller renderMainPage ---');
         error_log('User ID: ' . $current_user_id);
 
         // Dapatkan customer_id dari query parameter

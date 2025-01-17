@@ -17,7 +17,7 @@ class MenuManager {
     private $plugin_name;
     private $version;
     private $settings_controller;
-    private $customerController;
+    private $customer_controller;
 
     public function __construct($plugin_name, $version) {
         $this->plugin_name = $plugin_name;
