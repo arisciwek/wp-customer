@@ -51,6 +51,79 @@
 
         bindEvents() {
             // Form events
+            $(document).on('submit', '#edit-customer-form', async (e) => {
+                e.preventDefault();
+
+                if (!this.form.valid()) {
+                    return;
+                }
+
+                const id = this.form.find('#customer-id').val();
+                const requestData = {
+                    action: 'update_customer',
+                    nonce: wpCustomerData.nonce,
+                    id: id,
+                    name: this.form.find('[name="name"]').val().trim(),
+                    user_id: this.form.find('#edit-user').val()
+                };
+
+                this.setLoadingState(true);
+
+                try {
+                    const response = await $.ajax({
+                        url: wpCustomerData.ajaxUrl,
+                        type: 'POST',
+                        data: requestData
+                    });
+
+                    if (response.success) {
+                        CustomerToast.success('Customer berhasil diperbarui');
+                        this.hideModal();
+
+                        // Update URL hash to edited customer's ID
+                        if (id) {
+                            window.location.hash = id;
+                        }
+
+                        // Refresh DataTable if exists
+                        if (window.CustomerDataTable) {
+                            window.CustomerDataTable.refresh();
+                        }
+
+                        // Refresh panel data if the updated customer ID matches the current ID
+                        if (window.currentCustomerId && window.currentCustomerId === id) {
+                            window.CustomerPanel.refresh();
+                        }
+                    } else {
+                        CustomerToast.error(response.data?.message || 'Gagal memperbarui customer');
+                    }
+                } catch (error) {
+                    console.error('Update customer error:', error);
+                    CustomerToast.error('Gagal menghubungi server');
+                } finally {
+                    this.setLoadingState(false);
+                }
+            });
+
+            this.form.on('input', 'input[name="name"]', (e) => {
+                this.validateField(e.target);
+            });
+
+            // Modal events
+            $('.modal-close', this.modal).on('click', () => this.hideModal());
+            $('.cancel-edit', this.modal).on('click', () => this.hideModal());
+
+            // Close modal when clicking outside
+            this.modal.on('click', (e) => {
+                if ($(e.target).is('.modal-overlay')) {
+                    this.hideModal();
+                }
+            });
+        },
+        
+        /*
+        bindEvents() {
+            // Form events
             this.form.on('submit', (e) => this.handleUpdate(e));
             this.form.on('input', 'input[name="name"]', (e) => {
                 this.validateField(e.target);
@@ -67,6 +140,7 @@
                 }
             });
         },
+        */
 
         showEditForm(data) {
             if (!data || !data.customer) {
@@ -80,7 +154,6 @@
             // Populate form data
             this.form.find('#customer-id').val(data.customer.id);
             this.form.find('[name="name"]').val(data.customer.name);
-            this.form.find('[name="code"]').val(data.customer.code);
             
             // Set user_id if exists
             const userSelect = this.form.find('[name="user_id"]');
@@ -93,7 +166,7 @@
 
             // Show modal with animation
             this.modal.fadeIn(300, () => {
-                this.form.find('[name="code"]').focus();
+                this.form.find('[name="name"]').focus();
             });
             $('#edit-mode').show();
         },
@@ -110,12 +183,6 @@
         initializeValidation() {
             this.form.validate({
                 rules: {
-                    code: {
-                        required: true,
-                        minlength: 2,
-                        maxlength: 2,
-                        digits: true
-                    },
                     name: {
                         required: true,
                         minlength: 3,
@@ -126,12 +193,6 @@
                     }
                 },
                 messages: {
-                    code: {
-                        required: 'Kode customer wajib diisi',
-                        minlength: 'Kode harus 2 digit',
-                        maxlength: 'Kode harus 2 digit',
-                        digits: 'Kode hanya boleh berisi angka'
-                    },
                     name: {
                         required: 'Nama customer wajib diisi',
                         minlength: 'Nama minimal 3 karakter',
@@ -180,7 +241,7 @@
                 return true;
             }
         },
-
+        /*
         async handleUpdate(e) {
             e.preventDefault();
 
@@ -194,7 +255,6 @@
                 nonce: wpCustomerData.nonce,
                 id: id,
                 name: this.form.find('[name="name"]').val().trim(),
-                code: this.form.find('[name="code"]').val().trim(),
                 user_id: this.form.find('#edit-user').val() // Tambahkan ini
 
             };
@@ -209,10 +269,15 @@
                     type: 'POST',
                     data: requestData
                 });
+        
+                console.log('Edit form response:', response);  // Debug response
 
                 if (response.success) {
                     CustomerToast.success('Customer berhasil diperbarui');
                     this.hideModal();
+        
+                    console.log('Triggering customer:updated event with:', response); // Debug event data
+                    // $(document).trigger('customer:updated', [response]);
 
                     // Update URL hash to edited customer's ID
                     if (id) {
@@ -236,6 +301,7 @@
                 this.setLoadingState(false);
             }
         },
+        */
 
         setLoadingState(loading) {
             const $submitBtn = this.form.find('[type="submit"]');
