@@ -9,19 +9,40 @@
 <div class="wp-customer-panel-content">
 
 <?php
-if (isset($customer) && is_object($customer)) {
-    // Debug untuk memastikan data ada
-    error_log('=== Customer Data in Right Panel ===');
-    error_log(print_r($customer, true));
-    
-    // Jadikan data available untuk semua tab
-    $panel_data = [
-        'customer' => $customer,
-        'access' => isset($access) ? $access : null
-    ];
-} else {
-    error_log('Customer data not available in right panel');
+
+
+// Debug untuk memastikan data ada
+if (defined('WP_DEBUG') && WP_DEBUG) {
+    error_log('=== Customer Right Panel Debug ===');
+    error_log('Template Data Available:');
+    error_log(print_r(get_defined_vars(), true));
 }
+
+// Make data available for all tabs
+$panel_data = [
+    'customer' => isset($customer) && is_object($customer) ? $customer : null,
+    'access' => isset($access) ? $access : null,
+    'controller' => isset($controller) ? $controller : null
+];
+
+// Di _branch_list.php
+$branches = isset($panel_data['branches']) ? $panel_data['branches'] : [];
+//$branch_model = isset($panel_data['branch_model']) ? $panel_data['branch_model'] : null;
+
+// Di _employee_list.php 
+$employees = isset($panel_data['employees']) ? $panel_data['employees'] : [];
+//$employee_model = isset($panel_data['employee_model']) ? $panel_data['employee_model'] : null;
+
+// Debug panel data
+if (defined('WP_DEBUG') && WP_DEBUG) {
+    error_log('Panel Data Prepared:');
+    error_log(print_r($panel_data, true));
+    error_log('Panel Data [Customer]:' . print_r($panel_data['customer'], true));
+}
+
+
+
+
 ?>
 
 <div class="nav-tab-wrapper">
@@ -30,7 +51,6 @@ if (isset($customer) && is_object($customer)) {
     <a href="#" class="nav-tab" data-tab="branch-list">Cabang</a>
     <a href="#" class="nav-tab" data-tab="employee-list">Staff</a>
 </div>
-
 
 <?php
 // Pass data ke semua partial templates
