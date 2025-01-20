@@ -133,14 +133,10 @@ class BranchController {
             error_log('WP Customer Plugin: ' . $log_message);
         }
     }
+    /*
 public function getCheckCustomerAccess($customer_id) {
     global $wpdb;
     $current_user_id = get_current_user_id();
-
-    // Debug logging
-    error_log("=== Branch Access Check ===");
-    error_log("Customer ID: $customer_id");
-    error_log("Current User ID: $current_user_id");
 
     // 1. Admin Check
     if (current_user_can('edit_all_customers')) {
@@ -187,6 +183,7 @@ public function getCheckCustomerAccess($customer_id) {
         'access_type' => null
     ];
 }
+*/
 
     public function handleDataTableRequest() {
         try {
