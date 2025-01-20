@@ -36,20 +36,36 @@
          $this->employee_table = $wpdb->prefix . 'app_customer_employees';
      }
 
+    private function generateCustomerCode(): string {
+        do {
+            $timestamp = substr(time(), -4);
+            $random = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
+            $code = 'CUST-' . $timestamp . $random;
+            
+            $exists = $this->existsByCode($code);
+        } while ($exists);
+        
+        return $code;
+    }
+
     public function create(array $data): ?int {
         global $wpdb;
-
+        
+        $data['code'] = $this->generateCustomerCode();
         $result = $wpdb->insert(
             $this->table,
             [
                 'code' => $data['code'],
                 'name' => $data['name'],
+                'npwp' => $data['npwp'] ?? null,
+                'nib' => $data['nib'] ?? null,
+                'status' => $data['status'] ?? 'active',
                 'user_id' => $data['user_id'],
                 'created_by' => get_current_user_id(),
                 'created_at' => current_time('mysql'),
                 'updated_at' => current_time('mysql')
             ],
-            ['%s', '%s', '%d', '%d', '%s', '%s']
+            ['%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s']
         );
 
         if ($result === false) {
@@ -85,6 +101,62 @@
 
         return $result;
     }
+
+    // Di CustomerModel// Di CustomerModel
+    public function getCustomer(?int $id = null): ?object {
+        global $wpdb;
+
+        // Basic query structure
+        $select = "SELECT p.*, 
+                   COUNT(r.id) as branch_count,
+                   u.display_name as owner_name";
+        $from = " FROM {$this->table} p";
+        $join = " LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id
+                  LEFT JOIN {$wpdb->users} u ON p.user_id = u.ID";
+
+        // Handle different cases
+        if (current_user_can('edit_all_customers')) {
+            // Admin bisa akses semua customer
+            $where = $id ? $wpdb->prepare(" WHERE p.id = %d", $id) : "";
+        } else {
+            // Regular user hanya bisa lihat customer sendiri
+            $where = $wpdb->prepare(" WHERE p.user_id = %d", get_current_user_id());
+            if ($id) {
+                $where .= $wpdb->prepare(" AND p.id = %d", $id);
+            }
+        }
+
+        $group = " GROUP BY p.id";
+        $sql = $select . $from . $join . $where . $group;
+
+        $result = $wpdb->get_row($sql);
+
+        if ($result) {
+            $result->branch_count = (int) $result->branch_count;
+        }
+
+        return $result;
+    }
+
+    private function getMembershipData(int $customer_id): array {
+        // Get membership settings
+        $settings = get_option('wp_customer_membership_settings', []);
+        
+        // Get customer data untuk cek level
+        $customer = $this->find($customer_id);
+        $level = $customer->membership_level ?? $settings['default_level'] ?? 'regular';
+
+        return [
+            'level' => $level,
+            'max_staff' => $settings["{$level}_max_staff"] ?? 2,
+            'capabilities' => [
+                'can_add_staff' => $settings["{$level}_can_add_staff"] ?? false,
+                'can_export' => $settings["{$level}_can_export"] ?? false,
+                'can_bulk_import' => $settings["{$level}_can_bulk_import"] ?? false,
+            ]
+        ];
+    }
+
 
     public function update(int $id, array $data): bool {
         global $wpdb;
