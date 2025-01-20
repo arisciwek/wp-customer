@@ -56,16 +56,6 @@ class CustomerValidator {
             return $errors;
         }
 
-        // Code validation
-        $code = trim(sanitize_text_field($data['code'] ?? ''));
-        if (empty($code)) {
-            $errors['code'] = __('Kode customer wajib diisi.', 'wp-customer');
-        } elseif (!preg_match('/^\d{2}$/', $code)) {
-            $errors['code'] = __('Kode customer harus berupa 2 digit angka.', 'wp-customer');
-        } elseif ($this->customer_model->existsByCode($code)) {
-            $errors['code'] = __('Kode customer sudah ada.', 'wp-customer');
-        }
-
         // Name validation
         $name = trim(sanitize_text_field($data['name'] ?? ''));
         if (empty($name)) {
@@ -95,7 +85,7 @@ class CustomerValidator {
 
         // Permission check
         if (!current_user_can('edit_all_customers') &&
-            (!current_user_can('edit_own_customer') || $customer->created_by !== get_current_user_id())) {
+            (!current_user_can('edit_own_customer') || (int)$customer->user_id !== get_current_user_id())) {
             $errors['permission'] = __('Anda tidak memiliki izin untuk mengedit customer ini.', 'wp-customer');
             return $errors;
         }
@@ -106,14 +96,6 @@ class CustomerValidator {
             $errors['name'] = __('Nama customer wajib diisi.', 'wp-customer');
         }
 
-        // Validate code
-        $code = trim(sanitize_text_field($data['code'] ?? ''));
-        if (empty($code)) {
-            $errors['code'] = __('Kode customer wajib diisi.', 'wp-customer');
-        } elseif (!preg_match('/^[0-9]{2}$/', $code)) {
-            $errors['code'] = __('Kode customer harus 2 digit angka.', 'wp-customer');
-        }
-
         // Length check
         if (mb_strlen($name) > 100) {
             $errors['name'] = __('Nama customer maksimal 100 karakter.', 'wp-customer');
@@ -122,11 +104,6 @@ class CustomerValidator {
         // Unique check excluding current ID
         if ($this->customer_model->existsByName($name, $id)) {
             $errors['name'] = __('Nama customer sudah ada.', 'wp-customer');
-        }
-
-        // Check if code is unique (excluding current customer)
-        if ($this->customer_model->existsByCode($code, $id)) {
-            $errors['code'] = __('Kode customer sudah digunakan.', 'wp-customer');
         }
 
         return $errors;
