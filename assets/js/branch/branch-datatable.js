@@ -174,9 +174,9 @@
                      }
                  },
                  columns: [
-                     { data: 'code', width: '15%' },
+                     { data: 'code', width: '18%' },
                      { data: 'name', width: '45%' },
-                     { data: 'type', width: '20%' },
+                     { data: 'type', width: '17%' },
                      {
                          data: 'actions',
                          width: '20%',
