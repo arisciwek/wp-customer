@@ -4,10 +4,10 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Tables
- * @version     1.0.1
+ * @version     1.0.2
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Database/Tables/Customers.php
+ * Path: /wp-customer/src/Database/Tables/CustomersDB.php
  *
  * Description: Mendefinisikan struktur tabel customers.
  *              Table prefix yang digunakan adalah 'app_'.
@@ -16,7 +16,7 @@
  *
  * Fields:
  * - id             : Primary key
- * - code           : Kode customer (2 digit)
+ * - code           : Format CUST-TTTTRRRR (T=timestamp, R=random)
  * - name           : Nama customer
  * - nik            : Nomor Induk Kependudukan
  * - npwp           : Nomor Pokok Wajib Pajak
@@ -28,22 +28,22 @@
  * - updated_at     : Timestamp update terakhir
  *
  * Changelog:
+ * 1.0.2 - 2024-01-19
+ * - Modified code field to varchar(13) for new format CUST-TTTTRRRR
+ * - Removed unique constraint from name field
+ * - Added unique constraint for name+province+regency
+ * 
  * 1.0.1 - 2024-01-11
  * - Added nik field with unique constraint
  * - Added npwp field with unique constraint
  * 
  * 1.0.0 - 2024-01-07
  * - Initial version
- * - Added basic customer fields
- * - Added wilayah integration fields
- * - Added timestamps and audit fields
  */
 
 namespace WPCustomer\Database\Tables;
 
 defined('ABSPATH') || exit;
-
-namespace WPCustomer\Database\Tables;
 
 class CustomersDB {
     public static function get_schema() {
@@ -53,10 +53,10 @@ class CustomersDB {
 
         return "CREATE TABLE {$table_name} (
             id bigint(20) UNSIGNED NOT NULL auto_increment,
-            code varchar(2) NOT NULL,
+            code varchar(13) NOT NULL,
             name varchar(100) NOT NULL,
-            npwp varchar(20)  NULL,
-            nib varchar(20)  NULL,
+            npwp varchar(20) NULL,
+            nib varchar(20) NULL,
             status enum('inactive','active') NOT NULL DEFAULT 'inactive',
             provinsi_id bigint(20) UNSIGNED NULL,
             regency_id bigint(20) UNSIGNED NULL,
@@ -66,9 +66,9 @@ class CustomersDB {
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY  (id),
             UNIQUE KEY code (code),
-            UNIQUE KEY name (name),
             UNIQUE KEY nib (nib),
             UNIQUE KEY npwp (npwp),
+            UNIQUE KEY name_region (name, provinsi_id, regency_id),
             KEY created_by_index (created_by)
         ) $charset_collate;";
     }
