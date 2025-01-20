@@ -80,8 +80,7 @@
             const formData = {
                 action: 'create_customer',
                 nonce: wpCustomerData.nonce,
-                name: this.form.find('[name="name"]').val().trim(),
-                code: this.form.find('[name="code"]').val().trim(),
+                name: this.form.find('[name="name"]').val().trim()
             };
 
             // Tambahkan user_id jika ada
@@ -160,12 +159,6 @@
                         required: true,
                         minlength: 3,
                         maxlength: 100
-                    },
-                    code: {
-                        required: true,
-                        digits: true,
-                        minlength: 2,
-                        maxlength: 2
                     }
                 },
                 messages: {
@@ -173,12 +166,6 @@
                         required: 'Nama customer wajib diisi',
                         minlength: 'Nama customer minimal 3 karakter',
                         maxlength: 'Nama customer maksimal 100 karakter'
-                    },
-                    code: {
-                        required: 'Kode wajib diisi',
-                        digits: 'Kode harus berupa angka',
-                        minlength: 'Kode harus 2 digit',
-                        maxlength: 'Kode harus 2 digit'
                     }
                 }
             });
