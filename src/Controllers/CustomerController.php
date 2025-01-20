@@ -95,6 +95,7 @@ class CustomerController {
         add_action('wp_ajax_create_customer', [$this, 'store']);
         add_action('wp_ajax_delete_customer', [$this, 'delete']);
         add_action('wp_ajax_validate_customer_access', [$this, 'validateCustomerAccess']);
+        add_action('wp_ajax_get_current_customer_id', [$this, 'getCurrentCustomerId']);
 
     }
 
@@ -137,7 +138,6 @@ class CustomerController {
         }
     }
 
-
     /**
      * Internal method untuk validasi akses customer
      * @param int $customer_id
@@ -149,36 +149,20 @@ private function checkCustomerAccess($customer_id) {
 
     $this->debug_log("Checking access for customer $customer_id by user $current_user_id");
 
-    // Prepare access array structure
-    // Prepare access array structure
+    // Get customer entity from cache or model
+    $customer = null;
+    if ($customer_id > 0) {
+        $customer = $this->cache->getCustomer($customer_id);
+        if (!$customer) {
+            $customer = $this->model->find($customer_id);
+        }
+    }
+
+    // Initialize access array with customer entity
     $access = [
         'has_access' => false,
         'access_type' => null,
-        'customer_access' => [
-            'view_customer_list' => current_user_can('view_customer_list'),
-            'view_own_customer' => current_user_can('view_own_customer'),
-            'add_customer' => current_user_can('add_customer'),
-            'edit_own_customer' => current_user_can('edit_own_customer'),
-            'edit_all_customers' => current_user_can('edit_all_customers')
-        ],
-        'branch_access' => [
-            'view_branch_list' => current_user_can('view_branch_list'),
-            'view_branch_detail' => current_user_can('view_branch_detail'),
-            'view_own_branch' => current_user_can('view_own_branch'),
-            'add_branch' => current_user_can('add_branch'),
-            'edit_all_branches' => current_user_can('edit_all_branches'),
-            'edit_own_branch' => current_user_can('edit_own_branch'),
-            'delete_branch' => current_user_can('delete_branch')
-        ],
-        'employee_access' => [
-            'view_employee_list' => current_user_can('view_employee_list'),
-            'view_employee_detail' => current_user_can('view_employee_detail'),
-            'view_own_employee' => current_user_can('view_own_employee'),
-            'add_employee' => current_user_can('add_employee'),
-            'edit_all_employees' => current_user_can('edit_all_employees'),
-            'edit_own_employee' => current_user_can('edit_own_employee'),
-            'delete_employee' => current_user_can('delete_employee')
-        ]
+        'customer' => $customer
     ];
 
     // 1. Admin Check
@@ -219,6 +203,8 @@ private function checkCustomerAccess($customer_id) {
         return $access;
     }
 
+    $this->debug_log('Checking customer' . print_r($customer), true);
+    $this->debug_log('Checking access customer' . print_r($access), true);
     return $access;
 }    
     public function getCheckCustomerAccess($customer_id) {
@@ -463,8 +449,8 @@ private function checkCustomerAccess($customer_id) {
         }
         
         // Edit Button Check - based on edit_own_customer
-        $can_edit = (current_user_can('edit_own_customer') && 
-                     (int)$customer->user_id === $current_user_id);
+        $can_edit = (current_user_can('edit_all_customers') ||
+                    current_user_can('edit_own_customer') && (int)$customer->user_id === $current_user_id);
         
         $this->debug_log("Edit Button Conditions:");
         $this->debug_log([
@@ -512,7 +498,6 @@ private function checkCustomerAccess($customer_id) {
             // Debug POST data - hanya log data yang kita perlukan
             $debug_post = [
                 'name' => $_POST['name'] ?? 'not set',
-                'code' => $_POST['code'] ?? 'not set',
                 'user_id' => $_POST['user_id'] ?? 'not set',
             ];
             $this->debug_log('Relevant POST data:');
@@ -521,7 +506,6 @@ private function checkCustomerAccess($customer_id) {
             // Basic data
             $data = [
                 'name' => sanitize_text_field($_POST['name']),
-                'code' => sanitize_text_field($_POST['code']),
                 'created_by' => $current_user_id
             ];
 
@@ -582,6 +566,8 @@ private function checkCustomerAccess($customer_id) {
     public function update() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
+    
+            $this->debug_log('Update request data:');
 
             $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
             if (!$id) {
@@ -594,19 +580,43 @@ private function checkCustomerAccess($customer_id) {
                 throw new \Exception('Customer not found');
             }
 
-            // Check permissions
-            if (!current_user_can('edit_all_customers') && 
-                (!current_user_can('edit_own_customer') || $existing_customer->created_by !== get_current_user_id())) {
+            $current_user_id = get_current_user_id();
+
+            // Debug: log current user permissions
+            error_log('Current user ID: ' . $current_user_id);
+            error_log('Checking permissions for user: ' . $existing_customer->user_id);
+
+            // In the update() method, modify the permission check:
+            $can_edit = (current_user_can('edit_all_customers') || 
+                        (current_user_can('edit_own_customer') && (int)$existing_customer->user_id === (int)$current_user_id));
+
+            // Add more detailed logging
+            error_log('Permission check details:');
+            error_log('Can edit all customers: ' . (current_user_can('edit_all_customers') ? 'yes' : 'no'));
+            error_log('Can edit own customer: ' . (current_user_can('edit_own_customer') ? 'yes' : 'no'));
+            error_log('Customer user_id: ' . (int)$existing_customer->user_id);
+            error_log('Current user_id: ' . (int)$current_user_id);
+            error_log('IDs match: ' . ((int)$existing_customer->user_id === $current_user_id ? 'yes' : 'no'));
+            error_log('Final can_edit result: ' . ($can_edit ? 'yes' : 'no'));
+
+            if (!$can_edit) {
+                error_log('Current user cannot edit own customer or the user_id does not match.');
+                error_log('User trying to edit: ' . (int)$existing_customer->user_id);
+                error_log('Current user id: ' . get_current_user_id());
+                
                 wp_send_json_error([
                     'message' => __('You do not have permission to edit this customer', 'wp-customer')
                 ]);
                 return;
+            } else {
+                error_log('User has permission to edit the customer');
             }
+
+
 
             // Basic data
             $data = [
-                'name' => sanitize_text_field($_POST['name']),
-                'code' => sanitize_text_field($_POST['code'])
+                'name' => sanitize_text_field($_POST['name'])
             ];
 
             $this->debug_log('POST: ' . print_r($_POST, true));
@@ -638,12 +648,36 @@ private function checkCustomerAccess($customer_id) {
 
             // Invalidate cache
             $this->cache->invalidateCustomerCache($id);
+            // In the update() method after successful update
+
+            /*
+             *  TODO
+             *
+             * $this->cache->invalidateCustomerListCache();
+             * $this->cache->invalidateCustomerStatsCache();
+             */
+
+            // If customer ownership changed, invalidate user caches
+            if (isset($data['user_id']) && $data['user_id'] !== $existing_customer->user_id) {
+                $this->cache->invalidateUserCustomersCache($existing_customer->user_id);
+                $this->cache->invalidateUserCustomersCache($data['user_id']);
+            }
+
+            // Log cache invalidation
+            $this->debug_log('Invalidated caches for customer update: ' . $id);
 
             // Get updated data
             $customer = $this->model->find($id);
             if (!$customer) {
                 throw new \Exception('Failed to retrieve updated customer');
             }
+            
+            // Debug response data
+            $this->debug_log('Update response data:');
+            $this->debug_log([
+                'customer' => $customer,
+                'branch_count' => $this->model->getBranchCount($id)
+            ]);
 
             wp_send_json_success([
                 'message' => __('Customer updated successfully', 'wp-customer'),
@@ -743,6 +777,98 @@ private function checkCustomerAccess($customer_id) {
         }
     }
 
+    /**
+     * Get customer ID associated with current logged in user.
+     * Checks both owner and employee relationships to determine the active customer.
+     * Used internally by other methods requiring customer context.
+     * 
+     * @access private
+     * @since 1.0.0
+     * @return int Customer ID if found, 0 otherwise
+     * 
+     * @example
+     * // Inside another controller method:
+     * $customer_id = $this->getCurrentUserCustomerId();
+     * if ($customer_id > 0) {
+     *     // Process for specific customer
+     * }
+     */
+    private function getCurrentUserCustomerId() {
+        global $wpdb;
+        $current_user_id = get_current_user_id();
+
+        // Check if user is owner of any customer
+        $customer_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}app_customers 
+             WHERE user_id = %d 
+             LIMIT 1",
+            $current_user_id
+        ));
+
+        if ($customer_id) {
+            return (int)$customer_id;
+        }
+
+        // If not owner, check if user is employee
+        $customer_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT customer_id 
+             FROM {$wpdb->prefix}app_customer_employees 
+             WHERE user_id = %d 
+             AND status = 'active' 
+             LIMIT 1",
+            $current_user_id
+        ));
+
+        return $customer_id ? (int)$customer_id : 0;
+    }
+
+    /**
+     * AJAX endpoint to provide current user's customer ID to frontend.
+     * Returns the customer ID based on user's relationship (owner/employee).
+     * Used by JavaScript to determine active customer context.
+     * 
+     * @access public
+     * @since 1.0.0
+     * @uses WP_Customer_Controller::getCurrentUserCustomerId()
+     * @uses check_ajax_referer() For security validation
+     * @uses wp_send_json_success() To return customer ID
+     * @uses wp_send_json_error() To return error message
+     * 
+     * @fires wp_ajax_get_current_customer_id
+     * 
+     * @example
+     * // From JavaScript:
+     * $.ajax({
+     *     url: wpCustomerData.ajaxUrl,
+     *     data: {
+     *         action: 'get_current_customer_id',
+     *         nonce: wpCustomerData.nonce
+     *     },
+     *     success: function(response) {
+     *         const customerId = response.data.customer_id;
+     *     }
+     * });
+     */
+    public function getCurrentCustomerId() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+            
+            $customer_id = $this->getCurrentUserCustomerId();
+            
+            $this->debug_log("Got customer ID for current user: " . $customer_id);
+            
+            wp_send_json_success([
+                'customer_id' => $customer_id
+            ]);
+
+        } catch (\Exception $e) {
+            $this->debug_log("Error getting customer ID: " . $e->getMessage());
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
     // Di CustomerController
     public function getStats() {
         try {
@@ -767,75 +893,113 @@ private function checkCustomerAccess($customer_id) {
         }
     }
 
+    public function getCustomerData($id) {
+        global $wpdb;
+        $current_user_id = get_current_user_id();
         
+        $this->debug_log("Getting customer data for ID: " . $id);
+
+        try {
+            // Jika id = 0, coba dapatkan customer berdasarkan user yang login
+            if ($id === 0) {
+                // Cek apakah user adalah owner dari customer
+                $customer = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM {$wpdb->prefix}app_customers 
+                     WHERE user_id = %d 
+                     LIMIT 1",
+                    $current_user_id
+                ));
+
+                if ($customer) {
+                    $this->debug_log("Found customer data for user: " . $current_user_id);
+                    // Tambahkan data tambahan
+                    $customer->branch_count = $this->model->getBranchCount($customer->id);
+                    return $customer;
+                }
+
+                // Jika bukan owner, cek apakah user adalah employee
+                $employee_customer = $wpdb->get_row($wpdb->prepare(
+                    "SELECT c.* 
+                     FROM {$wpdb->prefix}app_customers c
+                     JOIN {$wpdb->prefix}app_customer_employees e ON e.customer_id = c.id
+                     WHERE e.user_id = %d AND e.status = 'active'
+                     LIMIT 1",
+                    $current_user_id
+                ));
+
+                if ($employee_customer) {
+                    $this->debug_log("Found customer data through employee relationship");
+                    $employee_customer->branch_count = $this->model->getBranchCount($employee_customer->id);
+                    return $employee_customer;
+                }
+            } else {
+                // Jika id spesifik diberikan
+                // Coba ambil dari cache dulu
+                $customer = $this->cache->getCustomer($id);
+                
+                // Jika tidak ada di cache, ambil dari database
+                if (!$customer) {
+                    $customer = $this->model->find($id);
+                    if ($customer) {
+                        $customer->branch_count = $this->model->getBranchCount($id);
+                        return $customer;
+                    }
+                }
+            }
+
+            $this->debug_log("No customer data found");
+            return null;
+
+        } catch (\Exception $e) {
+            $this->debug_log("Error getting customer data: " . $e->getMessage());
+            return null;
+        }
+    }
+
     public function renderMainPage() {
         global $wpdb;
         $current_user_id = get_current_user_id();
 
-        error_log('--- Debug Controller renderMainPage ---');
-        error_log('User ID: ' . $current_user_id);
+        $this->debug_log('--- Debug Controller renderMainPage ---');
+        $this->debug_log('User ID: ' . $current_user_id);
 
-        // Dapatkan customer_id dari query parameter
-
-        $customer_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
-
-        error_log('Query param customer_id: ' . $customer_id);
-
-        // Cek relasi sebagai employee dengan customer spesifik
-        $customer_ids = $wpdb->get_col($wpdb->prepare(
-            "SELECT DISTINCT customer_id 
-             FROM {$wpdb->prefix}app_customer_employees 
-             WHERE user_id = %d",
-            $current_user_id
-        ));
-        
-        error_log('Employee customer IDs: ' . print_r($customer_ids, true));
-
-
-        // Cek akses ke plugin
-        error_log('Checking basic plugin access:');
-        error_log('Can view_customer_list: ' . (current_user_can('view_customer_list') ? 'yes' : 'no'));
-
+        // Basic Access Check
         if (!current_user_can('view_customer_list')) {
-            error_log('Basic access check failed - user cannot view customer list');
             wp_die(__('Anda tidak memiliki izin untuk mengakses halaman ini.', 'wp-customer'));
         }
 
-        // Admin check
-        error_log('Checking admin access:');
-        error_log('Can edit_all_customers: ' . (current_user_can('edit_all_customers') ? 'yes' : 'no'));
-
-        if (current_user_can('edit_all_customers')) {
-            error_log('Admin access granted - showing full dashboard');
-            require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-dashboard.php';
-            return;
+        // Get customer_id dari URL atau hash
+        $customer_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+        if ($customer_id === 0 && isset($_SERVER['REQUEST_URI'])) {
+            $hash = parse_url($_SERVER['REQUEST_URI'], PHP_URL_FRAGMENT);
+            if ($hash && is_numeric($hash)) {
+                $customer_id = (int)$hash;
+            }
         }
 
-        // Cek relasi sebagai owner
-        $has_customer = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers WHERE user_id = %d",
-            $current_user_id
-        ));
-        error_log('Checking owner relationship:');
-        error_log('Has customer records: ' . ($has_customer > 0 ? 'yes' : 'no'));
+        $this->debug_log('Customer ID from params: ' . $customer_id);
 
-        // Jika user adalah owner, berikan akses
-        if ($has_customer > 0 && current_user_can('view_own_customer')) {
-            error_log('Owner access granted - showing customer dashboard');
+        // Setup template data
+        $template_data = [
+            'customer' => $this->getCustomerData($customer_id),
+            'access' => $this->getCheckCustomerAccess($customer_id),
+            'controller' => $this,
+            'branch_model' => new \WPCustomer\Models\Branch\BranchModel(),
+            'employee_model' => new \WPCustomer\Models\Employee\CustomerEmployeeModel(),
+            'branches' => [], // Default empty array
+            'employees' => []  // Default empty array
+        ];
+        
+        // Debug log template data
+        $this->debug_log('Template data:');
+        $this->debug_log($template_data);
+
+        // Render appropriate template
+        if ($template_data['access']['has_access']) {
             require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-dashboard.php';
-            return;
+        } else {
+            require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-no-access.php';
         }
-
-        // Jika customer_id dari query parameter ada dalam daftar customer_ids employee
-        if (!empty($customer_ids) && ($customer_id === 0 || in_array($customer_id, $customer_ids))) {
-            error_log('Employee access granted for customer_id: ' . $customer_id);
-            require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-dashboard.php';
-            return;
-        }
-
-        error_log('All checks failed - showing no access template');
-        error_log('--- End Debug MenuManager renderMainPage ---');
-        require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-no-access.php';
     }
 
 }
