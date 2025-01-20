@@ -15,7 +15,7 @@
 if (defined('WP_DEBUG') && WP_DEBUG) {
     error_log('=== Customer Right Panel Debug ===');
     error_log('Template Data Available:');
-    error_log(print_r(get_defined_vars(), true));
+    //error_log(print_r(get_defined_vars(), true));
 }
 
 // Make data available for all tabs
@@ -35,9 +35,9 @@ $employees = isset($panel_data['employees']) ? $panel_data['employees'] : [];
 
 // Debug panel data
 if (defined('WP_DEBUG') && WP_DEBUG) {
-    error_log('Panel Data Prepared:');
-    error_log(print_r($panel_data, true));
-    error_log('Panel Data [Customer]:' . print_r($panel_data['customer'], true));
+    //error_log('Panel Data Prepared:');
+    //error_log(print_r($panel_data, true));
+    //error_log('Panel Data [Customer]:' . print_r($panel_data['customer'], true));
 }
 
 

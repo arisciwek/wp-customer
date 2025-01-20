@@ -95,7 +95,7 @@ class CustomerController {
         add_action('wp_ajax_create_customer', [$this, 'store']);
         add_action('wp_ajax_delete_customer', [$this, 'delete']);
         add_action('wp_ajax_validate_customer_access', [$this, 'validateCustomerAccess']);
-        add_action('wp_ajax_get_current_customer_id', [$this, 'getCurrentCustomerId']);
+        //add_action('wp_ajax_get_current_customer_id', [$this, 'getCurrentCustomerId']);
 
     }
 
@@ -572,46 +572,52 @@ class CustomerController {
                 throw new \Exception('Invalid customer ID');
             }
 
-            // Coba ambil dari cache dulu
-            $customer = $this->cache->getCustomer($id);
-            
-            // Jika tidak ada di cache, ambil dari database
-            if (!$customer) {
-                $customer = $this->model->find($id);
-                if (!$customer) {
-                    throw new \Exception('Customer not found');
-                }
-            }
-
-            // Gunakan validator untuk cek akses
+            // Cek akses dulu sebelum ambil data
             $access = $this->validator->validateAccess($id);
-            $this->logPermissionCheck(
-                'view_customer_detail',
-                get_current_user_id(), 
-                $id,
-                null,
-                $access['has_access']
-            );
-
             if (!$access['has_access']) {
                 throw new \Exception('You do not have permission to view this customer');
             }
 
-            // Tambahkan informasi akses ke response
-            $customer->access_type = $access['access_type'];
-            $customer->has_access = $access['has_access'];
+            // Cache & DB fetch dalam satu operasi
+            $customer = $this->getCustomerData($id);
+            if (!$customer) {
+                throw new \Exception('Customer not found');
+            }
 
-            wp_send_json_success([
-                'customer' => $customer,
-                'branch_count' => $this->model->getBranchCount($id),
-                'access_type' => $access['access_type']
-            ]);
+            // Hitung branch count sekali saja
+            $branch_count = $this->model->getBranchCount($id);
+
+            // Enrichment data
+            $customer_data = $this->enrichCustomerData($customer, $access, $branch_count);
+
+            // Debug log lebih terstruktur
+            $this->logCustomerAccess($customer_data);
+
+            wp_send_json_success($customer_data);
 
         } catch (\Exception $e) {
+            $this->debug_log('Error in show(): ' . $e->getMessage());
             wp_send_json_error(['message' => $e->getMessage()]);
         }
     }
-    
+
+    private function enrichCustomerData($customer, $access, $branch_count) {
+        return [
+            'customer' => array_merge((array)$customer, [
+                'access_type' => $access['access_type'],
+                'has_access' => $access['has_access']
+            ]),
+            'branch_count' => $branch_count,
+            'access_type' => $access['access_type']
+        ];
+    }
+
+    private function logCustomerAccess($data) {
+        $this->debug_log('=== Customer Access Debug ===');
+        $this->debug_log('Customer ID: ' . $data['customer']['id']);
+        $this->debug_log('Access Type: ' . $data['access_type']);
+        $this->debug_log('Customer Data: ' . print_r($data['customer'], true));
+    }
 
     public function delete() {
         try {
@@ -666,6 +672,7 @@ class CustomerController {
      *     // Process for specific customer
      * }
      */
+    /*
     private function getCurrentUserCustomerId() {
         global $wpdb;
         $current_user_id = get_current_user_id();
@@ -694,6 +701,7 @@ class CustomerController {
 
         return $customer_id ? (int)$customer_id : 0;
     }
+    */
 
     /**
      * AJAX endpoint to provide current user's customer ID to frontend.
@@ -722,6 +730,7 @@ class CustomerController {
      *     }
      * });
      */
+    /*
     public function getCurrentCustomerId() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
@@ -741,6 +750,7 @@ class CustomerController {
             ]);
         }
     }
+    */
 
     // Di CustomerController
     public function getStats() {
@@ -877,104 +887,7 @@ class CustomerController {
         // Render template
         require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-dashboard.php';
     }
-
-    /*
-    public function renderMainPage() {
-        global $wpdb;
-        $current_user_id = get_current_user_id();
-
-        $this->debug_log('--- Debug Controller renderMainPage ---');
-        $this->debug_log('User ID: ' . $current_user_id);
-
-        // Get initial data using same method
-        $initialData = $this->getCustomerTableData(0, 1); // Ambil 1 record pertama
-        
-        if ($initialData && !empty($initialData['data'])) {
-            $customer = $initialData['data'][0]; // Gunakan record pertama
-        }
-
-        $template_data = [
-            'customer' => $customer ?? null,
-            'access' => $access,
-            'controller' => $this,
-            'branches' => [],
-            'employees' => []
-        ];
-
-        // Ambil customer_id dari URL hash jika ada
-        $customer_id = 0;
-        if (isset($_SERVER['REQUEST_URI'])) {
-            $parts = parse_url($_SERVER['REQUEST_URI']);
-            if (isset($parts['fragment'])) {
-                $customer_id = (int)$parts['fragment'];
-            }
-        }
-
-        //$this->debug_log('Initial Customer ID from hash: ' . print_r($customer));
-
-        // Validasi akses seperti di handleDataTableRequest
-        $hasPermission = current_user_can('view_customer_list');
-        //$this->logPermissionCheck(
-        //    'view_customer_list',
-        //    $current_user_id,
-        //    $customer_id,
-        //    null,
-        //    $hasPermission
-        //);
-
-        if (!$hasPermission) {
-            require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-no-access.php';
-            return;
-        }
-
-        // Jika customer_id valid, validasi aksesnya
-        if ($customer_id > 0) {
-            $access = $this->validator->validateAccess($customer_id);
-            $customer = null;
-            
-            if ($access['has_access']) {
-                $customer = $this->model->find($customer_id);
-                if ($customer) {
-                    $customer->branch_count = $this->model->getBranchCount($customer_id);
-                }
-            }
-        } else {
-            // Jika tidak ada ID spesifik, coba dapatkan customer default user
-            $customer_id = $this->getCurrentUserCustomerId();
-            if ($customer_id > 0) {
-                $access = $this->validator->validateAccess($customer_id);
-                $customer = $this->model->find($customer_id);
-                if ($customer) {
-                    $customer->branch_count = $this->model->getBranchCount($customer_id);
-                }
-            }
-        }
-
-        $this->debug_log('Final Customer ID: ' . $customer_id);
-        //$this->debug_log('Customer Data: ' . print_r($customer ?? 'null', true));
-
-        // Setup template data
-        $template_data = [
-            'customer' => $customer,
-            'access' => $access ?? [
-                'has_access' => true,
-                'access_type' => current_user_can('edit_all_customers') ? 'admin' : 'owner',
-                'relation' => [
-                    'is_admin' => current_user_can('edit_all_customers'),
-                    'is_owner' => true,
-                    'is_employee' => false
-                ]
-            ],
-            'controller' => $this,
-            'branches' => [],
-            'employees' => []
-        ];
-
-        $this->debug_log('Template data prepared:');
-        //$this->debug_log($template_data);
-
-        // Render template
-        require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-dashboard.php';
-    }
-    */
+    
+    
+    
 }

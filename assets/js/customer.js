@@ -203,7 +203,7 @@
                  CustomerToast.error('Data customer tidak valid');
                  return;
              }
-
+            
             console.log('Initial data received:', data);
             console.log('Current customer ID:', data.customer.id);
 
@@ -213,17 +213,7 @@
             console.log('Current URL param id:', currentId);
             console.log('New customer id:', data.customer.id);
 
-            // Cek apakah ID berubah
-            if (currentId !== data.customer.id.toString()) {
-                console.log('ID changed, will reload');
-                // Update URL dan reload
-                currentUrl.searchParams.set('id', data.customer.id);
-                window.location.href = currentUrl.toString() + '#' + data.customer.id;
-                return;
-            }
 
-            console.log('ID unchanged, continuing without reload');
-            
              $('.tab-content').removeClass('active');
              $('#customer-details').addClass('active');
              $('.nav-tab').removeClass('nav-tab-active');
@@ -405,7 +395,7 @@
          * } catch (error) {
          *   console.error('Failed to get customer ID:', error);
          * }
-         */
+         *
         getCurrentCustomerId() {
             return new Promise((resolve, reject) => {
                 $.ajax({
@@ -428,6 +418,7 @@
                 });
             });
         },
+        */
 
         /**
          * Load customer statistics including total customers and branches.
@@ -448,27 +439,23 @@
          * $(document).on('customer:created', () => Customer.loadStats());
          */
         async loadStats() {
-            try {
-                const customerId = await this.getCurrentCustomerId();
-                console.log('Got new customer ID:', customerId);
-                
-                $.ajax({
-                    url: wpCustomerData.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: 'get_customer_stats',
-                        nonce: wpCustomerData.nonce,
-                        id: customerId
-                    },
-                    success: (response) => {
-                        if (response.success) {
-                            this.updateStats(response.data);
-                        }
+            const hash = window.location.hash;
+            const customerId = hash ? parseInt(hash.substring(1)) : 0;
+            
+            $.ajax({
+                url: wpCustomerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'get_customer_stats',
+                    nonce: wpCustomerData.nonce,
+                    id: customerId
+                },
+                success: (response) => {
+                    if (response.success) {
+                        this.updateStats(response.data);
                     }
-                });
-            } catch (error) {
-                console.error('Error loading stats:', error);
-            }
+                }
+            });
         },
 
         updateStats(stats) {

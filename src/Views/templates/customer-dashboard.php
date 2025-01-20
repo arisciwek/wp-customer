@@ -29,7 +29,7 @@
 
 defined('ABSPATH') || exit;
 
-extract($template_data);
+//extract($template_data);
 
 
 ?>
