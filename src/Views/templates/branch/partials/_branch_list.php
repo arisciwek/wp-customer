@@ -23,20 +23,6 @@
 
 defined('ABSPATH') || exit;
 
-use WPCustomer\Controllers\CustomerController;
-
-$controller = new CustomerController();
-$customer_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-$access = $controller->getCheckCustomerAccess($customer_id);
-
-if (WP_DEBUG) {
-    error_log('Branch List Template Access Debug:');
-    error_log('Access Info: ' . print_r($customer, true));
-    error_log('Access : ' . print_r($access, true));
-    error_log('Access access_type : ' . print_r($access['access_type'], true));
-}
-
-
 ?>
 
 <div id="branch-list" class="tab-content">
@@ -62,7 +48,7 @@ if (WP_DEBUG) {
         <div class="branch-header-actions">
             <?php 
             if (isset($customer) && is_object($customer)) {
-                echo $controller->generateAddBranchButton($customer);
+                //echo $controller->generateAddBranchButton($customer);
             }
             ?>
         </div>
