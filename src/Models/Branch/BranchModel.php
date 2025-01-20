@@ -24,19 +24,39 @@
 
 namespace WPCustomer\Models\Branch;
 
+use WPCustomer\Models\CustomerModel;
+
 class BranchModel {
     private $table;
     private $customer_table;
+    private CustomerModel $customerModel;
 
     public function __construct() {
         global $wpdb;
         $this->table = $wpdb->prefix . 'app_branches';
         $this->customer_table = $wpdb->prefix . 'app_customers';
+        $this->customerModel = new CustomerModel();        
+    }
+
+    private function generateBranchCode(int $customer_id): string {
+        // Get customer code using the properly initialized customerModel property
+        $customer = $this->customerModel->find($customer_id);
+        $customer_code = $customer->code ?? '';
+        
+        do {
+            $sequence = str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
+            $branch_code = "BR-" . substr($customer_code, 5) . $sequence;
+            
+            $exists = $this->existsByCode($branch_code);
+        } while ($exists);
+        
+        return $branch_code;
     }
 
     public function create(array $data): ?int {
         global $wpdb;
 
+        $data['code'] = $this->generateBranchCode($data['customer_id']);
         $result = $wpdb->insert(
             $this->table,
             [
