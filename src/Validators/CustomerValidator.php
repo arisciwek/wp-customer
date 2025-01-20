@@ -143,14 +143,15 @@ class CustomerValidator {
      * @param int $customer_id
      * @return array Array containing is_admin, is_owner, is_employee flags
      */
+    
     public function getUserRelation(int $customer_id): array {
+        global $wpdb;
+        $current_user_id = get_current_user_id();
+
         // Check cache first
         if (isset($this->relationCache[$customer_id])) {
             return $this->relationCache[$customer_id];
         }
-
-        global $wpdb;
-        $current_user_id = get_current_user_id();
 
         $relation = [
             'is_admin' => current_user_can('edit_all_customers'),
@@ -158,29 +159,79 @@ class CustomerValidator {
             'is_employee' => false
         ];
 
-        // Check if user is owner
-        $customer = $this->model->find($customer_id);
-        if ($customer) {
-            $relation['is_owner'] = ((int)$customer->user_id === $current_user_id);
+        if ($customer_id === 0) {
+            // Cek apakah user adalah owner dari customer manapun
+            $owner_check = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}app_customers 
+                 WHERE user_id = %d 
+                 LIMIT 1",
+                $current_user_id
+            ));
+
+            if ($owner_check) {
+                $relation['is_owner'] = true;
+                $customer_id = (int)$owner_check;
+            } else {
+                // Jika bukan owner, cek apakah employee
+                $employee_check = $wpdb->get_var($wpdb->prepare(
+                    "SELECT customer_id 
+                     FROM {$wpdb->prefix}app_customer_employees 
+                     WHERE user_id = %d 
+                     AND status = 'active' 
+                     LIMIT 1",
+                    $current_user_id
+                ));
+
+                if ($employee_check) {
+                    $relation['is_employee'] = true;
+                    $customer_id = (int)$employee_check;
+                }
+            }
+        } else {
+            // Existing logic for specific customer_id
+            $customer = $this->model->find($customer_id);
+            if ($customer) {
+                $relation['is_owner'] = ((int)$customer->user_id === $current_user_id);
+            }
+
+            // Check if user is employee
+            $is_employee = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) 
+                 FROM {$wpdb->prefix}app_customer_employees 
+                 WHERE customer_id = %d 
+                 AND user_id = %d 
+                 AND status = 'active'",
+                $customer_id,
+                $current_user_id
+            ));
+
+            $relation['is_employee'] = (int)$is_employee > 0;
         }
 
-        // Check if user is employee
-        $is_employee = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
-             WHERE customer_id = %d 
-             AND user_id = %d 
-             AND status = 'active'",
-            $customer_id, 
-            $current_user_id
-        ));
-        
-        $relation['is_employee'] = (int)$is_employee > 0;
-
-        // Save to cache
+        // Save to cache with actual customer_id
         $this->relationCache[$customer_id] = $relation;
 
         return $relation;
     }
+
+    public function validateAccess(int $customer_id): array {
+        $relation = $this->getUserRelation($customer_id);
+        
+        return [
+            'has_access' => $this->canView($relation),
+            'access_type' => $this->getAccessType($relation),
+            'relation' => $relation,
+            'customer_id' => $customer_id // Tambahkan ini
+        ];
+    }
+    
+    private function getAccessType(array $relation): string {
+        if ($relation['is_admin']) return 'admin';
+        if ($relation['is_owner']) return 'owner';
+        if ($relation['is_employee']) return 'employee';
+        return 'none';
+    }
+
 
     /**
      * Check if user can view customer

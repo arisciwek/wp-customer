@@ -28,48 +28,7 @@
  */
 
 defined('ABSPATH') || exit;
-/*
-use WPCustomer\Controllers\CustomerController;
 
-// Use controller from template data if available, otherwise create new
-$controller = isset($controller) ? $controller : new CustomerController();
-
-// Get customer ID from URL hash or query parameter
-$customer_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-
-// Jika tidak ada di $_GET, cek dari hash URL
-if ($customer_id === 0 && isset($_SERVER['REQUEST_URI'])) {
-    $hash = parse_url($_SERVER['REQUEST_URI'], PHP_URL_FRAGMENT);
-    if ($hash && is_numeric($hash)) {
-        $customer_id = (int)$hash;
-    }
-}
-
-// Debug log
-if (WP_DEBUG) {
-    error_log('Customer Dashboard Loading:');
-    error_log('Customer ID from params from template : ' . $customer_id);
-}
-
-// Use customer from template data if available, otherwise get it
-if (!isset($customer) || $customer === null) {
-    $customer = null;
-    if ($customer_id > 0) {
-        $customer = $controller->getCustomerData($customer_id);
-    }
-}
-
-// Use access from template data if available, otherwise get it
-if (!isset($access) || $access === null) {
-    $access = $controller->getCheckCustomerAccess($customer_id);
-}
-
-// Debug log
-if (WP_DEBUG) {
-    error_log('Customer Data from template : ' . print_r($customer, true));
-    error_log('Access from template : ' . print_r($access, true));
-}
-*/
 extract($template_data);
 
 

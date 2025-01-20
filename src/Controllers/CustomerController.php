@@ -113,8 +113,8 @@ class CustomerController {
                 throw new \Exception('Invalid customer ID');
             }
 
-            // Gunakan method private untuk validasi internal
-            $access = $this->checkCustomerAccess($customer_id);
+            // Gunakan validator langsung
+            $access = $this->validator->validateAccess($customer_id);
             
             if (!$access['has_access']) {
                 wp_send_json_error([
@@ -143,75 +143,79 @@ class CustomerController {
      * @param int $customer_id
      * @return array
      */
-private function checkCustomerAccess($customer_id) {
-    global $wpdb;
-    $current_user_id = get_current_user_id();
+    /*
+    private function checkCustomerAccess($customer_id) {
+        global $wpdb;
+        $current_user_id = get_current_user_id();
 
-    $this->debug_log("Checking access for customer $customer_id by user $current_user_id");
+        $this->debug_log("Checking access for customer $customer_id by user $current_user_id");
 
-    // Get customer entity from cache or model
-    $customer = null;
-    if ($customer_id > 0) {
-        $customer = $this->cache->getCustomer($customer_id);
-        if (!$customer) {
-            $customer = $this->model->find($customer_id);
+        // Get customer entity from cache or model
+        $customer = null;
+        if ($customer_id > 0) {
+            $customer = $this->cache->getCustomer($customer_id);
+            if (!$customer) {
+                $customer = $this->model->find($customer_id);
+            }
         }
-    }
 
-    // Initialize access array with customer entity
-    $access = [
-        'has_access' => false,
-        'access_type' => null,
-        'customer' => $customer
-    ];
+        // Initialize access array with customer entity
+        $access = [
+            'has_access' => false,
+            'access_type' => null,
+            'customer' => $customer
+        ];
 
-    // 1. Admin Check
-    if (current_user_can('edit_all_customers')) {
-        $access['has_access'] = true;
-        $access['access_type'] = 'admin';
+        // 1. Admin Check
+        if (current_user_can('edit_all_customers')) {
+            $access['has_access'] = true;
+            $access['access_type'] = 'admin';
+            return $access;
+        }
+
+        // 2. Owner Check
+        $owner_query = $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers 
+             WHERE " . ($customer_id > 0 ? "id = %d AND " : "") . "user_id = %d",
+            ...($customer_id > 0 ? [$customer_id, $current_user_id] : [$current_user_id])
+        );
+        
+        $is_owner = (int)$wpdb->get_var($owner_query) > 0;
+        
+        if ($is_owner && current_user_can('view_own_customer')) {
+            $access['has_access'] = true;
+            $access['access_type'] = 'owner';
+            return $access;
+        }
+
+        // 3. Employee Check
+        $employee_query = $wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
+             WHERE " . ($customer_id > 0 ? "customer_id = %d AND " : "") . "user_id = %d 
+             AND status = 'active'",
+            ...($customer_id > 0 ? [$customer_id, $current_user_id] : [$current_user_id])
+        );
+        
+        $is_employee = (int)$wpdb->get_var($employee_query) > 0;
+        
+        if ($is_employee && current_user_can('view_own_customer')) {
+            $access['has_access'] = true;
+            $access['access_type'] = 'employee';
+            return $access;
+        }
+
+        $this->debug_log('Checking customer' . print_r($customer), true);
+        $this->debug_log('Checking access customer' . print_r($access), true);
         return $access;
-    }
-
-    // 2. Owner Check
-    $owner_query = $wpdb->prepare(
-        "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers 
-         WHERE " . ($customer_id > 0 ? "id = %d AND " : "") . "user_id = %d",
-        ...($customer_id > 0 ? [$customer_id, $current_user_id] : [$current_user_id])
-    );
-    
-    $is_owner = (int)$wpdb->get_var($owner_query) > 0;
-    
-    if ($is_owner && current_user_can('view_own_customer')) {
-        $access['has_access'] = true;
-        $access['access_type'] = 'owner';
-        return $access;
-    }
-
-    // 3. Employee Check
-    $employee_query = $wpdb->prepare(
-        "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
-         WHERE " . ($customer_id > 0 ? "customer_id = %d AND " : "") . "user_id = %d 
-         AND status = 'active'",
-        ...($customer_id > 0 ? [$customer_id, $current_user_id] : [$current_user_id])
-    );
-    
-    $is_employee = (int)$wpdb->get_var($employee_query) > 0;
-    
-    if ($is_employee && current_user_can('view_own_customer')) {
-        $access['has_access'] = true;
-        $access['access_type'] = 'employee';
-        return $access;
-    }
-
-    $this->debug_log('Checking customer' . print_r($customer), true);
-    $this->debug_log('Checking access customer' . print_r($access), true);
-    return $access;
-}    
+    } 
+    */
+    /*   
     public function getCheckCustomerAccess($customer_id) {
         $access = $this->checkCustomerAccess($customer_id);
         error_log('getCheckCustomerAccess result: ' . print_r($access, true));
         return $access;
     }
+    */
 
     /**
      * Initialize log directory if it doesn't exist
@@ -671,8 +675,8 @@ private function checkCustomerAccess($customer_id) {
                 }
             }
 
-            // Gunakan checkCustomerAccess untuk konsistensi
-            $access = $this->checkCustomerAccess($id);
+            // Gunakan validator untuk cek akses
+            $access = $this->validator->validateAccess($id);
             $this->logPermissionCheck(
                 'view_customer_detail',
                 get_current_user_id(), 
@@ -685,13 +689,14 @@ private function checkCustomerAccess($customer_id) {
                 throw new \Exception('You do not have permission to view this customer');
             }
 
+            // Tambahkan informasi akses ke response
             $customer->access_type = $access['access_type'];
             $customer->has_access = $access['has_access'];
 
             wp_send_json_success([
                 'customer' => $customer,
                 'branch_count' => $this->model->getBranchCount($id),
-                'access_type' => $access['access_type'] // berguna untuk UI
+                'access_type' => $access['access_type']
             ]);
 
         } catch (\Exception $e) {
@@ -861,52 +866,30 @@ private function checkCustomerAccess($customer_id) {
         try {
             // Jika id = 0, coba dapatkan customer berdasarkan user yang login
             if ($id === 0) {
-                // Cek apakah user adalah owner dari customer
-                $customer = $wpdb->get_row($wpdb->prepare(
-                    "SELECT * FROM {$wpdb->prefix}app_customers 
-                     WHERE user_id = %d 
-                     LIMIT 1",
-                    $current_user_id
-                ));
-
-                if ($customer) {
-                    $this->debug_log("Found customer data for user: " . $current_user_id);
-                    // Tambahkan data tambahan
-                    $customer->branch_count = $this->model->getBranchCount($customer->id);
-                    return $customer;
-                }
-
-                // Jika bukan owner, cek apakah user adalah employee
-                $employee_customer = $wpdb->get_row($wpdb->prepare(
-                    "SELECT c.* 
-                     FROM {$wpdb->prefix}app_customers c
-                     JOIN {$wpdb->prefix}app_customer_employees e ON e.customer_id = c.id
-                     WHERE e.user_id = %d AND e.status = 'active'
-                     LIMIT 1",
-                    $current_user_id
-                ));
-
-                if ($employee_customer) {
-                    $this->debug_log("Found customer data through employee relationship");
-                    $employee_customer->branch_count = $this->model->getBranchCount($employee_customer->id);
-                    return $employee_customer;
-                }
-            } else {
-                // Jika id spesifik diberikan
-                // Coba ambil dari cache dulu
-                $customer = $this->cache->getCustomer($id);
-                
-                // Jika tidak ada di cache, ambil dari database
-                if (!$customer) {
+                // Cek apakah user adalah owner atau employee dari customer
+                $relation = $this->validator->getUserRelation($id);
+                if ($relation['is_owner'] || $relation['is_employee']) {
                     $customer = $this->model->find($id);
                     if ($customer) {
                         $customer->branch_count = $this->model->getBranchCount($id);
                         return $customer;
                     }
                 }
+                return null;
+            } 
+
+            // Untuk id spesifik
+            $access = $this->validator->validateAccess($id);
+            if (!$access['has_access']) {
+                return null;
             }
 
-            $this->debug_log("No customer data found");
+            $customer = $this->cache->getCustomer($id) ?? $this->model->find($id);
+            if ($customer) {
+                $customer->branch_count = $this->model->getBranchCount($id);
+                return $customer;
+            }
+
             return null;
 
         } catch (\Exception $e) {
@@ -938,15 +921,19 @@ private function checkCustomerAccess($customer_id) {
 
         $this->debug_log('Customer ID from params: ' . $customer_id);
 
+        // Validasi akses dan dapatkan customer_id jika belum ada
+        $access = $this->validator->validateAccess($customer_id);
+        $customer_id = $access['customer_id'] ?? $customer_id;
+
         // Setup template data
         $template_data = [
             'customer' => $this->getCustomerData($customer_id),
-            'access' => $this->getCheckCustomerAccess($customer_id),
+            'access' => $access,
             'controller' => $this,
-            'branch_model' => new \WPCustomer\Models\Branch\BranchModel(),
-            'employee_model' => new \WPCustomer\Models\Employee\CustomerEmployeeModel(),
-            'branches' => [], // Default empty array
-            'employees' => []  // Default empty array
+            //'branch_model' => new \WPCustomer\Models\Branch\BranchModel(),
+            //'employee_model' => new \WPCustomer\Models\Employee\CustomerEmployeeModel(),
+            'branches' => [],
+            'employees' => []
         ];
         
         // Debug log template data
@@ -954,7 +941,7 @@ private function checkCustomerAccess($customer_id) {
         $this->debug_log($template_data);
 
         // Render appropriate template
-        if ($template_data['access']['has_access']) {
+        if ($access['has_access']) {
             require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-dashboard.php';
         } else {
             require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-no-access.php';
