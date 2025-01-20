@@ -1,4 +1,3 @@
-
 /**
  * Customer DataTable Handler
  *
@@ -29,14 +28,6 @@
  * - create-customer-form.js: Handles create form submission
  * - edit-customer-form.js: Handles edit form submission
  */
- /**
-  * Customer DataTable Handler
-  *
-  * @package     WP_Customer
-  * @subpackage  Assets/JS/Components
-  * @version     1.1.0
-  * @author      arisciwek
-  */
  (function($) {
      'use strict';
 
@@ -104,7 +95,7 @@
                     {
                         data: 'code',
                         title: 'Kode',
-                        width: '20px'
+                        width: '120px'
                     },
                     {
                         data: 'name',
