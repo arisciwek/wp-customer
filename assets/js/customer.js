@@ -204,6 +204,26 @@
                  return;
              }
 
+            console.log('Initial data received:', data);
+            console.log('Current customer ID:', data.customer.id);
+
+            // Dapatkan URL dan parameter saat ini
+            const currentUrl = new URL(window.location.href);
+            const currentId = currentUrl.searchParams.get('id');
+            console.log('Current URL param id:', currentId);
+            console.log('New customer id:', data.customer.id);
+
+            // Cek apakah ID berubah
+            if (currentId !== data.customer.id.toString()) {
+                console.log('ID changed, will reload');
+                // Update URL dan reload
+                currentUrl.searchParams.set('id', data.customer.id);
+                window.location.href = currentUrl.toString() + '#' + data.customer.id;
+                return;
+            }
+
+            console.log('ID unchanged, continuing without reload');
+            
              $('.tab-content').removeClass('active');
              $('#customer-details').addClass('active');
              $('.nav-tab').removeClass('nav-tab-active');
