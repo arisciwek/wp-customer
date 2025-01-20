@@ -44,22 +44,6 @@ defined('ABSPATH') || exit;
                 <input type="hidden" name="action" value="create_customer">
                 
                 <div class="wp-customer-form-group">
-                    <label for="customer-code" class="required-field">
-                        <?php _e('Kode Customer', 'wp-customer'); ?>
-                    </label>
-                    <input type="text" 
-                           id="customer-code" 
-                           name="code" 
-                           class="small-text" 
-                           maxlength="2" 
-                           pattern="\d{2}"
-                           required>
-                    <p class="description">
-                        <?php _e('Masukkan 2 digit angka', 'wp-customer'); ?>
-                    </p>
-                </div>
-
-                <div class="wp-customer-form-group">
                     <label for="customer-name" class="required-field">
                         <?php _e('Nama Customer', 'wp-customer'); ?>
                     </label>
