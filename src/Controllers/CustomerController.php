@@ -404,6 +404,64 @@ private function checkCustomerAccess($customer_id) {
         }
     }
 
+    /**
+     * Generate action buttons untuk DataTable row
+     * 
+     * @param object $customer Data customer dari row
+     * @return string HTML button actions
+     */
+    private function generateActionButtons($customer) {
+        $actions = '';
+        
+        // Debug logging
+        $this->debug_log("==== Generating Action Buttons for Customer ID: {$customer->id} ====");
+        
+        // Dapatkan relasi user dengan customer ini
+        $relation = $this->validator->getUserRelation($customer->id);
+        
+        // Log relasi untuk debugging
+        $this->debug_log("User Relation:", $relation);
+
+        // View Button
+        if ($this->validator->canView($relation)) {
+            $actions .= sprintf(
+                '<button type="button" class="button view-customer" data-id="%d" title="%s">' .
+                '<i class="dashicons dashicons-visibility"></i></button> ',
+                (int)$customer->id,
+                __('Lihat', 'wp-customer')
+            );
+        }
+
+        // Edit Button
+        if ($this->validator->canUpdate($relation)) {
+            $actions .= sprintf(
+                '<button type="button" class="button edit-customer" data-id="%d" title="%s">' .
+                '<i class="dashicons dashicons-edit"></i></button> ',
+                (int)$customer->id,
+                __('Edit', 'wp-customer')
+            );
+        }
+
+        // Delete Button
+        if ($this->validator->canDelete($relation)) {
+            $actions .= sprintf(
+                '<button type="button" class="button delete-customer" data-id="%d" title="%s">' .
+                '<i class="dashicons dashicons-trash"></i></button>',
+                (int)$customer->id,
+                __('Hapus', 'wp-customer')
+            );
+        }
+
+        // Log final output untuk debugging
+        $this->debug_log("Generated buttons:", [
+            'customer_id' => $customer->id,
+            'html' => $actions
+        ]);
+
+        return $actions;
+    }
+
+    /*
     private function generateActionButtons($customer) {
         $actions = '';
         $current_user_id = (int)get_current_user_id();
@@ -481,12 +539,19 @@ private function checkCustomerAccess($customer_id) {
         $this->debug_log("Final Actions HTML: " . $actions);
         return $actions;
     }
+    */
 
+    /**
+     * Handle customer creation request
+     * Endpoint: wp_ajax_create_customer
+     */
     public function store() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            if (!current_user_can('add_customer')) {
+            // 1. Validasi permission terlebih dahulu
+            $permission_errors = $this->validator->validatePermission('create');
+            if (!empty($permission_errors)) {
                 wp_send_json_error([
                     'message' => __('Insufficient permissions', 'wp-customer')
                 ]);
@@ -503,51 +568,67 @@ private function checkCustomerAccess($customer_id) {
             $this->debug_log('Relevant POST data:');
             $this->debug_log($debug_post);
             
-            // Basic data
+            // 2. Siapkan data dasar
             $data = [
                 'name' => sanitize_text_field($_POST['name']),
                 'created_by' => $current_user_id
             ];
 
-            // Handle user_id
+            // 3. Handle user_id dengan beberapa skenario
             if (isset($_POST['user_id']) && !empty($_POST['user_id'])) {
+                // Kasus: Admin membuat customer untuk user lain
                 $data['user_id'] = absint($_POST['user_id']);
-            } else {
+            } else if (isset($_POST['is_registration']) && $_POST['is_registration']) {
+                // Kasus: User melakukan registrasi sendiri
                 $data['user_id'] = $current_user_id;
+                $data['created_by'] = $current_user_id;
+            } else {
+                // Default: User yang create menjadi owner
+                $data['user_id'] = $current_user_id;
+            }
+
+            // 4. Tambahkan data opsional
+            if (!empty($_POST['npwp'])) {
+                $data['npwp'] = sanitize_text_field($_POST['npwp']);
+            }
+            if (!empty($_POST['nib'])) {
+                $data['nib'] = sanitize_text_field($_POST['nib']);
+            }
+
+            // 5. Validasi form data
+            $form_errors = $this->validator->validateForm($data);
+            if (!empty($form_errors)) {
+                wp_send_json_error([
+                    'message' => implode(', ', $form_errors),
+                    'errors' => $form_errors
+                ]);
+                return;
             }
 
             // Debug final data
             $this->debug_log('Data to be saved:');
             $this->debug_log($data);
 
-            // Validate input
-            $errors = $this->validator->validateCreate($data);
-            if (!empty($errors)) {
-                wp_send_json_error([
-                    'message' => is_array($errors) ? implode(', ', $errors) : $errors,
-                    'errors' => $errors
-                ]);
-                return;
-            }
-
-            // Get ID from creation
+            // 6. Buat customer baru
             $id = $this->model->create($data);
             if (!$id) {
-                wp_send_json_error([
-                    'message' => __('Failed to create customer', 'wp-customer')
-                ]);
-                return;
+                throw new \Exception(__('Failed to create customer', 'wp-customer'));
             }
 
-            // Get fresh data for response
+            // 7. Get fresh data untuk response
             $customer = $this->model->find($id);
             if (!$customer) {
-                wp_send_json_error([
-                    'message' => __('Failed to retrieve created customer', 'wp-customer')
-                ]);
-                return;
+                throw new \Exception(__('Failed to retrieve created customer', 'wp-customer'));
             }
 
+            // 8. Clear cache yang relevan
+            $this->cache->invalidateCustomerListCache();
+            $this->cache->invalidateCustomerStatsCache();
+            if ($data['user_id']) {
+                $this->cache->invalidateUserCustomersCache($data['user_id']);
+            }
+
+            // 9. Return success response
             wp_send_json_success([
                 'id' => $id,
                 'customer' => $customer,
@@ -556,6 +637,7 @@ private function checkCustomerAccess($customer_id) {
             ]);
 
         } catch (\Exception $e) {
+            $this->debug_log('Create customer error: ' . $e->getMessage());
             wp_send_json_error([
                 'message' => $e->getMessage() ?: 'Terjadi kesalahan saat menambah customer',
                 'error_details' => WP_DEBUG ? $e->getTraceAsString() : null
@@ -563,115 +645,68 @@ private function checkCustomerAccess($customer_id) {
         }
     }
 
+    /**
+     * Handle customer update request
+     * Endpoint: wp_ajax_update_customer
+     */
     public function update() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
-    
-            $this->debug_log('Update request data:');
 
             $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
             if (!$id) {
                 throw new \Exception('Invalid customer ID');
             }
 
-            // Get existing customer data
-            $existing_customer = $this->model->find($id);
-            if (!$existing_customer) {
-                throw new \Exception('Customer not found');
-            }
+            // Debug log input data
+            $this->debug_log('Update request data:');
+            $this->debug_log($_POST);
 
-            $current_user_id = get_current_user_id();
-
-            // Debug: log current user permissions
-            error_log('Current user ID: ' . $current_user_id);
-            error_log('Checking permissions for user: ' . $existing_customer->user_id);
-
-            // In the update() method, modify the permission check:
-            $can_edit = (current_user_can('edit_all_customers') || 
-                        (current_user_can('edit_own_customer') && (int)$existing_customer->user_id === (int)$current_user_id));
-
-            // Add more detailed logging
-            error_log('Permission check details:');
-            error_log('Can edit all customers: ' . (current_user_can('edit_all_customers') ? 'yes' : 'no'));
-            error_log('Can edit own customer: ' . (current_user_can('edit_own_customer') ? 'yes' : 'no'));
-            error_log('Customer user_id: ' . (int)$existing_customer->user_id);
-            error_log('Current user_id: ' . (int)$current_user_id);
-            error_log('IDs match: ' . ((int)$existing_customer->user_id === $current_user_id ? 'yes' : 'no'));
-            error_log('Final can_edit result: ' . ($can_edit ? 'yes' : 'no'));
-
-            if (!$can_edit) {
-                error_log('Current user cannot edit own customer or the user_id does not match.');
-                error_log('User trying to edit: ' . (int)$existing_customer->user_id);
-                error_log('Current user id: ' . get_current_user_id());
-                
+            // 1. Validasi permission terlebih dahulu
+            $permission_errors = $this->validator->validatePermission('update', $id);
+            if (!empty($permission_errors)) {
                 wp_send_json_error([
-                    'message' => __('You do not have permission to edit this customer', 'wp-customer')
+                    'message' => reset($permission_errors)
                 ]);
                 return;
-            } else {
-                error_log('User has permission to edit the customer');
             }
 
-
-
-            // Basic data
+            // 2. Siapkan data untuk validasi
             $data = [
                 'name' => sanitize_text_field($_POST['name'])
             ];
 
-            $this->debug_log('POST: ' . print_r($_POST, true));
-
-            // Handle user_id
+            // Handle user_id jika ada
             if (isset($_POST['user_id'])) {
-                if (current_user_can('edit_all_customers')) {
-                    $data['user_id'] = !empty($_POST['user_id']) ? intval($_POST['user_id']) : null;
-                    $this->debug_log('Setting user_id to: ' . print_r($data['user_id'], true));
-                } else {
-                    $this->debug_log('User lacks permission to change user_id');
-                }
+                $data['user_id'] = !empty($_POST['user_id']) ? intval($_POST['user_id']) : null;
             }
 
-            // If no edit_all_customers capability, user_id remains unchanged
-
-            // Validate input
-            $errors = $this->validator->validateUpdate($data, $id);
-            if (!empty($errors)) {
-                wp_send_json_error(['message' => implode(', ', $errors)]);
+            // 3. Validasi form data
+            $form_errors = $this->validator->validateForm($data, $id);
+            if (!empty($form_errors)) {
+                wp_send_json_error([
+                    'message' => implode(', ', $form_errors)
+                ]);
                 return;
             }
 
-            // Update data
+            // 4. Lakukan update jika semua validasi sukses
             $updated = $this->model->update($id, $data);
             if (!$updated) {
                 throw new \Exception('Failed to update customer');
             }
 
-            // Invalidate cache
+            // 5. Invalidate cache
             $this->cache->invalidateCustomerCache($id);
-            // In the update() method after successful update
+            $this->cache->invalidateCustomerListCache();
+            $this->cache->invalidateCustomerStatsCache();
 
-            /*
-             *  TODO
-             *
-             * $this->cache->invalidateCustomerListCache();
-             * $this->cache->invalidateCustomerStatsCache();
-             */
-
-            // If customer ownership changed, invalidate user caches
-            if (isset($data['user_id']) && $data['user_id'] !== $existing_customer->user_id) {
-                $this->cache->invalidateUserCustomersCache($existing_customer->user_id);
-                $this->cache->invalidateUserCustomersCache($data['user_id']);
-            }
-
-            // Log cache invalidation
-            $this->debug_log('Invalidated caches for customer update: ' . $id);
-
-            // Get updated data
+            // 6. Get fresh data untuk response
             $customer = $this->model->find($id);
             if (!$customer) {
                 throw new \Exception('Failed to retrieve updated customer');
             }
-            
+
             // Debug response data
             $this->debug_log('Update response data:');
             $this->debug_log([
@@ -679,6 +714,7 @@ private function checkCustomerAccess($customer_id) {
                 'branch_count' => $this->model->getBranchCount($id)
             ]);
 
+            // 7. Return success response
             wp_send_json_success([
                 'message' => __('Customer updated successfully', 'wp-customer'),
                 'data' => [
@@ -688,7 +724,10 @@ private function checkCustomerAccess($customer_id) {
             ]);
 
         } catch (\Exception $e) {
-            wp_send_json_error(['message' => $e->getMessage()]);
+            $this->debug_log('Update error: ' . $e->getMessage());
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
         }
     }
 
