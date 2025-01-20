@@ -164,6 +164,8 @@
 
              this.isLoading = true;
              this.showLoading();
+        
+            console.log('loadCustomerData called for ID:', id);  // Debug load call
 
              try {
                  const response = await $.ajax({
@@ -172,9 +174,12 @@
                      data: {
                          action: 'get_customer',
                          id: id,
-                         nonce: wpCustomerData.nonce
+                         nonce: wpCustomerData.nonce,
+                         _: new Date().getTime() // Cache busting
                      }
                  });
+        
+                    console.log('Load customer response:', response);  // Debug load response
 
                  if (response.success) {
                      this.displayData(response.data);
@@ -331,14 +336,27 @@
                  window.Dashboard.refreshStats();
              }
          },
-
-         handleUpdated(data) {
-             if (data && data.data && data.data.customer) {
-                 if (this.currentId === data.data.customer.id) {
-                     this.displayData(data.data);
-                 }
-             }
-         },
+         
+        handleUpdated(response) {
+            if (response && response.data && response.data.customer) {
+                const editedCustomerId = response.data.customer.id;
+                
+                if (editedCustomerId === parseInt(window.location.hash.substring(1))) {
+                    // Jika customer yang diedit sama dengan yang sedang dilihat
+                    // Langsung update panel tanpa mengubah hash
+                    this.displayData(response.data);
+                } else {
+                    // Jika berbeda, ubah hash ke customer yang diedit
+                    window.location.hash = editedCustomerId;
+                }
+                
+                // Refresh DataTable
+                if (window.CustomerDataTable) {
+                    window.CustomerDataTable.refresh();
+                }
+            }
+        },
+        
 
          handleDeleted() {
              this.closePanel();
@@ -351,28 +369,86 @@
          },
 
 
-        // Di customer.js
-        loadStats() {
-            const urlHash = window.location.hash;
-            const customerId = urlHash ? parseInt(urlHash.substring(1)) : 0;
-
-            console.log(urlHash); // Misalnya "#2"
-
-            console.log('Loading stats, customerId:', customerId);            
-            $.ajax({
-                url: wpCustomerData.ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'get_customer_stats',
-                    nonce: wpCustomerData.nonce,
-                    id: customerId  // Kirim ID dari hash URL
-                },
-                success: (response) => {
-                    if (response.success) {
-                        this.updateStats(response.data);
+         /**
+         * Get current customer ID for logged in user.
+         * This method makes an AJAX call to server to determine the active customer ID
+         * based on user's relationship (owner or employee) with customers.
+         * 
+         * @async
+         * @returns {Promise<number>} Resolves with customer ID (0 if no customer found)
+         * @throws {Error} When AJAX call fails or server returns error
+         * 
+         * @example
+         * try {
+         *   const customerId = await Customer.getCurrentCustomerId();
+         *   console.log('Active customer ID:', customerId);
+         * } catch (error) {
+         *   console.error('Failed to get customer ID:', error);
+         * }
+         */
+        getCurrentCustomerId() {
+            return new Promise((resolve, reject) => {
+                $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'get_current_customer_id',
+                        nonce: wpCustomerData.nonce
+                    },
+                    success: (response) => {
+                        if (response.success) {
+                            resolve(response.data.customer_id);
+                        } else {
+                            reject(new Error(response.data.message));
+                        }
+                    },
+                    error: (xhr) => {
+                        reject(new Error('Failed to get customer ID'));
                     }
-                }
+                });
             });
+        },
+
+        /**
+         * Load customer statistics including total customers and branches.
+         * Uses getCurrentCustomerId() to determine which customer's stats to load.
+         * Updates stats display via updateStats() when data is received.
+         * 
+         * @async
+         * @fires customer:loading When stats loading begins
+         * @fires customer:loaded When stats are successfully loaded
+         * @see getCurrentCustomerId
+         * @see updateStats
+         * 
+         * @example
+         * // Load stats on page load 
+         * Customer.loadStats();
+         * 
+         * // Load stats after customer creation
+         * $(document).on('customer:created', () => Customer.loadStats());
+         */
+        async loadStats() {
+            try {
+                const customerId = await this.getCurrentCustomerId();
+                console.log('Got new customer ID:', customerId);
+                
+                $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'get_customer_stats',
+                        nonce: wpCustomerData.nonce,
+                        id: customerId
+                    },
+                    success: (response) => {
+                        if (response.success) {
+                            this.updateStats(response.data);
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
         },
 
         updateStats(stats) {
@@ -390,3 +466,4 @@
      });
 
  })(jQuery);
+ 
