@@ -4,30 +4,19 @@
  *
  * @package     WP_Customer
  * @subpackage  Database
- * @version     1.0.0
+ * @version     1.0.1
  * @author      arisciwek
- *
- * Path: /wp-customer/src/Database/Demo_Data.php
  *
  * Description: Menyediakan data demo untuk testing.
  *              Includes generator untuk customers, branches, dan employees.
  *              Menggunakan transaction untuk data consistency.
  *              Generates realistic Indonesian names dan alamat.
- *
- * Generated Data:
- * - 10 Customer records with unique codes
- * - 30 Branch records (3 per customer)
- * - 20 Employee records with departments
- *
- * Changelog:
- * 1.0.0 - 2024-01-07
- * - Initial version
- * - Added customer demo data
- * - Added branch demo data
- * - Added employee demo data
  */
 
 namespace WPCustomer\Database;
+
+use WPCustomer\Models\CustomerModel;
+use WPCustomer\Models\Branch\BranchModel;
 
 defined('ABSPATH') || exit;
 
@@ -39,6 +28,8 @@ class DemoData {
     private static $used_emails = [];
     private static $used_npwp = [];
     private static $used_nib = [];
+    private static $customerModel;
+    private static $branchModel;
 
     /**
      * Main method to load all demo data
@@ -49,11 +40,14 @@ class DemoData {
         try {
             $wpdb->query('START TRANSACTION');
 
+            // Initialize models
+            self::$customerModel = new CustomerModel();
+            self::$branchModel = new BranchModel();
+
             self::clearTables();
             self::generateCustomers();
             self::generateBranches();
             self::generateEmployees();
-            // Future data generators can be added here
 
             $wpdb->query('COMMIT');
             return true;
@@ -107,19 +101,17 @@ class DemoData {
      * Generate customer data
      */
     private static function generateCustomers() {
-        global $wpdb;
-        
         $customers = [
-            ['code' => '02', 'name' => 'PT Maju Bersama'],
-            ['code' => '03', 'name' => 'CV Teknologi Nusantara'],
-            ['code' => '04', 'name' => 'PT Sinar Abadi'],
-            ['code' => '05', 'name' => 'PT Global Teknindo'],
-            ['code' => '06', 'name' => 'CV Mitra Solusi'],
-            ['code' => '07', 'name' => 'PT Karya Digital'],
-            ['code' => '08', 'name' => 'PT Bumi Perkasa'],
-            ['code' => '09', 'name' => 'CV Cipta Kreasi'],
-            ['code' => '10', 'name' => 'PT Meta Inovasi'],
-            ['code' => '11', 'name' => 'PT Delta Sistem']
+            ['name' => 'PT Maju Bersama'],
+            ['name' => 'CV Teknologi Nusantara'],
+            ['name' => 'PT Sinar Abadi'],
+            ['name' => 'PT Global Teknindo'],
+            ['name' => 'CV Mitra Solusi'],
+            ['name' => 'PT Karya Digital'],
+            ['name' => 'PT Bumi Perkasa'],
+            ['name' => 'CV Cipta Kreasi'],
+            ['name' => 'PT Meta Inovasi'],
+            ['name' => 'PT Delta Sistem']
         ];
 
         foreach ($customers as $customer) {
@@ -128,11 +120,9 @@ class DemoData {
             
             // Create WP user for owner
             $user_id = self::createWPUser($owner_name, 'customer');
-            self::$user_ids[$customer['code']] = $user_id;
 
-            // Insert customer data
+            // Create customer data using model
             $customer_data = [
-                'code' => $customer['code'],
                 'name' => $customer['name'],
                 'npwp' => self::generateNPWP(),
                 'nib' => self::generateNIB(),
@@ -141,10 +131,14 @@ class DemoData {
                 'status' => 'active'
             ];
 
-            $wpdb->insert($wpdb->prefix . 'app_customers', $customer_data);
-            if ($wpdb->last_error) throw new \Exception($wpdb->last_error);
-            
-            self::$customer_ids[] = $wpdb->insert_id;
+            // Use model to create customer (which will generate code automatically)
+            $customer_id = self::$customerModel->create($customer_data);
+            if (!$customer_id) {
+                throw new \Exception('Failed to create customer: ' . $customer['name']);
+            }
+
+            self::$customer_ids[] = $customer_id;
+            self::$user_ids[$customer_id] = $user_id;
         }
     }
 
@@ -152,19 +146,14 @@ class DemoData {
      * Generate branch data
      */
     private static function generateBranches() {
-        global $wpdb;
-        
         $branch_types = ['kabupaten', 'kota'];
         
-        foreach (self::$customer_ids as $index => $customer_id) {
-            $customer_code = str_pad($index + 2, 2, '0', STR_PAD_LEFT);
-            
+        foreach (self::$customer_ids as $customer_id) {
             // Each customer gets 3 branches
             for ($i = 1; $i <= 3; $i++) {
                 $city = self::generateCityName();
                 $branch_data = [
                     'customer_id' => $customer_id,
-                    'code' => $customer_code . str_pad($i, 2, '0', STR_PAD_LEFT),
                     'name' => "Cabang " . $city . " " . $i,
                     'type' => $branch_types[array_rand($branch_types)],
                     'address' => 'Jl. ' . $city . ' No. ' . rand(1, 100),
@@ -172,16 +161,20 @@ class DemoData {
                     'email' => strtolower(str_replace(' ', '', $city)) . $i . '@example.com',
                     'created_by' => 1,
                     'status' => 'active',
-                    'user_id' => self::$user_ids[$customer_code]
+                    'user_id' => self::$user_ids[$customer_id]
                 ];
 
-                $wpdb->insert($wpdb->prefix . 'app_branches', $branch_data);
-                if ($wpdb->last_error) throw new \Exception($wpdb->last_error);
-                
-                self::$branch_ids[] = $wpdb->insert_id;
+                // Use model to create branch (which will generate code automatically)
+                $branch_id = self::$branchModel->create($branch_data);
+                if (!$branch_id) {
+                    throw new \Exception('Failed to create branch for customer: ' . $customer_id);
+                }
+
+                self::$branch_ids[] = $branch_id;
             }
         }
     }
+
 
     /**
      * Generate employee data
@@ -334,4 +327,5 @@ class DemoData {
         self::$used_names[] = $name;
         return $name;
     }
+
 }
