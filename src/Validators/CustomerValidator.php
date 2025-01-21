@@ -289,4 +289,53 @@ class CustomerValidator {
             $this->relationCache = [];
         }
     }
+
+
+    public function validateDelete(int $id): array {
+        $errors = [];
+
+        // 1. Validasi permission dasar
+        if (!current_user_can('delete_customer')) {
+            $errors[] = __('Anda tidak memiliki izin untuk menghapus customer', 'wp-customer');
+            return $errors;
+        }
+
+        // 2. Cek apakah customer ada
+        $customer = $this->model->find($id);
+        if (!$customer) {
+            $errors[] = __('Customer tidak ditemukan', 'wp-customer');
+            return $errors;
+        }
+
+        // 3. Cek relasi dengan User
+        if (!$this->canDelete($this->getUserRelation($id))) {
+            $errors[] = __('Anda tidak memiliki izin untuk menghapus customer ini', 'wp-customer');
+            return $errors;
+        }
+
+        // 4. Cek apakah customer memiliki branch
+        $branch_count = $this->model->getBranchCount($id);
+        if ($branch_count > 0) {
+            $errors[] = sprintf(
+                __('Customer tidak dapat dihapus karena masih memiliki %d cabang', 'wp-customer'),
+                $branch_count
+            );
+        }
+
+        // 5. Cek apakah customer memiliki employee
+        global $wpdb;
+        $employee_count = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees WHERE customer_id = %d",
+            $id
+        ));
+
+        if ($employee_count > 0) {
+            $errors[] = sprintf(
+                __('Customer tidak dapat dihapus karena masih memiliki %d karyawan', 'wp-customer'),
+                $employee_count
+            );
+        }
+
+        return $errors;
+    }    
 }

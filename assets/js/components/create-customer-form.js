@@ -32,8 +32,8 @@
  *
  * Last modified: 2024-12-03 16:30:00
  */
- (function($) {
-     'use strict';
+(function($) {
+    'use strict';
 
     const CreateCustomerForm = {
         modal: null,
@@ -48,10 +48,12 @@
         },
 
         bindEvents() {
-            // Form events
+            // Form submission - menggunakan arrow function untuk menjaga context
             this.form.on('submit', (e) => this.handleCreate(e));
+            
+            // Field validation - bind dengan proper context
             this.form.on('input', 'input[name="name"]', (e) => {
-                this.validateField(e.target);
+                this.validateNameField(e.target);
             });
 
             // Add button handler
@@ -69,6 +71,44 @@
             });
         },
 
+        // Memisahkan validasi khusus untuk field nama
+        validateNameField(field) {
+            const $field = $(field);
+            const value = $field.val().trim();
+            const errors = [];
+
+            if (!value) {
+                errors.push('Nama customer wajib diisi');
+            } else {
+                if (value.length < 3) {
+                    errors.push('Nama customer minimal 3 karakter');
+                }
+                if (value.length > 100) {
+                    errors.push('Nama customer maksimal 100 karakter');
+                }
+                if (!/^[a-zA-Z\s]+$/.test(value)) {
+                    errors.push('Nama customer hanya boleh mengandung huruf dan spasi');
+                }
+            }
+
+            const $error = $field.next('.form-error');
+            if (errors.length > 0) {
+                $field.addClass('error');
+                if ($error.length) {
+                    $error.text(errors[0]);
+                } else {
+                    $('<span class="form-error"></span>')
+                        .text(errors[0])
+                        .insertAfter($field);
+                }
+                return false;
+            } else {
+                $field.removeClass('error');
+                $error.remove();
+                return true;
+            }
+        },
+
         async handleCreate(e) {
             e.preventDefault();
 
@@ -76,14 +116,16 @@
                 return;
             }
 
-            // Ambil semua data form termasuk user_id
+            // Collect form data
             const formData = {
                 action: 'create_customer',
                 nonce: wpCustomerData.nonce,
-                name: this.form.find('[name="name"]').val().trim()
+                name: this.form.find('[name="name"]').val().trim(),
+                provinsi_id: this.form.find('[name="provinsi_id"]').val(),
+                regency_id: this.form.find('[name="regency_id"]').val()
             };
 
-            // Tambahkan user_id jika ada
+            // Add user_id if available (admin only)
             const userIdField = this.form.find('[name="user_id"]');
             if (userIdField.length && userIdField.val()) {
                 formData.user_id = userIdField.val();
@@ -115,6 +157,43 @@
             } finally {
                 this.setLoadingState(false);
             }
+        },
+
+        initializeValidation() {
+            this.form.validate({
+                rules: {
+                    name: {
+                        required: true,
+                        minlength: 3,
+                        maxlength: 100
+                    },
+                    provinsi_id: {
+                        required: true
+                    },
+                    regency_id: {
+                        required: true
+                    },
+                    user_id: {
+                        required: this.form.find('#customer-owner').length > 0
+                    }
+                },
+                messages: {
+                    name: {
+                        required: 'Nama customer wajib diisi',
+                        minlength: 'Nama customer minimal 3 karakter',
+                        maxlength: 'Nama customer maksimal 100 karakter'
+                    },
+                    provinsi_id: {
+                        required: 'Provinsi wajib dipilih'
+                    },
+                    regency_id: {
+                        required: 'Kabupaten/Kota wajib dipilih'
+                    },
+                    user_id: {
+                        required: 'Admin wajib dipilih'
+                    }
+                }
+            });
         },
 
         setLoadingState(loading) {
@@ -150,25 +229,12 @@
             this.form.find('.form-error').remove();
             this.form.find('.error').removeClass('error');
             this.form.validate().resetForm();
-        },
 
-        initializeValidation() {
-            this.form.validate({
-                rules: {
-                    name: {
-                        required: true,
-                        minlength: 3,
-                        maxlength: 100
-                    }
-                },
-                messages: {
-                    name: {
-                        required: 'Nama customer wajib diisi',
-                        minlength: 'Nama customer minimal 3 karakter',
-                        maxlength: 'Nama customer maksimal 100 karakter'
-                    }
-                }
-            });
+            // Reset wilayah selects
+            const $regencySelect = this.form.find('[name="regency_id"]');
+            $regencySelect
+                .html('<option value="">Pilih Kabupaten/Kota</option>')
+                .prop('disabled', true);
         }
     };
 
@@ -178,4 +244,4 @@
         CreateCustomerForm.init();
     });
 
- })(jQuery);
+})(jQuery);

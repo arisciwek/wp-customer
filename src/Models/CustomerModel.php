@@ -51,28 +51,61 @@
     public function create(array $data): ?int {
         global $wpdb;
         
+        // Debug incoming data
+        error_log('CustomerModel::create() - Input data: ' . print_r($data, true));
+        
         $data['code'] = $this->generateCustomerCode();
+        
+        // Prepare insert data
+        $insert_data = [
+            'code' => $data['code'],
+            'name' => $data['name'],
+            'npwp' => $data['npwp'] ?? null,
+            'nib' => $data['nib'] ?? null,
+            'status' => $data['status'] ?? 'active',
+            'user_id' => $data['user_id'],
+            'provinsi_id' => $data['provinsi_id'] ?? null,
+            'regency_id' => $data['regency_id'] ?? null,
+            'created_by' => get_current_user_id(),
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql')
+        ];
+
+        // Debug prepared data
+        error_log('CustomerModel::create() - Prepared data for insert: ' . print_r($insert_data, true));
+
+        // Prepare format array for $wpdb->insert
+        $format = [
+            '%s',  // code
+            '%s',  // name
+            '%s',  // npwp (nullable)
+            '%s',  // nib (nullable)
+            '%s',  // status
+            '%d',  // user_id
+            '%d',  // provinsi_id (nullable)
+            '%d',  // regency_id (nullable)
+            '%d',  // created_by
+            '%s',  // created_at
+            '%s'   // updated_at
+        ];
+
+        // Attempt the insert
         $result = $wpdb->insert(
             $this->table,
-            [
-                'code' => $data['code'],
-                'name' => $data['name'],
-                'npwp' => $data['npwp'] ?? null,
-                'nib' => $data['nib'] ?? null,
-                'status' => $data['status'] ?? 'active',
-                'user_id' => $data['user_id'],
-                'created_by' => get_current_user_id(),
-                'created_at' => current_time('mysql'),
-                'updated_at' => current_time('mysql')
-            ],
-            ['%s', '%s', '%s', '%s', '%s', '%d', '%d', '%s', '%s']
+            $insert_data,
+            $format
         );
 
+        // Debug insert result
         if ($result === false) {
+            error_log('CustomerModel::create() - Insert failed. Last error: ' . $wpdb->last_error);
             return null;
         }
 
-        return (int) $wpdb->insert_id;
+        $new_id = (int) $wpdb->insert_id;
+        error_log('CustomerModel::create() - Insert successful. New ID: ' . $new_id);
+
+        return $new_id;
     }
 
     public function find($id): ?object {
@@ -376,6 +409,22 @@ public function getDataTableData(int $start, int $length, string $search, string
         error_log('--- End Debug ---');
 
         return $total;
+    }
+     
+    // Di CustomerModel.php
+    public function getProvinsiOptions() {
+        return apply_filters('wilayah_indonesia_get_province_options', [
+            '' => __('Pilih Provinsi', 'wp-customer')
+        ], true);
+    }
+
+    public function getRegencyOptions($provinsi_id) {
+        return apply_filters(
+            'wilayah_indonesia_get_regency_options',
+            [],
+            $provinsi_id,
+            true
+        );
     }
  
  }

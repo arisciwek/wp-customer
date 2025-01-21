@@ -64,6 +64,8 @@
                     nonce: wpCustomerData.nonce,
                     id: id,
                     name: this.form.find('[name="name"]').val().trim(),
+                    provinsi_id: this.form.find('[name="provinsi_id"]').val(),
+                    regency_id: this.form.find('[name="regency_id"]').val(),
                     user_id: this.form.find('#edit-user').val()
                 };
 
@@ -121,27 +123,6 @@
             });
         },
         
-        /*
-        bindEvents() {
-            // Form events
-            this.form.on('submit', (e) => this.handleUpdate(e));
-            this.form.on('input', 'input[name="name"]', (e) => {
-                this.validateField(e.target);
-            });
-
-            // Modal events
-            $('.modal-close', this.modal).on('click', () => this.hideModal());
-            $('.cancel-edit', this.modal).on('click', () => this.hideModal());
-
-            // Close modal when clicking outside
-            this.modal.on('click', (e) => {
-                if ($(e.target).is('.modal-overlay')) {
-                    this.hideModal();
-                }
-            });
-        },
-        */
-
         showEditForm(data) {
             if (!data || !data.customer) {
                 CustomerToast.error('Data customer tidak valid');
@@ -154,7 +135,9 @@
             // Populate form data
             this.form.find('#customer-id').val(data.customer.id);
             this.form.find('[name="name"]').val(data.customer.name);
-            
+            this.form.find('[name="provinsi_id"]').val(data.customer.provinsi_id || '');
+            this.form.find('[name="regency_id"]').val(data.customer.regency_id || '');
+                        
             // Set user_id if exists
             const userSelect = this.form.find('[name="user_id"]');
             if (userSelect.length && data.customer.user_id) {
@@ -188,6 +171,12 @@
                         minlength: 3,
                         maxlength: 100
                     },
+                    provinsi_id: {
+                        required: true
+                    },
+                    regency_id: {
+                        required: true
+                    },
                     user_id: {
                         required: $('#edit-user').length > 0
                     }
@@ -197,6 +186,12 @@
                         required: 'Nama customer wajib diisi',
                         minlength: 'Nama minimal 3 karakter',
                         maxlength: 'Nama maksimal 100 karakter'
+                    },
+                    provinsi_id: {
+                        required: 'Provinsi wajib dipilih'
+                    },
+                    regency_id: {
+                        required: 'Kabupaten/Kota wajib dipilih'
                     },
                     user_id: {
                         required: 'User penanggung jawab wajib dipilih'
@@ -241,68 +236,7 @@
                 return true;
             }
         },
-        /*
-        async handleUpdate(e) {
-            e.preventDefault();
-
-            if (!this.form.valid()) {
-                return;
-            }
-
-            const id = this.form.find('#customer-id').val();
-            const requestData = {
-                action: 'update_customer',
-                nonce: wpCustomerData.nonce,
-                id: id,
-                name: this.form.find('[name="name"]').val().trim(),
-                user_id: this.form.find('#edit-user').val() // Tambahkan ini
-
-            };
-
-            this.setLoadingState(true);
-
-            console.log('Sending data:', requestData);
-
-            try {
-                const response = await $.ajax({
-                    url: wpCustomerData.ajaxUrl,
-                    type: 'POST',
-                    data: requestData
-                });
         
-                console.log('Edit form response:', response);  // Debug response
-
-                if (response.success) {
-                    CustomerToast.success('Customer berhasil diperbarui');
-                    this.hideModal();
-        
-                    console.log('Triggering customer:updated event with:', response); // Debug event data
-                    // $(document).trigger('customer:updated', [response]);
-
-                    // Update URL hash to edited customer's ID
-                    if (id) {
-                        window.location.hash = id;
-                    }
-
-                    // Trigger events for other components
-                    $(document).trigger('customer:updated', [response]);
-
-                    // Refresh DataTable if exists
-                    if (window.CustomerDataTable) {
-                        window.CustomerDataTable.refresh();
-                    }
-                } else {
-                    CustomerToast.error(response.data?.message || 'Gagal memperbarui customer');
-                }
-            } catch (error) {
-                console.error('Update customer error:', error);
-                CustomerToast.error('Gagal menghubungi server');
-            } finally {
-                this.setLoadingState(false);
-            }
-        },
-        */
-
         setLoadingState(loading) {
             const $submitBtn = this.form.find('[type="submit"]');
             const $spinner = this.form.find('.spinner');

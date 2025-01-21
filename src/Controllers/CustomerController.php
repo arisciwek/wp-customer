@@ -47,14 +47,14 @@ class CustomerController {
     private string $log_file;
 
     private function logPermissionCheck($action, $user_id, $customer_id, $branch_id = null, $result) {
-        $this->debug_log(sprintf(
-            'Permission check for %s - User: %d, Customer: %d, Branch: %s, Result: %s',
-            $action,
-            $user_id,
-            $customer_id,
-            $branch_id ?? 'none',  // Gunakan null coalescing untuk handle null branch_id
-            $result ? 'granted' : 'denied'
-        ));
+        // $this->debug_log(sprintf(
+        //    'Permission check for %s - User: %d, Customer: %d, Branch: %s, Result: %s',
+        //    $action,
+        //    $user_id,
+        //    $customer_id,
+        //    $branch_id ?? 'none',  // Gunakan null coalescing untuk handle null branch_id
+        //    $result ? 'granted' : 'denied'
+        // ));
     }
 
     /**
@@ -336,7 +336,7 @@ class CustomerController {
         $actions = '';
         
         // Debug logging
-        $this->debug_log("==== Generating Action Buttons for Customer ID: {$customer->id} ====");
+        // $this->debug_log("==== Generating Action Buttons for Customer ID: {$customer->id} ====");
         
         // Dapatkan relasi user dengan customer ini
         $relation = $this->validator->getUserRelation($customer->id);
@@ -379,43 +379,41 @@ class CustomerController {
      */
     public function store() {
         try {
+            // Debug incoming data
+            error_log('Create customer request data: ' . print_r($_POST, true));
+            
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
             // 1. Validasi permission terlebih dahulu
             $permission_errors = $this->validator->validatePermission('create');
             if (!empty($permission_errors)) {
+                error_log('Permission validation failed: ' . print_r($permission_errors, true));
                 wp_send_json_error([
-                    'message' => __('Insufficient permissions', 'wp-customer')
+                    'message' => __('Insufficient permissions', 'wp-customer'),
+                    'errors' => $permission_errors
                 ]);
                 return;
             }
 
             $current_user_id = get_current_user_id();
             
-            // Debug POST data - hanya log data yang kita perlukan
-            $debug_post = [
-                'name' => $_POST['name'] ?? 'not set',
-                'user_id' => $_POST['user_id'] ?? 'not set',
-            ];
-            $this->debug_log('Relevant POST data:');
-            //$this->debug_log($debug_post);
-            
             // 2. Siapkan data dasar
             $data = [
                 'name' => sanitize_text_field($_POST['name']),
-                'created_by' => $current_user_id
+                'created_by' => $current_user_id,
+                'provinsi_id' => isset($_POST['provinsi_id']) ? (int)$_POST['provinsi_id'] : null,
+                'regency_id' => isset($_POST['regency_id']) ? (int)$_POST['regency_id'] : null,
+                'status' => 'active'
             ];
+
+            error_log('Prepared data for creation: ' . print_r($data, true));
 
             // 3. Handle user_id dengan beberapa skenario
             if (isset($_POST['user_id']) && !empty($_POST['user_id'])) {
-                // Kasus: Admin membuat customer untuk user lain
+                // Admin membuat customer untuk user lain
                 $data['user_id'] = absint($_POST['user_id']);
-            } else if (isset($_POST['is_registration']) && $_POST['is_registration']) {
-                // Kasus: User melakukan registrasi sendiri
-                $data['user_id'] = $current_user_id;
-                $data['created_by'] = $current_user_id;
             } else {
-                // Default: User yang create menjadi owner
+                // User yang create menjadi owner
                 $data['user_id'] = $current_user_id;
             }
 
@@ -430,6 +428,7 @@ class CustomerController {
             // 5. Validasi form data
             $form_errors = $this->validator->validateForm($data);
             if (!empty($form_errors)) {
+                error_log('Form validation failed: ' . print_r($form_errors, true));
                 wp_send_json_error([
                     'message' => implode(', ', $form_errors),
                     'errors' => $form_errors
@@ -437,19 +436,21 @@ class CustomerController {
                 return;
             }
 
-            // Debug final data
-            $this->debug_log('Data to be saved:');
-            //$this->debug_log($data);
+            error_log('Attempting to create customer with data: ' . print_r($data, true));
 
             // 6. Buat customer baru
             $id = $this->model->create($data);
             if (!$id) {
+                error_log('Failed to create customer - no ID returned');
                 throw new \Exception(__('Failed to create customer', 'wp-customer'));
             }
+
+            error_log('Customer created successfully with ID: ' . $id);
 
             // 7. Get fresh data untuk response
             $customer = $this->model->find($id);
             if (!$customer) {
+                error_log('Failed to retrieve created customer with ID: ' . $id);
                 throw new \Exception(__('Failed to retrieve created customer', 'wp-customer'));
             }
 
@@ -461,15 +462,21 @@ class CustomerController {
             }
 
             // 9. Return success response
-            wp_send_json_success([
+            $response_data = [
                 'id' => $id,
                 'customer' => $customer,
                 'branch_count' => 0,
                 'message' => __('Customer created successfully', 'wp-customer')
-            ]);
+            ];
+            
+            error_log('Sending success response: ' . print_r($response_data, true));
+            
+            wp_send_json_success($response_data);
 
         } catch (\Exception $e) {
-            $this->debug_log('Create customer error: ' . $e->getMessage());
+            error_log('Create customer error: ' . $e->getMessage());
+            error_log('Stack trace: ' . $e->getTraceAsString());
+            
             wp_send_json_error([
                 'message' => $e->getMessage() ?: 'Terjadi kesalahan saat menambah customer',
                 'error_details' => WP_DEBUG ? $e->getTraceAsString() : null
@@ -490,10 +497,6 @@ class CustomerController {
                 throw new \Exception('Invalid customer ID');
             }
 
-            // Debug log input data
-            $this->debug_log('Update request data:');
-            //$this->debug_log($_POST);
-
             // 1. Validasi permission terlebih dahulu
             $permission_errors = $this->validator->validatePermission('update', $id);
             if (!empty($permission_errors)) {
@@ -503,9 +506,11 @@ class CustomerController {
                 return;
             }
 
-            // 2. Siapkan data untuk validasi
+            // 2. Siapkan data untuk validasi dan update
             $data = [
-                'name' => sanitize_text_field($_POST['name'])
+                'name' => sanitize_text_field($_POST['name']),
+                'provinsi_id' => isset($_POST['provinsi_id']) ? intval($_POST['provinsi_id']) : null,
+                'regency_id' => isset($_POST['regency_id']) ? intval($_POST['regency_id']) : null
             ];
 
             // Handle user_id jika ada
@@ -522,7 +527,7 @@ class CustomerController {
                 return;
             }
 
-            // 4. Lakukan update jika semua validasi sukses
+            // 4. Lakukan update
             $updated = $this->model->update($id, $data);
             if (!$updated) {
                 throw new \Exception('Failed to update customer');
@@ -538,13 +543,6 @@ class CustomerController {
             if (!$customer) {
                 throw new \Exception('Failed to retrieve updated customer');
             }
-
-            // Debug response data
-            $this->debug_log('Update response data:');
-            //$this->debug_log([
-            //    'customer' => $customer,
-            //    'branch_count' => $this->model->getBranchCount($id)
-            //]);
 
             // 7. Return success response
             wp_send_json_success([
@@ -775,7 +773,7 @@ class CustomerController {
             ]);
         }
     }
-
+    
     public function getCustomerData($id) {
         global $wpdb;
         $current_user_id = get_current_user_id();
@@ -879,7 +877,6 @@ class CustomerController {
             'employees' => []
         ];
 
-        $this->debug_log('Template data prepared with customer_id: ' . $customer_id);
         if (isset($customer)) {
             $this->debug_log('Customer data loaded: ' . print_r($customer, true));
         }

@@ -222,17 +222,9 @@ public function enqueue_frontend_assets() {
             wp_enqueue_script('confirmation-modal', WP_CUSTOMER_URL . 'assets/js/components/confirmation-modal.js', ['jquery'], $this->version, true);
             wp_enqueue_script('wp-customer-settings', WP_CUSTOMER_URL . 'assets/js/settings/settings-script.js', ['jquery', 'wp-customer-toast'], $this->version, true);
             
-            // Debug logging
-            error_log('Current screen ID: ' . $screen->id);
-            error_log('Current screen base: ' . $screen->base);
-
             // Get current tab and permission tab
             $current_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
             $permission_tab = isset($_GET['permission_tab']) ? sanitize_key($_GET['permission_tab']) : '';
-
-            error_log('Current tab: ' . $current_tab);
-            error_log('Current permission tab: ' . $permission_tab);
-            error_log('Current URL: ' . $_SERVER['REQUEST_URI']);
 
             switch ($current_tab) {
                 case 'permissions':
@@ -291,6 +283,14 @@ public function enqueue_frontend_assets() {
             wp_enqueue_script('confirmation-modal', WP_CUSTOMER_URL . 'assets/js/components/confirmation-modal.js', ['jquery'], $this->version, true);
             // Branch toast
             wp_enqueue_script('branch-toast', WP_CUSTOMER_URL . 'assets/js/branch/branch-toast.js', ['jquery'], $this->version, true);
+
+
+            // Existing handler untuk user select
+            // $this->enqueue_select_handler();
+            
+            // Tambah handler untuk wilayah
+            $this->enqueue_wilayah_handler();
+
 
             // Customer scripts - path fixed according to tree.md
             wp_enqueue_script('customer-datatable', WP_CUSTOMER_URL . 'assets/js/components/customer-datatable.js', ['jquery', 'datatables', 'customer-toast'], $this->version, true);
@@ -354,6 +354,50 @@ public function enqueue_frontend_assets() {
                 'select_customer' => __('Pilih Customer', 'wp-customer'),
                 'select_branch' => __('Pilih Cabang', 'wp-customer'),
                 'loading' => __('Memuat...', 'wp-customer')
+            ]
+        ]);
+    }
+    
+    private function enqueue_wilayah_handler() {
+        // Use direct constant check first
+        if (!defined('WILAYAH_INDONESIA_URL')) {
+            error_log('Wilayah Indonesia plugin is not installed');
+            return;
+        }
+
+        // Cek apakah sudah di-enqueue sebelumnya
+        if (wp_script_is('wilayah-select-handler-core', 'enqueued')) {
+            return;
+        }
+
+        // Enqueue core handler dari plugin wilayah-indonesia
+        wp_enqueue_script(
+            'wilayah-select-handler-core',
+            WILAYAH_INDONESIA_URL . 'assets/js/components/select-handler-core.js',
+            ['jquery'],
+            defined('WILAYAH_INDONESIA_VERSION') ? WILAYAH_INDONESIA_VERSION : '1.0.0',
+            true
+        );
+
+        // Enqueue UI handler dari plugin wilayah-indonesia
+        wp_enqueue_script(
+            'wilayah-select-handler-ui',
+            WILAYAH_INDONESIA_URL . 'assets/js/components/select-handler-ui.js',
+            ['jquery', 'wilayah-select-handler-core'],
+            defined('WILAYAH_INDONESIA_VERSION') ? WILAYAH_INDONESIA_VERSION : '1.0.0',
+            true
+        );
+
+        // Localize script data
+        wp_localize_script('wilayah-select-handler-core', 'wilayahData', [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('wilayah_select_nonce'),
+            'debug' => (defined('WP_DEBUG') && WP_DEBUG),
+            'texts' => [
+                'select_provinsi' => __('Pilih Provinsi', 'wp-customer'),
+                'select_regency' => __('Pilih Kabupaten/Kota', 'wp-customer'),
+                'loading' => __('Memuat...', 'wp-customer'),
+                'error' => __('Gagal memuat data', 'wp-customer')
             ]
         ]);
     }

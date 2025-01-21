@@ -30,6 +30,12 @@
  */
 
 defined('ABSPATH') || exit;
+
+// Tambahkan ini sementara di awal render form untuk debug
+error_log('Debug wilayah hooks:');
+error_log('Province select hook exists: ' . (has_action('wilayah_indonesia_province_select') ? 'yes' : 'no'));
+error_log('Regency select hook exists: ' . (has_action('wilayah_indonesia_regency_select') ? 'yes' : 'no'));
+
 ?>
 
 <div id="create-customer-modal" class="modal-overlay" style="display: none;">
@@ -38,6 +44,8 @@ defined('ABSPATH') || exit;
             <h3>Tambah Customer</h3>
             <button type="button" class="modal-close" aria-label="Close">&times;</button>
         </div>
+
+
         <div class="modal-content">
             <form id="create-customer-form" method="post">
                 <?php wp_nonce_field('wp_customer_nonce'); ?>
@@ -53,6 +61,43 @@ defined('ABSPATH') || exit;
                            class="regular-text" 
                            maxlength="100" 
                            required>
+                </div>
+
+                <div class="wp-customer-form-group">
+                    <label for="customer-provinsi" class="required-field">
+                        <?php _e('Provinsi', 'wp-customer'); ?>
+                    </label>
+                    <div class="input-group">
+                        <?php 
+                        do_action('wilayah_indonesia_province_select', [
+                            'name' => 'provinsi_id',
+                            'id' => 'customer-provinsi',
+                            'class' => 'regular-text wilayah-province-select',
+                            'data-placeholder' => __('Pilih Provinsi', 'wp-customer'),
+                            'required' => 'required',
+                            'aria-label' => __('Pilih Provinsi', 'wp-customer')
+                        ]);
+                        ?>
+                    </div>
+                </div>
+
+                <div class="wp-customer-form-group">
+                    <label for="customer-regency" class="required-field">
+                        <?php _e('Kabupaten/Kota', 'wp-customer'); ?>
+                    </label>
+                    <div class="input-group">
+                        <?php 
+                        do_action('wilayah_indonesia_regency_select', [
+                            'name' => 'regency_id',
+                            'id' => 'customer-regency',
+                            'class' => 'regular-text wilayah-regency-select',
+                            'data-loading-text' => __('Memuat...', 'wp-customer'),
+                            'required' => 'required',
+                            'aria-label' => __('Pilih Kabupaten/Kota', 'wp-customer'),
+                            'data-dependent' => 'customer-provinsi'
+                        ]);
+                        ?>
+                    </div>
                 </div>
 
                 <?php if (current_user_can('edit_all_customers')): ?>
