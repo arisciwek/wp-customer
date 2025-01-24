@@ -6,7 +6,7 @@
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/assets/js/components/create-customer-form.js
+ * Path: /wp-customer/assets/js/customer/create-customer-form.js
  *
  * Description: Handler untuk form customer.
  *              Menangani create dan update customer.

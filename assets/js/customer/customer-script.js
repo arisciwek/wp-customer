@@ -6,7 +6,7 @@
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/assets/js/customer.js
+ * Path: /wp-customer/assets/js/customer/customer-script.js
  *
  * Description: Main JavaScript handler untuk halaman customer.
  *              Mengatur interaksi antar komponen seperti DataTable,
@@ -86,15 +86,6 @@
                  .on('customer:loading.Customer', () => this.showLoading())
                  .on('customer:loaded.Customer', () => this.hideLoading());
 
-             // Panel events
-             $('.wp-customer-close-panel').off('click').on('click', () => this.closePanel());
-
-             // Panel navigation
-             $('.nav-tab').off('click').on('click', (e) => {
-                 e.preventDefault();
-                 this.switchTab($(e.currentTarget).data('tab'));
-             });
-
              // Window events
              $(window).off('hashchange.Customer').on('hashchange.Customer', () => this.handleHashChange());
          },
@@ -123,15 +114,20 @@
                     }
                 });
             },
-            
-        handleInitialState() {
+
+            handleInitialState() {
             const hash = window.location.hash;
             if (hash && hash.startsWith('#')) {
                 const customerId = parseInt(hash.substring(1));
                 if (customerId) {
                     this.validateCustomerAccess(
                         customerId,
-                        (data) => this.loadCustomerData(customerId),
+                        (data) => {
+                            // On successful validation
+                            this.load_customer_preview(customerId);
+                            this.components.container.addClass('with-right-panel');
+                            this.components.rightPanel.addClass('visible');
+                        },
                         (error) => {
                             window.location.href = 'admin.php?page=wp-customer';
                             CustomerToast.error(error.message);
@@ -140,57 +136,6 @@
                 }
             }
         },
-/*
-         handleHashChange() {
-             const hash = window.location.hash;
-             if (!hash) {
-                 this.closePanel();
-                 return;
-             }
-
-             const id = hash.substring(1);
-             if (id && id !== this.currentId) {
-                 $('.tab-content').removeClass('active');
-                 $('#customer-details').addClass('active');
-                 $('.nav-tab').removeClass('nav-tab-active');
-                 $('.nav-tab[data-tab="customer-details"]').addClass('nav-tab-active');
-
-                 this.loadCustomerData(id);
-             }
-         },
-*/
-
-/*
-
-
-            load_customer_preview(id) {
-                if (this.isLoading) return;
-                this.isLoading = true;
-
-                $.ajax({
-                    url: wpCustomerData.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: 'get_customer_data_ajax',
-                        id: id,
-                        nonce: wpCustomerData.nonce
-                    },
-                    success: (response) => {
-                        if (response.success) {
-                            $('#wp-customer-right-panel').html(response);
-                            this.currentId = id;
-                            this.switchTab('customer-details');
-                            this.components.container.addClass('with-right-panel');
-                            this.components.rightPanel.addClass('visible');
-                        }
-                    },
-                    complete: () => {
-                        this.isLoading = false;
-                    }
-                });
-            },
-
-*/
 
         handleHashChange() {
             const hash = window.location.hash;
@@ -458,48 +403,6 @@
                 window.Dashboard.loadStats(); // Gunakan loadStats() langsung
              }
          },
-
-
-         /**
-         * Get current customer ID for logged in user.
-         * This method makes an AJAX call to server to determine the active customer ID
-         * based on user's relationship (owner or employee) with customers.
-         * 
-         * @async
-         * @returns {Promise<number>} Resolves with customer ID (0 if no customer found)
-         * @throws {Error} When AJAX call fails or server returns error
-         * 
-         * @example
-         * try {
-         *   const customerId = await Customer.getCurrentCustomerId();
-         *   console.log('Active customer ID:', customerId);
-         * } catch (error) {
-         *   console.error('Failed to get customer ID:', error);
-         * }
-         *
-        getCurrentCustomerId() {
-            return new Promise((resolve, reject) => {
-                $.ajax({
-                    url: wpCustomerData.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: 'get_current_customer_id',
-                        nonce: wpCustomerData.nonce
-                    },
-                    success: (response) => {
-                        if (response.success) {
-                            resolve(response.data.customer_id);
-                        } else {
-                            reject(new Error(response.data.message));
-                        }
-                    },
-                    error: (xhr) => {
-                        reject(new Error('Failed to get customer ID'));
-                    }
-                });
-            });
-        },
-        */
 
         /**
          * Load customer statistics including total customers and branches.

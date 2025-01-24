@@ -6,7 +6,7 @@
  * @version     1.0.2
  * @author      arisciwek
  *
- * Path: /wp-customer/assets/js/components/customer-datatable.js
+ * Path: /wp-customer/assets/js/customer/customer-datatable.js
  *
  * Description: Komponen untuk mengelola DataTables customer.
  *              Menangani server-side processing, panel kanan,

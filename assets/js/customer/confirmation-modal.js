@@ -6,7 +6,7 @@
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/assets/js/components/confirmation-modal.js
+ * Path: /wp-customer/assets/js/customer/confirmation-modal.js
  *
  * Description: JavaScript handler untuk reusable modal component.
  *              Menangani show/hide, animasi, keyboard events,
