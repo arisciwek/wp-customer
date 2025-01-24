@@ -318,29 +318,56 @@
             },
 
             switchTab(tabId) {
+                // Pastikan kita punya currentId sebelum switch tab
+                if (!this.currentId) {
+                    return;
+                }
+
+                // Update URL tanpa reload halaman
+                const currentHash = window.location.hash;
+                if (!currentHash || !currentHash.includes(this.currentId)) {
+                    // Gunakan replaceState untuk update URL tanpa trigger hashchange
+                    window.history.replaceState(null, '', `#${this.currentId}`);
+                }
+
+                // Update UI
                 $('.nav-tab').removeClass('nav-tab-active');
                 $(`.nav-tab[data-tab="${tabId}"]`).addClass('nav-tab-active');
 
                 $('.tab-content').removeClass('active');
                 $(`#${tabId}`).addClass('active');
 
-                // Tambahkan ini untuk menangani tampilan tab membership
-                if (tabId === 'membership-info') {
-                    $('#membership-info').show();
-                } else {
-                    $('#membership-info').hide();
+                // Load content jika diperlukan
+                if (tabId === 'branch-list') {
+                    this.initializeBranchTable();
+                } 
+                else if (tabId === 'employee-list') {
+                    this.initializeEmployeeTable();
                 }
+            },
 
-                if (tabId === 'branch-list' && this.currentId) {
+            initializeBranchTable() {
+                const checkAndInit = () => {
                     if (window.BranchDataTable) {
                         window.BranchDataTable.init(this.currentId);
+                        $(`#branch-list .loading-placeholder`).hide();
+                    } else {
+                        setTimeout(checkAndInit, 100);
                     }
-                }
-                if (tabId === 'employee-list' && this.currentId) {
+                };
+                checkAndInit();
+            },
+
+            initializeEmployeeTable() {
+                const checkAndInit = () => {
                     if (window.EmployeeDataTable) {
                         window.EmployeeDataTable.init(this.currentId);
+                        $(`#employee-list .loading-placeholder`).hide();
+                    } else {
+                        setTimeout(checkAndInit, 100);
                     }
-                }
+                };
+                checkAndInit();
             },
 
          closePanel() {
@@ -449,7 +476,15 @@
         }
 
      };
-
+    
+    $(document).on('click', '.nav-tab', function(e) {
+        e.preventDefault();
+        const tabId = $(this).data('tab');
+        if (Customer.currentId) {
+            Customer.switchTab(tabId);
+        }
+    });
+    
      // Initialize when document is ready
      $(document).ready(() => {
          window.Customer = Customer;

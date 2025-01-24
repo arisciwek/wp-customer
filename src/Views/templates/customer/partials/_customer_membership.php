@@ -38,9 +38,16 @@
  */
 
 defined('ABSPATH') || exit;
+
+// Pastikan data membership tersedia
+$membership = $membership ?? [];
+$staff_count = $membership['staff_count'] ?? 0;
+$max_staff = $membership['max_staff'] ?? 2;
+$level = $membership['level'] ?? 'regular';
+$capabilities = $membership['capabilities'] ?? [];
 ?>
+
 <div id="membership-info" class="tab-content">
-    <!-- Current Membership Status in a card -->
     <div class="membership-status-card">
         <h3><?php _e('Status Membership Saat Ini', 'wp-customer'); ?></h3>
         <div class="membership-content">
@@ -49,10 +56,13 @@ defined('ABSPATH') || exit;
                 <h4><?php _e('Penggunaan Staff', 'wp-customer'); ?></h4>
                 <div class="staff-progress">
                     <div class="progress-bar">
-                        <div class="progress-fill" id="staff-usage-bar"></div>
+                        <div class="progress-fill" id="staff-usage-bar" 
+                             style="width: <?php echo $max_staff > 0 ? ($staff_count / $max_staff * 100) : 0; ?>%">
+                        </div>
                     </div>
                     <div class="usage-text">
-                        <span id="staff-usage-count"></span> / <span id="staff-usage-limit"></span> staff
+                        <span id="staff-usage-count"><?php echo esc_html($staff_count); ?></span> / 
+                        <span id="staff-usage-limit"><?php echo $max_staff === -1 ? 'Unlimited' : esc_html($max_staff); ?></span> staff
                     </div>
                 </div>
             </div>
@@ -60,55 +70,30 @@ defined('ABSPATH') || exit;
             <!-- Capabilities -->
             <div class="capabilities-section">
                 <h4><?php _e('Fitur Aktif', 'wp-customer'); ?></h4>
-                <ul class="capability-list" id="active-capabilities"></ul>
+                <ul class="capability-list" id="active-capabilities">
+                    <?php foreach ($capabilities as $cap => $enabled): 
+                        if ($enabled): ?>
+                            <li><?php echo esc_html($this->getCapabilityLabel($cap)); ?></li>
+                        <?php endif;
+                    endforeach; ?>
+                </ul>
             </div>
         </div>
     </div>
 
-    <!-- Upgrade Section Title -->
-    <h3 class="upgrade-section-title"><?php _e('Upgrade Membership', 'wp-customer'); ?></h3>
-
-    <!-- Upgrade Cards Container -->
-    <div class="upgrade-cards-container">
-        <!-- Regular Plan Card -->
-        <div class="upgrade-card">
-            <h4><?php _e('Regular', 'wp-customer'); ?></h4>
-            <ul class="plan-features">
-                <li><?php _e('Maksimal 2 staff', 'wp-customer'); ?></li>
-                <li><?php _e('Dapat menambah staff', 'wp-customer'); ?></li>
-                <li><?php _e('1 departemen', 'wp-customer'); ?></li>
-            </ul>
-            <button type="button" class="button upgrade-button" data-plan="regular">
-                <?php _e('Upgrade ke Regular', 'wp-customer'); ?>
-            </button>
+    <?php if ($access['access_type'] === 'admin' || $access['access_type'] === 'owner'): ?>
+        <div class="upgrade-cards-container">
+            <?php foreach (['regular', 'priority', 'utama'] as $plan_level):
+                if ($this->shouldShowUpgradeOption($level, $plan_level)): ?>
+                    <div class="upgrade-card">
+                        <h4><?php echo esc_html(ucfirst($plan_level)); ?></h4>
+                        <?php $this->renderPlanFeatures($plan_level); ?>
+                        <button type="button" class="button upgrade-button" data-plan="<?php echo esc_attr($plan_level); ?>">
+                            <?php printf(__('Upgrade ke %s', 'wp-customer'), ucfirst($plan_level)); ?>
+                        </button>
+                    </div>
+                <?php endif;
+            endforeach; ?>
         </div>
-
-        <!-- Priority Plan Card -->
-        <div class="upgrade-card">
-            <h4><?php _e('Priority', 'wp-customer'); ?></h4>
-            <ul class="plan-features">
-                <li><?php _e('Maksimal 5 staff', 'wp-customer'); ?></li>
-                <li><?php _e('Dapat menambah staff', 'wp-customer'); ?></li>
-                <li><?php _e('Dapat export data', 'wp-customer'); ?></li>
-                <li><?php _e('3 departemen', 'wp-customer'); ?></li>
-            </ul>
-            <button type="button" class="button upgrade-button" data-plan="priority">
-                <?php _e('Upgrade ke Priority', 'wp-customer'); ?>
-            </button>
-        </div>
-
-        <!-- Utama Plan Card -->
-        <div class="upgrade-card">
-            <h4><?php _e('Utama', 'wp-customer'); ?></h4>
-            <ul class="plan-features">
-                <li><?php _e('Unlimited staff', 'wp-customer'); ?></li>
-                <li><?php _e('Semua fitur Priority', 'wp-customer'); ?></li>
-                <li><?php _e('Dapat bulk import', 'wp-customer'); ?></li>
-                <li><?php _e('Unlimited departemen', 'wp-customer'); ?></li>
-            </ul>
-            <button type="button" class="button upgrade-button" data-plan="utama">
-                <?php _e('Upgrade ke Utama', 'wp-customer'); ?>
-            </button>
-        </div>
-    </div>
+    <?php endif; ?>
 </div>

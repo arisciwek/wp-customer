@@ -47,14 +47,14 @@ class CustomerController {
     private string $log_file;
 
     private function logPermissionCheck($action, $user_id, $customer_id, $branch_id = null, $result) {
-        // $this->debug_log(sprintf(
-        //    'Permission check for %s - User: %d, Customer: %d, Branch: %s, Result: %s',
-        //    $action,
-        //    $user_id,
-        //    $customer_id,
-        //    $branch_id ?? 'none',  // Gunakan null coalescing untuk handle null branch_id
-        //    $result ? 'granted' : 'denied'
-        // ));
+         $this->debug_log(sprintf(
+            'Permission check for %s - User: %d, Customer: %d, Branch: %s, Result: %s',
+            $action,
+            $user_id,
+            $customer_id,
+            $branch_id ?? 'none',  // Gunakan null coalescing untuk handle null branch_id
+            $result ? 'granted' : 'denied'
+         ));
     }
 
     /**
@@ -96,6 +96,7 @@ class CustomerController {
         add_action('wp_ajax_delete_customer', [$this, 'delete']);
         add_action('wp_ajax_validate_customer_access', [$this, 'validateCustomerAccess']);
         add_action('wp_ajax_get_customer_data_ajax', [$this, 'get_customer_data_ajax']);
+        add_action('wp_ajax_get_tab_content', [$this, 'get_tab_content']);
     }
 
     public function get_customer_data_ajax() {
@@ -152,6 +153,116 @@ class CustomerController {
         require WP_CUSTOMER_PATH . 'src/Views/templates/' . $template . '.php';
         return ob_get_clean();
     }
+
+    public function get_tab_content() {
+        check_ajax_referer('wp_customer_nonce', 'nonce');
+        $tab = $_POST['tab'] ?? '';
+        $customer_id = (int)($_POST['id'] ?? 0);
+
+            error_log('=== Debug Tab Content Loading ===');
+            error_log('Request data: ' . print_r($_POST, true));
+
+        // Get data
+        $customer = $this->model->find($customer_id);
+        $access = $this->validator->validateAccess($customer_id);
+        
+            error_log('Loading tab: ' . $tab);
+            error_log('Customer ID: ' . $customer_id);
+
+        // For branch tab, get branch data
+        $branches = [];
+        if ($tab === 'branch-list') {
+            $branchModel = new BranchModel();
+            $branches = $branchModel->getByCustomer($customer_id);
+        }
+
+        // Set template variables
+        $data = compact('customer', 'access', 'branches');
+
+        error_log('Customer data: ' . print_r($data['customer'], true));    
+        // Extract untuk template
+        extract($data);
+
+
+            error_log('Access data: ' . print_r($data['access'], true));
+        
+        ob_start();
+
+            switch($tab) {
+                case 'branch-list':
+                    error_log('Loading branch template');
+                    require WP_CUSTOMER_PATH . 'src/Views/templates/branch/partials/_branch_list.php';
+                    break;
+                case 'membership-info':
+                    error_log('Loading membership template');
+                    require WP_CUSTOMER_PATH . 'src/Views/templates/customer/partials/_customer_membership.php';
+                    break;
+                case 'employee-list':
+                    error_log('Loading employee template');
+                    require WP_CUSTOMER_PATH . 'src/Views/templates/employee/partials/_employee_list.php';
+                    break;
+            }
+        
+            $html = ob_get_clean();
+            error_log('Generated HTML length: ' . strlen($html));
+            error_log('=== End Debug Tab Content ===');
+
+            wp_send_json_success(['html' => $html]);
+    }
+
+    /*
+    public function get_tab_content() {
+        error_log('=== Debug Tab Content Loading ===');
+        error_log('Request data: ' . print_r($_POST, true));
+
+        check_ajax_referer('wp_customer_nonce', 'nonce');
+        $tab = $_POST['tab'];
+        $customer_id = (int)$_POST['id'];
+
+        error_log('Loading tab: ' . $tab);
+        error_log('Customer ID: ' . $customer_id);
+
+        // Siapkan data yang diperlukan
+        $data = [
+            'customer' => $this->model->find($customer_id),
+            'access' => $this->validator->validateAccess($customer_id)
+        ];
+
+        error_log('Customer data: ' . print_r($data['customer'], true));
+        error_log('Access data: ' . print_r($data['access'], true));
+
+        // Tambah membership data jika tab membership
+        if ($tab === 'membership-info') {
+            $data['membership'] = $this->model->getMembershipData($customer_id);
+            error_log('Membership data: ' . print_r($data['membership'], true));
+        }
+
+        // Extract data agar bisa diakses dalam template
+        extract($data);
+
+        ob_start();
+        switch($tab) {
+            case 'branch-list':
+                error_log('Loading branch template');
+                require WP_CUSTOMER_PATH . 'src/Views/templates/branch/partials/_branch_list.php';
+                break;
+            case 'membership-info':
+                error_log('Loading membership template');
+                require WP_CUSTOMER_PATH . 'src/Views/templates/customer/partials/_customer_membership.php';
+                break;
+            case 'employee-list':
+                error_log('Loading employee template');
+                require WP_CUSTOMER_PATH . 'src/Views/templates/employee/partials/_employee_list.php';
+                break;
+        }
+        $html = ob_get_clean();
+        error_log('Generated HTML length: ' . strlen($html));
+        error_log('=== End Debug Tab Content ===');
+
+        wp_send_json_success(['html' => $html]);
+    }
+    */
+
 
     /**
      * Validate customer access - public endpoint untuk AJAX
@@ -770,6 +881,50 @@ class CustomerController {
             $this->debug_log("Error getting customer data: " . $e->getMessage());
             return null;
         }
+    }
+
+    private function getCapabilityLabel($cap) {
+        $labels = [
+            'can_add_staff' => __('Dapat menambah staff', 'wp-customer'),
+            'can_export' => __('Dapat export data', 'wp-customer'),
+            'can_bulk_import' => __('Dapat bulk import', 'wp-customer')
+        ];
+        return $labels[$cap] ?? $cap;
+    }
+
+    private function shouldShowUpgradeOption($current_level, $target_level) {
+        $levels = ['regular', 'priority', 'utama'];
+        $current_idx = array_search($current_level, $levels);
+        $target_idx = array_search($target_level, $levels);
+        return $target_idx > $current_idx;
+    }
+
+    private function renderPlanFeatures($plan) {
+        $features = [
+            'regular' => [
+                'Maksimal 2 staff',
+                'Dapat menambah staff',
+                '1 departemen'
+            ],
+            'priority' => [
+                'Maksimal 5 staff',
+                'Dapat menambah staff',
+                'Dapat export data',
+                '3 departemen'
+            ],
+            'utama' => [
+                'Unlimited staff',
+                'Semua fitur Priority',
+                'Dapat bulk import',
+                'Unlimited departemen'
+            ]
+        ];
+
+        echo '<ul class="plan-features">';
+        foreach ($features[$plan] as $feature) {
+            echo '<li>' . esc_html($feature) . '</li>';
+        }
+        echo '</ul>';
     }
 
     public function renderMainPage() {

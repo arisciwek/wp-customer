@@ -171,7 +171,7 @@
         return $result;
     }
 
-    private function getMembershipData(int $customer_id): array {
+    public function getMembershipData(int $customer_id): array {
         // Get membership settings
         $settings = get_option('wp_customer_membership_settings', []);
         
