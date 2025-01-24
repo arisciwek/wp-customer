@@ -97,7 +97,7 @@ class CustomerController {
         add_action('wp_ajax_validate_customer_access', [$this, 'validateCustomerAccess']);
         add_action('wp_ajax_get_customer_data_ajax', [$this, 'get_customer_data_ajax']);
     }
-    
+
     public function get_customer_data_ajax() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
@@ -112,12 +112,14 @@ class CustomerController {
             if (!$access['has_access']) {
                 throw new \Exception('Access denied');
             }
+            error_log('Access data: ' . print_r($access, true));
 
             // Get customer data
             $customer = $this->model->find($id);
             if (!$customer) {
                 throw new \Exception('Customer not found');
             }
+            error_log('Customer data: ' . print_r($customer, true));
 
             // Get related data
             $branches = $this->branchModel->getByCustomer($id);
@@ -131,6 +133,7 @@ class CustomerController {
                 'branches' => $branches,
                 'employees' => $employees
             ];
+            error_log('Data for template: ' . print_r($data, true));
 
             // Render template
             ob_start();
@@ -703,102 +706,6 @@ class CustomerController {
             wp_send_json_error(['message' => $e->getMessage()]);
         }
     }
-
-    /**
-     * Get customer ID associated with current logged in user.
-     * Checks both owner and employee relationships to determine the active customer.
-     * Used internally by other methods requiring customer context.
-     * 
-     * @access private
-     * @since 1.0.0
-     * @return int Customer ID if found, 0 otherwise
-     * 
-     * @example
-     * // Inside another controller method:
-     * $customer_id = $this->getCurrentUserCustomerId();
-     * if ($customer_id > 0) {
-     *     // Process for specific customer
-     * }
-     */
-    /*
-    private function getCurrentUserCustomerId() {
-        global $wpdb;
-        $current_user_id = get_current_user_id();
-
-        // Check if user is owner of any customer
-        $customer_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}app_customers 
-             WHERE user_id = %d 
-             LIMIT 1",
-            $current_user_id
-        ));
-
-        if ($customer_id) {
-            return (int)$customer_id;
-        }
-
-        // If not owner, check if user is employee
-        $customer_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT customer_id 
-             FROM {$wpdb->prefix}app_customer_employees 
-             WHERE user_id = %d 
-             AND status = 'active' 
-             LIMIT 1",
-            $current_user_id
-        ));
-
-        return $customer_id ? (int)$customer_id : 0;
-    }
-    */
-
-    /**
-     * AJAX endpoint to provide current user's customer ID to frontend.
-     * Returns the customer ID based on user's relationship (owner/employee).
-     * Used by JavaScript to determine active customer context.
-     * 
-     * @access public
-     * @since 1.0.0
-     * @uses WP_Customer_Controller::getCurrentUserCustomerId()
-     * @uses check_ajax_referer() For security validation
-     * @uses wp_send_json_success() To return customer ID
-     * @uses wp_send_json_error() To return error message
-     * 
-     * @fires wp_ajax_get_current_customer_id
-     * 
-     * @example
-     * // From JavaScript:
-     * $.ajax({
-     *     url: wpCustomerData.ajaxUrl,
-     *     data: {
-     *         action: 'get_current_customer_id',
-     *         nonce: wpCustomerData.nonce
-     *     },
-     *     success: function(response) {
-     *         const customerId = response.data.customer_id;
-     *     }
-     * });
-     */
-    /*
-    public function getCurrentCustomerId() {
-        try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
-            
-            $customer_id = $this->getCurrentUserCustomerId();
-            
-            $this->debug_log("Got customer ID for current user: " . $customer_id);
-            
-            wp_send_json_success([
-                'customer_id' => $customer_id
-            ]);
-
-        } catch (\Exception $e) {
-            $this->debug_log("Error getting customer ID: " . $e->getMessage());
-            wp_send_json_error([
-                'message' => $e->getMessage()
-            ]);
-        }
-    }
-    */
 
     // Di CustomerController
     public function getStats() {
