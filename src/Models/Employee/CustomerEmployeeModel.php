@@ -292,4 +292,36 @@ class CustomerEmployeeModel {
             ['%d']
         ) !== false;
     }
+
+    
+    public function getByCustomer($customer_id) {
+        global $wpdb;
+        
+        $query = $wpdb->prepare(
+            "SELECT e.*, b.name as branch_name 
+             FROM {$this->table} e
+             LEFT JOIN {$this->branch_table} b ON e.branch_id = b.id
+             WHERE e.customer_id = %d 
+             AND e.status = 'active'
+             ORDER BY e.name ASC",
+            $customer_id
+        );
+        
+        return $wpdb->get_results($query);
+    }
+
+    public function getEmployeeData(int $user_id, int $customer_id): ?object {
+        global $wpdb;
+        
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT e.*, b.name as branch_name
+             FROM {$this->table} e
+             LEFT JOIN {$this->branch_table} b ON e.branch_id = b.id
+             WHERE e.user_id = %d 
+             AND e.customer_id = %d 
+             AND e.status = 'active'",
+            $user_id,
+            $customer_id
+        ));
+    }
 }

@@ -1,69 +1,59 @@
-
-
-
-<div class="wp-customer-panel-header">
-    <h2>Detail Customer: <span id="customer-header-name"></span></h2>
-    <button type="button" class="wp-customer-close-panel">×</button>
-</div>
-
-<div class="wp-customer-panel-content">
-
 <?php
 
+defined('ABSPATH') || exit;
 
-// Debug untuk memastikan data ada
+// At top of file
 if (defined('WP_DEBUG') && WP_DEBUG) {
-    error_log('=== Customer Right Panel Debug ===');
-    error_log('Template Data Available:');
-    //error_log(print_r(get_defined_vars(), true));
+    error_log('Template data received:');
+    error_log(print_r($customer, true)); 
 }
 
-// Make data available for all tabs
-$panel_data = [
-    'customer' => isset($customer) && is_object($customer) ? $customer : null,
-    'access' => isset($access) ? $access : null,
-    'controller' => isset($controller) ? $controller : null
-];
-
-// Di _branch_list.php
-$branches = isset($panel_data['branches']) ? $panel_data['branches'] : [];
-//$branch_model = isset($panel_data['branch_model']) ? $panel_data['branch_model'] : null;
-
-// Di _employee_list.php 
-$employees = isset($panel_data['employees']) ? $panel_data['employees'] : [];
-//$employee_model = isset($panel_data['employee_model']) ? $panel_data['employee_model'] : null;
-
-// Debug panel data
+/*
+// Debug log untuk $access
 if (defined('WP_DEBUG') && WP_DEBUG) {
-    //error_log('Panel Data Prepared:');
-    //error_log(print_r($panel_data, true));
-    //error_log('Panel Data [Customer]:' . print_r($panel_data['customer'], true));
+    error_log('=== Debug Customer Right Panel ===');
+    error_log('$access variable: ' . print_r(isset($access) ? $access : 'undefined', true)); 
+    if (isset($access)) {
+        error_log('access_type: ' . (isset($access['access_type']) ? $access['access_type'] : 'not set'));
+        error_log('has_access: ' . (isset($access['has_access']) ? $access['has_access'] : 'not set'));
+    }
+    error_log('Current user ID: ' . get_current_user_id());
+    error_log('Current user roles: ' . print_r(wp_get_current_user()->roles, true));
+    error_log('=== End Debug ===');
 }
-
-
-
-
+*/
 ?>
 
-<div class="nav-tab-wrapper">
-    <a href="#" class="nav-tab nav-tab-customer-details nav-tab-active" data-tab="customer-details">Data Customer</a>
-    <a href="#" class="nav-tab" data-tab="membership-info">Membership</a>
-    <a href="#" class="nav-tab" data-tab="branch-list">Cabang</a>
-    <a href="#" class="nav-tab" data-tab="employee-list">Staff</a>
-</div>
+<div class="wp-customer-preview"> 
+    <div class="wp-customer-panel-header">
+        <h2>Detail Customer</h2>
+        <?php if (isset($customer) && is_object($customer)): ?>
+            <h4><?php echo esc_html($customer->name); ?></h4>
+        <?php endif; ?>
+        <button type="button" class="wp-customer-close-panel">×</button>
+    </div>  
 
-<?php
-// Pass data ke semua partial templates
-$template_data = isset($panel_data) ? $panel_data : [];
+    <div class="wp-customer-panel-content">
+        <div class="nav-tab-wrapper">
+            <a href="#" class="nav-tab nav-tab-active" data-tab="customer-details">Data Customer</a>
+            <a href="#" class="nav-tab" data-tab="membership-info">Membership</a>
+            <a href="#" class="nav-tab" data-tab="branch-list">Cabang</a>
+            <a href="#" class="nav-tab" data-tab="employee-list">Staff</a>
+        </div>
 
-foreach ([
-    'customer/partials/_customer_details.php',
-    'customer/partials/_customer_membership.php',
-    'branch/partials/_branch_list.php',
-    'employee/partials/_employee_list.php'
-] as $template) {
-    include_once WP_CUSTOMER_PATH . 'src/Views/templates/' . $template;
-}
-?>
-
+        <div class="tab-content-wrapper">
+            <div id="customer-details" class="tab-content tab-content-active">
+                <?php include WP_CUSTOMER_PATH . 'src/Views/templates/customer/partials/_customer_details.php'; ?>
+            </div>
+            <div id="membership-info" class="tab-content">
+                <?php include WP_CUSTOMER_PATH . 'src/Views/templates/customer/partials/_customer_membership.php'; ?>
+            </div>
+            <div id="branch-list" class="tab-content">
+                <?php include WP_CUSTOMER_PATH . 'src/Views/templates/branch/partials/_branch_list.php'; ?>
+            </div>
+            <div id="employee-list" class="tab-content">
+                <?php include WP_CUSTOMER_PATH . 'src/Views/templates/employee/partials/_employee_list.php'; ?>
+            </div>
+        </div>
+    </div>
 </div>

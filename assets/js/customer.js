@@ -140,7 +140,7 @@
                 }
             }
         },
-
+/*
          handleHashChange() {
              const hash = window.location.hash;
              if (!hash) {
@@ -158,6 +158,87 @@
                  this.loadCustomerData(id);
              }
          },
+*/
+
+/*
+
+
+            load_customer_preview(id) {
+                if (this.isLoading) return;
+                this.isLoading = true;
+
+                $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'get_customer_data_ajax',
+                        id: id,
+                        nonce: wpCustomerData.nonce
+                    },
+                    success: (response) => {
+                        if (response.success) {
+                            $('#wp-customer-right-panel').html(response);
+                            this.currentId = id;
+                            this.switchTab('customer-details');
+                            this.components.container.addClass('with-right-panel');
+                            this.components.rightPanel.addClass('visible');
+                        }
+                    },
+                    complete: () => {
+                        this.isLoading = false;
+                    }
+                });
+            },
+
+*/
+
+        handleHashChange() {
+            const hash = window.location.hash;
+            if (!hash) {
+                this.closePanel();
+                return;
+            }
+
+            const id = hash.substring(1);
+            if (id) {
+                this.load_customer_preview(id);
+                $('.tab-content').removeClass('active');
+                $('#customer-details').addClass('active');
+                $('.nav-tab').removeClass('nav-tab-active');
+                $('.nav-tab[data-tab="customer-details"]').addClass('nav-tab-active');
+            }
+        },
+
+
+        load_customer_preview(id) {
+            if (this.isLoading) return;
+            this.isLoading = true;
+
+            $.ajax({
+                url: wpCustomerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'get_customer_data_ajax',
+                    id: id,
+                    nonce: wpCustomerData.nonce
+                },
+                success: (response) => {
+                    $('#wp-customer-right-panel').html(response);
+                    this.currentId = id;
+                    this.components.container.addClass('with-right-panel');
+                    this.components.rightPanel.addClass('visible');
+                    
+                    // Bind new events setelah content diupdate
+                    this.bindEvents();
+                },
+                error: (xhr) => {
+                    CustomerToast.error('Gagal memuat data customer');
+                },
+                complete: () => {
+                    this.isLoading = false;
+                }
+            });
+        },
 
          async loadCustomerData(id) {
              if (!id || this.isLoading) return;

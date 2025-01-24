@@ -95,10 +95,60 @@ class CustomerController {
         add_action('wp_ajax_create_customer', [$this, 'store']);
         add_action('wp_ajax_delete_customer', [$this, 'delete']);
         add_action('wp_ajax_validate_customer_access', [$this, 'validateCustomerAccess']);
-        //add_action('wp_ajax_get_current_customer_id', [$this, 'getCurrentCustomerId']);
-
+        add_action('wp_ajax_get_customer_data_ajax', [$this, 'get_customer_data_ajax']);
     }
+    
+    public function get_customer_data_ajax() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+            
+            $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+            if (!$id) {
+                throw new \Exception('Invalid customer ID');
+            }
 
+            // Validate access
+            $access = $this->validator->validateAccess($id);
+            if (!$access['has_access']) {
+                throw new \Exception('Access denied');
+            }
+
+            // Get customer data
+            $customer = $this->model->find($id);
+            if (!$customer) {
+                throw new \Exception('Customer not found');
+            }
+
+            // Get related data
+            $branches = $this->branchModel->getByCustomer($id);
+            $customerEmployeeModel = new \WPCustomer\Models\Employee\CustomerEmployeeModel();
+            $employees = $customerEmployeeModel->getByCustomer($id);
+
+            // Prepare view data
+            $data = [
+                'customer' => $customer,
+                'access' => $access,
+                'branches' => $branches,
+                'employees' => $employees
+            ];
+
+            // Render template
+            ob_start();
+            extract($data);
+            require WP_CUSTOMER_PATH . 'src/Views/templates/customer-right-panel.php';
+            $html = ob_get_clean();
+
+            die($html); // Kirim HTML langsung
+
+        } catch (\Exception $e) {
+            wp_send_json_error(['message' => $e->getMessage()]);
+        }
+    }
+    private function render_template($template, $data) {
+        ob_start();
+        require WP_CUSTOMER_PATH . 'src/Views/templates/' . $template . '.php';
+        return ob_get_clean();
+    }
 
     /**
      * Validate customer access - public endpoint untuk AJAX
