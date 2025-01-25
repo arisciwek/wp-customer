@@ -29,6 +29,24 @@ error_log('Customer variable On Template: ' . print_r($customer ?? 'null', true)
 // Sebelum permission check
 error_log('Access type On Template: ' . ($access['access_type'] ?? 'undefined'));
 error_log('Can add branch On Template: ' . (current_user_can('add_branch') ? 'yes' : 'no'));
+/*
+$active_tab = $_GET['tab'] ?? 'customer-details';
+
+error_log('Active Tab: ' . ($active_tab ?? 'undefined'));
+
+if ($active_tab !== 'branch-list') {
+    ?>
+    <div id="branch-list" class="tab-content">
+        <div class="loading-placeholder">
+            <span class="spinner is-active"></span>
+            <p>Memuat data cabang...</p>
+        </div>
+    </div>
+    <?php
+    return;
+}
+*/
+
 ?>
 
 <div id="branch-list" class="tab-content">
