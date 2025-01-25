@@ -54,10 +54,10 @@ class BranchesDB {
             code varchar(17) NOT NULL,
             name varchar(100) NOT NULL,
             type enum('cabang','pusat') NOT NULL,
-            nitku varchar(20) NULL,                    // Nomor Identitas Tempat Kegiatan Usaha  
-            postal_code varchar(5) NULL,               // Kode pos
-            latitude decimal(10,8) NULL,               // Koordinat lokasi
-            longitude decimal(11,8) NULL,              // Koordinat lokasi
+            nitku varchar(20) NULL COMMENT 'Nomor Identitas Tempat Kegiatan Usaha',
+            postal_code varchar(5) NULL COMMENT 'Kode pos',
+            latitude decimal(10,8) NULL COMMENT 'Koordinat lokasi',
+            longitude decimal(11,8) NULL COMMENT 'Koordinat lokasi',
             address text NULL,
             phone varchar(20) NULL,
             email varchar(100) NULL,
@@ -74,12 +74,8 @@ class BranchesDB {
             KEY customer_id_index (customer_id),
             KEY created_by_index (created_by),
             KEY nitku_index (nitku),
-            KEY postal_code_index (postal_code), 
-            KEY location_index (latitude, longitude),
-            CONSTRAINT `{$wpdb->prefix}app_branches_ibfk_1` 
-                FOREIGN KEY (customer_id) 
-                REFERENCES `{$wpdb->prefix}app_customers` (id) 
-                ON DELETE CASCADE
+            KEY postal_code_index (postal_code),
+            KEY location_index (latitude, longitude)
         ) $charset_collate;";
     }
 }

@@ -57,21 +57,56 @@ class BranchModel {
         global $wpdb;
 
         $data['code'] = $this->generateBranchCode($data['customer_id']);
+        
+        $insertData = [
+            'customer_id' => $data['customer_id'],
+            'code' => $data['code'],
+            'name' => $data['name'],
+            'type' => $data['type'],
+            'nitku' => $data['nitku'] ?? null,
+            'postal_code' => $data['postal_code'] ?? null,
+            'latitude' => $data['latitude'] ?? null,
+            'longitude' => $data['longitude'] ?? null,
+            'address' => $data['address'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'email' => $data['email'] ?? null,
+            'provinsi_id' => $data['provinsi_id'] ?? null,
+            'regency_id' => $data['regency_id'] ?? null,
+            'user_id' => $data['user_id'] ?? null,
+            'created_by' => $data['created_by'],
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql'),
+            'status' => $data['status'] ?? 'active'
+        ];
+
         $result = $wpdb->insert(
             $this->table,
+            $insertData,
             [
-                'customer_id' => $data['customer_id'],
-                'code' => $data['code'],
-                'name' => $data['name'],
-                'type' => $data['type'],
-                'created_by' => get_current_user_id(),
-                'created_at' => current_time('mysql'),
-                'updated_at' => current_time('mysql')
-            ],
-            ['%d', '%s', '%s', '%s', '%d', '%s', '%s']
+                '%d', // customer_id
+                '%s', // code
+                '%s', // name 
+                '%s', // type
+                '%s', // nitku
+                '%s', // postal_code
+                '%f', // latitude
+                '%f', // longitude 
+                '%s', // address
+                '%s', // phone
+                '%s', // email
+                '%d', // provinsi_id
+                '%d', // regency_id
+                '%d', // user_id
+                '%d', // created_by
+                '%s', // created_at
+                '%s', // updated_at
+                '%s'  // status
+            ]
         );
 
         if ($result === false) {
+            error_log('Failed to insert branch: ' . $wpdb->last_error);
+            error_log('Insert data: ' . print_r($insertData, true));
             return null;
         }
 

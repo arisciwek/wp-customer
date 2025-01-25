@@ -146,33 +146,154 @@ class DemoData {
      * Generate branch data
      */
     private static function generateBranches() {
-        $branch_types = ['kabupaten', 'kota'];
+        $branch_types = ['cabang', 'pusat'];
+        $postal_codes = ['12760', '13210', '14350', '15310', '16110'];
+        $provinsi = [
+            ['id' => 31, 'name' => 'DKI Jakarta'],
+            ['id' => 32, 'name' => 'Jawa Barat'],
+            ['id' => 33, 'name' => 'Jawa Tengah'],
+            ['id' => 34, 'name' => 'DI Yogyakarta'],
+            ['id' => 35, 'name' => 'Jawa Timur']
+        ];
+        
+        $kota = [
+            31 => [
+                ['id' => 3171, 'name' => 'Jakarta Pusat'],
+                ['id' => 3172, 'name' => 'Jakarta Utara'],
+                ['id' => 3173, 'name' => 'Jakarta Barat'],
+                ['id' => 3174, 'name' => 'Jakarta Selatan'],
+                ['id' => 3175, 'name' => 'Jakarta Timur']
+            ],
+            32 => [
+                ['id' => 3271, 'name' => 'Bogor'],
+                ['id' => 3272, 'name' => 'Sukabumi'],
+                ['id' => 3273, 'name' => 'Bandung'],
+                ['id' => 3274, 'name' => 'Cirebon'],
+                ['id' => 3275, 'name' => 'Bekasi']
+            ]
+        ];
+
+        $domains = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com'];
         
         foreach (self::$customer_ids as $customer_id) {
-            // Each customer gets 3 branches
-            for ($i = 1; $i <= 3; $i++) {
-                $city = self::generateCityName();
+            // Each customer gets 2-3 branches
+            $branch_count = rand(2, 3);
+            
+            // First branch is always pusat
+            $selected_provinsi = $provinsi[array_rand($provinsi)];
+            $selected_kota = isset($kota[$selected_provinsi['id']]) ? 
+                $kota[$selected_provinsi['id']][array_rand($kota[$selected_provinsi['id']])] : 
+                ['id' => null, 'name' => 'Unknown'];
+
+            // Generate kantor pusat first
+            $pusat_data = [
+                'customer_id' => $customer_id,
+                'name' => "Kantor Pusat " . $selected_kota['name'],
+                'type' => 'pusat',
+                'nitku' => sprintf("%013d", rand(1000000000000, 9999999999999)),
+                'postal_code' => $postal_codes[array_rand($postal_codes)],
+                'latitude' => rand(-6000000, -5000000) / 100000,
+                'longitude' => rand(106000000, 107000000) / 100000,
+                'address' => sprintf(
+                    'Jl. %s No. %d, %s, %s', 
+                    self::generateStreetName(),
+                    rand(1, 200),
+                    $selected_kota['name'],
+                    $selected_provinsi['name']
+                ),
+                'phone' => sprintf(
+                    '%s%s', 
+                    rand(0, 1) ? '021-' : '022-',
+                    rand(1000000, 9999999)
+                ),
+                'email' => sprintf(
+                    'pusat.%s@%s',
+                    strtolower(str_replace([' ', '.'], '', $selected_kota['name'])),
+                    $domains[array_rand($domains)]
+                ),
+                'provinsi_id' => $selected_provinsi['id'],
+                'regency_id' => $selected_kota['id'],
+                'user_id' => self::$user_ids[$customer_id],
+                'created_by' => self::$user_ids[$customer_id],
+                'status' => 'active'
+            ];
+
+            $pusat_id = self::$branchModel->create($pusat_data);
+            if (!$pusat_id) {
+                throw new \Exception('Failed to create pusat for customer: ' . $customer_id);
+            }
+            self::$branch_ids[] = $pusat_id;
+
+            // Generate remaining branches
+            for ($i = 1; $i < $branch_count; $i++) {
+                $selected_provinsi = $provinsi[array_rand($provinsi)];
+                $selected_kota = isset($kota[$selected_provinsi['id']]) ? 
+                    $kota[$selected_provinsi['id']][array_rand($kota[$selected_provinsi['id']])] : 
+                    ['id' => null, 'name' => 'Unknown'];
+
                 $branch_data = [
                     'customer_id' => $customer_id,
-                    'name' => "Cabang " . $city . " " . $i,
-                    'type' => $branch_types[array_rand($branch_types)],
-                    'address' => 'Jl. ' . $city . ' No. ' . rand(1, 100),
-                    'phone' => '08' . rand(100000000, 999999999),
-                    'email' => strtolower(str_replace(' ', '', $city)) . $i . '@example.com',
-                    'created_by' => 1,
-                    'status' => 'active',
-                    'user_id' => self::$user_ids[$customer_id]
+                    'name' => sprintf(
+                        "Cabang %s %d",
+                        $selected_kota['name'],
+                        $i
+                    ),
+                    'type' => 'cabang',
+                    'nitku' => sprintf("%013d", rand(1000000000000, 9999999999999)),
+                    'postal_code' => $postal_codes[array_rand($postal_codes)],
+                    'latitude' => rand(-6000000, -5000000) / 100000,
+                    'longitude' => rand(106000000, 107000000) / 100000,
+                    'address' => sprintf(
+                        'Jl. %s No. %d RT %02d/RW %02d, %s, %s', 
+                        self::generateStreetName(),
+                        rand(1, 200),
+                        rand(1, 12),
+                        rand(1, 8),
+                        $selected_kota['name'],
+                        $selected_provinsi['name']
+                    ),
+                    'phone' => sprintf(
+                        '%s%s', 
+                        rand(0, 1) ? '021-' : '022-',
+                        rand(1000000, 9999999)
+                    ),
+                    'email' => sprintf(
+                        'cabang.%s%d@%s',
+                        strtolower(str_replace([' ', '.'], '', $selected_kota['name'])),
+                        $i,
+                        $domains[array_rand($domains)]
+                    ),
+                    'provinsi_id' => $selected_provinsi['id'],
+                    'regency_id' => $selected_kota['id'],
+                    'user_id' => self::$user_ids[$customer_id],
+                    'created_by' => self::$user_ids[$customer_id],
+                    'status' => 'active'
                 ];
 
-                // Use model to create branch (which will generate code automatically)
                 $branch_id = self::$branchModel->create($branch_data);
                 if (!$branch_id) {
                     throw new \Exception('Failed to create branch for customer: ' . $customer_id);
                 }
-
                 self::$branch_ids[] = $branch_id;
             }
         }
+    }
+
+    private static function generateStreetName() {
+        $prefixes = ['Jend.', 'Letjen.', 'Dr.', 'Ir.', 'Prof.'];
+        $names = [
+            'Sudirman', 'Thamrin', 'Gatot Subroto', 'Rasuna Said', 'Kuningan',
+            'Asia Afrika', 'Diponegoro', 'Ahmad Yani', 'Imam Bonjol', 'Veteran',
+            'Pemuda', 'Merdeka', 'Hayam Wuruk', 'Gajah Mada', 'Wahid Hasyim'
+        ];
+        $types = ['Raya', 'Besar', ''];
+        
+        return sprintf(
+            '%s %s %s',
+            $prefixes[array_rand($prefixes)],
+            $names[array_rand($names)],
+            $types[array_rand($types)]
+        );
     }
 
 
