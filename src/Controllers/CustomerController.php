@@ -34,6 +34,7 @@ namespace WPCustomer\Controllers;
 
 use WPCustomer\Models\CustomerModel;
 use WPCustomer\Models\Branch\BranchModel;
+use WPCustomer\Models\Employee\CustomerEmployeeModel;
 use WPCustomer\Validators\CustomerValidator;
 use WPCustomer\Cache\CacheManager;
 
@@ -43,6 +44,7 @@ class CustomerController {
     private CustomerValidator $validator;
     private CacheManager $cache;
     private BranchModel $branchModel;  // Tambahkan ini
+    private CustomerEmployeeModel $customerEmployeeModel;  // Tambahkan ini
 
     private string $log_file;
 
@@ -64,7 +66,8 @@ class CustomerController {
 
     public function __construct() {
         $this->model = new CustomerModel();
-        $this->branchModel = new BranchModel();  // Inisialisasi di constructor
+        $this->branchModel = new BranchModel();
+        $this->customerEmployeeModel = new CustomerEmployeeModel();
         $this->validator = new CustomerValidator();
         $this->cache = new CacheManager();
 
@@ -124,8 +127,7 @@ class CustomerController {
 
             // Get related data
             $branches = $this->branchModel->getByCustomer($id);
-            $customerEmployeeModel = new \WPCustomer\Models\Employee\CustomerEmployeeModel();
-            $employees = $customerEmployeeModel->getByCustomer($id);
+            $employees = $this->customerEmployeeModel->getByCustomer($id);
 
             // Prepare view data
             $data = [
@@ -142,8 +144,6 @@ class CustomerController {
             require WP_CUSTOMER_PATH . 'src/Views/templates/customer-right-panel.php';
             $html = ob_get_clean();
 
-
-
         error_log('Generated AJAX HTML length: ' . strlen($html));
         error_log('First 501 characters of HTML:');
         error_log(substr($html, 0, 500));
@@ -158,203 +158,6 @@ class CustomerController {
             wp_send_json_error(['message' => $e->getMessage()]);
         }
     }
-/*
-    private function render_template($template, $data) {
-        ob_start();
-        require WP_CUSTOMER_PATH . 'src/Views/templates/' . $template . '.php';
-        return ob_get_clean();
-    }
-*/
-    
-/*
-    public function get_tab_content() {
-        try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
-            $tab = $_POST['tab'] ?? '';
-            $customer_id = (int)($_POST['id'] ?? 0);
-
-            error_log('=== Start Debug Tab Content ===');
-            error_log('Request data: ' . print_r($_POST, true));
-
-            // Get data
-            $customer = $this->model->find($customer_id);
-            $access = $this->validator->validateAccess($customer_id);
-
-            error_log('Loading tab: ' . $tab);
-            error_log('Customer ID: ' . $customer_id);
-            error_log('Customer data: ' . print_r($customer, true));
-            error_log('Access data: ' . print_r($access, true));
-
-            // For branch tab, get branch data
-            $branches = [];
-            if ($tab === 'branch-list') {
-                $branchModel = new BranchModel();
-                $branches = $branchModel->getByCustomer($customer_id);
-                error_log('Branch data: ' . print_r($branches, true));
-            }
-
-            // Set template variables
-            $data = compact('customer', 'access', 'branches');
-            extract($data);
-
-            ob_start();
-            switch($tab) {
-                case 'branch-list':
-                    error_log('Loading branch template');
-                    require WP_CUSTOMER_PATH . 'src/Views/templates/branch/partials/_branch_list.php';
-                    require WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/create-branch-form.php';
-                    require WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/edit-branch-form.php';
-                    break;
-                case 'membership-info':
-                    error_log('Loading membership template');
-                    require WP_CUSTOMER_PATH . 'src/Views/templates/customer/partials/_customer_membership.php';
-                    break;
-                case 'employee-list':
-                    error_log('Loading employee template');
-                    require WP_CUSTOMER_PATH . 'src/Views/templates/employee/partials/_employee_list.php';
-                    break;
-            }
-
-            $html = ob_get_clean();
-            error_log('Generated HTML length: ' . strlen($html));
-            error_log('First 500 characters of HTML:');
-            error_log(substr($html, 0, 500));
-            error_log('Last 500 characters of HTML:');
-            error_log(substr($html, -500));
-            error_log('=== End Debug Tab Content ===');
-
-            wp_send_json_success(['html' => $html]);
-
-        } catch (\Exception $e) {
-            error_log('Error in get_tab_content: ' . $e->getMessage());
-            error_log('Stack trace: ' . $e->getTraceAsString());
-            wp_send_json_error([
-                'message' => $e->getMessage(),
-                'details' => WP_DEBUG ? $e->getTraceAsString() : null
-            ]);
-        }
-    }
-*/
-    /*
-    public function get_tab_content() {
-        check_ajax_referer('wp_customer_nonce', 'nonce');
-        $tab = $_POST['tab'] ?? '';
-        $customer_id = (int)($_POST['id'] ?? 0);
-
-            error_log('=== Debug Tab Content Loading ===');
-            error_log('Request data: ' . print_r($_POST, true));
-
-        // Get data
-        $customer = $this->model->find($customer_id);
-        $access = $this->validator->validateAccess($customer_id);
-        
-            error_log('Loading tab: ' . $tab);
-            error_log('Customer ID: ' . $customer_id);
-
-        // For branch tab, get branch data
-        $branches = [];
-        if ($tab === 'branch-list') {
-            $branchModel = new BranchModel();
-            $branches = $branchModel->getByCustomer($customer_id);
-        }
-
-        // Set template variables
-        $data = compact('customer', 'access', 'branches');
-
-        error_log('Customer data: ' . print_r($data['customer'], true));    
-        // Extract untuk template
-        extract($data);
-
-
-            error_log('Access data: ' . print_r($data['access'], true));
-        
-        ob_start();
-
-            switch($tab) {
-                case 'branch-list':
-                    error_log('Loading branch template');
-                    require WP_CUSTOMER_PATH . 'src/Views/templates/branch/partials/_branch_list.php';
-                    require WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/create-branch-form.php';
-                    require WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/edit-branch-form.php';
-
-                    break;
-                case 'membership-info':
-                    error_log('Loading membership template');
-                    require WP_CUSTOMER_PATH . 'src/Views/templates/customer/partials/_customer_membership.php';
-                    break;
-                case 'employee-list':
-                    error_log('Loading employee template');
-                    require WP_CUSTOMER_PATH . 'src/Views/templates/employee/partials/_employee_list.php';
-                    break;
-            }
-        
-            $html = ob_get_clean();
-            error_log('Generated HTML length: ' . strlen($html));
-
-
-            error_log('First 500 characters of HTML:');
-            error_log(substr($html, 0, 500));
-            error_log('Last 500 characters of HTML:');
-            error_log(substr($html, -500));
-
-
-            error_log('=== End Debug Tab Content ===');
-
-            wp_send_json_success(['html' => $html]);
-    }
-
-    
-    public function get_tab_content() {
-        error_log('=== Debug Tab Content Loading ===');
-        error_log('Request data: ' . print_r($_POST, true));
-
-        check_ajax_referer('wp_customer_nonce', 'nonce');
-        $tab = $_POST['tab'];
-        $customer_id = (int)$_POST['id'];
-
-        error_log('Loading tab: ' . $tab);
-        error_log('Customer ID: ' . $customer_id);
-
-        // Siapkan data yang diperlukan
-        $data = [
-            'customer' => $this->model->find($customer_id),
-            'access' => $this->validator->validateAccess($customer_id)
-        ];
-
-        error_log('Customer data: ' . print_r($data['customer'], true));
-        error_log('Access data: ' . print_r($data['access'], true));
-
-        // Tambah membership data jika tab membership
-        if ($tab === 'membership-info') {
-            $data['membership'] = $this->model->getMembershipData($customer_id);
-            error_log('Membership data: ' . print_r($data['membership'], true));
-        }
-
-        // Extract data agar bisa diakses dalam template
-        extract($data);
-
-        ob_start();
-        switch($tab) {
-            case 'branch-list':
-                error_log('Loading branch template');
-                require WP_CUSTOMER_PATH . 'src/Views/templates/branch/partials/_branch_list.php';
-                break;
-            case 'membership-info':
-                error_log('Loading membership template');
-                require WP_CUSTOMER_PATH . 'src/Views/templates/customer/partials/_customer_membership.php';
-                break;
-            case 'employee-list':
-                error_log('Loading employee template');
-                require WP_CUSTOMER_PATH . 'src/Views/templates/employee/partials/_employee_list.php';
-                break;
-        }
-        $html = ob_get_clean();
-        error_log('Generated HTML length: ' . strlen($html));
-        error_log('=== End Debug Tab Content ===');
-
-        wp_send_json_success(['html' => $html]);
-    }
-    */
 
 
     /**
