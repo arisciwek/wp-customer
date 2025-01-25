@@ -172,6 +172,17 @@
                     this.currentId = id;
                     this.components.container.addClass('with-right-panel');
                     this.components.rightPanel.addClass('visible');
+
+                    // Reinitialize components after content update
+                    if (window.BranchDataTable) {
+                        window.BranchDataTable.init(id);
+                    }
+                    if (window.CreateBranchForm) {
+                        window.CreateBranchForm.init();
+                    }
+                    if (window.EditBranchForm) {
+                        window.EditBranchForm.init(); 
+                    }
                     
                     // Bind new events setelah content diupdate
                     this.bindEvents();
@@ -484,7 +495,7 @@
             Customer.switchTab(tabId);
         }
     });
-    
+
      // Initialize when document is ready
      $(document).ready(() => {
          window.Customer = Customer;

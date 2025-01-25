@@ -37,17 +37,11 @@ if (defined('WP_DEBUG') && WP_DEBUG) {
             ?>
         </div>
     </div>
+
+    <?php
+    // Include related modals
+    require WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/create-branch-form.php';
+    require WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/edit-branch-form.php';
+    ?>
+    
 </div>
-
-
-    <!-- Modal Forms -->
-    <?php
-    require_once WP_CUSTOMER_PATH . 'src/Views/templates/forms/create-customer-form.php';
-    require_once WP_CUSTOMER_PATH . 'src/Views/templates/forms/edit-customer-form.php';
-    ?>
-    <!-- Modal Templates -->
-    <?php
-    if (function_exists('wp_customer_render_confirmation_modal')) {
-        wp_customer_render_confirmation_modal();
-    }
-    ?>

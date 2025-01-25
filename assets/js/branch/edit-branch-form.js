@@ -250,10 +250,15 @@
         },
 
         resetForm() {
+            if (!this.form || !this.form[0]) return;
+            
             this.form[0].reset();
             this.form.find('.form-error').remove();
             this.form.find('.error').removeClass('error');
-            this.form.validate().resetForm();
+            
+            if (this.form.data('validator')) {
+                this.form.validate().resetForm();
+            }
         }
     };
 

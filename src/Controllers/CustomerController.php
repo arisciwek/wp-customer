@@ -192,6 +192,9 @@ class CustomerController {
                 case 'branch-list':
                     error_log('Loading branch template');
                     require WP_CUSTOMER_PATH . 'src/Views/templates/branch/partials/_branch_list.php';
+                    require WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/create-branch-form.php';
+                    require WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/edit-branch-form.php';
+
                     break;
                 case 'membership-info':
                     error_log('Loading membership template');

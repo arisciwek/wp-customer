@@ -140,9 +140,3 @@ error_log('Can add branch On Template: ' . (current_user_can('add_branch') ? 'ye
         </div>
     <?php endif; ?>
 </div>
-
-<?php
-// Include related modals
-require_once WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/create-branch-form.php';
-require_once WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/edit-branch-form.php';
-?>

@@ -57,7 +57,12 @@
             });
 
             // Add button handler
-            $('#add-customer-btn').on('click', () => this.showModal());
+            //$('#add-customer-btn').on('click', () => this.showModal());
+
+            $('#add-customer-btn').on('click', () => {
+                console.log('Button clicked');
+                this.showModal();
+            });
 
             // Modal events
             $('.modal-close', this.modal).on('click', () => this.hideModal());
@@ -212,12 +217,14 @@
         },
 
         showModal() {
+            console.log('Show modal called');
             this.resetForm();
             this.modal.fadeIn(300, () => {
+                console.log('Fade complete');
                 this.form.find('[name="name"]').focus();
             });
         },
-
+        
         hideModal() {
             this.modal.fadeOut(300, () => {
                 this.resetForm();
@@ -225,16 +232,19 @@
         },
 
         resetForm() {
+            if (!this.form || !this.validator) return;
+
             this.form[0].reset();
             this.form.find('.form-error').remove();
             this.form.find('.error').removeClass('error');
-            this.form.validate().resetForm();
+            this.validator.resetForm();
 
-            // Reset wilayah selects
             const $regencySelect = this.form.find('[name="regency_id"]');
-            $regencySelect
-                .html('<option value="">Pilih Kabupaten/Kota</option>')
-                .prop('disabled', true);
+            if ($regencySelect.length) {
+                $regencySelect
+                    .html('<option value="">Pilih Kabupaten/Kota</option>')
+                    .prop('disabled', true);
+            }
         }
     };
 

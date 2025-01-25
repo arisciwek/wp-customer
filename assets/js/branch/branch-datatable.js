@@ -73,14 +73,24 @@
                  this.refresh();
              });
 
-             // Direct event binding for action buttons
-             $('#branch-table').off('click', '.delete-branch').on('click', '.delete-branch', (e) => {
-                 e.preventDefault();
-                 const id = $(e.currentTarget).data('id');
-                 if (id) {
-                     this.handleDelete(id);
-                 }
-             });
+            // Event delegation for action buttons
+            $('#branch-table')
+                .off('click', '.delete-branch, .edit-branch')
+                .on('click', '.delete-branch', (e) => {
+                    e.preventDefault();
+                    const id = $(e.currentTarget).data('id');
+                    if (id) {
+                        this.handleDelete(id);
+                    }
+                })
+                .on('click', '.edit-branch', (e) => {
+                    e.preventDefault();
+                    const id = $(e.currentTarget).data('id');
+                    if (id && window.EditBranchForm) {
+                        window.EditBranchForm.loadBranchData(id);
+                    }
+                });
+                
          },
 
          async handleDelete(id) {
