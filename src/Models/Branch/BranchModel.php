@@ -123,28 +123,58 @@ class BranchModel {
             WHERE r.id = %d
         ", $id));
     }
-
     public function update(int $id, array $data): bool {
         global $wpdb;
 
-        $updateData = array_merge($data, ['updated_at' => current_time('mysql')]);
-        $format = [];
+        $updateData = [
+            'name' => $data['name'] ?? null,
+            'type' => $data['type'] ?? null,
+            'nitku' => $data['nitku'] ?? null,
+            'postal_code' => $data['postal_code'] ?? null,
+            'latitude' => $data['latitude'] ?? null,
+            'longitude' => $data['longitude'] ?? null,
+            'address' => $data['address'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'email' => $data['email'] ?? null,
+            'provinsi_id' => $data['provinsi_id'] ?? null,
+            'regency_id' => $data['regency_id'] ?? null,
+            'user_id' => $data['user_id'] ?? null,
+            'status' => $data['status'] ?? null,
+            'updated_at' => current_time('mysql')
+        ];
 
-        // Add format for each field
-        if (isset($data['code'])) $format[] = '%d';
-        if (isset($data['name'])) $format[] = '%s';
-        if (isset($data['type'])) $format[] = '%s';
-        $format[] = '%s'; // for updated_at
+        // Remove null values
+        $updateData = array_filter($updateData, function($value) {
+            return $value !== null;
+        });
+
+        $formats = array_map(function($key) {
+            switch($key) {
+                case 'latitude':
+                case 'longitude':
+                    return '%f';
+                case 'provinsi_id':
+                case 'regency_id':
+                    return '%d';
+                default:
+                    return '%s';
+            }
+        }, array_keys($updateData));
 
         $result = $wpdb->update(
             $this->table,
             $updateData,
             ['id' => $id],
-            $format,
+            $formats,
             ['%d']
         );
 
-        return $result !== false;
+        if ($result === false) {
+            error_log('Update branch error: ' . $wpdb->last_error);
+            return false;
+        }
+
+        return true;
     }
 
     public function delete(int $id): bool {
