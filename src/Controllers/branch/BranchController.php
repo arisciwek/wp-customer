@@ -25,11 +25,13 @@
 
 namespace WPCustomer\Controllers\Branch;
 
+use WPCustomer\Models\CustomerModel;
 use WPCustomer\Models\Branch\BranchModel;
 use WPCustomer\Validators\Branch\BranchValidator;
 use WPCustomer\Cache\CacheManager;
 
 class BranchController {
+    private CustomerModel $customerModel;
     private BranchModel $model;
     private BranchValidator $validator;
     private CacheManager $cache;
@@ -41,6 +43,7 @@ class BranchController {
     private const DEFAULT_LOG_FILE = 'logs/branch.log';
 
     public function __construct() {
+        $this->customerModel = new CustomerModel();
         $this->model = new BranchModel();
         $this->validator = new BranchValidator();
         $this->cache = new CacheManager();
@@ -603,7 +606,12 @@ private function canEditBranch($branch, $customer) {
             // Validate input
             $data = [
                 'name' => sanitize_text_field($_POST['name']),
-                'type' => sanitize_text_field($_POST['type'])
+                'type' => sanitize_text_field($_POST['type']),
+                'phone' => sanitize_text_field($_POST['phone']),
+                'provinsi_id' => intval($_POST['provinsi_id']),
+                'regency_id' => intval($_POST['regency_id']), 
+                'latitude' => floatval($_POST['latitude']),
+                'longitude' => floatval($_POST['longitude'])
             ];
 
             $errors = $this->validator->validateUpdate($data, $id);

@@ -20,6 +20,24 @@
     background-color: #218838;
 }
 
+.branch-form-group .error {
+    border-color: #dc3545;
+    background-color: #fff;
+}
+
+.branch-form-group .error:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 1px #dc3545;
+    outline: none;
+}
+
+.branch-form-group .error ~ .form-error {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 4px;
+    display: block;
+}
+
 .branch-toast-error {
     background-color: #C82333;
 }

@@ -318,14 +318,6 @@ div#branch-table_filter input {
     margin-left: 10px;
 }
 
-.branch-form-section h4 {
-    margin: 0 0 16px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid #e2e8f0;
-    font-size: 14px;
-    font-weight: 600;
-}
-
 .branch-form-row {
     display: flex;
     flex-wrap: wrap;
@@ -404,20 +396,29 @@ div#branch-table_filter input {
 /* Card Sections */
 .branch-form-section {
     background: #fff;
-    border: 1px solid #ddd;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+    font-size: 14px;
     border-radius: 4px;
     padding: 20px;
     margin-bottom: 20px;
     width: 100%;  /* Full width */
     box-sizing: border-box;
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.1);
+
 }
 
 .branch-form-section h4 {
     margin: 0 0 15px;
     padding-bottom: 10px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 2px solid #342b2b;
     font-size: 14px;
     color: #23282d;
+    display: block;
+    width: 100%;
+    font-weight: 600;
+    background: #ddd;
+    padding: 6px 4px;
 }
 
 /* Form Groups */

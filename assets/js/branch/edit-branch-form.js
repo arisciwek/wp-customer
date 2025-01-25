@@ -153,6 +153,20 @@
         this.form.find('[name="regency_id"]').val(branch.regency_id);
         this.form.find('[name="status"]').val(branch.status);
 
+        
+        // Province and Regency fields
+        if (branch.provinsi_id) {
+            this.form.find('[name="provinsi_id"]').val(branch.provinsi_id).trigger('change');
+            
+            // Wait for province change to complete before setting regency
+            setTimeout(() => {
+                if (branch.regency_id) {
+                    this.form.find('[name="regency_id"]').val(branch.regency_id);
+                }
+            }, 500);
+        }
+
+
         this.modal.find('.modal-header h3').text(`Edit Cabang: ${branch.name}`);
         this.modal.fadeIn(300, () => this.form.find('[name="name"]').focus());
     },
@@ -168,22 +182,27 @@
                 type: { required: true },
                 nitku: { maxlength: 20 },
                 postal_code: { 
+                    required: true,
                     maxlength: 5,
                     digits: true
                 },
                 latitude: {
+                    required: true,
                     number: true,
                     range: [-90, 90]
                 },
                 longitude: {
+                    required: true,
                     number: true,
                     range: [-180, 180]
                 },
                 phone: {
+                    required: true,
                     maxlength: 20,
                     phoneID: true
                 },
                 email: {
+                    required: true,
                     email: true,
                     maxlength: 100
                 }
@@ -195,6 +214,8 @@
                     maxlength: 'Nama cabang maksimal 100 karakter'
                 },
                 type: { required: 'Tipe cabang wajib dipilih' },
+                provinsi_id: { required: 'Provinsi wajib dipilih' },
+                regency_id: { required: 'Kabupaten/Kota wajib dipilih' }
                 // ... other validation messages
             }
         });

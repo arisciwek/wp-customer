@@ -77,7 +77,7 @@ class BranchValidator {
         $type = trim(sanitize_text_field($data['type'] ?? ''));
         if (empty($type)) {
             $errors['type'] = __('Tipe cabang wajib diisi.', 'wp-customer');
-        } elseif (!in_array($type, ['kabupaten', 'kota'])) {
+        } elseif (!in_array($type, ['cabang', 'pusat'])) {
             $errors['type'] = __('Tipe cabang tidak valid.', 'wp-customer');
         }
 
@@ -120,7 +120,7 @@ class BranchValidator {
         // Type validation if provided
         if (isset($data['type'])) {
             $type = trim(sanitize_text_field($data['type']));
-            if (!in_array($type, ['kabupaten', 'kota'])) {
+            if (!in_array($type, ['cabang', 'pusat'])) {
                 $errors['type'] = __('Tipe cabang tidak valid.', 'wp-customer');
             }
         }

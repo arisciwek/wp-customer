@@ -61,8 +61,15 @@
                                 <option value="cabang"><?php _e('Cabang', 'wp-customer'); ?></option>
                                 <option value="pusat"><?php _e('Pusat', 'wp-customer'); ?></option>
                             </select>
-                            <span class="field-hint"><?php _e('Pilih tipe cabang', 'wp-customer'); ?></span>
+                            <span class="field-hint"><?php _e('Pilih tipe cabang: Kantor Pusat atau Kantor Cabang, Kantor Operasional, Perwakilan selain Kantor Pusat', 'wp-customer'); ?></span>
                         </div>
+
+                        <div class="branch-form-group">
+                            <label for="edit-branch-nitku">NITKU</label>
+                            <input type="text" id="edit-branch-nitku" name="nitku" maxlength="20">
+                            <span class="field-hint"><?php _e('Nomor Identitas Tempat Kegiatan Usaha, jika ada', 'wp-customer'); ?></span>
+                        </div>
+
                     </div>
 
                     <!-- Kontak -->
@@ -76,7 +83,7 @@
                         </div>
 
                         <div class="branch-form-group">
-                            <label for="edit-branch-email">Email</label>
+                            <label for="edit-branch-email" class="required-field">Email</label>
                             <input type="email" id="edit-branch-email" name="email" maxlength="100">
                             <span class="field-hint"><?php _e('Email aktif cabang', 'wp-customer'); ?></span>
                         </div>
@@ -98,36 +105,62 @@
                 </div>
 
                 <div class="row right-side">
-                    <!-- Lokasi & Identitas -->
+                    <!-- Alamat & Lokasi -->
                     <div class="branch-form-section">
-                        <h4><?php _e('Lokasi & Identitas', 'wp-customer'); ?></h4>
+                        <h4><?php _e('Aamat & Lokasi', 'wp-customer'); ?></h4>
                         
                         <div class="branch-form-group">
-                            <label for="edit-branch-nitku">NITKU</label>
-                            <input type="text" id="edit-branch-nitku" name="nitku" maxlength="20">
-                            <span class="field-hint"><?php _e('Nomor Identitas Tempat Kegiatan Usaha', 'wp-customer'); ?></span>
+                            <label for="edit-branch-address" class="required-field">Alamat</label>
+                            <textarea id="edit-branch-address" name="address" rows="3"></textarea>
+                            <span class="field-hint"><?php _e('Alamat cabang tanpa kabupaten/kota, provinsi dan kode pos', 'wp-customer'); ?></span>
+                        </div>
+                        
+                        <div class="branch-form-group">
+                            <label for="edit-branch-provinsi" class="required-field">
+                                <?php _e('Provinsi', 'wp-customer'); ?>
+                            </label>
+                            <?php 
+                            do_action('wilayah_indonesia_province_select', [
+                                'name' => 'provinsi_id',
+                                'id' => 'edit-branch-provinsi',
+                                'class' => 'regular-text wilayah-province-select',
+                                'data-placeholder' => __('Pilih Provinsi', 'wp-customer'),
+                                'required' => 'required'
+                            ]);
+                            ?>
                         </div>
 
                         <div class="branch-form-group">
-                            <label for="edit-branch-postal">Kode Pos</label>
+                            <label for="edit-branch-regency" class="required-field">
+                                <?php _e('Kabupaten/Kota', 'wp-customer'); ?>
+                            </label>
+                            <?php 
+                            do_action('wilayah_indonesia_regency_select', [
+                                'name' => 'regency_id',
+                                'id' => 'edit-branch-regency',
+                                'class' => 'regular-text wilayah-regency-select',
+                                'data-loading-text' => __('Memuat...', 'wp-customer'),
+                                'required' => 'required',
+                                'data-dependent' => 'edit-branch-provinsi'
+                            ]);
+                            ?>
+                        </div>
+
+                        <div class="branch-form-group">
+                            <label for="edit-branch-postal" class="required-field">Kode Pos</label>
                             <input type="text" id="edit-branch-postal" name="postal_code" maxlength="5">
                             <span class="field-hint"><?php _e('5 digit kode pos', 'wp-customer'); ?></span>
                         </div>
 
-                        <div class="branch-form-group">
-                            <label for="edit-branch-address">Alamat</label>
-                            <textarea id="edit-branch-address" name="address" rows="3"></textarea>
-                            <span class="field-hint"><?php _e('Alamat lengkap cabang', 'wp-customer'); ?></span>
-                        </div>
-
                         <div class="branch-coordinates">
+                            <h4><?php _e('Lokasi', 'wp-customer'); ?></h4>
                             <div class="branch-form-group">
-                                <label for="edit-branch-latitude">Latitude</label>
+                                <label for="edit-branch-latitude" class="required-field">Latitude</label>
                                 <input type="text" id="edit-branch-latitude" name="latitude">
                                 <span class="field-hint"><?php _e('Contoh: -6.123456', 'wp-customer'); ?></span>
                             </div>
 
-                            <div class="branch-form-group">
+                            <div class="branch-form-group" class="required-field">
                                 <label for="edit-branch-longitude">Longitude</label>
                                 <input type="text" id="edit-branch-longitude" name="longitude">
                                 <span class="field-hint"><?php _e('Contoh: 106.123456', 'wp-customer'); ?></span>
