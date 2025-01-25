@@ -22,6 +22,24 @@
  */
 
 defined('ABSPATH') || exit;
+
+/*
+$active_tab = $_GET['tab'] ?? 'customer-details';
+
+error_log('Active Tab: ' . ($active_tab ?? 'undefined'));
+
+if ($active_tab !== 'employee-list') {
+    ?>
+    <div id="employee-list" class="tab-content">
+        <div class="loading-placeholder">
+            <span class="spinner is-active"></span>
+            <p>Memuat data employee...</p>
+        </div>
+    </div>
+    <?php
+    return;
+}
+*/
 ?>
 
 <div id="employee-list" class="tab-content">
