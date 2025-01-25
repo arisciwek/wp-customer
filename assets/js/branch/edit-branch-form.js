@@ -83,69 +83,9 @@
             }
         },
 
-        showEditForm(data) {
-            if (!data || !data.branch) {
-                CustomerToast.error('Data cabang tidak valid');
-                return;
-            }
-
-            // Reset form first
-            this.resetForm();
-
-            // Populate form data
-            this.form.find('#branch-id').val(data.branch.id);
-            this.form.find('[name="name"]').val(data.branch.name);
-            this.form.find('[name="code"]').val(data.branch.code);
-            this.form.find('[name="type"]').val(data.branch.type);
-
-            // Update modal title with branch name
-            this.modal.find('.modal-header h3').text(`Edit Cabang: ${data.branch.name}`);
-
-            // Show modal with animation
-            this.modal.fadeIn(300, () => {
-                this.form.find('[name="name"]').focus();
-            });
-        },
-
         hideModal() {
             this.modal.fadeOut(300, () => {
                 this.resetForm();
-            });
-        },
-
-        initializeValidation() {
-            this.form.validate({
-                rules: {
-                    name: {
-                        required: true,
-                        minlength: 3,
-                        maxlength: 100
-                    },
-                    type: {
-                        required: true
-                    }
-                },
-                messages: {
-                    name: {
-                        required: 'Nama cabang wajib diisi',
-                        minlength: 'Nama cabang minimal 3 karakter',
-                        maxlength: 'Nama cabang maksimal 100 karakter'
-                    },
-                    type: {
-                        required: 'Tipe cabang wajib dipilih'
-                    }
-                },
-                errorElement: 'span',
-                errorClass: 'form-error',
-                errorPlacement: (error, element) => {
-                    error.insertAfter(element);
-                },
-                highlight: (element) => {
-                    $(element).addClass('error');
-                },
-                unhighlight: (element) => {
-                    $(element).removeClass('error');
-                }
             });
         },
 
@@ -186,53 +126,135 @@
             }
         },
 
-        async handleUpdate(e) {
-            e.preventDefault();
 
-            if (!this.form.valid()) {
-                return;
-            }
 
-            const id = this.form.find('#branch-id').val();
-            const requestData = {
-                action: 'update_branch',
-                nonce: wpCustomerData.nonce,
-                id: id,
-                name: this.form.find('[name="name"]').val().trim(),
-                type: this.form.find('[name="type"]').val(),
-                code: this.form.find('[name="code"]').val().trim()
-            };
 
-            this.setLoadingState(true);
+    showEditForm(data) {
+        if (!data?.branch) {
+            CustomerToast.error('Data cabang tidak valid');
+            return;
+        }
 
-            try {
-                const response = await $.ajax({
-                    url: wpCustomerData.ajaxUrl,
-                    type: 'POST',
-                    data: requestData
-                });
+        this.resetForm();
 
-                if (response.success) {
-                    CustomerToast.success('Kabupaten/kota berhasil diperbarui');
-                    this.hideModal();
+        // Populate all form fields
+        const branch = data.branch;
+        this.form.find('#branch-id').val(branch.id);
+        this.form.find('[name="name"]').val(branch.name);
+        this.form.find('[name="type"]').val(branch.type);
+        this.form.find('[name="nitku"]').val(branch.nitku);
+        this.form.find('[name="postal_code"]').val(branch.postal_code);
+        this.form.find('[name="latitude"]').val(branch.latitude);
+        this.form.find('[name="longitude"]').val(branch.longitude);
+        this.form.find('[name="address"]').val(branch.address);
+        this.form.find('[name="phone"]').val(branch.phone);
+        this.form.find('[name="email"]').val(branch.email);
+        this.form.find('[name="provinsi_id"]').val(branch.provinsi_id);
+        this.form.find('[name="regency_id"]').val(branch.regency_id);
+        this.form.find('[name="status"]').val(branch.status);
 
-                    // Trigger events untuk refresh DataTable
-                    $(document).trigger('branch:updated', [response.data]);
+        this.modal.find('.modal-header h3').text(`Edit Cabang: ${branch.name}`);
+        this.modal.fadeIn(300, () => this.form.find('[name="name"]').focus());
+    },
 
-                    // Refresh DataTable jika ada
-                    if (window.BranchDataTable) {
-                        window.BranchDataTable.refresh();
-                    }
-                } else {
-                    CustomerToast.error(response.data?.message || 'Gagal memperbarui cabang');
+    initializeValidation() {
+        this.form.validate({
+            rules: {
+                name: {
+                    required: true,
+                    minlength: 3,
+                    maxlength: 100
+                },
+                type: { required: true },
+                nitku: { maxlength: 20 },
+                postal_code: { 
+                    maxlength: 5,
+                    digits: true
+                },
+                latitude: {
+                    number: true,
+                    range: [-90, 90]
+                },
+                longitude: {
+                    number: true,
+                    range: [-180, 180]
+                },
+                phone: {
+                    maxlength: 20,
+                    phoneID: true
+                },
+                email: {
+                    email: true,
+                    maxlength: 100
                 }
-            } catch (error) {
-                console.error('Update branch error:', error);
-                CustomerToast.error('Gagal menghubungi server');
-            } finally {
-                this.setLoadingState(false);
+            },
+            messages: {
+                name: {
+                    required: 'Nama cabang wajib diisi',
+                    minlength: 'Nama cabang minimal 3 karakter',
+                    maxlength: 'Nama cabang maksimal 100 karakter'
+                },
+                type: { required: 'Tipe cabang wajib dipilih' },
+                // ... other validation messages
             }
-        },
+        });
+
+        // Add custom phone validation for Indonesia
+        $.validator.addMethod('phoneID', function(phone_number, element) {
+            return this.optional(element) || phone_number.match(/^(\+62|62)?[\s-]?0?8[1-9]{1}\d{1}[\s-]?\d{4}[\s-]?\d{2,5}$/);
+        }, 'Masukkan nomor telepon yang valid');
+    },
+
+    async handleUpdate(e) {
+        e.preventDefault();
+        if (!this.form.valid()) return;
+
+        const formData = {
+            action: 'update_branch',
+            nonce: wpCustomerData.nonce,
+            id: this.form.find('#branch-id').val(),
+            name: this.form.find('[name="name"]').val().trim(),
+            type: this.form.find('[name="type"]').val(),
+            nitku: this.form.find('[name="nitku"]').val().trim(),
+            postal_code: this.form.find('[name="postal_code"]').val().trim(),
+            latitude: this.form.find('[name="latitude"]').val(),
+            longitude: this.form.find('[name="longitude"]').val(),
+            address: this.form.find('[name="address"]').val().trim(),
+            phone: this.form.find('[name="phone"]').val().trim(),
+            email: this.form.find('[name="email"]').val().trim(),
+            provinsi_id: this.form.find('[name="provinsi_id"]').val(),
+            regency_id: this.form.find('[name="regency_id"]').val(),
+            status: this.form.find('[name="status"]').val()
+        };
+
+        this.setLoadingState(true);
+
+        try {
+            const response = await $.ajax({
+                url: wpCustomerData.ajaxUrl,
+                type: 'POST',
+                data: formData
+            });
+
+            if (response.success) {
+                CustomerToast.success('Cabang berhasil diperbarui');
+                this.hideModal();
+                $(document).trigger('branch:updated', [response.data]);
+                if (window.BranchDataTable) {
+                    window.BranchDataTable.refresh();
+                }
+            } else {
+                CustomerToast.error(response.data?.message || 'Gagal memperbarui cabang');
+            }
+        } catch (error) {
+            console.error('Update branch error:', error);
+            CustomerToast.error('Gagal menghubungi server');
+        } finally {
+            this.setLoadingState(false);
+        }
+    },
+    
+
 
         setLoadingState(loading) {
             const $submitBtn = this.form.find('[type="submit"]');
