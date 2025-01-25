@@ -45,6 +45,26 @@ $staff_count = $membership['staff_count'] ?? 0;
 $max_staff = $membership['max_staff'] ?? 2;
 $level = $membership['level'] ?? 'regular';
 $capabilities = $membership['capabilities'] ?? [];
+
+
+/*
+$active_tab = $_GET['tab'] ?? 'customer-details';
+
+error_log('Active Tab: ' . ($active_tab ?? 'undefined'));
+
+if ($active_tab !== 'membership-info') {
+    ?>
+    <div id="membership-info" class="tab-content">
+        <div class="loading-placeholder">
+            <span class="spinner is-active"></span>
+            <p>Memuat data membership...</p>
+        </div>
+    </div>
+    <?php
+    return;
+}
+*/
+
 ?>
 
 <div id="membership-info" class="tab-content">
