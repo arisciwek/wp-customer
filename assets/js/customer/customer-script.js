@@ -82,7 +82,7 @@
                  .on('customer:created.Customer', (e, data) => this.handleCreated(data))
                  .on('customer:updated.Customer', (e, data) => this.handleUpdated(data))
                  .on('customer:deleted.Customer', () => this.handleDeleted())
-                 .on('customer:display.Customer', (e, data) => this.displayData(data))
+                 //.on('customer:display.Customer', (e, data) => this.displayData(data))
                  .on('customer:loading.Customer', () => this.showLoading())
                  .on('customer:loaded.Customer', () => this.hideLoading());
 
@@ -219,7 +219,7 @@
                     console.log('Load customer response:', response);  // Debug load response
 
                  if (response.success) {
-                     this.displayData(response.data);
+                     //this.displayData(response.data);
                      this.currentId = id;
                  } else {
                      CustomerToast.error(response.data?.message || 'Gagal memuat data customer');
@@ -234,7 +234,7 @@
                  this.hideLoading();
              }
          },
-
+/*
          displayData(data) {
              if (!data || !data.customer) {
                  CustomerToast.error('Data customer tidak valid');
@@ -305,11 +305,8 @@
                     $(this).toggle(this.shouldShowUpgradeOption(currentLevel, cardLevel));
                 });
             }
-
-
-
          },
-
+*/
             // Helper function untuk label capability
             getCapabilityLabel(cap) {
                 const labels = {
