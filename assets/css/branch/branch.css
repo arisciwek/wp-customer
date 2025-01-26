@@ -511,3 +511,14 @@ div#branch-table_filter input {
         width: 100%;
     }
 }
+
+
+#branch-table {
+    table-layout: fixed;
+    width: 100% !important;
+}
+
+#branch-table th,
+#branch-table td {
+    word-wrap: break-word;
+}
