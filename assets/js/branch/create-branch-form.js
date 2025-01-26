@@ -21,6 +21,7 @@
  *
  * Last modified: 2024-12-10
  */
+
 (function($) {
     'use strict';
 
@@ -32,19 +33,16 @@
         init() {
             this.modal = $('#create-branch-modal');
             this.form = $('#create-branch-form');
-
             this.bindEvents();
             this.initializeValidation();
         },
 
         bindEvents() {
-            // Form events
             this.form.on('submit', (e) => this.handleCreate(e));
             this.form.on('input', 'input[name="name"]', (e) => {
                 this.validateField(e.target);
             });
 
-            // Add button handler
             $('#add-branch-btn').on('click', () => {
                 const customerId = window.Customer?.currentId;
                 if (customerId) {
@@ -54,11 +52,7 @@
                 }
             });
 
-            // Modal events
-            $('.modal-close', this.modal).on('click', () => this.hideModal());
-            $('.cancel-create', this.modal).on('click', () => this.hideModal());
-
-            // Close modal when clicking outside
+            $('.modal-close, .cancel-create', this.modal).on('click', () => this.hideModal());
             this.modal.on('click', (e) => {
                 if ($(e.target).is('.modal-overlay')) {
                     this.hideModal();
@@ -73,15 +67,18 @@
             }
 
             this.customerId = customerId;
-            this.form.find('#customer_id').val(customerId);
+            const customerIdField = this.form.find('#customer_id');
+            if (customerIdField.length) {
+                customerIdField.val(customerId);
+            }
 
-            // Reset and show form
             this.resetForm();
-            this.modal
-                .addClass('branch-modal')
-                .fadeIn(300, () => {
-                    this.form.find('[name="name"]').focus();
-                });
+            this.modal.addClass('branch-modal').fadeIn(300, () => {
+                const nameField = this.form.find('[name="name"]');
+                if (nameField.length) {
+                    nameField.focus();
+                }
+            });
         },
 
         hideModal() {
@@ -101,6 +98,30 @@
                     },
                     type: {
                         required: true
+                    },
+                    phone: {
+                        required: true,
+                        phoneID: true
+                    },
+                    email: {
+                        required: true,
+                        email: true
+                    },
+                    postal_code: {
+                        required: true,
+                        digits: true,
+                        minlength: 5,
+                        maxlength: 5
+                    },
+                    latitude: {
+                        required: true,
+                        number: true,
+                        range: [-90, 90]
+                    },
+                    longitude: {
+                        required: true,
+                        number: true,
+                        range: [-180, 180]
                     }
                 },
                 messages: {
@@ -111,6 +132,14 @@
                     },
                     type: {
                         required: 'Tipe cabang wajib dipilih'
+                    },
+                    phone: {
+                        required: 'Nomor telepon wajib diisi',
+                        phoneID: 'Format nomor telepon tidak valid'
+                    },
+                    email: {
+                        required: 'Email wajib diisi',
+                        email: 'Format email tidak valid'
                     }
                 },
                 errorElement: 'span',
@@ -125,11 +154,18 @@
                     $(element).removeClass('error');
                 }
             });
+
+            // Add custom phone validation for Indonesia
+            $.validator.addMethod('phoneID', function(phone_number, element) {
+                return this.optional(element) || phone_number.match(/^(\+62|62)?[\s-]?0?8[1-9]{1}\d{1}[\s-]?\d{4}[\s-]?\d{2,5}$/);
+            }, 'Masukkan nomor telepon yang valid');
         },
 
         validateField(field) {
             const $field = $(field);
-            const value = $field.val().trim();
+            if (!$field.length) return false;
+
+            const value = $field.val()?.trim() ?? '';
             const errors = [];
 
             if (!value) {
@@ -157,27 +193,44 @@
                         .insertAfter($field);
                 }
                 return false;
-            } else {
-                $field.removeClass('error');
-                $error.remove();
-                return true;
             }
+
+            $field.removeClass('error');
+            $error.remove();
+            return true;
+        },
+
+        getFieldValue(name) {
+            const field = this.form.find(`[name="${name}"]`);
+            return field.length ? field.val()?.trim() ?? '' : '';
         },
 
         async handleCreate(e) {
             e.preventDefault();
 
-            if (!this.form.valid()) {
-                return;
-            }
+            if (!this.form.valid()) return;
 
             const requestData = {
                 action: 'create_branch',
                 nonce: wpCustomerData.nonce,
                 customer_id: this.customerId,
-                code: this.form.find('[name="code"]').val().trim(), // Tambahkan ini
-                name: this.form.find('[name="name"]').val().trim(),
-                type: this.form.find('[name="type"]').val()
+                name: this.getFieldValue('name'),
+                type: this.getFieldValue('type'),
+                nitku: this.getFieldValue('nitku'),
+                postal_code: this.getFieldValue('postal_code'),
+                latitude: this.getFieldValue('latitude'),
+                longitude: this.getFieldValue('longitude'),
+                address: this.getFieldValue('address'),
+                phone: this.getFieldValue('phone'),
+                email: this.getFieldValue('email'),
+                provinsi_id: this.getFieldValue('provinsi_id'),
+                regency_id: this.getFieldValue('regency_id'),
+
+                // Admin data
+                admin_username: this.getFieldValue('admin_username'),
+                admin_email: this.getFieldValue('admin_email'),
+                admin_firstname: this.getFieldValue('admin_firstname'),
+                admin_lastname: this.getFieldValue('admin_lastname')
             };
 
             this.setLoadingState(true);
@@ -198,11 +251,6 @@
                     if (window.BranchDataTable) {
                         window.BranchDataTable.refresh();
                     }
-
-                    if (window.CustomerDataTable) {
-                        window.CustomerDataTable.refresh();
-                    }
-                                        
                 } else {
                     BranchToast.error(response.data?.message || 'Gagal menambah cabang');
                 }
@@ -215,25 +263,30 @@
         },
 
         setLoadingState(loading) {
-            const $submitBtn = this.form.find('[type="submit"]');
-            const $spinner = this.form.find('.spinner');
+            const submitBtn = this.form.find('[type="submit"]');
+            const spinner = this.form.find('.spinner');
 
             if (loading) {
-                $submitBtn.prop('disabled', true);
-                $spinner.addClass('is-active');
+                submitBtn.prop('disabled', true);
+                spinner.addClass('is-active');
                 this.form.addClass('loading');
             } else {
-                $submitBtn.prop('disabled', false);
-                $spinner.removeClass('is-active');
+                submitBtn.prop('disabled', false);
+                spinner.removeClass('is-active');
                 this.form.removeClass('loading');
             }
         },
 
         resetForm() {
+            if (!this.form || !this.form[0]) return;
+            
             this.form[0].reset();
             this.form.find('.form-error').remove();
             this.form.find('.error').removeClass('error');
-            this.form.validate().resetForm();
+            
+            if (this.form.data('validator')) {
+                this.form.validate().resetForm();
+            }
         }
     };
 

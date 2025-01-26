@@ -407,73 +407,68 @@ public function getCheckCustomerAccess($customer_id) {
             return $actions;
         }
 
+        public function store() {
+            try {
+                check_ajax_referer('wp_customer_nonce', 'nonce');
 
-    public function store() {
-        try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
+                if (!current_user_can('add_branch')) {
+                    throw new \Exception('Insufficient permissions');
+                }
 
-            if (!current_user_can('add_branch')) {
-                wp_send_json_error([
-                    'message' => __('Insufficient permissions', 'wp-customer')
+                // Create WP User first
+                $userdata = [
+                    'user_login'    => sanitize_text_field($_POST['admin_username']),
+                    'user_email'    => sanitize_email($_POST['admin_email']),
+                    'first_name'    => sanitize_text_field($_POST['admin_firstname']),
+                    'last_name'     => sanitize_text_field($_POST['admin_lastname']),
+                    'user_pass'     => wp_generate_password(),
+                    'role'          => 'customer'
+                ];
+
+                $user_id = wp_insert_user($userdata);
+                if (is_wp_error($user_id)) {
+                    throw new \Exception($user_id->get_error_message());
+                }
+
+                // Create branch with user_id
+                $branch_data = [
+                    'customer_id' => (int)$_POST['customer_id'],
+                    'name' => sanitize_text_field($_POST['name']),
+                    'type' => sanitize_text_field($_POST['type']),
+                    'user_id' => $user_id,
+                    // Other branch data
+                    'nitku' => sanitize_text_field($_POST['nitku']),
+                    'postal_code' => sanitize_text_field($_POST['postal_code']),
+                    'latitude' => (float)$_POST['latitude'],
+                    'longitude' => (float)$_POST['longitude'],
+                    'address' => sanitize_text_field($_POST['address']),
+                    'phone' => sanitize_text_field($_POST['phone']),
+                    'email' => sanitize_email($_POST['email']),
+                    'provinsi_id' => (int)$_POST['provinsi_id'],
+                    'regency_id' => (int)$_POST['regency_id'],
+                    'created_by' => get_current_user_id(),
+                    'status' => 'active'
+                ];
+
+                $branch_id = $this->model->create($branch_data);
+                if (!$branch_id) {
+                    // Rollback user creation if branch fails
+                    wp_delete_user($user_id);
+                    throw new \Exception('Failed to create branch');
+                }
+
+                // Send password reset email
+                wp_new_user_notification($user_id, null, 'user');
+
+                wp_send_json_success([
+                    'message' => 'Branch dan admin berhasil dibuat',
+                    'branch_id' => $branch_id
                 ]);
-                return;
+
+            } catch (\Exception $e) {
+                wp_send_json_error(['message' => $e->getMessage()]);
             }
-
-            $data = [
-                'customer_id' => intval($_POST['customer_id']),
-                'code' => sanitize_text_field($_POST['code']),
-                'name' => sanitize_text_field($_POST['name']),
-                'type' => sanitize_text_field($_POST['type']),
-                'created_by' => get_current_user_id()
-            ];
-
-            // Validate input
-            $errors = $this->validator->validateCreate($data);
-            if (!empty($errors)) {
-                wp_send_json_error([
-                    'message' => is_array($errors) ? implode(', ', $errors) : $errors,
-                    'errors' => $errors
-                ]);
-                return;
-            }
-
-            // Get ID from creation
-            $id = $this->model->create($data);
-            if (!$id) {
-                $this->debug_log('Failed to create branch');
-                wp_send_json_error([
-                    'message' => __('Failed to create branch', 'wp-customer')
-                ]);
-                return;
-            }
-
-            //$this->debug_log('Branch created with ID: ' . $id);
-
-            // Get fresh data for response
-            $branch = $this->model->find($id);
-            if (!$branch) {
-                $this->debug_log('Failed to retrieve created branch');
-                wp_send_json_error([
-                    'message' => __('Failed to retrieve created branch', 'wp-customer')
-                ]);
-                return;
-            }
-
-            wp_send_json_success([
-                'message' => __('Branch created successfully', 'wp-customer'),
-                'branch' => $branch
-            ]);
-
-        } catch (\Exception $e) {
-            $this->debug_log('Store error: ' . $e->getMessage());
-            $this->debug_log('Stack trace: ' . $e->getTraceAsString());
-            wp_send_json_error([
-                'message' => $e->getMessage() ?: __('Failed to add branch', 'wp-customer'),
-                'error_details' => WP_DEBUG ? $e->getTraceAsString() : null
-            ]);
         }
-    }
-
 
 /**
  * Branch Permission Logic
@@ -604,15 +599,23 @@ private function canEditBranch($branch, $customer) {
             }
 
             // Validate input
-            $data = [
-                'name' => sanitize_text_field($_POST['name']),
-                'type' => sanitize_text_field($_POST['type']),
-                'phone' => sanitize_text_field($_POST['phone']),
-                'provinsi_id' => intval($_POST['provinsi_id']),
-                'regency_id' => intval($_POST['regency_id']), 
-                'latitude' => floatval($_POST['latitude']),
-                'longitude' => floatval($_POST['longitude'])
-            ];
+
+            $data = array_filter([
+                'name' => isset($_POST['name']) ? sanitize_text_field($_POST['name']) : null,
+                'type' => isset($_POST['type']) ? sanitize_text_field($_POST['type']) : null,
+                'nitku' => isset($_POST['nitku']) ? sanitize_text_field($_POST['nitku']) : null,
+                'postal_code' => isset($_POST['postal_code']) ? sanitize_text_field($_POST['postal_code']) : null,
+                'latitude' => isset($_POST['latitude']) ? (float)$_POST['latitude'] : null,
+                'longitude' => isset($_POST['longitude']) ? (float)$_POST['longitude'] : null,
+                'address' => isset($_POST['address']) ? sanitize_text_field($_POST['address']) : null,
+                'phone' => isset($_POST['phone']) ? sanitize_text_field($_POST['phone']) : null,
+                'email' => isset($_POST['email']) ? sanitize_email($_POST['email']) : null,
+                'provinsi_id' => isset($_POST['provinsi_id']) ? (int)$_POST['provinsi_id'] : null,
+                'regency_id' => isset($_POST['regency_id']) ? (int)$_POST['regency_id'] : null,
+                'user_id' => isset($_POST['user_id']) ? (int)$_POST['user_id'] : null,
+                'status' => isset($_POST['status']) ? sanitize_text_field($_POST['status']) : null
+            ], function($value) { return $value !== null; });
+            
 
             $errors = $this->validator->validateUpdate($data, $id);
             if (!empty($errors)) {

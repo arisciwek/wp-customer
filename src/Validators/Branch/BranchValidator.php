@@ -53,16 +53,6 @@ class BranchValidator {
             return $errors;
         }
         
-        // Code validation
-        $code = trim(sanitize_text_field($data['code'] ?? ''));
-        if (empty($code)) {
-            $errors['code'] = __('Kode cabang wajib diisi.', 'wp-customer');
-        } elseif (!preg_match('/^\d{4}$/', $code)) {
-            $errors['code'] = __('Kode cabang harus berupa 4 digit angka.', 'wp-customer');
-        } elseif ($this->branch_model->existsByCode($code)) {
-            $errors['code'] = __('Kode cabang sudah ada.', 'wp-customer');
-        }
-
         // Name validation
         $name = trim(sanitize_text_field($data['name'] ?? ''));
         if (empty($name)) {
