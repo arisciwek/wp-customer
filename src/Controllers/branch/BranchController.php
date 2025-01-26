@@ -503,21 +503,6 @@ public function getCheckCustomerAccess($customer_id) {
                     throw new \Exception('Insufficient permissions');
                 }
 
-                // Create WP User first
-                $userdata = [
-                    'user_login'    => sanitize_text_field($_POST['admin_username']),
-                    'user_email'    => sanitize_email($_POST['admin_email']),
-                    'first_name'    => sanitize_text_field($_POST['admin_firstname']),
-                    'last_name'     => sanitize_text_field($_POST['admin_lastname']),
-                    'user_pass'     => wp_generate_password(),
-                    'role'          => 'customer'
-                ];
-
-                $user_id = wp_insert_user($userdata);
-                if (is_wp_error($user_id)) {
-                    throw new \Exception($user_id->get_error_message());
-                }
-
                 // Create branch with user_id
                 $branch_data = [
                     'customer_id' => (int)$_POST['customer_id'],
@@ -537,6 +522,31 @@ public function getCheckCustomerAccess($customer_id) {
                     'created_by' => get_current_user_id(),
                     'status' => 'active'
                 ];
+                
+                // Inside store() method before creating branch
+                $type_validation = $this->validator->validateBranchTypeCreate(
+                    $branch_data['type'],
+                    $branch_data['customer_id']
+                );
+
+                if (!$type_validation['valid']) {
+                    throw new \Exception($type_validation['message']);
+                }
+
+                // Create WP User first
+                $userdata = [
+                    'user_login'    => sanitize_text_field($_POST['admin_username']),
+                    'user_email'    => sanitize_email($_POST['admin_email']),
+                    'first_name'    => sanitize_text_field($_POST['admin_firstname']),
+                    'last_name'     => sanitize_text_field($_POST['admin_lastname']),
+                    'user_pass'     => wp_generate_password(),
+                    'role'          => 'customer'
+                ];
+
+                $user_id = wp_insert_user($userdata);
+                if (is_wp_error($user_id)) {
+                    throw new \Exception($user_id->get_error_message());
+                }
 
                 $branch_id = $this->model->create($branch_data);
                 if (!$branch_id) {

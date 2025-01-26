@@ -180,6 +180,23 @@ class BranchValidator {
         return $sanitized;
     }
 
+    public function validateBranchTypeCreate(string $type, int $customer_id): array {
+        global $wpdb;
+        
+        $branch_count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_branches WHERE customer_id = %d",
+            $customer_id
+        ));
+
+        if ($branch_count === '0' && $type !== 'pusat') {
+            return [
+                'valid' => false,
+                'message' => 'Cabang pertama harus bertipe kantor pusat'
+            ];
+        }
+
+        return ['valid' => true];
+    }
 
     public function validateBranchTypeChange(int $branch_id, string $new_type, int $customer_id): array {
         global $wpdb;
