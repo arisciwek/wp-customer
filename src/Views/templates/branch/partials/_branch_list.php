@@ -110,6 +110,7 @@ if ($active_tab !== 'branch-list') {
                     <tr>
                         <th><?php _e('Kode', 'wp-customer'); ?></th>
                         <th><?php _e('Nama', 'wp-customer'); ?></th>
+                        <th><?php _e('Admin', 'wp-customer'); ?></th>
                         <th><?php _e('Tipe', 'wp-customer'); ?></th>
                         <th class="text-center no-sort">
                             <?php _e('Aksi', 'wp-customer'); ?>
@@ -123,6 +124,7 @@ if ($active_tab !== 'branch-list') {
                     <tr>
                         <th><?php _e('Kode', 'wp-customer'); ?></th>
                         <th><?php _e('Nama', 'wp-customer'); ?></th>
+                        <th><?php _e('Admin', 'wp-customer'); ?></th>
                         <th><?php _e('Tipe', 'wp-customer'); ?></th>
                         <th><?php _e('Aksi', 'wp-customer'); ?></th>
                     </tr>
