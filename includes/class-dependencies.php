@@ -283,11 +283,7 @@ public function enqueue_frontend_assets() {
             wp_enqueue_script('confirmation-modal', WP_CUSTOMER_URL . 'assets/js/customer/confirmation-modal.js', ['jquery'], $this->version, true);
             // Branch toast
             wp_enqueue_script('branch-toast', WP_CUSTOMER_URL . 'assets/js/branch/branch-toast.js', ['jquery'], $this->version, true);
-
-
-            // Existing handler untuk user select
-            // $this->enqueue_select_handler();
-            
+        
             // Tambah handler untuk wilayah
             $this->enqueue_wilayah_handler();
 
@@ -296,12 +292,6 @@ public function enqueue_frontend_assets() {
             wp_enqueue_script('customer-datatable', WP_CUSTOMER_URL . 'assets/js/customer/customer-datatable.js', ['jquery', 'datatables', 'customer-toast'], $this->version, true);
             wp_enqueue_script('create-customer-form', WP_CUSTOMER_URL . 'assets/js/customer/create-customer-form.js', ['jquery', 'jquery-validate', 'customer-toast'], $this->version, true);
             wp_enqueue_script('edit-customer-form', WP_CUSTOMER_URL . 'assets/js/customer/edit-customer-form.js', ['jquery', 'jquery-validate', 'customer-toast'], $this->version, true);
-
-            // Employee scripts - mengikuti pola branch yang sudah berhasil
-            wp_enqueue_script('employee-datatable', WP_CUSTOMER_URL . 'assets/js/employee/employee-datatable.js', ['jquery', 'datatables', 'customer-toast', 'customer'], $this->version, true);
-            wp_enqueue_script('employee-toast', WP_CUSTOMER_URL . 'assets/js/employee/employee-toast.js', ['jquery'], $this->version, true);
-            wp_enqueue_script('create-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/create-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
-            wp_enqueue_script('edit-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/edit-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
 
             wp_enqueue_script('customer',
                 WP_CUSTOMER_URL . 'assets/js/customer/customer-script.js',
@@ -331,34 +321,15 @@ public function enqueue_frontend_assets() {
             wp_enqueue_script('create-branch-form', WP_CUSTOMER_URL . 'assets/js/branch/create-branch-form.js', ['jquery', 'jquery-validate', 'branch-toast', 'branch-datatable'], $this->version, true);
             wp_enqueue_script('edit-branch-form', WP_CUSTOMER_URL . 'assets/js/branch/edit-branch-form.js', ['jquery', 'jquery-validate', 'branch-toast', 'branch-datatable'], $this->version, true);
 
+            // Employee scripts - mengikuti pola branch yang sudah berhasil
+            wp_enqueue_script('employee-datatable', WP_CUSTOMER_URL . 'assets/js/employee/employee-datatable.js', ['jquery', 'datatables', 'customer-toast', 'customer'], $this->version, true);
+            wp_enqueue_script('employee-toast', WP_CUSTOMER_URL . 'assets/js/employee/employee-toast.js', ['jquery'], $this->version, true);
+            wp_enqueue_script('create-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/create-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
+            wp_enqueue_script('edit-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/edit-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
+
         }
     }
-    /*
-    public function enqueue_select_handler() {
-        // Cek apakah sudah di-enqueue sebelumnya
-        if (wp_script_is('wp-customer-select-handler', 'enqueued')) {
-            return;
-        }
 
-        wp_enqueue_script('wp-customer-select-handler', 
-            WP_CUSTOMER_URL . 'assets/js/customer/select-handler.js', 
-            ['jquery'], 
-            $this->version, 
-            true
-        );
-
-        wp_localize_script('wp-customer-select-handler', 'wpCustomerSelectData', [
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('wp_customer_nonce'),
-            'texts' => [
-                'select_customer' => __('Pilih Customer', 'wp-customer'),
-                'select_branch' => __('Pilih Cabang', 'wp-customer'),
-                'loading' => __('Memuat...', 'wp-customer')
-            ]
-        ]);
-    }
-    */
-    
     private function enqueue_wilayah_handler() {
         // Use direct constant check first
         if (!defined('WILAYAH_INDONESIA_URL')) {
