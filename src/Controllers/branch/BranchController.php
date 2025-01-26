@@ -187,7 +187,95 @@ public function getCheckCustomerAccess($customer_id) {
     ];
 }
 */
+    public function handleDataTableRequest() {
+        try {
+            if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
+                throw new \Exception('Security check failed');
+            }
 
+            $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
+            if (!$customer_id) {
+                throw new \Exception('Invalid customer ID');
+            }
+
+            $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
+            $start = isset($_POST['start']) ? intval($_POST['start']) : 0;
+            $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
+            $search = isset($_POST['search']['value']) ? sanitize_text_field($_POST['search']['value']) : '';
+
+            $orderColumn = isset($_POST['order'][0]['column']) ? intval($_POST['order'][0]['column']) : 0;
+            $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
+
+            $columns = ['name', 'type', 'actions'];
+            $orderBy = isset($columns[$orderColumn]) ? $columns[$orderColumn] : 'name';
+
+            if ($orderBy === 'actions') {
+                $orderBy = 'name';
+            }
+
+            try {
+                $result = $this->model->getDataTableData(
+                    $customer_id,
+                    $start,
+                    $length,
+                    $search,
+                    $orderBy,
+                    $orderDir
+                );
+
+                if (!$result) {
+                    throw new \Exception('No data returned from model');
+                }
+
+                $data = [];
+                foreach ($result['data'] as $branch) {
+                    // Get WordPress user data for admin name
+                    $admin_name = '-';
+                    if (!empty($branch->user_id)) {
+                        $user = get_userdata($branch->user_id);
+                        if ($user) {
+                            $first_name = $user->first_name;
+                            $last_name = $user->last_name;
+                            if ($first_name || $last_name) {
+                                $admin_name = trim($first_name . ' ' . $last_name);
+                            } else {
+                                $admin_name = $user->display_name;
+                            }
+                        }
+                    }
+
+                    $data[] = [
+                        'id' => $branch->id,
+                        'code' => esc_html($branch->code),
+                        'name' => esc_html($branch->name),
+                        'admin_name' => esc_html($admin_name),
+                        'type' => esc_html($branch->type),
+                        'actions' => $this->generateActionButtons($branch)
+                    ];
+                }
+
+                $response = [
+                    'draw' => $draw,
+                    'recordsTotal' => $result['total'],
+                    'recordsFiltered' => $result['filtered'],
+                    'data' => $data,
+                ];
+
+                wp_send_json($response);
+
+            } catch (\Exception $modelException) {
+                throw new \Exception('Database error: ' . $modelException->getMessage());
+            }
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage(),
+                'code' => $e->getCode()
+            ], 400);
+        }
+    }
+
+/*
     public function handleDataTableRequest() {
         try {
             // Verify nonce
@@ -265,7 +353,7 @@ public function getCheckCustomerAccess($customer_id) {
             ], 400);
         }
     }
-
+*/
     // Contoh implementasi yang lebih sesuai untuk tombol tambah
     private function generateAddBranchButton($customer) {
         $current_user_id = get_current_user_id();
@@ -615,7 +703,7 @@ private function canEditBranch($branch, $customer) {
                 'user_id' => isset($_POST['user_id']) ? (int)$_POST['user_id'] : null,
                 'status' => isset($_POST['status']) ? sanitize_text_field($_POST['status']) : null
             ], function($value) { return $value !== null; });
-            
+
 
             $errors = $this->validator->validateUpdate($data, $id);
             if (!empty($errors)) {
