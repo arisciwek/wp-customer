@@ -213,87 +213,100 @@
 
         return $result !== false;
     }
-
-public function getDataTableData(int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
-    global $wpdb;
     
-    $current_user_id = get_current_user_id();
+    public function getDataTableData(int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
+       global $wpdb;
+       $current_user_id = get_current_user_id();
 
-    // Debug capabilities
-    error_log('--- Debug User Capabilities ---');
-    error_log('User ID: ' . $current_user_id);
-    error_log('Can view_customer_list: ' . (current_user_can('view_customer_list') ? 'yes' : 'no'));
-    error_log('Can view_own_customer: ' . (current_user_can('view_own_customer') ? 'yes' : 'no'));
+       // Debug capabilities
+       error_log('--- Debug User Capabilities ---');
+       error_log('User ID: ' . $current_user_id);
+       error_log('Can view_customer_list: ' . (current_user_can('view_customer_list') ? 'yes' : 'no'));
+       error_log('Can view_own_customer: ' . (current_user_can('view_own_customer') ? 'yes' : 'no'));
 
-    // Base query parts
-    $select = "SELECT SQL_CALC_FOUND_ROWS p.*, COUNT(r.id) as branch_count";
-    $from = " FROM {$this->table} p";
-    $join = " LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id";
-    $where = " WHERE 1=1";
+       // Base query parts
+       $select = "SELECT SQL_CALC_FOUND_ROWS p.*, COUNT(b.id) as branch_count";
+       $from = " FROM {$this->table} p";
+       $join = " LEFT JOIN {$this->branch_table} b ON p.id = b.customer_id";
+       $where = " WHERE 1=1";
 
-    // Debug query building process
-    error_log('Building WHERE clause:');
-    error_log('Initial WHERE: ' . $where);
+       // Debug query building process
+       error_log('Building WHERE clause:');
+       error_log('Initial WHERE: ' . $where);
 
-    // Cek apakah user memiliki akses sebagai owner
-    $has_customer = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM {$this->table} WHERE user_id = %d",
-        $current_user_id
-    ));
-    error_log('User has customer: ' . ($has_customer > 0 ? 'yes' : 'no'));
+       // Check user relationships
+       $has_customer = $wpdb->get_var($wpdb->prepare(
+           "SELECT COUNT(*) FROM {$this->table} WHERE user_id = %d",
+           $current_user_id
+       ));
+       error_log('User has customer: ' . ($has_customer > 0 ? 'yes' : 'no'));
 
-    // Cek apakah user adalah employee dari customer
-    $employee_customer = $wpdb->get_var($wpdb->prepare(
-        "SELECT customer_id FROM {$this->employee_table} WHERE user_id = %d",
-        $current_user_id
-    ));
-    error_log('User is employee of customer: ' . ($employee_customer ? $employee_customer : 'no'));
+       $employee_customer = $wpdb->get_var($wpdb->prepare(
+           "SELECT customer_id FROM {$this->employee_table} WHERE user_id = %d",
+           $current_user_id
+       ));
+       error_log('User is employee of customer: ' . ($employee_customer ? $employee_customer : 'no'));
 
-    // Permission based filtering
-    if (current_user_can('edit_all_customers')) {
-        error_log('User can edit all customers - no additional restrictions');
+       $branch_admin = $wpdb->get_var($wpdb->prepare(
+           "SELECT customer_id FROM {$this->branch_table} WHERE user_id = %d",
+           $current_user_id
+       ));
+       error_log('User is branch admin of customer: ' . ($branch_admin ? $branch_admin : 'no'));
+
+       // Handle permissions
+       if (current_user_can('edit_all_customers')) {
+           error_log('User can edit all customers - no additional restrictions');
+       }
+       else if ($has_customer > 0 && current_user_can('view_own_customer')) {
+           $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
+           error_log('Added owner restriction: ' . $where);
+       }
+       else if ($employee_customer && current_user_can('view_own_customer')) {
+           $where .= $wpdb->prepare(" AND p.id = %d", $employee_customer);
+           error_log('Added employee restriction: ' . $where);
+       }
+       else if ($branch_admin && current_user_can('view_own_customer')) {
+           $where .= $wpdb->prepare(" AND p.id = %d", $branch_admin);
+           error_log('Added branch admin restriction: ' . $where);
+       }
+       else {
+           $where .= " AND 1=0";
+           error_log('User has no access - restricting all results');
+       }
+
+       // Add search if provided  
+       if (!empty($search)) {
+           $where .= $wpdb->prepare(" AND (p.name LIKE %s OR p.code LIKE %s)",
+               '%' . $wpdb->esc_like($search) . '%',
+               '%' . $wpdb->esc_like($search) . '%'
+           );
+           error_log('Added search: ' . $where);
+       }
+
+       // Complete query
+       $group = " GROUP BY p.id";
+       $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
+       $limit = $wpdb->prepare(" LIMIT %d, %d", $start, $length);
+
+       $sql = $select . $from . $join . $where . $group . $order . $limit;
+       error_log('Final Query: ' . $sql);
+
+       $results = $wpdb->get_results($sql);
+       error_log('Results count: ' . count($results));
+
+       $filtered = $wpdb->get_var("SELECT FOUND_ROWS()");
+       error_log('Filtered count: ' . $filtered);
+
+       $total = $this->getTotalCount();
+       error_log('Total count: ' . $total);
+       error_log('--- End Debug ---');
+
+       return [
+           'data' => $results,
+           'total' => (int) $total,
+           'filtered' => (int) $filtered
+       ];
     }
-    else if ($has_customer > 0 && current_user_can('view_own_customer')) {
-        // User sebagai owner
-        $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
-        error_log('Added owner restriction: ' . $where);
-    }
-    else if ($employee_customer && current_user_can('view_own_customer')) {
-        // User sebagai employee
-        $where .= $wpdb->prepare(" AND p.id = %d", $employee_customer);
-        error_log('Added employee restriction: ' . $where);
-    }
-    else {
-        // Tidak punya akses
-        $where .= " AND 1=0";
-        error_log('User has no access - restricting all results');
-    }
-
-    // Complete query parts
-    $group = " GROUP BY p.id";
-    $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
-    $limit = $wpdb->prepare(" LIMIT %d, %d", $start, $length);
-
-    $sql = $select . $from . $join . $where . $group . $order . $limit;
-    error_log('Final Query: ' . $sql);
-
-    // Execute query
-    $results = $wpdb->get_results($sql);
-    
-    // Get counts  
-    $filtered = $wpdb->get_var("SELECT FOUND_ROWS()");
-    $total = $this->getTotalCount();
-
-    error_log('Filtered count: ' . $filtered);
-    error_log('Total count: ' . $total);
-    error_log('--- End Debug ---');
-
-    return [
-        'data' => $results,
-        'total' => (int) $total,
-        'filtered' => (int) $filtered
-    ];
-}
      public function delete(int $id): bool {
          global $wpdb;
 

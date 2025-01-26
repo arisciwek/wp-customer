@@ -47,7 +47,7 @@
             });
 
             // Add button handler
-            $('#add-employee-btn').on('click', () => {
+            $(document).on('click', '#add-employee-btn', () => {
                 const customerId = window.Customer?.currentId;
                 if (customerId) {
                     this.showModal(customerId);
