@@ -179,4 +179,42 @@ class BranchValidator {
 
         return $sanitized;
     }
+
+
+    public function validateBranchTypeChange(int $branch_id, string $new_type, int $customer_id): array {
+        global $wpdb;
+        
+        // If not changing to 'cabang', no validation needed
+        if ($new_type !== 'cabang') {
+            return ['valid' => true];
+        }
+
+        // Get current branch type
+        $current_branch = $wpdb->get_row($wpdb->prepare(
+            "SELECT type FROM {$wpdb->prefix}app_branches 
+             WHERE id = %d AND customer_id = %d",
+            $branch_id, $customer_id
+        ));
+
+        // If current type is not 'pusat', no validation needed
+        if (!$current_branch || $current_branch->type !== 'pusat') {
+            return ['valid' => true];
+        }
+
+        // Count remaining 'pusat' branches excluding current branch
+        $pusat_count = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_branches 
+             WHERE customer_id = %d AND type = 'pusat' AND id != %d",
+            $customer_id, $branch_id
+        ));
+
+        if ($pusat_count === '0') {
+            return [
+                'valid' => false,
+                'message' => 'Minimal harus ada 1 kantor pusat. Tidak bisa mengubah tipe kantor pusat terakhir.'
+            ];
+        }
+
+        return ['valid' => true];
+    }
 }

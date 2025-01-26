@@ -704,6 +704,18 @@ private function canEditBranch($branch, $customer) {
                 'status' => isset($_POST['status']) ? sanitize_text_field($_POST['status']) : null
             ], function($value) { return $value !== null; });
 
+            // Inside update() method before performing update
+            if ($data['type'] ?? false) {
+                $type_validation = $this->validator->validateBranchTypeChange(
+                    $id, 
+                    $data['type'], 
+                    $branch->customer_id
+                );
+                
+                if (!$type_validation['valid']) {
+                    throw new \Exception($type_validation['message']);
+                }
+            }
 
             $errors = $this->validator->validateUpdate($data, $id);
             if (!empty($errors)) {
