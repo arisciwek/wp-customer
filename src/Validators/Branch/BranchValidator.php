@@ -118,13 +118,14 @@ class BranchValidator {
         return $errors;
     }
 
+
     public function validateDelete(int $id): array {
         $errors = [];
 
         // Check if branch exists
         $branch = $this->branch_model->find($id);
         if (!$branch) {
-            $errors['id'] = __('Kabupaten/kota tidak ditemukan.', 'wp-customer');
+            $errors['id'] = __('Cabang tidak ditemukan.', 'wp-customer');
             return $errors;
         }
 
@@ -132,6 +133,12 @@ class BranchValidator {
         if (!current_user_can('delete_branch') &&
             (!current_user_can('delete_own_branch') || $branch->created_by !== get_current_user_id())) {
             $errors['permission'] = __('Anda tidak memiliki izin untuk menghapus cabang ini.', 'wp-customer');
+        }
+
+        // Branch type deletion validation
+        $type_validation = $this->validateBranchTypeDelete($id);
+        if (!$type_validation['valid']) {
+            $errors['type'] = $type_validation['message'];
         }
 
         return $errors;
@@ -234,4 +241,44 @@ class BranchValidator {
 
         return ['valid' => true];
     }
+
+    public function validateBranchTypeDelete(int $branch_id): array {
+        global $wpdb;
+        
+        // Get branch details including customer_id and type
+        $branch = $wpdb->get_row($wpdb->prepare(
+            "SELECT type, customer_id FROM {$wpdb->prefix}app_branches WHERE id = %d",
+            $branch_id
+        ));
+
+        if (!$branch) {
+            return ['valid' => false, 'message' => 'Branch tidak ditemukan'];
+        }
+
+        // If not pusat, no validation needed
+        if ($branch->type !== 'pusat') {
+            return ['valid' => true];
+        }
+
+        // Count active non-pusat branches
+        $active_branches = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_branches 
+             WHERE customer_id = %d 
+             AND type = 'cabang' 
+             AND status = 'active'
+             AND id != %d",
+            $branch->customer_id,
+            $branch_id
+        ));
+
+        if ($active_branches > 0) {
+            return [
+                'valid' => false,
+                'message' => 'Tidak dapat menghapus kantor pusat karena masih ada cabang aktif'
+            ];
+        }
+
+        return ['valid' => true];
+    }
+
 }
