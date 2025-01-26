@@ -57,12 +57,9 @@ if ($active_tab !== 'branch-list') {
         </div>
 
             <div class="branch-header-actions">
-                <?php 
-                // Show Add Branch button based on permissions
-                if (($access['access_type'] === 'admin' || $access['access_type'] === 'owner' || 
-                     $access['access_type'] === 'branch_admin') && 
-                    current_user_can('add_branch')) : 
-                ?>
+                <?php if (($access['access_type'] === 'admin' || 
+                           $access['access_type'] === 'owner') && 
+                          current_user_can('add_branch')) : ?>
                     <button type="button" class="button button-primary" id="add-branch-btn">
                         <span class="dashicons dashicons-plus-alt"></span>
                         <?php _e('Tambah Cabang', 'wp-customer'); ?>
