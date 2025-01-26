@@ -503,13 +503,24 @@ public function getCheckCustomerAccess($customer_id) {
                     throw new \Exception('Insufficient permissions');
                 }
 
-                // Create branch with user_id
+                // 1. Validate customer_id first
+                $customer_id = isset($_POST['customer_id']) ? (int)$_POST['customer_id'] : 0;
+                if (!$customer_id) {
+                    throw new \Exception('Invalid customer ID');
+                }
+
+                // 2. Validate branch type
+                $type = sanitize_text_field($_POST['type']);
+                $type_validation = $this->validator->validateBranchTypeCreate($type, $customer_id);
+                if (!$type_validation['valid']) {
+                    throw new \Exception($type_validation['message']);
+                }
+
+                // 3. Validate branch data
                 $branch_data = [
-                    'customer_id' => (int)$_POST['customer_id'],
+                    'customer_id' => $customer_id,
                     'name' => sanitize_text_field($_POST['name']),
-                    'type' => sanitize_text_field($_POST['type']),
-                    'user_id' => $user_id,
-                    // Other branch data
+                    'type' => $type,
                     'nitku' => sanitize_text_field($_POST['nitku']),
                     'postal_code' => sanitize_text_field($_POST['postal_code']),
                     'latitude' => (float)$_POST['latitude'],
@@ -522,25 +533,21 @@ public function getCheckCustomerAccess($customer_id) {
                     'created_by' => get_current_user_id(),
                     'status' => 'active'
                 ];
-                
-                // Inside store() method before creating branch
-                $type_validation = $this->validator->validateBranchTypeCreate(
-                    $branch_data['type'],
-                    $branch_data['customer_id']
-                );
 
-                if (!$type_validation['valid']) {
-                    throw new \Exception($type_validation['message']);
+                // Validate branch data
+                $branch_validation = $this->validator->validateCreate($branch_data);
+                if (!empty($branch_validation)) {
+                    throw new \Exception(reset($branch_validation));
                 }
 
-                // Create WP User first
+                // 4. Create WP User after all validations pass
                 $userdata = [
-                    'user_login'    => sanitize_text_field($_POST['admin_username']),
-                    'user_email'    => sanitize_email($_POST['admin_email']),
-                    'first_name'    => sanitize_text_field($_POST['admin_firstname']),
-                    'last_name'     => sanitize_text_field($_POST['admin_lastname']),
-                    'user_pass'     => wp_generate_password(),
-                    'role'          => 'customer'
+                    'user_login' => sanitize_text_field($_POST['admin_username']),
+                    'user_email' => sanitize_email($_POST['admin_email']),
+                    'first_name' => sanitize_text_field($_POST['admin_firstname']),
+                    'last_name' => sanitize_text_field($_POST['admin_lastname']),
+                    'user_pass' => wp_generate_password(),
+                    'role' => 'customer'
                 ];
 
                 $user_id = wp_insert_user($userdata);
@@ -548,14 +555,16 @@ public function getCheckCustomerAccess($customer_id) {
                     throw new \Exception($user_id->get_error_message());
                 }
 
+                // 5. Add user_id to branch data and create branch
+                $branch_data['user_id'] = $user_id;
                 $branch_id = $this->model->create($branch_data);
+                
                 if (!$branch_id) {
-                    // Rollback user creation if branch fails
                     wp_delete_user($user_id);
                     throw new \Exception('Failed to create branch');
                 }
 
-                // Send password reset email
+                // 6. Send password reset email
                 wp_new_user_notification($user_id, null, 'user');
 
                 wp_send_json_success([
