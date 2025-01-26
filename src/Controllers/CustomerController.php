@@ -144,12 +144,12 @@ class CustomerController {
             require WP_CUSTOMER_PATH . 'src/Views/templates/customer-right-panel.php';
             $html = ob_get_clean();
 
-        error_log('Generated AJAX HTML length: ' . strlen($html));
-        error_log('First 501 characters of HTML:');
-        error_log(substr($html, 0, 500));
-        error_log('Last 501 characters of HTML:');
-        error_log(substr($html, -500));
-        error_log('=== End Debug Tab Content ===');
+            error_log('Generated AJAX HTML length: ' . strlen($html));
+            error_log('First 501 characters of HTML:');
+            error_log(substr($html, 0, 500));
+            error_log('Last 501 characters of HTML:');
+            error_log(substr($html, -500));
+            error_log('=== End Debug Tab Content ===');
 
 
             die($html); // Kirim HTML langsung
