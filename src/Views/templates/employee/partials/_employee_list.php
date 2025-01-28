@@ -23,23 +23,14 @@
 
 defined('ABSPATH') || exit;
 
-/*
-$active_tab = $_GET['tab'] ?? 'customer-details';
+error_log('=== Debug Employee List Template ===');
+error_log('Access variable On Employee Template: ' . print_r($access ?? 'null', true));
+error_log('Customer variable On Employee Template: ' . print_r($customer ?? 'null', true));
 
-error_log('Active Tab: ' . ($active_tab ?? 'undefined'));
+// Sebelum permission check
+error_log('Access type On Employee Template: ' . ($access['access_type'] ?? 'undefined'));
+error_log('Can add branch On Employee Template: ' . (current_user_can('add_branch') ? 'yes' : 'no'));
 
-if ($active_tab !== 'employee-list') {
-    ?>
-    <div id="employee-list" class="tab-content">
-        <div class="loading-placeholder">
-            <span class="spinner is-active"></span>
-            <p>Memuat data employee...</p>
-        </div>
-    </div>
-    <?php
-    return;
-}
-*/
 ?>
 
 <div id="employee-list" class="tab-content">
@@ -146,8 +137,3 @@ if ($active_tab !== 'employee-list') {
     <?php endif; ?>
 </div>
 
-<?php
-// Include related modals
-require_once WP_CUSTOMER_PATH . 'src/Views/templates/employee/forms/create-employee-form.php';
-require_once WP_CUSTOMER_PATH . 'src/Views/templates/employee/forms/edit-employee-form.php';
-?>

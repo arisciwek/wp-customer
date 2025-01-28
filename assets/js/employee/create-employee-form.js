@@ -32,41 +32,45 @@
         init() {
             this.modal = $('#create-employee-modal');
             this.form = $('#create-employee-form');
-
             this.bindEvents();
             this.initializeValidation();
         },
 
         bindEvents() {
+            console.log('Starting bindEvents for CreateEmployeeForm');
+            
             // Form events
-            this.form.on('submit', (e) => this.handleCreate(e));
-
-            // Input validation events
-            this.form.on('input', 'input[name="name"], input[name="email"]', (e) => {
-                this.validateField(e.target);
+            this.form.on('submit', (e) => {
+                console.log('Form submit triggered');
+                this.handleCreate(e);
             });
+
+            // Log form existence
+            console.log('Employee Form element found:', this.form.length > 0);
 
             // Add button handler
-            $(document).on('click', '#add-employee-btn', () => {
+            $('#add-employee-btn').on('click', () => {
                 const customerId = window.Customer?.currentId;
+                console.log('Add employee button clicked');
+                console.log('Current customer ID:', window.Customer?.currentId);
+
                 if (customerId) {
+                    console.log('Showing modal for customer:', customerId);
                     this.showModal(customerId);
                 } else {
-                    EmployeeToast.error('Silakan pilih customer terlebih dahulu');
+                    console.log('No customer ID found');
+                    CustomerToast.error('Silakan pilih customer terlebih dahulu');
                 }
             });
 
-            // Modal events
-            $('.modal-close', this.modal).on('click', () => this.hideModal());
-            $('.cancel-create', this.modal).on('click', () => this.hideModal());
 
-            // Close modal when clicking outside
-            this.modal.on('click', (e) => {
-                if ($(e.target).is('.modal-overlay')) {
-                    this.hideModal();
-                }
-            });
+            // Check button existence
+            console.log('Add employee button exists:', $('#add-employee-btn').length > 0);
+
+            // Log modal existence
+            console.log('Modal element found:', this.modal.length > 0);
         },
+
 
         showModal(customerId) {
             if (!customerId) {
@@ -323,6 +327,7 @@
         },
 
         resetForm() {
+            if (!this.form || !this.validator) return;
             this.form[0].reset();
             this.form.find('.form-error').remove();
             this.form.find('.error').removeClass('error');

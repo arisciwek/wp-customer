@@ -39,9 +39,15 @@ if (defined('WP_DEBUG') && WP_DEBUG) {
     </div>
 
     <?php
+
+    // Include related modals
+    require WP_CUSTOMER_PATH . 'src/Views/templates/employee/forms/create-employee-form.php';
+    require WP_CUSTOMER_PATH . 'src/Views/templates/employee/forms/edit-employee-form.php';
+
     // Include related modals
     require WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/create-branch-form.php';
     require WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/edit-branch-form.php';
+
     ?>
     
 </div>

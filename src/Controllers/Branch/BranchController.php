@@ -25,7 +25,7 @@
 
 namespace WPCustomer\Controllers\Branch;
 
-use WPCustomer\Models\CustomerModel;
+use WPCustomer\Models\Customer\CustomerModel;
 use WPCustomer\Models\Branch\BranchModel;
 use WPCustomer\Validators\Branch\BranchValidator;
 use WPCustomer\Cache\CacheManager;

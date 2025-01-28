@@ -32,10 +32,10 @@
 
 namespace WPCustomer\Controllers;
 
-use WPCustomer\Models\CustomerModel;
+use WPCustomer\Models\Customer\CustomerModel;
 use WPCustomer\Models\Branch\BranchModel;
 use WPCustomer\Models\Employee\CustomerEmployeeModel;
-use WPCustomer\Validators\CustomerValidator;
+use WPCustomer\Validators\Customer\CustomerValidator;
 use WPCustomer\Cache\CacheManager;
 
 class CustomerController {

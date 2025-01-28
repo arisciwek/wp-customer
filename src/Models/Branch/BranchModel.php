@@ -24,7 +24,7 @@
 
 namespace WPCustomer\Models\Branch;
 
-use WPCustomer\Models\CustomerModel;
+use WPCustomer\Models\Customer\CustomerModel;
 
 class BranchModel {
     private $table;
@@ -37,15 +37,20 @@ class BranchModel {
         $this->customer_table = $wpdb->prefix . 'app_customers';
         $this->customerModel = new CustomerModel();        
     }
-
+    
     private function generateBranchCode(int $customer_id): string {
-        // Get customer code using the properly initialized customerModel property
+        // Get customer code 
         $customer = $this->customerModel->find($customer_id);
-        $customer_code = $customer->code ?? '';
+        if (!$customer || empty($customer->code)) {
+            throw new \Exception('Invalid customer code');
+        }
         
         do {
-            $sequence = str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-            $branch_code = "BR-" . substr($customer_code, 5) . $sequence;
+            // Generate 2 digit random number (RR)
+            $random = str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
+            
+            // Format: customer_code + '-' + RR
+            $branch_code = $customer->code . '-' . $random;
             
             $exists = $this->existsByCode($branch_code);
         } while ($exists);

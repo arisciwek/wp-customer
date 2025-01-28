@@ -23,14 +23,13 @@
  */
 defined('ABSPATH') || exit;
 ?>
+<?php defined('ABSPATH') || exit; ?>
 
-<div id="create-employee-modal" class="modal-overlay" style="display: none;">
+<div id="create-employee-modal" class="modal-overlay wp-customer-modal">
     <div class="modal-container">
         <div class="modal-header">
             <h3><?php _e('Tambah Karyawan', 'wp-customer'); ?></h3>
-            <button type="button" class="modal-close" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-            </button>
+            <button type="button" class="modal-close">&times;</button>
         </div>
 
         <form id="create-employee-form" method="post">
@@ -38,99 +37,68 @@ defined('ABSPATH') || exit;
             <input type="hidden" name="customer_id" id="employee-customer-id">
 
             <div class="modal-content">
-                <!-- Nama Karyawan -->
-                <div class="employee-form-group">
-                    <label for="employee-name" class="required-field">
-                        <?php _e('Nama Karyawan', 'wp-customer'); ?>
-                    </label>
-                    <input type="text"
-                           id="employee-name"
-                           name="name"
-                           class="regular-text"
-                           maxlength="100"
-                           required>
+                <div class="row left-side">
+                    <!-- Data Pribadi -->
+                    <div class="employee-form-section">
+                        <h4><?php _e('Data Pribadi', 'wp-customer'); ?></h4>
+                        
+                        <div class="employee-form-group">
+                            <label for="employee-name" class="required-field">Nama Lengkap</label>
+                            <input type="text" id="employee-name" name="name" maxlength="100" required>
+                            <span class="field-hint"><?php _e('Nama lengkap karyawan', 'wp-customer'); ?></span>
+                        </div>
+
+                        <div class="employee-form-group">
+                            <label for="employee-email" class="required-field">Email</label>
+                            <input type="email" id="employee-email" name="email" maxlength="100" required>
+                            <span class="field-hint"><?php _e('Email akan digunakan untuk login', 'wp-customer'); ?></span>
+                        </div>
+
+                        <div class="employee-form-group">
+                            <label for="employee-phone">Telepon</label>
+                            <input type="tel" id="employee-phone" name="phone" maxlength="20">
+                            <span class="field-hint"><?php _e('Format: +62xxx atau 08xxx', 'wp-customer'); ?></span>
+                        </div>
+                    </div>
+
+                    <!-- Informasi Pekerjaan -->
+                    <div class="employee-form-section">
+                        <h4><?php _e('Informasi Pekerjaan', 'wp-customer'); ?></h4>
+                        
+                        <div class="employee-form-group">
+                            <label for="employee-position" class="required-field">Jabatan</label>
+                            <input type="text" id="employee-position" name="position" maxlength="100" required>
+                            <span class="field-hint"><?php _e('Posisi/jabatan karyawan', 'wp-customer'); ?></span>
+                        </div>
+
+                        <div class="employee-form-group">
+                            <label for="employee-department" class="required-field">Departemen</label>
+                            <input type="text" id="employee-department" name="department" maxlength="100" required>
+                            <span class="field-hint"><?php _e('Departemen karyawan', 'wp-customer'); ?></span>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Cabang -->
-                <div class="employee-form-group">
-                    <label for="employee-branch" class="required-field">
-                        <?php _e('Cabang', 'wp-customer'); ?>
-                    </label>
-                    <select id="employee-branch" name="branch_id" required>
-                        <option value=""><?php _e('Pilih Cabang', 'wp-customer'); ?></option>
-                        <!-- Options will be populated via JavaScript -->
-                    </select>
-                </div>
-
-                <!-- Jabatan -->
-                <div class="employee-form-group">
-                    <label for="employee-position" class="required-field">
-                        <?php _e('Jabatan', 'wp-customer'); ?>
-                    </label>
-                    <input type="text"
-                           id="employee-position"
-                           name="position"
-                           class="regular-text"
-                           maxlength="100"
-                           required>
-                </div>
-
-                <!-- Departemen -->
-                <div class="employee-form-group">
-                    <label for="employee-department" class="required-field">
-                        <?php _e('Departemen', 'wp-customer'); ?>
-                    </label>
-                    <input type="text"
-                           id="employee-department"
-                           name="department"
-                           class="regular-text"
-                           maxlength="100"
-                           required>
-                </div>
-
-                <!-- Email -->
-                <div class="employee-form-group">
-                    <label for="employee-email" class="required-field">
-                        <?php _e('Email', 'wp-customer'); ?>
-                    </label>
-                    <input type="email"
-                           id="employee-email"
-                           name="email"
-                           class="regular-text"
-                           maxlength="100"
-                           required>
-                    <p class="description">
-                        <?php _e('Email akan digunakan untuk login dan komunikasi', 'wp-customer'); ?>
-                    </p>
-                </div>
-
-                <!-- Nomor Telepon -->
-                <div class="employee-form-group">
-                    <label for="employee-phone">
-                        <?php _e('Nomor Telepon', 'wp-customer'); ?>
-                    </label>
-                    <input type="tel"
-                           id="employee-phone"
-                           name="phone"
-                           class="regular-text"
-                           maxlength="20"
-                           pattern="\+?[0-9\-\(\)\s]*">
-                    <p class="description">
-                        <?php _e('Format: +62xxx atau 08xxx (opsional)', 'wp-customer'); ?>
-                    </p>
+                <div class="row right-side">
+                    <!-- Penempatan -->
+                    <div class="employee-form-section">
+                        <h4><?php _e('Penempatan', 'wp-customer'); ?></h4>
+                        
+                        <div class="employee-form-group">
+                            <label for="employee-branch" class="required-field">Cabang</label>
+                            <select id="employee-branch" name="branch_id" required>
+                                <option value=""><?php _e('Pilih Cabang', 'wp-customer'); ?></option>
+                            </select>
+                            <span class="field-hint"><?php _e('Lokasi penempatan karyawan', 'wp-customer'); ?></span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
             <div class="modal-footer">
-                <div class="employee-form-actions">
-                    <button type="button" class="button cancel-create">
-                        <?php _e('Batal', 'wp-customer'); ?>
-                    </button>
-                    <button type="submit" class="button button-primary">
-                        <?php _e('Simpan', 'wp-customer'); ?>
-                    </button>
-                    <span class="spinner"></span>
-                </div>
+                <button type="button" class="button cancel-create"><?php _e('Batal', 'wp-customer'); ?></button>
+                <button type="submit" class="button button-primary"><?php _e('Simpan', 'wp-customer'); ?></button>
+                <span class="spinner"></span>
             </div>
         </form>
     </div>
