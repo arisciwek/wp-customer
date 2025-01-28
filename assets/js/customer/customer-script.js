@@ -183,7 +183,17 @@
                     if (window.EditBranchForm) {
                         window.EditBranchForm.init(); 
                     }
-                    
+
+                    if (window.CreateEmployeeForm) {
+                        window.CreateEmployeeForm.init();
+                    }
+                    if (window.EditEmployeeForm) {
+                        window.EditEmployeeForm.init();
+                    }
+                    if (window.EmployeeDataTable) {
+                        window.EmployeeDataTable.init(id);
+                    }
+
                     // Bind new events setelah content diupdate
                     this.bindEvents();
                 },
