@@ -4,10 +4,10 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Tables
- * @version     1.0.0
+ * @version     1.1.0
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Database/Tables/CustomerEmployees.php
+ * Path: /wp-customer/src/Database/Tables/CustomerEmployeesDB.php
  *
  * Description: Mendefinisikan struktur tabel employees.
  *              Table prefix yang digunakan adalah 'app_'.
@@ -21,7 +21,10 @@
  * - user_id        : Foreign key ke user
  * - name           : Nama karyawan
  * - position       : Jabatan karyawan
- * - department     : Departemen
+ * - finance        : Department finance (boolean)
+ * - operation      : Department operation (boolean)
+ * - legal          : Department legal (boolean)
+ * - purchase       : Department purchase (boolean)
  * - email          : Email karyawan (unique)
  * - phone          : Nomor telepon
  * - created_by     : User ID pembuat
@@ -33,6 +36,10 @@
  * - customer_id    : REFERENCES app_customers(id) ON DELETE CASCADE
  *
  * Changelog:
+ * 1.0.1 - 2024-01-27
+ * - Removed department field
+ * - Added boolean fields for specific departments: finance, operation, legal, purchase
+ * 
  * 1.0.0 - 2024-01-07
  * - Initial version
  * - Added basic employee fields
@@ -57,7 +64,10 @@ class CustomerEmployeesDB {
             user_id bigint(20) UNSIGNED NOT NULL,
             name varchar(100) NOT NULL,
             position varchar(100) NULL,
-            department varchar(100) NULL,
+            finance boolean NOT NULL DEFAULT 0,
+            operation boolean NOT NULL DEFAULT 0,
+            legal boolean NOT NULL DEFAULT 0,
+            purchase boolean NOT NULL DEFAULT 0,
             email varchar(100) NOT NULL,
             phone varchar(20) NULL,
             created_by bigint(20) NOT NULL,

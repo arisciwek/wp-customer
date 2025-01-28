@@ -168,6 +168,15 @@ public function enqueue_frontend_assets() {
                        $this->version
                    );
                    break;
+
+               case 'demo-data':
+                   wp_enqueue_style(
+                       'wp-customer-demo-data-tab',
+                       WP_CUSTOMER_URL . 'assets/css/settings/demo-data-tab-style.css',
+                       ['wp-customer-settings'],
+                       $this->version
+                   );
+                   break;
            }
         }
 
@@ -187,10 +196,10 @@ public function enqueue_frontend_assets() {
             wp_enqueue_style('wp-customer-customer-form', WP_CUSTOMER_URL . 'assets/css/customer/customer-form.css', [], $this->version);
 
             // Branch styles
-            wp_enqueue_style('wp-customer-branch', WP_CUSTOMER_URL . 'assets/css/branch/branch.css', [], $this->version);
+            wp_enqueue_style('wp-customer-branch', WP_CUSTOMER_URL . 'assets/css/branch/branch-style.css', [], $this->version);
 
             // Tambahkan Employee styles
-            wp_enqueue_style('wp-customer-employee', WP_CUSTOMER_URL . 'assets/css/employee/employee.css', [], $this->version);
+            wp_enqueue_style('wp-customer-employee', WP_CUSTOMER_URL . 'assets/css/employee/employee-style.css', [], $this->version);
             wp_enqueue_style('employee-toast', WP_CUSTOMER_URL . 'assets/css/employee/employee-toast.css', [], $this->version);
 
         }
@@ -268,6 +277,24 @@ public function enqueue_frontend_assets() {
                         $this->version,
                         true
                     );
+                    break;
+
+                case 'demo-data':
+                    wp_enqueue_script(
+                        'wp-customer-demo-data-tab',
+                        WP_CUSTOMER_URL . 'assets/js/settings/demo-data-tab-script.js',
+                        ['jquery', 'wp-customer-settings'],
+                        $this->version,
+                        true
+                    );
+
+                    wp_localize_script('wp-customer-demo-data-tab', 'wpCustomerDemoData', [
+                        'i18n' => [
+                            'errorMessage' => __('An error occurred while generating demo data.', 'wp-customer'),
+                            'generating' => __('Generating...', 'wp-customer')
+                        ]
+                    ]);
+                    
                     break;
             }
         }

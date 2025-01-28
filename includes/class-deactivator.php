@@ -30,10 +30,33 @@ class WP_Customer_Deactivator {
         }
     }
 
+    private static function should_clear_data() {
+        // Get development settings
+        $dev_settings = get_option('wp_customer_development_settings');
+        
+        // Always check the clear_data_on_deactivate setting first
+        if (isset($dev_settings['clear_data_on_deactivate']) && 
+            $dev_settings['clear_data_on_deactivate']) {
+            return true;
+        }
+        
+        // Fallback to constant if settings don't explicitly enable cleanup
+        return defined('WP_CUSTOMER_DEVELOPMENT') && WP_CUSTOMER_DEVELOPMENT;
+    }
+
     public static function deactivate() {
         global $wpdb;
+        
+        // Hapus development settings terlebih dahulu
+        delete_option('wp_customer_development_settings');
+        self::debug("Development settings cleared");
 
         try {
+            // Only proceed with data cleanup if in development mode
+            if (!self::should_clear_data()) {
+                self::debug("Skipping data cleanup - not in development mode");
+                return;
+            }
 
             // Add this new method call at the start
             self::remove_capabilities();
@@ -47,6 +70,7 @@ class WP_Customer_Deactivator {
             // Daftar tabel yang akan dihapus
             $tables = [
                 'app_customer_employees',
+                'app_employee_departments',
                 'app_branches',
                 'app_customer_membership_levels',
                 'app_customers'
@@ -105,7 +129,7 @@ class WP_Customer_Deactivator {
             throw $e;
         }
     }
-    
+        
     private static function delete_demo_users() {
         global $wpdb;
         
@@ -113,21 +137,97 @@ class WP_Customer_Deactivator {
             // Start transaction
             $wpdb->query('START TRANSACTION');
             
-            // Delete users created by plugin (ID >= 2)
-            $wpdb->query("DELETE FROM {$wpdb->prefix}users WHERE ID >= 2");
+            // 1. Identifikasi user berdasarkan meta/role spesifik plugin
+            // DITAMBAHKAN "AND u.ID != 1" untuk lindungi admin
+            $demo_users = $wpdb->get_col("
+                SELECT DISTINCT u.ID 
+                FROM {$wpdb->users} u
+                INNER JOIN {$wpdb->usermeta} um ON u.ID = um.user_id
+                WHERE u.ID != 1  /* Proteksi admin */
+                AND (
+                    (um.meta_key = 'wp_customer_demo_user' AND um.meta_value = '1')
+                    OR EXISTS (
+                        SELECT 1 
+                        FROM {$wpdb->usermeta} um2 
+                        WHERE um2.user_id = u.ID 
+                        AND um2.meta_key = 'wp_capabilities'
+                        AND um2.meta_value LIKE '%customer%'
+                    )
+                )
+            ");
             
-            // Reset auto increment to 11 for next activation
-            $wpdb->query("ALTER TABLE {$wpdb->prefix}users AUTO_INCREMENT = 2");
+            if (!empty($demo_users)) {
+                $user_ids = implode(',', array_map('intval', $demo_users));
+                
+                // Double check untuk memastikan ID=1 tidak masuk
+                if (in_array(1, explode(',', $user_ids))) {
+                    throw new \Exception("Attempted to delete admin user - operation aborted");
+                }
+                
+                // 2. Hapus entries di wp_usermeta
+                $wpdb->query("
+                    DELETE FROM {$wpdb->usermeta} 
+                    WHERE user_id IN ($user_ids)
+                    AND user_id != 1  /* Double protection */
+                ");
+                self::debug("Deleted usermeta entries for users: $user_ids");
+                
+                // 3. Hapus relasi di tabel WordPress lain yang terkait user
+                // comments
+                $wpdb->query("
+                    DELETE FROM {$wpdb->comments} 
+                    WHERE user_id IN ($user_ids)
+                    AND user_id != 1
+                ");
+                
+                // posts
+                $wpdb->query("
+                    DELETE FROM {$wpdb->posts} 
+                    WHERE post_author IN ($user_ids)
+                    AND post_author != 1
+                ");
+                
+                // term relationships (jika ada)
+                $wpdb->query("
+                    DELETE tr FROM {$wpdb->term_relationships} tr
+                    INNER JOIN {$wpdb->posts} p ON tr.object_id = p.ID
+                    WHERE p.post_author IN ($user_ids)
+                    AND p.post_author != 1
+                ");
+                
+                // 4. Hapus custom table relations
+                $wpdb->query("
+                    DELETE FROM {$wpdb->prefix}app_customer_employees 
+                    WHERE user_id IN ($user_ids)
+                    AND user_id != 1
+                ");
+                
+                // 5. Terakhir, hapus user
+                $wpdb->query("
+                    DELETE FROM {$wpdb->users} 
+                    WHERE ID IN ($user_ids)
+                    AND ID != 1  /* Final protection */
+                ");
+                
+                self::debug("Successfully deleted " . count($demo_users) . " demo users and their related data");
+                
+                // 6. Reset auto increment ke 2 untuk development
+                if (defined('WP_CUSTOMER_DEVELOPMENT') && WP_CUSTOMER_DEVELOPMENT) {
+                    $wpdb->query("ALTER TABLE {$wpdb->users} AUTO_INCREMENT = 2");
+                    self::debug("Reset users table AUTO_INCREMENT to 2");
+                }
+            } else {
+                self::debug("No demo users found to delete");
+            }
             
             $wpdb->query('COMMIT');
             
-            self::debug("Deleted WP users created by plugin and reset auto increment.");
         } catch (\Exception $e) {
             $wpdb->query('ROLLBACK');
             self::debug("Error managing users: " . $e->getMessage());
+            throw $e;
         }
     }
-
     private static function cleanupMembershipOptions() {
         try {
             // Hapus opsi membership settings

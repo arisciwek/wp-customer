@@ -17,7 +17,7 @@
  * Fields:
  * - id             : Primary key
  * - customer_id    : Foreign key ke customer
- * - code           : Format BR-TTTTRRRR-NNN (T=timestamp, R=random, N=sequence)
+ * - code           : Format 
  * - name           : Nama branch
  * - type           : Tipe wilayah (cabang)
  * - provinsi_id    : ID provinsi (nullable)
@@ -51,7 +51,7 @@ class BranchesDB {
         return "CREATE TABLE {$table_name} (
             id bigint(20) UNSIGNED NOT NULL auto_increment,
             customer_id bigint(20) UNSIGNED NOT NULL,
-            code varchar(17) NOT NULL,
+            code varchar(13) NOT NULL,
             name varchar(100) NOT NULL,
             type enum('cabang','pusat') NOT NULL,
             nitku varchar(20) NULL COMMENT 'Nomor Identitas Tempat Kegiatan Usaha',
