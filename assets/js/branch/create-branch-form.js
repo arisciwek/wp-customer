@@ -38,11 +38,13 @@
         },
 
         bindEvents() {
+            console.log('Starting bindEvents for CreateBranchForm');
             this.form.on('submit', (e) => this.handleCreate(e));
             this.form.on('input', 'input[name="name"]', (e) => {
                 this.validateField(e.target);
             });
 
+            console.log('Branch Form element found:', this.form.length > 0);
             $('#add-branch-btn').on('click', () => {
                 const customerId = window.Customer?.currentId;
                 if (customerId) {
