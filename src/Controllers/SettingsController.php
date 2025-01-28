@@ -33,6 +33,7 @@ class SettingsController {
     // Add this to your SettingsController or appropriate controller class
     public function register_ajax_handlers() {
         add_action('wp_ajax_reset_permissions', [$this, 'handle_reset_permissions']);
+        add_action('wp_ajax_generate_demo_data', [$this, 'handle_generate_demo_data']);      
     }
 
     public function handle_reset_permissions() {
@@ -112,6 +113,26 @@ class SettingsController {
                 )
             )
         );
+
+        // Development Settings
+        register_setting(
+            'wp_customer_development_settings',
+            'wp_customer_development_settings',
+            array(
+                'sanitize_callback' => [$this, 'sanitize_development_settings'],
+                'default' => array(
+                    'enable_development' => 0,
+                    'clear_data_on_deactivate' => 0
+                )
+            )
+        );
+    }
+
+    public function sanitize_development_settings($input) {
+        $sanitized = array();
+        $sanitized['enable_development'] = isset($input['enable_development']) ? 1 : 0;
+        $sanitized['clear_data_on_deactivate'] = isset($input['clear_data_on_deactivate']) ? 1 : 0;
+        return $sanitized;
     }
 
     public function sanitize_settings($input) {
@@ -160,6 +181,86 @@ class SettingsController {
         return $sanitized;
     }
 
+    public function handle_generate_demo_data() {
+        try {
+            if (!current_user_can('manage_options')) {
+                throw new \Exception(__('You do not have permission to perform this action.', 'wp-customer'));
+            }
+
+            $type = sanitize_key($_POST['type']);
+            if (!wp_verify_nonce($_POST['nonce'], "generate_demo_{$type}")) {
+                throw new \Exception(__('Security check failed.', 'wp-customer'));
+            }
+    
+            // Ambil settings development
+            $dev_settings = get_option('wp_customer_development_settings', [
+                'enable_development' => 0
+            ]);
+
+            switch ($type) {
+                case 'users':
+                    $generator = new \WPCustomer\Database\Demo\WPUserGenerator();
+                    $message = __('User WP generated successfully.', 'wp-customer');
+                    break;
+
+                case 'membership':
+                    $generator = new \WPCustomer\Database\Demo\MembershipLevelsDemoData();
+                    $message = __('Membership levels generated successfully.', 'wp-customer');
+                    break;
+
+                case 'customer':
+                    // Cek apakah development mode aktif
+                    if (!isset($dev_settings['enable_development']) || $dev_settings['enable_development'] != 1) {
+                        wp_send_json_error([
+                            'message' => __('Cannot generate data - Development mode is not enabled.', 'wp-customer')
+                        ]);
+                        return;
+                    }
+                    $generator = new \WPCustomer\Database\Demo\CustomerDemoData();
+
+                    $result = $generator->run();
+                    if (!$result) {
+                        throw new \Exception(__('Failed to generate customer data.', 'wp-customer'));
+                    }
+                    
+                    $message = __('Customer data generated successfully.', 'wp-customer');
+                    break;
+
+                case 'branch':
+                    // Get customer IDs and user IDs from CustomerDemoData
+                    $customerDemo = new \WPCustomer\Database\Demo\CustomerDemoData();
+                    $customer_ids = $customerDemo->getCustomerIds();
+                    $user_ids = $customerDemo->getUserIds();
+                    
+                    $generator = new \WPCustomer\Database\Demo\BranchDemoData($customer_ids, $user_ids);
+                    $message = __('Branch data generated successfully.', 'wp-customer');
+                    break;
+
+                case 'employee':
+                    $generator = new \WPCustomer\Database\Demo\CustomerEmployeeDemoData();
+                    $message = __('Employee data generated successfully.', 'wp-customer');
+                    break;
+
+                default:
+                    throw new \Exception(__('Invalid demo data type.', 'wp-customer'));
+            }
+
+            $result = $generator->run();
+            if (!$result) {
+                throw new \Exception(__('Failed to generate demo data.', 'wp-customer'));
+            }
+
+            wp_send_json_success([
+                'message' => $message
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
     public function renderPage() {
         if (!current_user_can('manage_options')) {
             wp_die(__('Anda tidak memiliki izin untuk mengakses halaman ini.', 'wp-customer'));
@@ -176,7 +277,8 @@ class SettingsController {
         $allowed_tabs = [
             'general' => 'tab-general.php',
             'permissions' => 'tab-permissions.php',
-            'membership' => 'tab-membership.php'
+            'membership' => 'tab-membership.php',
+            'demo-data' => 'tab-demo-data.php'
         ];
         
         // Validate tab exists
