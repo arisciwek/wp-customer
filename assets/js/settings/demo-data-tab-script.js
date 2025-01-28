@@ -1,16 +1,14 @@
 jQuery(document).ready(function($) {
-    $('.generate-demo-data').on('click', function() {
+    $('.generate-demo-data').on('click', function(e) {
+        e.preventDefault();
+        
         const button = $(this);
         const type = button.data('type');
         const nonce = button.data('nonce');
         
-        // Disable button
+        // Disable button while processing
         button.prop('disabled', true);
         
-        // Add spinner
-        button.after('<span class="spinner is-active"></span>');
-
-        // AJAX call
         $.ajax({
             url: ajaxurl,
             type: 'POST',
@@ -20,37 +18,32 @@ jQuery(document).ready(function($) {
                 nonce: nonce
             },
             success: function(response) {
+                // Re-enable button
+                button.prop('disabled', false);
+                
+                const messageDiv = $('#demo-data-messages');
+                messageDiv.removeClass('notice-error notice-success notice-warning').empty();
+                
                 if (response.success) {
-                    $('#demo-data-messages').html(
-                        '<div class="notice notice-success is-dismissible"><p>' + 
-                        response.data.message + 
-                        '</p></div>'
-                    );
+                    messageDiv.addClass('notice notice-success').html('<p>' + response.data.message + '</p>');
                 } else {
-                    $('#demo-data-messages').html(
-                        '<div class="notice notice-error is-dismissible"><p>' + 
-                        (response.data.message || 'An error occurred while generating demo data.') + 
-                        '</p></div>'
-                    );
+                    // Different styling for development mode off vs other errors
+                    if (response.data.type === 'dev_mode_off') {
+                        messageDiv.addClass('notice notice-warning').html('<p>' + response.data.message + '</p>');
+                    } else {
+                        messageDiv.addClass('notice notice-error').html('<p>' + response.data.message + '</p>');
+                    }
                 }
             },
             error: function() {
-                $('#demo-data-messages').html(
-                    '<div class="notice notice-error is-dismissible"><p>' + 
-                    'An error occurred while generating demo data.' + 
-                    '</p></div>'
-                );
-            },
-            complete: function() {
-                // Re-enable button and remove spinner
+                // Re-enable button
                 button.prop('disabled', false);
-                button.next('.spinner').remove();
+                
+                const messageDiv = $('#demo-data-messages');
+                messageDiv.removeClass('notice-error notice-success notice-warning')
+                    .addClass('notice notice-error')
+                    .html('<p>An unexpected error occurred while generating demo data.</p>');
             }
         });
-    });
-
-    // Add handler for dismissible notices
-    $(document).on('click', '.notice-dismiss', function() {
-        $(this).closest('.notice').fadeOut();
     });
 });

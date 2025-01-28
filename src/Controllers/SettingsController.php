@@ -181,82 +181,74 @@ class SettingsController {
         return $sanitized;
     }
 
+    /**
+     * Get the appropriate generator class based on data type
+     *
+     * @param string $type The type of data to generate
+     * @return AbstractDemoData Generator instance
+     * @throws \Exception If invalid type specified
+     */
+    private function getGeneratorClass($type) {
+        switch ($type) {
+            case 'users':
+                return new \WPCustomer\Database\Demo\WPUserGenerator();
+            case 'customer':
+                return new \WPCustomer\Database\Demo\CustomerDemoData();
+            case 'branch':
+                return new \WPCustomer\Database\Demo\BranchDemoData();
+            case 'employee':
+                return new \WPCustomer\Database\Demo\EmployeeDemoData();
+            case 'membership':
+                return new \WPCustomer\Database\Demo\MembershipDemoData();
+            default:
+                throw new \Exception('Invalid demo data type: ' . $type);
+        }
+    }
+
     public function handle_generate_demo_data() {
         try {
+            // Validate nonce and permissions first
             if (!current_user_can('manage_options')) {
-                throw new \Exception(__('You do not have permission to perform this action.', 'wp-customer'));
+                throw new \Exception('Permission denied');
             }
 
-            $type = sanitize_key($_POST['type']);
-            if (!wp_verify_nonce($_POST['nonce'], "generate_demo_{$type}")) {
-                throw new \Exception(__('Security check failed.', 'wp-customer'));
-            }
-    
-            // Ambil settings development
-            $dev_settings = get_option('wp_customer_development_settings', [
-                'enable_development' => 0
-            ]);
+            $type = sanitize_text_field($_POST['type']);
+            $nonce = sanitize_text_field($_POST['nonce']);
 
-            switch ($type) {
-                case 'users':
-                    $generator = new \WPCustomer\Database\Demo\WPUserGenerator();
-                    $message = __('User WP generated successfully.', 'wp-customer');
-                    break;
-
-                case 'membership':
-                    $generator = new \WPCustomer\Database\Demo\MembershipLevelsDemoData();
-                    $message = __('Membership levels generated successfully.', 'wp-customer');
-                    break;
-
-                case 'customer':
-                    // Cek apakah development mode aktif
-                    if (!isset($dev_settings['enable_development']) || $dev_settings['enable_development'] != 1) {
-                        wp_send_json_error([
-                            'message' => __('Cannot generate data - Development mode is not enabled.', 'wp-customer')
-                        ]);
-                        return;
-                    }
-                    $generator = new \WPCustomer\Database\Demo\CustomerDemoData();
-
-                    $result = $generator->run();
-                    if (!$result) {
-                        throw new \Exception(__('Failed to generate customer data.', 'wp-customer'));
-                    }
-                    
-                    $message = __('Customer data generated successfully.', 'wp-customer');
-                    break;
-
-                case 'branch':
-                    // Get customer IDs and user IDs from CustomerDemoData
-                    $customerDemo = new \WPCustomer\Database\Demo\CustomerDemoData();
-                    $customer_ids = $customerDemo->getCustomerIds();
-                    $user_ids = $customerDemo->getUserIds();
-                    
-                    $generator = new \WPCustomer\Database\Demo\BranchDemoData($customer_ids, $user_ids);
-                    $message = __('Branch data generated successfully.', 'wp-customer');
-                    break;
-
-                case 'employee':
-                    $generator = new \WPCustomer\Database\Demo\CustomerEmployeeDemoData();
-                    $message = __('Employee data generated successfully.', 'wp-customer');
-                    break;
-
-                default:
-                    throw new \Exception(__('Invalid demo data type.', 'wp-customer'));
+            if (!wp_verify_nonce($nonce, "generate_demo_{$type}")) {
+                throw new \Exception('Invalid security token');
             }
 
-            $result = $generator->run();
-            if (!$result) {
-                throw new \Exception(__('Failed to generate demo data.', 'wp-customer'));
+            // Get the generator class based on type
+            $generator = $this->getGeneratorClass($type);
+            
+            // Check if development mode is enabled before proceeding
+            if (!$generator->isDevelopmentMode()) {
+                wp_send_json_error([
+                    'message' => 'Cannot generate demo data - Development mode is not enabled. Please enable it in settings first.',
+                    'type' => 'dev_mode_off'  // Menandakan error karena development mode off
+                ]);
+                return;
             }
 
-            wp_send_json_success([
-                'message' => $message
-            ]);
+            // If development mode is on, proceed with generation
+            if ($generator->run()) {
+                wp_send_json_success([
+                    'message' => ucfirst($type) . ' data generated successfully.',
+                    'type' => 'success'
+                ]);
+            } else {
+                wp_send_json_error([
+                    'message' => 'Failed to generate demo data.',
+                    'type' => 'error'  // Menandakan error teknis
+                ]);
+            }
 
         } catch (\Exception $e) {
+            $this->debug('Demo data generation failed: ' . $e->getMessage());
             wp_send_json_error([
-                'message' => $e->getMessage()
+                'message' => 'Failed to generate demo data.',
+                'type' => 'error'
             ]);
         }
     }

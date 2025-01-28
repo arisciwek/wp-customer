@@ -47,14 +47,16 @@ class WP_Customer_Deactivator {
     public static function deactivate() {
         global $wpdb;
         
+        $should_clear_data = self::should_clear_data();
+
         // Hapus development settings terlebih dahulu
         delete_option('wp_customer_development_settings');
         self::debug("Development settings cleared");
 
         try {
             // Only proceed with data cleanup if in development mode
-            if (!self::should_clear_data()) {
-                self::debug("Skipping data cleanup - not in development mode");
+            if (!$should_clear_data) {
+                self::debug("Skipping data cleanup on plugin deactivation as in settings");
                 return;
             }
 

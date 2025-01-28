@@ -74,6 +74,9 @@ class BranchDemoData extends AbstractDemoData {
     private $branch_ids = [];
     private $used_nitku = [];
     private $used_emails = [];
+    private $customer_ids;
+    private $user_ids;
+    protected $branch_users = [];
 
     // Format nama branch
     private static $branches = [
@@ -82,15 +85,13 @@ class BranchDemoData extends AbstractDemoData {
         ['id' => 3, 'name' => '%s Cabang %s']          // Cabang Area
     ];
 
-    private $customer_ids;
-    private $user_ids;
-
     public function __construct() {
         parent::__construct();
         $this->customer_ids = [];
         $this->user_ids = [];
-    }
-    
+
+        $this->branch_users = WPUserGenerator::$branch_users;    }
+
     /**
      * Validasi data sebelum generate
      */
@@ -100,6 +101,12 @@ class BranchDemoData extends AbstractDemoData {
             $this->customer_ids = $this->customerModel->getAllCustomerIds();
             if (empty($this->customer_ids)) {
                 throw new \Exception('No active customers found in database');
+            }
+
+            // Get branch admin users mapping from WPUserGenerator
+            $this->branch_users = WPUserGenerator::$branch_users;  // Perubahan di sini
+            if (empty($this->branch_users)) {
+                throw new \Exception('Branch admin users not found');
             }
 
             // Validasi tabel provinces & regencies
@@ -125,34 +132,82 @@ class BranchDemoData extends AbstractDemoData {
         }
     }
 
-    /**
-     * Generate branch data
-     */
     protected function generate(): void {
-        // Clear existing data
-        $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_branches");
-        
-        foreach ($this->customer_ids as $customer_id) {
-            $customer = $this->customerModel->find($customer_id);
-            if (!$customer) {
-                $this->debug("Customer not found: {$customer_id}");
-                continue;
-            }
-            
-            // Generate kantor pusat first (menggunakan lokasi yang sama dengan customer)
-            $this->generatePusatBranch($customer);
-            
-            // Generate cabang-cabang with different locations
-            $this->generateCabangBranches($customer);
+        if (!$this->isDevelopmentMode()) {
+            $this->debug('Cannot generate data - not in development mode');
+            throw new \Exception('Development mode is not enabled. Please enable it in settings first.');
         }
 
-        $this->debug('Branch generation completed');
+        $generated_count = 0;
+
+        try {
+            // Get all active customers
+            foreach ($this->customer_ids as $customer_id) {
+                $customer = $this->customerModel->find($customer_id);
+                if (!$customer) {
+                    $this->debug("Customer not found: {$customer_id}");
+                    continue;
+                }
+
+                if (!isset($this->branch_users[$customer_id])) {
+                    $this->debug("No branch admin users found for customer {$customer_id}, skipping...");
+                    continue;
+                }
+
+                // Check for existing pusat branch
+                $existing_pusat = $this->wpdb->get_row($this->wpdb->prepare(
+                    "SELECT * FROM {$this->wpdb->prefix}app_branches 
+                     WHERE customer_id = %d AND type = 'pusat'",
+                    $customer_id
+                ));
+
+                if ($existing_pusat) {
+                    $this->debug("Pusat branch exists for customer {$customer_id}, skipping...");
+                } else {
+                    // Get pusat admin user ID
+                    $pusat_user = $this->branch_users[$customer_id]['pusat'];
+                    $this->debug("Using pusat admin user ID: {$pusat_user['id']} for customer {$customer_id}");
+                    $this->generatePusatBranch($customer, $pusat_user['id']);
+                    $generated_count++;
+                }
+
+                // Check for existing cabang branches
+                $existing_cabang_count = $this->wpdb->get_var($this->wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$this->wpdb->prefix}app_branches 
+                     WHERE customer_id = %d AND type = 'cabang'",
+                    $customer_id
+                ));
+
+                if ($existing_cabang_count > 0) {
+                    $this->debug("Cabang branches exist for customer {$customer_id}, skipping...");
+                } else {
+                    $this->generateCabangBranches($customer);
+                    $generated_count++;
+                }
+            }
+
+            if ($generated_count === 0) {
+                $this->debug('No new branches were generated - all branches already exist');
+            } else {
+                // Reset auto increment only if we added new data
+                $this->wpdb->query(
+                    "ALTER TABLE {$this->wpdb->prefix}app_branches AUTO_INCREMENT = " . 
+                    (count($this->branch_ids) + 1)
+                );
+                $this->debug("Branch generation completed. Total new branches processed: {$generated_count}");
+            }
+
+        } catch (\Exception $e) {
+            $this->debug("Error in branch generation: " . $e->getMessage());
+            throw $e;
+        }
     }
 
     /**
      * Generate kantor pusat
      */
-    private function generatePusatBranch($customer): void {
+
+    private function generatePusatBranch($customer, $branch_user_id): void {
         // Validate location data
         if (!$this->validateLocation($customer->provinsi_id, $customer->regency_id)) {
             throw new \Exception("Invalid location for customer: {$customer->id}");
@@ -162,7 +217,7 @@ class BranchDemoData extends AbstractDemoData {
         
         $branch_data = [
             'customer_id' => $customer->id,
-            'name' => sprintf(self::$branches[0]['name'], $customer->name),
+            'name' => sprintf('%s Kantor Pusat', $customer->name),
             'type' => 'pusat',
             'nitku' => $this->generateNITKU(),
             'postal_code' => $this->generatePostalCode(),
@@ -173,12 +228,11 @@ class BranchDemoData extends AbstractDemoData {
             'email' => $this->generateEmail($customer->name, 'pusat'),
             'provinsi_id' => $customer->provinsi_id,
             'regency_id' => $customer->regency_id,
-            'user_id' => $this->user_ids[$customer->id],
-            'created_by' => $this->user_ids[$customer->id],
+            'user_id' => $branch_user_id,                  // Branch admin user
+            'created_by' => $customer->user_id,            // Customer owner user
             'status' => 'active'
         ];
 
-        error_log('Branch Data' . print_r($branch_data), true);
         $branch_id = $this->branchModel->create($branch_data);
         if (!$branch_id) {
             throw new \Exception("Failed to create pusat branch for customer: {$customer->id}");
@@ -197,6 +251,14 @@ class BranchDemoData extends AbstractDemoData {
         $used_provinces = [$customer->provinsi_id];
         
         for ($i = 0; $i < $cabang_count; $i++) {
+            // Get cabang admin user ID
+            $cabang_key = 'cabang' . ($i + 1);
+            if (!isset($this->branch_users[$customer->id][$cabang_key])) {
+                $this->debug("No admin user found for {$cabang_key} of customer {$customer->id}, skipping...");
+                continue;
+            }
+            $cabang_user = $this->branch_users[$customer->id][$cabang_key];
+            
             // Get random province (different from used provinces)
             $provinsi_id = $this->getRandomProvinceExcept($customer->provinsi_id);
             while (in_array($provinsi_id, $used_provinces)) {
@@ -210,7 +272,7 @@ class BranchDemoData extends AbstractDemoData {
 
             $branch_data = [
                 'customer_id' => $customer->id,
-                'name' => sprintf(self::$branches[$i + 1]['name'], 
+                'name' => sprintf('%s Cabang %s', 
                                 $customer->name, 
                                 $regency_name),
                 'type' => 'cabang',
@@ -220,14 +282,13 @@ class BranchDemoData extends AbstractDemoData {
                 'longitude' => $this->generateLongitude(),
                 'address' => $this->generateAddress($regency_name),
                 'phone' => $this->generatePhone(),
-                'email' => $this->generateEmail($customer->name, 'cabang' . ($i + 1)),
+                'email' => $this->generateEmail($customer->name, $cabang_key),
                 'provinsi_id' => $provinsi_id,
                 'regency_id' => $regency_id,
-                'user_id' => $this->user_ids[$customer->id],
-                'created_by' => $this->user_ids[$customer->id],
+                'user_id' => $cabang_user['id'],           // Branch admin user
+                'created_by' => $customer->user_id,        // Customer owner user
                 'status' => 'active'
             ];
-            error_log('Branch Data' . print_r($branch_data), true);
 
             $branch_id = $this->branchModel->create($branch_data);
             if (!$branch_id) {

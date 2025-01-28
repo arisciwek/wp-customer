@@ -249,13 +249,17 @@ trait CustomerDemoDataHelperTrait {
     /**
      * Get random province except specified ID
      */
-    protected function getRandomProvinceExcept(int $exclude_id): int {
-        $province = $this->wpdb->get_row($this->wpdb->prepare(
-            "SELECT id FROM {$this->wpdb->prefix}wi_provinces 
-             WHERE id != %d ORDER BY RAND() LIMIT 1",
+      protected function getRandomProvinceExcept(int $exclude_id): int {
+        $province = $this->wpdb->get_row($this->wpdb->prepare("
+            SELECT DISTINCT p.id 
+            FROM {$this->wpdb->prefix}wi_provinces p
+            INNER JOIN {$this->wpdb->prefix}wi_regencies r ON r.province_id = p.id 
+            WHERE p.id != %d 
+            ORDER BY RAND() 
+            LIMIT 1",
             $exclude_id
         ));
-        
+
         if (!$province) {
             throw new \Exception('No other provinces found');
         }

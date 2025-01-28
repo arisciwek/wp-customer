@@ -104,14 +104,19 @@ abstract class AbstractDemoData {
             return false;
         }
     }
-    
-    protected function isDevelopmentMode(): bool {
+    /**
+     * Check if development mode is enabled
+     * This can be enabled via settings or WP_CUSTOMER_DEVELOPMENT constant
+     * 
+     * @return bool True if development mode is enabled
+     */
+    public function isDevelopmentMode(): bool {
         $dev_settings = get_option('wp_customer_development_settings');
         return (isset($dev_settings['enable_development']) && $dev_settings['enable_development']) 
                || (defined('WP_CUSTOMER_DEVELOPMENT') && WP_CUSTOMER_DEVELOPMENT);
     }
 
-    protected function shouldClearData(): bool {
+    public function shouldClearData(): bool {
         $dev_settings = get_option('wp_customer_development_settings');
         return isset($dev_settings['clear_data_on_deactivate']) && 
                $dev_settings['clear_data_on_deactivate'];
