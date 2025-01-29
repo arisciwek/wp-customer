@@ -11,7 +11,7 @@ if (defined('WP_DEBUG') && WP_DEBUG) {
 }
 ?>
 
-<div id="customer-details" class="tab-content-active">
+<div id="customer-details" class="tab-content active">
     <?php if (isset($customer)): ?>
         <div class="customer-header">
             <h3><?php echo esc_html($customer->name); ?></h3>
