@@ -177,33 +177,42 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
         }
     }
 
-    private function createEmployeeRecord(
-        int $customer_id, 
-        int $branch_id, 
-        int $user_id, 
-        array $departments
-    ): void {
-        try {
-            $wp_user = get_userdata($user_id);
-            if (!$wp_user) {
-                throw new \Exception("WordPress user not found: {$user_id}");
-            }
+private function createEmployeeRecord(
+    int $customer_id, 
+    int $branch_id, 
+    int $user_id, 
+    array $departments
+): void {
+    try {
+        $wp_user = get_userdata($user_id);
+        if (!$wp_user) {
+            throw new \Exception("WordPress user not found: {$user_id}");
+        }
 
-            $employee_data = [
-                'customer_id' => $customer_id,
-                'branch_id' => $branch_id,
-                'user_id' => $user_id,
-                'name' => $wp_user->display_name,
-                'position' => 'Staff',  // Default position
-                'email' => $wp_user->user_email,
-                'phone' => $this->generatePhone(),
-                'finance' => $departments['finance'] ?? false,
-                'operation' => $departments['operation'] ?? false,
-                'legal' => $departments['legal'] ?? false,
-                'purchase' => $departments['purchase'] ?? false,
-                'created_by' => 1,
-                'status' => 'active'
-            ];
+        $keterangan = [];
+        if ($user_id >= 2 && $user_id <= 11) $keterangan[] = 'Admin Pusat';
+        if ($user_id >= 12 && $user_id <= 41) $keterangan[] = 'Admin Cabang';
+        if ($departments['finance']) $keterangan[] = 'Finance'; 
+        if ($departments['operation']) $keterangan[] = 'Operation';
+        if ($departments['legal']) $keterangan[] = 'Legal';
+        if ($departments['purchase']) $keterangan[] = 'Purchase';
+
+        $employee_data = [
+            'customer_id' => $customer_id,
+            'branch_id' => $branch_id,
+            'user_id' => $user_id,
+            'name' => $wp_user->display_name,
+            'position' => 'Staff',
+            'email' => $wp_user->user_email,
+            'phone' => $this->generatePhone(),
+            'finance' => $departments['finance'] ?? false,
+            'operation' => $departments['operation'] ?? false,
+            'legal' => $departments['legal'] ?? false,
+            'purchase' => $departments['purchase'] ?? false,
+            'keterangan' => implode(', ', $keterangan),
+            'created_by' => 1,
+            'status' => 'active'
+        ];
 
             $result = $this->wpdb->insert(
                 $this->wpdb->prefix . 'app_customer_employees',
@@ -226,3 +235,4 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
         return sprintf('08%d', rand(100000000, 999999999));
     }
 }
+

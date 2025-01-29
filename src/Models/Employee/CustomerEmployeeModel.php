@@ -46,7 +46,7 @@ class CustomerEmployeeModel {
                 'branch_id' => $data['branch_id'],
                 'name' => $data['name'],
                 'position' => $data['position'],
-                'department' => $data['department'],
+                'keterangan' => $data['keterangan'],
                 'email' => $data['email'],
                 'phone' => $data['phone'],
                 'created_by' => get_current_user_id(),
@@ -89,7 +89,7 @@ class CustomerEmployeeModel {
         // Add format for each field
         if (isset($data['name'])) $format[] = '%s';
         if (isset($data['position'])) $format[] = '%s';
-        if (isset($data['department'])) $format[] = '%s';
+        if (isset($data['keterangan'])) $format[] = '%s';
         if (isset($data['email'])) $format[] = '%s';
         if (isset($data['phone'])) $format[] = '%s';
         if (isset($data['status'])) $format[] = '%s';
@@ -162,7 +162,7 @@ class CustomerEmployeeModel {
 
         // Add search if provided
         if (!empty($search)) {
-            $where .= " AND (e.name LIKE %s OR e.department LIKE %s)";
+            $where .= " AND (e.name LIKE %s OR e.keterangan LIKE %s)";
             $search_param = '%' . $wpdb->esc_like($search) . '%';
             $params = array_merge($params, [$search_param, $search_param, $search_param, $search_param]);
             error_log('Search Where Clause Added: ' . $where);
@@ -170,7 +170,7 @@ class CustomerEmployeeModel {
         }
 
         // Validate order column
-        $validColumns = ['name', 'department', 'branch_name', 'status'];
+        $validColumns = ['name', 'keterangan', 'branch_name', 'status'];
         if (!in_array($orderColumn, $validColumns)) {
             $orderColumn = 'name';
         }
@@ -179,7 +179,7 @@ class CustomerEmployeeModel {
         // Map frontend column to actual column
         $orderColumnMap = [
             'name' => 'e.name',
-            'department' => 'e.department',
+            'keterangan' => 'e.keterangan',
             'branch_name' => 'b.name',
             'status' => 'e.status'
         ];

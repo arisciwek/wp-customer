@@ -68,6 +68,7 @@ class CustomerEmployeesDB {
             operation boolean NOT NULL DEFAULT 0,
             legal boolean NOT NULL DEFAULT 0,
             purchase boolean NOT NULL DEFAULT 0,
+            keterangan varchar(200) NULL,
             email varchar(100) NOT NULL,
             phone varchar(20) NULL,
             created_by bigint(20) NOT NULL,

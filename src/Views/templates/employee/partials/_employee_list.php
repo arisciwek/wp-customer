@@ -82,7 +82,7 @@ error_log('Can add branch On Employee Template: ' . (current_user_can('add_branc
                     <tr>
                         <th><?php _e('Nama', 'wp-customer'); ?></th>
                         <th><?php _e('Jabatan', 'wp-customer'); ?></th>
-                        <th><?php _e('Departemen', 'wp-customer'); ?></th>
+                        <th><?php _e('Keterangan', 'wp-customer'); ?></th>
                         <th><?php _e('Email', 'wp-customer'); ?></th>
                         <th><?php _e('Cabang', 'wp-customer'); ?></th>
                         <th><?php _e('Status', 'wp-customer'); ?></th>
@@ -98,7 +98,7 @@ error_log('Can add branch On Employee Template: ' . (current_user_can('add_branc
                     <tr>
                         <th><?php _e('Nama', 'wp-customer'); ?></th>
                         <th><?php _e('Jabatan', 'wp-customer'); ?></th>
-                        <th><?php _e('Departemen', 'wp-customer'); ?></th>
+                        <th><?php _e('Keterangan', 'wp-customer'); ?></th>
                         <th><?php _e('Email', 'wp-customer'); ?></th>
                         <th><?php _e('Cabang', 'wp-customer'); ?></th>
                         <th><?php _e('Status', 'wp-customer'); ?></th>

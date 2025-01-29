@@ -72,9 +72,9 @@ defined('ABSPATH') || exit;
                         </div>
 
                         <div class="employee-form-group">
-                            <label for="employee-department" class="required-field">Departemen</label>
-                            <input type="text" id="employee-department" name="department" maxlength="100" required>
-                            <span class="field-hint"><?php _e('Departemen karyawan', 'wp-customer'); ?></span>
+                            <label for="employee-keterangan" class="required-field">Keterangan</label>
+                            <input type="text" id="employee-keterangan" name="keterangan" maxlength="100" required>
+                            <span class="field-hint"><?php _e('Keterangan karyawan', 'wp-customer'); ?></span>
                         </div>
                     </div>
                 </div>

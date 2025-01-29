@@ -146,8 +146,8 @@
                         minlength: 2,
                         maxlength: 100
                     },
-                    department: {
-                        required: true,
+                    keterangan: {
+                        required: false,
                         minlength: 2,
                         maxlength: 100
                     },
@@ -176,10 +176,10 @@
                         minlength: 'Jabatan minimal 2 karakter',
                         maxlength: 'Jabatan maksimal 100 karakter'
                     },
-                    department: {
-                        required: 'Departemen wajib diisi',
-                        minlength: 'Departemen minimal 2 karakter',
-                        maxlength: 'Departemen maksimal 100 karakter'
+                    keterangan: {
+                        required: 'Keterangan wajib diisi',
+                        minlength: 'Keterangan minimal 2 karakter',
+                        maxlength: 'Keterangan maksimal 100 karakter'
                     },
                     email: {
                         required: 'Email wajib diisi',
@@ -276,7 +276,7 @@
                 name: this.form.find('[name="name"]').val().trim(),
                 branch_id: this.form.find('[name="branch_id"]').val(),
                 position: this.form.find('[name="position"]').val().trim(),
-                department: this.form.find('[name="department"]').val().trim(),
+                keterangan: this.form.find('[name="keterangan"]').val().trim(),
                 email: this.form.find('[name="email"]').val().trim(),
                 phone: this.form.find('[name="phone"]').val().trim()
             };

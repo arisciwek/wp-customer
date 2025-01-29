@@ -72,7 +72,6 @@ class WP_Customer_Deactivator {
             // Daftar tabel yang akan dihapus
             $tables = [
                 'app_customer_employees',
-                'app_employee_departments',
                 'app_branches',
                 'app_customer_membership_levels',
                 'app_customers'
