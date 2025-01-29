@@ -7,6 +7,8 @@
  * @version     1.0.0
  * @author      arisciwek
  *
+ * Path: /wp-customer/src/Database/Demo/Data/CustomerDemoData.php
+ * 
  * Description: Generate customer demo data dengan:
  *              - Data perusahaan dengan format yang valid
  *              - Integrasi dengan WordPress user
@@ -15,6 +17,9 @@
  */
 
 namespace WPCustomer\Database\Demo;
+
+use WPCustomer\Database\Demo\Data\CustomerUsersData;
+use WPCustomer\Database\Demo\Data\BranchUsersData;
 
 defined('ABSPATH') || exit;
 
@@ -31,7 +36,7 @@ class CustomerDemoData extends AbstractDemoData {
 
     // Data statis customer
     private static $customers = [
-        ['id' => 1, 'name' => 'PT Maju Bersama','provinsi_id' => '16', 'regency_id' => '34'],
+        ['id' => 1, 'name' => 'PT Maju Bersama', 'provinsi_id' => '16', 'regency_id' => '34'],
         ['id' => 2, 'name' => 'CV Teknologi Nusantara'],
         ['id' => 3, 'name' => 'PT Sinar Abadi'],
         ['id' => 4, 'name' => 'PT Global Teknindo'],
@@ -48,7 +53,7 @@ class CustomerDemoData extends AbstractDemoData {
      */
     public function __construct() {
         parent::__construct();
-        $this->customer_users = WPUserGenerator::$customer_users;
+        $this->customer_users = CustomerUsersData::$data;
     }
 
     /**
@@ -64,8 +69,7 @@ class CustomerDemoData extends AbstractDemoData {
                 throw new \Exception('Tabel provinces tidak ditemukan');
             }
 
-            // Get customer users mapping from WPUserGenerator
-            $this->customer_users = WPUserGenerator::$customer_users;  // Tambah ini
+            // Get customer users mapping
             if (empty($this->customer_users)) {
                 throw new \Exception('Customer users not found');
             }
@@ -111,40 +115,30 @@ class CustomerDemoData extends AbstractDemoData {
 
         foreach (self::$customers as $customer) {
             try {
-                // 1. Cek existing customer dan user_id nya
+                // 1. Cek existing customer
                 $existing_customer = $this->wpdb->get_row(
                     $this->wpdb->prepare(
-                        "SELECT * FROM {$this->wpdb->prefix}app_customers WHERE id = %d",
+                        "SELECT c.* FROM {$this->wpdb->prefix}app_customers c 
+                         INNER JOIN {$this->wpdb->users} u ON c.user_id = u.ID 
+                         WHERE c.id = %d",
                         $customer['id']
                     )
                 );
 
-                // Ambil data user yang seharusnya dari WPUserGenerator
-                $expected_user_data = $this->customer_users[$customer['id'] - 1];
-                $expected_user_id = $expected_user_data['id'];
-
                 if ($existing_customer) {
-                    // Cek apakah user_id sama dengan yang diharapkan
-                    if ($existing_customer->user_id == $expected_user_id) {
-                        $this->debug("Customer exists with ID: {$customer['id']} and correct user_id, skipping...");
-                        continue;
-                    } else {
-                        $this->debug("Customer exists with ID: {$customer['id']} but different user_id. Expected: {$expected_user_id}, Found: {$existing_customer->user_id}. Regenerating...");
-                        
-                        // Hapus data customer yang lama
-                        $this->wpdb->delete(
-                            $this->wpdb->prefix . 'app_customers',
-                            ['id' => $customer['id']],
-                            ['%d']
-                        );
-                    }
+                    $this->debug("Customer exists with ID: {$customer['id']}, skipping...");
+                    continue;
                 }
 
-                // 2. Generate atau regenerate user
+                // 2. Cek dan buat WP User jika belum ada
+                $wp_user_id = 1 + $customer['id'];  // Sesuai dengan indeks di CustomerUsersData
+                
+                // Ambil data user dari static array
+                $user_data = $this->customer_users[$customer['id'] - 1];
                 $user_id = $userGenerator->generateUser([
-                    'id' => $expected_user_data['id'],
-                    'username' => $expected_user_data['username'],
-                    'display_name' => $expected_user_data['display_name'],
+                    'id' => $user_data['id'],
+                    'username' => $user_data['username'],
+                    'display_name' => $user_data['display_name'],
                     'role' => 'customer'
                 ]);
 
@@ -153,7 +147,7 @@ class CustomerDemoData extends AbstractDemoData {
                 }
 
                 // Store user_id untuk referensi
-                self::$user_ids[$customer['id']] = $user_id;
+                self::$user_ids[$customer['id']] = $wp_user_id;
 
                 // 3. Generate customer data baru
                 $provinsi_id = isset($customer['provinsi_id']) ? 
@@ -169,17 +163,31 @@ class CustomerDemoData extends AbstractDemoData {
                     throw new \Exception("Invalid province-regency relationship: Province {$provinsi_id}, Regency {$regency_id}");
                 }
 
+                if ($this->shouldClearData()) {
+                    // Delete existing customer if user WP not  exists
+                    $this->wpdb->delete(
+                        $this->wpdb->prefix . 'app_customers',
+                        ['id' => $customer['id']],
+                        ['%d']
+                    );
+                    
+                    $this->debug("Deleted existing customer with ID: {$customer['id']}");
+                }
+
+                // Prepare customer data according to schema
                 $customer_data = [
                     'id' => $customer['id'],
                     'code' => $this->customerModel->generateCustomerCode(),
                     'name' => $customer['name'],
                     'npwp' => $this->generateNPWP(),
                     'nib' => $this->generateNIB(),
-                    'provinsi_id' => $provinsi_id,
-                    'regency_id' => $regency_id,
+                    'status' => 'active',
+                    'provinsi_id' => $provinsi_id ?: null,
+                    'regency_id' => $regency_id ?: null,
+                    'user_id' => $wp_user_id,
                     'created_by' => 1,
-                    'user_id' => $user_id,
-                    'status' => 'active'
+                    'created_at' => current_time('mysql'),
+                    'updated_at' => current_time('mysql')
                 ];
 
                 // Insert customer baru
@@ -195,7 +203,7 @@ class CustomerDemoData extends AbstractDemoData {
                 // Track customer ID
                 self::$customer_ids[] = $customer['id'];
 
-                $this->debug("Created/Updated customer: {$customer['name']} with ID: {$customer['id']} and WP User ID: {$user_id}");
+                $this->debug("Created customer: {$customer['name']} with ID: {$customer['id']} and WP User ID: {$wp_user_id}");
 
             } catch (\Exception $e) {
                 $this->debug("Error processing customer {$customer['name']}: " . $e->getMessage());

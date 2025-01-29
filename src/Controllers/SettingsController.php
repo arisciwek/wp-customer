@@ -197,7 +197,7 @@ class SettingsController {
             case 'branch':
                 return new \WPCustomer\Database\Demo\BranchDemoData();
             case 'employee':
-                return new \WPCustomer\Database\Demo\EmployeeDemoData();
+                return new \WPCustomer\Database\Demo\CustomerEmployeeDemoData();
             case 'membership':
                 return new \WPCustomer\Database\Demo\MembershipDemoData();
             default:

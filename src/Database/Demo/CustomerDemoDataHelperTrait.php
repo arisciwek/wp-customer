@@ -300,7 +300,7 @@ trait CustomerDemoDataHelperTrait {
         }
 
         // Format: "Kota Bandung" atau "Kabupaten Bogor"
-        return $regency->type . ' ' . $regency->name;
+        return $regency->name;
     }
 
     /**

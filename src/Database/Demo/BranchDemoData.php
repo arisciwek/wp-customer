@@ -66,6 +66,8 @@
 
 namespace WPCustomer\Database\Demo;
 
+use WPCustomer\Database\Demo\Data\BranchUsersData;
+
 defined('ABSPATH') || exit;
 
 class BranchDemoData extends AbstractDemoData {
@@ -89,53 +91,128 @@ class BranchDemoData extends AbstractDemoData {
         parent::__construct();
         $this->customer_ids = [];
         $this->user_ids = [];
-
-        $this->branch_users = WPUserGenerator::$branch_users;    }
+        $this->branch_users = BranchUsersData::$data;
+    }
 
     /**
      * Validasi data sebelum generate
      */
-    protected function validate(): bool {
-        try {
-            // Get all active customer IDs from model
-            $this->customer_ids = $this->customerModel->getAllCustomerIds();
-            if (empty($this->customer_ids)) {
-                throw new \Exception('No active customers found in database');
+        protected function validate(): bool {
+            try {
+                // Get all active customer IDs from model
+                $this->customer_ids = $this->customerModel->getAllCustomerIds();
+                if (empty($this->customer_ids)) {
+                    throw new \Exception('No active customers found in database');
+                }
+
+                // Get branch admin users mapping from WPUserGenerator
+                $this->branch_users = BranchUsersData::$data;
+                if (empty($this->branch_users)) {
+                    throw new \Exception('Branch admin users not found');
+                }
+
+                // 1. Validasi keberadaan tabel
+                $provinces_exist = $this->wpdb->get_var(
+                    "SHOW TABLES LIKE '{$this->wpdb->prefix}wi_provinces'"
+                );
+                if (!$provinces_exist) {
+                    throw new \Exception('Provinces table not found');
+                }
+
+                $regencies_exist = $this->wpdb->get_var(
+                    "SHOW TABLES LIKE '{$this->wpdb->prefix}wi_regencies'"
+                );
+                if (!$regencies_exist) {
+                    throw new \Exception('Regencies table not found');
+                }
+
+                // 2. Validasi ketersediaan data provinsi & regency
+                $province_count = $this->wpdb->get_var("
+                    SELECT COUNT(*) 
+                    FROM {$this->wpdb->prefix}wi_provinces
+                ");
+                if ($province_count == 0) {
+                    throw new \Exception('No provinces data found');
+                }
+
+                $regency_count = $this->wpdb->get_var("
+                    SELECT COUNT(*) 
+                    FROM {$this->wpdb->prefix}wi_regencies
+                ");
+                if ($regency_count == 0) {
+                    throw new \Exception('No regencies data found');
+                }
+
+                // 3. Validasi data wilayah untuk setiap customer
+                foreach ($this->customer_ids as $customer_id) {
+                    $customer = $this->customerModel->find($customer_id);
+                    if (!$customer) {
+                        throw new \Exception("Customer not found: {$customer_id}");
+                    }
+
+                    // Jika customer punya data wilayah, validasi relasinya
+                    if ($customer->provinsi_id && $customer->regency_id) {
+                        // Cek provinsi ada
+                        $province = $this->wpdb->get_row($this->wpdb->prepare("
+                            SELECT * FROM {$this->wpdb->prefix}wi_provinces 
+                            WHERE id = %d",
+                            $customer->provinsi_id
+                        ));
+                        if (!$province) {
+                            throw new \Exception("Invalid province ID for customer {$customer_id}: {$customer->provinsi_id}");
+                        }
+
+                        // Cek regency ada dan berelasi dengan provinsi
+                        $regency = $this->wpdb->get_row($this->wpdb->prepare("
+                            SELECT r.*, p.name as province_name 
+                            FROM {$this->wpdb->prefix}wi_regencies r
+                            JOIN {$this->wpdb->prefix}wi_provinces p ON r.province_id = p.id
+                            WHERE r.id = %d AND r.province_id = %d",
+                            $customer->regency_id,
+                            $customer->provinsi_id
+                        ));
+                        if (!$regency) {
+                            throw new \Exception("Invalid regency ID {$customer->regency_id} for province {$customer->provinsi_id}");
+                        }
+
+                        $this->debug(sprintf(
+                            "Validated location for customer %d: %s, %s %s",
+                            $customer_id,
+                            $province->name,
+                            $regency->type,
+                            $regency->name
+                        ));
+                    }
+                }
+
+                $this->debug('All location data validated successfully');
+                return true;
+
+            } catch (\Exception $e) {
+                $this->debug('Validation failed: ' . $e->getMessage());
+                return false;
             }
-
-            // Get branch admin users mapping from WPUserGenerator
-            $this->branch_users = WPUserGenerator::$branch_users;  // Perubahan di sini
-            if (empty($this->branch_users)) {
-                throw new \Exception('Branch admin users not found');
-            }
-
-            // Validasi tabel provinces & regencies
-            $provinces_exist = $this->wpdb->get_var(
-                "SHOW TABLES LIKE '{$this->wpdb->prefix}wi_provinces'"
-            );
-            if (!$provinces_exist) {
-                throw new \Exception('Provinces table not found');
-            }
-
-            $regencies_exist = $this->wpdb->get_var(
-                "SHOW TABLES LIKE '{$this->wpdb->prefix}wi_regencies'"
-            );
-            if (!$regencies_exist) {
-                throw new \Exception('Regencies table not found');
-            }
-
-            return true;
-
-        } catch (\Exception $e) {
-            $this->debug('Validation failed: ' . $e->getMessage());
-            return false;
         }
-    }
 
     protected function generate(): void {
         if (!$this->isDevelopmentMode()) {
             $this->debug('Cannot generate data - not in development mode');
             throw new \Exception('Development mode is not enabled. Please enable it in settings first.');
+        }
+        
+        if ($this->shouldClearData()) {
+            // Delete existing branches
+            $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_branches WHERE id > 0");
+            
+            // Reset auto increment
+            $this->wpdb->query("ALTER TABLE {$this->wpdb->prefix}app_branches AUTO_INCREMENT = 1");
+            
+            $this->debug("Cleared existing branch data");
+        }
+
+        // TAMBAHKAN DI SINI
+        if (!$this->validate()) {
+            throw new \Exception('Pre-generation validation failed');
         }
 
         $generated_count = 0;
@@ -213,11 +290,31 @@ class BranchDemoData extends AbstractDemoData {
             throw new \Exception("Invalid location for customer: {$customer->id}");
         }
 
+        // Generate WordPress user dulu
+        $userGenerator = new WPUserGenerator();
+        
+        // Ambil data user dari branch_users
+        $user_data = $this->branch_users[$customer->id]['pusat'];
+        
+        // Generate WP User
+        $wp_user_id = $userGenerator->generateUser([
+            'id' => $user_data['id'],
+            'username' => $user_data['username'],
+            'display_name' => $user_data['display_name'],
+            'role' => 'customer'  // atau role khusus untuk branch admin
+        ]);
+
+        if (!$wp_user_id) {
+            throw new \Exception("Failed to create WordPress user for branch admin: {$user_data['display_name']}");
+        }
+
         $regency_name = $this->getRegencyName($customer->regency_id);
         
         $branch_data = [
             'customer_id' => $customer->id,
-            'name' => sprintf('%s Kantor Pusat', $customer->name),
+            'name' => sprintf('%s Cabang %s', 
+                            $customer->name,
+                            $regency_name),
             'type' => 'pusat',
             'nitku' => $this->generateNITKU(),
             'postal_code' => $this->generatePostalCode(),
@@ -247,8 +344,12 @@ class BranchDemoData extends AbstractDemoData {
      */
     private function generateCabangBranches($customer): void {
         // Generate 1-2 cabang per customer
-        $cabang_count = rand(1, 2);
+        //$cabang_count = rand(1, 2);
+
+        $cabang_count = 2; // Selalu buat 2 cabang karena sudah ada 2 user cabang
+
         $used_provinces = [$customer->provinsi_id];
+        $userGenerator = new WPUserGenerator();
         
         for ($i = 0; $i < $cabang_count; $i++) {
             // Get cabang admin user ID
@@ -257,8 +358,20 @@ class BranchDemoData extends AbstractDemoData {
                 $this->debug("No admin user found for {$cabang_key} of customer {$customer->id}, skipping...");
                 continue;
             }
-            $cabang_user = $this->branch_users[$customer->id][$cabang_key];
+
+            // Generate WordPress user untuk cabang
+            $user_data = $this->branch_users[$customer->id][$cabang_key];
+            $wp_user_id = $userGenerator->generateUser([
+                'id' => $user_data['id'],
+                'username' => $user_data['username'],
+                'display_name' => $user_data['display_name'],
+                'role' => 'customer'  // atau role khusus untuk branch admin
+            ]);
             
+            if (!$wp_user_id) {
+                throw new \Exception("Failed to create WordPress user for branch admin: {$user_data['display_name']}");
+            }
+
             // Get random province (different from used provinces)
             $provinsi_id = $this->getRandomProvinceExcept($customer->provinsi_id);
             while (in_array($provinsi_id, $used_provinces)) {
@@ -285,7 +398,7 @@ class BranchDemoData extends AbstractDemoData {
                 'email' => $this->generateEmail($customer->name, $cabang_key),
                 'provinsi_id' => $provinsi_id,
                 'regency_id' => $regency_id,
-                'user_id' => $cabang_user['id'],           // Branch admin user
+                'user_id' => $wp_user_id,  // Gunakan WP user yang baru dibuat
                 'created_by' => $customer->user_id,        // Customer owner user
                 'status' => 'active'
             ];
