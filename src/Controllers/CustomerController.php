@@ -105,7 +105,7 @@ class CustomerController {
     public function get_customer_data_ajax() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
-            
+
             $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
             if (!$id) {
                 throw new \Exception('Invalid customer ID');
@@ -128,6 +128,8 @@ class CustomerController {
             // Get related data
             $branches = $this->branchModel->getByCustomer($id);
             $employees = $this->customerEmployeeModel->getByCustomer($id);
+
+            $employees['employee_count'] = $this->customerEmployeeModel->getTotalCount($id);
 
             // Prepare view data
             $data = [
@@ -175,7 +177,7 @@ class CustomerController {
 
             // Gunakan validator langsung
             $access = $this->validator->validateAccess($customer_id);
-            
+
             if (!$access['has_access']) {
                 wp_send_json_error([
                     'message' => __('Anda tidak memiliki akses ke customer ini', 'wp-customer'),
@@ -206,7 +208,7 @@ class CustomerController {
         $upload_dir = wp_upload_dir();
         $customer_base_dir = $upload_dir['basedir'] . '/wp-customer';
         $customer_log_dir = $customer_base_dir . '/logs';
-        
+
         // Update log file path with monthly rotation format
         $this->log_file = $customer_log_dir . '/customer-' . date('Y-m') . '.log';
 
@@ -217,7 +219,7 @@ class CustomerController {
                 error_log('Failed to create base directory in uploads: ' . $customer_base_dir);
                 return;
             }
-            
+
             // Add .htaccess to base directory
             $base_htaccess_content = "# Protect Directory\n";
             $base_htaccess_content .= "<FilesMatch \"^.*$\">\n";
@@ -230,7 +232,7 @@ class CustomerController {
             $base_htaccess_content .= "Order Allow,Deny\n";
             $base_htaccess_content .= "Allow from all\n";
             $base_htaccess_content .= "</FilesMatch>";
-            
+
             @file_put_contents($customer_base_dir . '/.htaccess', $base_htaccess_content);
             @chmod($customer_base_dir, 0755);
         }
@@ -256,7 +258,7 @@ class CustomerController {
             $logs_htaccess_content .= "<IfModule mod_php.c>\n";
             $logs_htaccess_content .= "php_flag engine off\n";
             $logs_htaccess_content .= "</IfModule>";
-            
+
             @file_put_contents($customer_log_dir . '/.htaccess', $logs_htaccess_content);
             @chmod($customer_log_dir, 0755);
         }
@@ -321,9 +323,9 @@ class CustomerController {
 
             // Get data using model
             $result = $this->model->getDataTableData($start, $length, $search, $orderColumn, $orderDir);
-            
+
             return $result;
-            
+
         } catch (\Exception $e) {
             $this->debug_log('Error getting customer table data: ' . $e->getMessage());
             return null;
@@ -343,17 +345,17 @@ class CustomerController {
             $start = isset($_POST['start']) ? intval($_POST['start']) : 0;
             $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
             $search = isset($_POST['search']['value']) ? sanitize_text_field($_POST['search']['value']) : '';
-            
+
             // Get data using shared method
             $result = $this->getCustomerTableData($start, $length, $search);
-            
+
             if (!$result) {
                 wp_send_json_error(['message' => 'Failed to get data']);
                 return;
             }
 
             $data = [];
-            foreach ($result['data'] as $customer) {  // Ini bagiannya! 
+            foreach ($result['data'] as $customer) {  // Ini bagiannya!
                 $owner_name = '-';
                 if (!empty($customer->user_id)) {
                     $user = get_userdata($customer->user_id);
@@ -388,19 +390,19 @@ class CustomerController {
 
     /**
      * Generate action buttons untuk DataTable row
-     * 
+     *
      * @param object $customer Data customer dari row
      * @return string HTML button actions
      */
     private function generateActionButtons($customer) {
         $actions = '';
-        
+
         // Debug logging
         // $this->debug_log("==== Generating Action Buttons for Customer ID: {$customer->id} ====");
-        
+
         // Dapatkan relasi user dengan customer ini
         $relation = $this->validator->getUserRelation($customer->id);
-        
+
         // Log relasi untuk debugging
         // $this->debug_log("User Relation for buttons:", $relation);
 
@@ -441,7 +443,7 @@ class CustomerController {
         try {
             // Debug incoming data
             error_log('Create customer request data: ' . print_r($_POST, true));
-            
+
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
             // 1. Validasi permission terlebih dahulu
@@ -456,7 +458,7 @@ class CustomerController {
             }
 
             $current_user_id = get_current_user_id();
-            
+
             // 2. Siapkan data dasar
             $data = [
                 'name' => sanitize_text_field($_POST['name']),
@@ -528,15 +530,15 @@ class CustomerController {
                 'branch_count' => 0,
                 'message' => __('Customer created successfully', 'wp-customer')
             ];
-            
+
             error_log('Sending success response: ' . print_r($response_data, true));
-            
+
             wp_send_json_success($response_data);
 
         } catch (\Exception $e) {
             error_log('Create customer error: ' . $e->getMessage());
             error_log('Stack trace: ' . $e->getTraceAsString());
-            
+
             wp_send_json_error([
                 'message' => $e->getMessage() ?: 'Terjadi kesalahan saat menambah customer',
                 'error_details' => WP_DEBUG ? $e->getTraceAsString() : null
@@ -620,7 +622,7 @@ class CustomerController {
             ]);
         }
     }
-    
+
     public function show() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
@@ -737,11 +739,11 @@ class CustomerController {
             ]);
         }
     }
-    
+
     public function getCustomerData($id) {
         global $wpdb;
         $current_user_id = get_current_user_id();
-        
+
         $this->debug_log("Getting customer data for ID: " . $id);
 
         try {
@@ -757,7 +759,7 @@ class CustomerController {
                     }
                 }
                 return null;
-            } 
+            }
 
             // Untuk id spesifik
             $access = $this->validator->validateAccess($id);
@@ -842,7 +844,7 @@ class CustomerController {
         if ($customer_id > 0) {
             // Coba ambil dari cache dulu
             $customer = $this->cache->getCustomer($customer_id);
-            
+
             // Jika tidak ada di cache, ambil dari database
             if (!$customer) {
                 $customer = $this->model->find($customer_id);
@@ -853,7 +855,7 @@ class CustomerController {
                 $access = $this->validator->validateAccess($customer_id);
                 $this->logPermissionCheck(
                     'view_customer_detail',
-                    $current_user_id, 
+                    $current_user_id,
                     $customer_id,
                     null,
                     $access['has_access']
@@ -892,7 +894,7 @@ class CustomerController {
         // Render template
         require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-dashboard.php';
     }
-    
-    
-    
+
+
+
 }

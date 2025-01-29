@@ -2,7 +2,7 @@
 /**
  * File: MenuManager.php
  * Path: /wp-customer/src/Controllers/MenuManager.php
- * 
+ *
  * @package     WP_Customer
  * @subpackage  Admin/Controllers
  * @version     1.0.1
@@ -24,7 +24,7 @@ class MenuManager {
         $this->version = $version;
         $this->settings_controller = new SettingsController();
         $this->customer_controller = new CustomerController();
-
+       // $this->membership_level_controller = new MembershipLevelController();
     }
 
     public function init() {
@@ -52,6 +52,16 @@ class MenuManager {
             'wp-customer-settings',
             [$this->settings_controller, 'renderPage']
         );
+/*
+        add_submenu_page(
+            'wp-customer',
+            __('Membership Levels', 'wp-customer'),
+            __('Membership Levels', 'wp-customer'),
+            'manage_options',
+            'wp-customer-membership-levels',
+            [$this->membership_level_controller, 'renderPage']
+        );
+        */
     }
 
 

@@ -44,7 +44,7 @@ if (defined('WP_DEBUG') && WP_DEBUG) {
             </div>
             <div class="stat-item">
                 <label>Jumlah Staff:</label>
-                <span class="stat-value"><?php echo isset($customer->staff_count) ? (int)$customer->staff_count : 0; ?></span>
+                <span class="stat-value"><?php echo isset($employees['employee_count']) ? (int)$employees['employee_count'] : 0; ?></span>
             </div>
         </div>
 

@@ -15,7 +15,7 @@
  *              - Level capabilities configuration
  *              - Staff limit management
  *              - Default settings initialization
- *              
+ *
  * Dependencies:
  * - WordPress Options API
  * - WP_Customer membership tables
@@ -67,7 +67,7 @@ class CustomerMembershipModel {
     public function getMembershipData(int $customer_id): array {
         // Get membership settings
         $settings = get_option($this->membership_settings_key, []);
-        
+
         // Get customer data untuk cek level
         $customer = $this->getCustomerLevel($customer_id);
         $level = $customer->membership_level ?? $settings['default_level'] ?? 'regular';
@@ -89,8 +89,8 @@ class CustomerMembershipModel {
     private function getCustomerLevel(int $customer_id): ?object {
         global $wpdb;
         return $wpdb->get_row($wpdb->prepare("
-            SELECT membership_level 
-            FROM {$wpdb->prefix}app_customers 
+            SELECT membership_level
+            FROM {$wpdb->prefix}app_customers
             WHERE id = %d
         ", $customer_id));
     }
@@ -107,17 +107,17 @@ class CustomerMembershipModel {
                     'regular_can_add_staff' => true,
                     'regular_can_export' => false,
                     'regular_can_bulk_import' => false,
-                    
+
                     'priority_max_staff' => 5,
                     'priority_can_add_staff' => true,
                     'priority_can_export' => true,
                     'priority_can_bulk_import' => false,
-                    
+
                     'utama_max_staff' => -1,
                     'utama_can_add_staff' => true,
                     'utama_can_export' => true,
                     'utama_can_bulk_import' => true,
-                    
+
                     'default_level' => 'regular'
                 ];
 
@@ -188,5 +188,6 @@ class CustomerMembershipModel {
             error_log('Error inserting default membership levels: ' . $e->getMessage());
             return false;
         }
-    }
+    } 
+
 }

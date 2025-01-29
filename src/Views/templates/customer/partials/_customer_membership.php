@@ -68,7 +68,7 @@ $capabilities = $membership['capabilities'] ?? [];
                       <div class="usage-fill" style="width: 0%"></div>
                   </div>
                   <div class="usage-stats">
-                      <span class="usage-current">0</span>
+                      <span class="usage-current"><?php echo isset($employees['employee_count']) ? (int)$employees['employee_count'] : 0; ?></span>
                       <span class="usage-separator">/</span>
                       <span class="usage-limit">2</span>
                       <span class="usage-label">staff</span>
