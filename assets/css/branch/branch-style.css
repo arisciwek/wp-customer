@@ -512,6 +512,44 @@ div#branch-table_filter input {
     }
 }
 
+#branch-table {
+    table-layout: fixed;
+    width: 100% !important;
+}
+
+#branch-table th,
+#branch-table td {
+    word-wrap: break-word;
+}
+/* Update coordinate fields layout */
+.branch-coordinates {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;  /* Allow wrapping */
+}
+
+.branch-coordinates .branch-form-group {
+    flex: 1 1 200px;  /* Set minimum width */
+    min-width: 0;     /* Allow shrinking */
+    margin-bottom: 10px;
+}
+
+/* Ensure input fields don't overflow */
+.branch-coordinates input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Add responsive adjustment */
+@media screen and (max-width: 500px) {
+    .branch-coordinates {
+        flex-direction: column;
+    }
+    .branch-coordinates .branch-form-group {
+        width: 100%;
+    }
+}
 
 #branch-table {
     table-layout: fixed;
@@ -521,4 +559,35 @@ div#branch-table_filter input {
 #branch-table th,
 #branch-table td {
     word-wrap: break-word;
+}
+
+/* Update coordinate fields layout */
+.branch-coordinates {
+    /* Existing styles... */
+}
+
+/* Tambahkan styles untuk map */
+.branch-coordinates-map {
+    height: 300px;
+    margin-bottom: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #f5f5f5; /* Tambahkan background agar terlihat saat kosong */
+}
+
+
+/* Pastikan popup Leaflet tidak terpotong modal */
+.leaflet-popup {
+    z-index: 10000;
+}
+
+/* Pastikan control Leaflet tetap bisa diklik */
+.leaflet-control-container .leaflet-control {
+    z-index: 9999;
+}
+
+/* Styling untuk map di dalam modal */
+.modal-container .branch-coordinates-map {
+    width: 100%;
+    min-height: 300px;
 }

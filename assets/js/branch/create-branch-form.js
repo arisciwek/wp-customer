@@ -80,13 +80,16 @@
                 if (nameField.length) {
                     nameField.focus();
                 }
+                $(document).trigger('branch:modalOpened');
             });
+     
         },
 
         hideModal() {
             this.modal.fadeOut(300, () => {
                 this.resetForm();
                 this.customerId = null;
+                $(document).trigger('branch:modalClosed');
             });
         },
 

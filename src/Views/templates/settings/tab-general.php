@@ -35,8 +35,16 @@ $options = get_option('wp_customer_settings', array(
     'enable_pusher' => false,
     'pusher_app_key' => '',
     'pusher_app_secret' => '',
-    'pusher_cluster' => 'ap1'
+    'pusher_cluster' => 'ap1',
+
+    // Tambahan settings untuk map
+    'map_default_lat' => -6.200000,  // Jakarta center
+    'map_default_lng' => 106.816666,
+    'map_default_zoom' => 12,
+    'map_provider' => 'osm', // osm = OpenStreetMap
+
 ));
+
 ?>
 
 <form method="post" action="options.php">

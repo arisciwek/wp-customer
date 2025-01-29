@@ -147,6 +147,11 @@ defined('ABSPATH') || exit;
                         </div>
 
                         <div class="branch-coordinates">
+                            <h4><?php _e('Lokasi', 'wp-customer'); ?></h4>
+                            
+                            <!-- Tambahkan div untuk map di sini -->
+                            <div class="branch-coordinates-map" style="height: 300px; margin-bottom: 15px;"></div>
+
                             <div class="branch-form-group">
                                 <label for="create-branch-latitude" class="required-field">Latitude</label>
                                 <input type="text" id="create-branch-latitude" name="latitude" required>
@@ -159,6 +164,7 @@ defined('ABSPATH') || exit;
                                 <span class="field-hint"><?php _e('Contoh: 106.123456', 'wp-customer'); ?></span>
                             </div>
                         </div>
+
                     </div>
                 </div>
             </div>
