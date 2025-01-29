@@ -95,38 +95,39 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
     }
 
     private function generateExistingUserEmployees(): void {
-        // 1. Customer owners (ID 2-11)
-        for ($id = 2; $id <= 11; $id++) {
-            $customer = $this->wpdb->get_row($this->wpdb->prepare(
-                "SELECT * FROM {$this->wpdb->prefix}app_customers WHERE user_id = %d",
-                $id
-            ));
 
-            if (!$customer) continue;
+		// For customer owners (ID 2-11)
+		for ($id = 2; $id <= 11; $id++) {
+		    $customer = $this->wpdb->get_row($this->wpdb->prepare(
+		        "SELECT * FROM {$this->wpdb->prefix}app_customers WHERE user_id = %d",
+		        $id
+		    ));
 
-            // Get pusat branch for this customer
-            $branch = $this->wpdb->get_row($this->wpdb->prepare(
-                "SELECT * FROM {$this->wpdb->prefix}app_branches 
-                 WHERE customer_id = %d AND type = 'pusat'",
-                $customer->id
-            ));
+		    if (!$customer) continue;
 
-            if (!$branch) continue;
+		    // Ambil branch pusat untuk assign owner
+		    $pusat_branch = $this->wpdb->get_row($this->wpdb->prepare(
+		        "SELECT * FROM {$this->wpdb->prefix}app_branches 
+		         WHERE customer_id = %d AND type = 'pusat'",
+		        $customer->id
+		    ));
 
-            // Create employee record for owner
-            $this->createEmployeeRecord(
-                $customer->id,
-                $branch->id,
-                $customer->user_id,
-                [
-                    'finance' => true,
-                    'operation' => true,
-                    'legal' => true,
-                    'purchase' => true
-                ]
-            );
-        }
+		    if (!$pusat_branch) continue;
 
+		    // Create employee record for owner di branch pusat
+		    $this->createEmployeeRecord(
+		        $customer->id,
+		        $pusat_branch->id,
+		        $customer->user_id,
+		        [
+		            'finance' => true,
+		            'operation' => true,
+		            'legal' => true,
+		            'purchase' => true
+		        ]
+		    );
+		} 
+		
         // 2. Branch admins (ID 12-41)
         for ($id = 12; $id <= 41; $id++) {
             $branch = $this->wpdb->get_row($this->wpdb->prepare(
