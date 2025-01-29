@@ -33,6 +33,7 @@ class WP_Customer_Dependencies {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
         add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_assets']);
+        add_action('admin_enqueue_scripts', [$this, 'leaflet_enqueue_scripts']); // Add this line
 
     }
 
@@ -193,6 +194,7 @@ public function enqueue_frontend_assets() {
 
             // Customer styles
             wp_enqueue_style('wp-customer-customer', WP_CUSTOMER_URL . 'assets/css/customer/customer-style.css', [], $this->version);
+            wp_enqueue_style('wp-customer-membership-tab', WP_CUSTOMER_URL . 'assets/css/customer/customer-membership-tab-style.css', [], $this->version);
             wp_enqueue_style('wp-customer-customer-form', WP_CUSTOMER_URL . 'assets/css/customer/customer-form.css', [], $this->version);
 
             // Branch styles
@@ -399,6 +401,49 @@ public function enqueue_frontend_assets() {
                 'error' => __('Gagal memuat data', 'wp-customer')
             ]
         ]);
+    }
+
+    public function leaflet_enqueue_scripts() {
+        $screen = get_current_screen();
+        if (!$screen) return;
+        
+        if ($screen->id === 'toplevel_page_wp-customer') {
+            // Leaflet CSS & JS
+            wp_enqueue_style(
+                'leaflet',
+                'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+                [],
+                '1.9.4'
+            );
+            
+            wp_enqueue_script(
+                'leaflet',
+                'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+                [],
+                '1.9.4',
+                true
+            );
+
+            // Custom map picker
+            wp_enqueue_script(
+                'wp-customer-map-picker',
+                WP_CUSTOMER_URL . 'assets/js/branch/map-picker.js',
+                ['jquery', 'leaflet'],
+                $this->version,
+                true
+            );
+
+            // Localize script dengan settings
+            wp_localize_script(
+                'wp-customer-map-picker',
+                'wpCustomerMapSettings',
+                [
+                    'defaultLat' => get_option('wp_customer_settings')['map_default_lat'] ?? -6.200000,
+                    'defaultLng' => get_option('wp_customer_settings')['map_default_lng'] ?? 106.816666,
+                    'defaultZoom' => get_option('wp_customer_settings')['map_default_zoom'] ?? 12
+                ]
+            );
+        }
     }
 
 }
