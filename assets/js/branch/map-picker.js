@@ -68,19 +68,34 @@
          */
         init() {
             console.log('MapPicker init called');
-            // Get settings or use defaults
             this.defaultLat = wpCustomerMapSettings?.defaultLat || this.defaultLat;
             this.defaultLng = wpCustomerMapSettings?.defaultLng || this.defaultLng;
             this.defaultZoom = wpCustomerMapSettings?.defaultZoom || this.defaultZoom;
 
-            // Find map container
             this.mapContainer = $('.branch-coordinates-map')[0];
             if (!this.mapContainer) {
                 console.warn('Map container not found - initialization deferred');
                 return;
             }
 
-            this.initMap();
+            // Wait for container to be fully visible
+            if ($(this.mapContainer).is(':visible')) {
+                this.initMap();
+            } else {
+                // Use MutationObserver to detect when container becomes visible
+                const observer = new MutationObserver((mutations, obs) => {
+                    if ($(this.mapContainer).is(':visible')) {
+                        this.initMap();
+                        obs.disconnect(); // Stop observing once initialized
+                    }
+                });
+
+                observer.observe(this.mapContainer.parentElement, {
+                    attributes: true,
+                    childList: true,
+                    subtree: true
+                });
+            }
         },
 
         /**
@@ -89,41 +104,39 @@
          */
         initMap() {
             try {
-                // Only initialize once
                 if (this.isInitialized) {
-                    console.warn('Map already initialized');
+                    // If already initialized, just invalidate size
+                    this.map.invalidateSize();
                     return;
                 }
 
-                // Create map instance
                 this.map = L.map(this.mapContainer).setView(
                     [this.defaultLat, this.defaultLng],
                     this.defaultZoom
                 );
 
-                // Add OpenStreetMap tiles
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap contributors',
                     maxZoom: 19
                 }).addTo(this.map);
 
-                // Add draggable marker
                 this.marker = L.marker(
                     [this.defaultLat, this.defaultLng],
                     { draggable: true }
                 ).addTo(this.map);
 
-                // Set initial coordinates
                 this.updateFields({
                     lat: this.defaultLat,
                     lng: this.defaultLng
                 });
 
-                // Bind all events
                 this.bindEvents();
-
                 this.isInitialized = true;
-                console.log('Map initialized successfully');
+
+                // Force a resize after initialization
+                setTimeout(() => {
+                    this.map.invalidateSize();
+                }, 250);
 
             } catch (error) {
                 console.error('Error initializing map:', error);
@@ -296,16 +309,22 @@
     // Make MapPicker globally available
     window.MapPicker = MapPicker;
 
-    // Initialize when document is ready and container is visible
+    // Modified initialization
     $(document).ready(() => {
-        // Defer initialization to when modal is opened
         $(document).on('branch:modalOpened', () => {
+            // Longer delay to ensure modal transition is complete
             setTimeout(() => {
                 window.MapPicker.init();
-            }, 100); // Small delay to ensure DOM is ready
+            }, 300);
         });
 
-        // Cleanup when modal is closed
+        // Add resize handler for when modal is fully visible
+        $(document).on('branch:modalFullyOpen', () => {
+            if (window.MapPicker.map) {
+                window.MapPicker.map.invalidateSize();
+            }
+        });
+
         $(document).on('branch:modalClosed', () => {
             window.MapPicker.cleanup();
         });
