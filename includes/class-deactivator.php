@@ -22,6 +22,7 @@
  * - Initial creation
  * - Added cache cleanup
  */
+use WP_Customer\Cache\CacheManager;
 
 class WP_Customer_Deactivator {
     private static function debug($message) {
@@ -87,11 +88,16 @@ class WP_Customer_Deactivator {
             // Hapus semua opsi terkait membership
             self::cleanupMembershipOptions();
 
-            // Bersihkan cache
-            wp_cache_delete('wp_customer_customer_list', 'wp_customer');
-            wp_cache_delete('wp_customer_branch_list', 'wp_customer');
-            wp_cache_delete('wp_customer_employee_list', 'wp_customer');
-            wp_cache_delete('wp_customer_membership_settings', 'wp_customer');
+
+            // Clear cache using CacheManager
+            try {
+                $cache_manager = new WP_Customer\Cache\CacheManager();
+                $cache_manager->clearAllCaches();
+                self::debug("All caches cleared via CacheManager");
+            } catch (\Exception $e) {
+                self::debug("Error clearing cache: " . $e->getMessage());
+                // Don't throw the exception - continue with deactivation
+            }
 
             // Commit transaction
             $wpdb->query('COMMIT');
