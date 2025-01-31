@@ -24,16 +24,20 @@
 
 namespace WPCustomer\Models\Employee;
 
+use WPCustomer\Cache\CacheManager;
+
 class CustomerEmployeeModel {
     private $table;
     private $customer_table;
     private $branch_table;
+    private $cache;
 
     public function __construct() {
         global $wpdb;
         $this->table = $wpdb->prefix . 'app_customer_employees';
         $this->customer_table = $wpdb->prefix . 'app_customers';
         $this->branch_table = $wpdb->prefix . 'app_branches';
+        $this->cache = new CacheManager();
     }
 
     public function create(array $data): ?int {
@@ -66,8 +70,14 @@ class CustomerEmployeeModel {
 
     public function find(int $id): ?object {
         global $wpdb;
+        
+        // Cek cache dulu
+        $cached = $this->cache->getEmployee($id);
+        if ($cached !== null) {
+            return $cached;
+        }
 
-        return $wpdb->get_row($wpdb->prepare("
+        $result = $wpdb->get_row($wpdb->prepare("
             SELECT e.*, 
                    c.name as customer_name,
                    b.name as branch_name,
@@ -78,6 +88,13 @@ class CustomerEmployeeModel {
             LEFT JOIN {$wpdb->users} u ON e.created_by = u.ID
             WHERE e.id = %d
         ", $id));
+
+        // Simpan ke cache
+        if ($result) {
+            $this->cache->setEmployee($id, $result);
+        }
+
+        return $result;        
     }
 
     public function update(int $id, array $data): bool {
@@ -103,6 +120,12 @@ class CustomerEmployeeModel {
             $format,
             ['%d']
         );
+        
+        // Invalidate cache
+        if ($result !== false) {
+            $this->cache->invalidateEmployeeCache($id);
+            $this->cache->invalidateEmployeeListCache();
+        }
 
         return $result !== false;
     }
