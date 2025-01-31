@@ -38,6 +38,29 @@ class BranchModel {
         $this->customerModel = new CustomerModel();        
     }
     
+    public function findPusatByCustomer(int $customer_id): ?object {
+        global $wpdb;
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->table} 
+             WHERE customer_id = %d 
+             AND type = 'pusat' 
+             AND status = 'active'
+             LIMIT 1",
+            $customer_id
+        ));
+    }
+
+    public function countPusatByCustomer(int $customer_id): int {
+        global $wpdb;
+        return (int)$wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$this->table} 
+             WHERE customer_id = %d 
+             AND type = 'pusat' 
+             AND status = 'active'",
+            $customer_id
+        ));
+    }
+
     private function generateBranchCode(int $customer_id): string {
         // Get customer code 
         $customer = $this->customerModel->find($customer_id);

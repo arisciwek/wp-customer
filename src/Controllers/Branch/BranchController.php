@@ -64,6 +64,58 @@ class BranchController {
         add_action('wp_ajax_create_branch', [$this, 'store']);
         add_action('wp_ajax_update_branch', [$this, 'update']);
         add_action('wp_ajax_delete_branch', [$this, 'delete']);
+        add_action('wp_ajax_validate_branch_type_change', [$this, 'validateBranchTypeChange']);
+    }
+
+    public function validateBranchTypeChange() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+            
+            $branch_id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+            $new_type = isset($_POST['new_type']) ? sanitize_text_field($_POST['new_type']) : '';
+            
+            if (!$branch_id || !$new_type) {
+                throw new \Exception('Missing required parameters');
+            }
+
+            // Get current branch data
+            $branch = $this->model->find($branch_id);
+            if (!$branch) {
+                throw new \Exception('Branch not found');
+            }
+
+            // Get all branches for this customer
+            $existing_pusat = $this->model->findPusatByCustomer($branch->customer_id);
+            
+            // If changing to 'pusat' and there's already a pusat branch
+            if ($new_type === 'pusat' && $existing_pusat && $existing_pusat->id !== $branch_id) {
+                wp_send_json_error([
+                    'message' => sprintf(
+                        'Customer sudah memiliki kantor pusat: %s. Tidak dapat mengubah cabang ini menjadi kantor pusat.',
+                        $existing_pusat->name
+                    ),
+                    'original_type' => $branch->type
+                ]);
+            }
+            
+            // If changing from 'pusat' to 'cabang', check if this is the only pusat
+            if ($branch->type === 'pusat' && $new_type === 'cabang') {
+                $pusat_count = $this->model->countPusatByCustomer($branch->customer_id);
+                if ($pusat_count <= 1) {
+                    wp_send_json_error([
+                        'message' => 'Tidak dapat mengubah tipe menjadi cabang karena ini adalah satu-satunya kantor pusat.',
+                        'original_type' => $branch->type
+                    ]);
+                }
+            }
+
+            wp_send_json_success(['message' => 'Valid']);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
     }
 
     /**

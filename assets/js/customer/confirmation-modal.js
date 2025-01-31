@@ -42,23 +42,43 @@
  * - Added core modal functionality
  * - Added accessibility features
  */
+
 const WIModal = {
     modal: null,
     options: null,
+    elements: {},
 
     init() {
         this.modal = document.getElementById('confirmation-modal');
-        if (!this.modal) return;
+        if (!this.modal) {
+            console.error('Modal element not found');
+            return false;
+        }
+
+        // Cache DOM elements
+        this.elements = {
+            title: this.modal.querySelector('#modal-title'),
+            message: this.modal.querySelector('#modal-message'),
+            icon: this.modal.querySelector('.modal-icon'),
+            confirmBtn: this.modal.querySelector('#modal-confirm-btn'),
+            cancelBtn: this.modal.querySelector('#modal-cancel-btn'),
+            modalDialog: this.modal.querySelector('.modal'),
+            closeButtons: this.modal.querySelectorAll('[data-dismiss="modal"]')
+        };
 
         this.bindEvents();
+        return true;
     },
 
     bindEvents() {
+        if (!this.modal) return;
+
         // Close button clicks
-        this.modal.querySelectorAll('[data-dismiss="modal"]')
-            .forEach(button => {
+        if (this.elements.closeButtons) {
+            this.elements.closeButtons.forEach(button => {
                 button.addEventListener('click', () => this.hide());
             });
+        }
 
         // ESC key press
         document.addEventListener('keydown', (e) => {
@@ -75,76 +95,102 @@ const WIModal = {
         });
     },
 
-    show(options) {
-        this.options = {
-            closeOnEsc: true,
-            closeOnClickOutside: true,
-            ...options
-        };
-
-        // Set modal content
-        this.setContent(this.options);
-
-        // Show modal
-        this.modal.classList.add('active');
-
-        // Focus management
-        const confirmBtn = document.getElementById('modal-confirm-btn');
-        if (confirmBtn) {
-            confirmBtn.focus();
-        }
-    },
-
-    hide() {
-        this.modal.classList.remove('active');
-        this.options = null;
-    },
-
     setContent(options) {
-        // Set title
-        document.getElementById('modal-title').textContent = options.title || '';
-
-        // Set message
-        document.getElementById('modal-message').textContent = options.message || '';
-
-        // Set icon if provided
-        const iconElem = this.modal.querySelector('.modal-icon');
-        if (options.icon) {
-            iconElem.className = `modal-icon dashicons dashicons-${options.icon}`;
+        if (!this.elements.title || !this.elements.message) {
+            console.error('Required modal elements not found');
+            return false;
         }
 
-        // Set modal type
-        if (options.type) {
-            this.modal.querySelector('.modal').className =
-                `modal type-${options.type}`;
+        // Safely set text content
+        if (this.elements.title) {
+            this.elements.title.textContent = options.title || '';
         }
 
-        // Set buttons
-        const confirmBtn = document.getElementById('modal-confirm-btn');
-        const cancelBtn = document.getElementById('modal-cancel-btn');
+        if (this.elements.message) {
+            this.elements.message.textContent = options.message || '';
+        }
 
-        if (confirmBtn) {
-            confirmBtn.textContent = options.confirmText || 'OK';
-            confirmBtn.className = `button ${options.confirmClass || ''}`;
-            confirmBtn.onclick = () => {
+        // Set icon if provided and element exists
+        if (options.icon && this.elements.icon) {
+            this.elements.icon.className = `modal-icon dashicons dashicons-${options.icon}`;
+        }
+
+        // Set modal type if element exists
+        if (options.type && this.elements.modalDialog) {
+            this.elements.modalDialog.className = `modal type-${options.type}`;
+        }
+
+        // Handle buttons if they exist
+        if (this.elements.confirmBtn) {
+            this.elements.confirmBtn.textContent = options.confirmText || 'OK';
+            this.elements.confirmBtn.className = `button ${options.confirmClass || ''}`;
+            this.elements.confirmBtn.onclick = () => {
                 if (options.onConfirm) options.onConfirm();
                 this.hide();
             };
         }
 
-        if (cancelBtn) {
-            cancelBtn.textContent = options.cancelText || 'Cancel';
-            cancelBtn.className = `button ${options.cancelClass || ''}`;
-            cancelBtn.onclick = () => {
-                if (options.onCancel) options.onCancel();
-                this.hide();
-            };
+        if (this.elements.cancelBtn) {
+            const showCancel = options.showCancelButton !== false;
+            this.elements.cancelBtn.style.display = showCancel ? 'inline-block' : 'none';
+            if (showCancel) {
+                this.elements.cancelBtn.textContent = options.cancelText || 'Cancel';
+                this.elements.cancelBtn.className = `button ${options.cancelClass || ''}`;
+                this.elements.cancelBtn.onclick = () => {
+                    if (options.onCancel) options.onCancel();
+                    this.hide();
+                };
+            }
         }
+
+        return true;
+    },
+
+    show(options) {
+        if (!this.modal) {
+            console.error('Modal not initialized');
+            return false;
+        }
+
+        this.options = {
+            closeOnEsc: true,
+            closeOnClickOutside: true,
+            showCancelButton: true,
+            ...options
+        };
+
+        // Try to set content
+        if (!this.setContent(this.options)) {
+            console.error('Failed to set modal content');
+            return false;
+        }
+
+        // Show modal
+        this.modal.classList.add('active');
+
+        // Focus management
+        if (this.elements.confirmBtn) {
+            this.elements.confirmBtn.focus();
+        }
+
+        return true;
+    },
+
+    hide() {
+        if (!this.modal) return;
+
+        this.modal.classList.remove('active');
+        this.options = null;
     }
 };
 
 // Initialize when document is ready
-document.addEventListener('DOMContentLoaded', () => WIModal.init());
+document.addEventListener('DOMContentLoaded', () => {
+    const initialized = WIModal.init();
+    if (!initialized) {
+        console.error('Failed to initialize WIModal');
+    }
+});
 
 // Make it globally available
 window.WIModal = WIModal;

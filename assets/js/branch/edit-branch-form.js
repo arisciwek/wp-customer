@@ -245,6 +245,28 @@
         }, 'Masukkan nomor telepon yang valid');
     },
 
+    async validateBranchTypeChange(newType) {
+        const branchId = this.form.find('#branch-id').val();
+        
+        try {
+            const response = await $.ajax({
+                url: wpCustomerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'validate_branch_type_change',
+                    id: branchId,
+                    new_type: newType,
+                    nonce: wpCustomerData.nonce
+                }
+            });
+
+            return response;
+        } catch (error) {
+            console.error('Validate branch type error:', error);
+            throw new Error('Gagal memvalidasi perubahan tipe cabang');
+        }
+    },
+
     async handleUpdate(e) {
         e.preventDefault();
         if (!this.form.valid()) return;
@@ -269,7 +291,30 @@
 
         this.setLoadingState(true);
 
+        // Validate type change first
         try {
+            const typeValidation = await this.validateBranchTypeChange(formData.type);
+            
+        if (!typeValidation.success) {
+            BranchToast.error(typeValidation.data?.message || 'Tipe cabang tidak dapat diubah.');
+            
+            const $typeSelect = this.form.find('[name="type"]');
+            $typeSelect.addClass('error');
+            
+            if (typeValidation.data?.original_type) {
+                $typeSelect.val(typeValidation.data.original_type);
+            }
+            
+            // Remove error class after 2 seconds
+            setTimeout(() => {
+                $typeSelect.removeClass('error');
+            }, 2000);
+            
+            return;
+        }
+            // If validation passes, proceed with update
+            this.setLoadingState(true);
+
             const response = await $.ajax({
                 url: wpCustomerData.ajaxUrl,
                 type: 'POST',
@@ -293,8 +338,6 @@
             this.setLoadingState(false);
         }
     },
-    
-
 
         setLoadingState(loading) {
             const $submitBtn = this.form.find('[type="submit"]');
