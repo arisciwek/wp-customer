@@ -24,17 +24,21 @@
 
  namespace WPCustomer\Models\Customer;
 
+ use WPCustomer\Cache\CacheManager;
+
  class CustomerModel {
      private $table;
      private $branch_table;
      private $employee_table;
      private static $used_codes = [];
+     private $cache;
 
      public function __construct() {
          global $wpdb;
          $this->table = $wpdb->prefix . 'app_customers';
          $this->branch_table = $wpdb->prefix . 'app_branches';
          $this->employee_table = $wpdb->prefix . 'app_customer_employees';
+         $this->cache = new CacheManager();
      }
 
     /**
@@ -157,6 +161,12 @@
         // Ensure integer type for ID
         $id = (int) $id;
 
+        // Cek cache dulu
+        $cached = $this->cache->getCustomer($id);
+        if ($cached !== null) {
+            return $cached;
+        }
+
         $result = $wpdb->get_row($wpdb->prepare("
             SELECT p.*, 
                    COUNT(r.id) as branch_count,
@@ -168,11 +178,16 @@
             GROUP BY p.id
         ", $id));
 
+        // Simpan ke cache
+        if ($result) {
+            $this->cache->setCustomer($id, $result);
+        }
+
         if ($result === null) {
             return null;
         }
 
-        // Ensure branch_count is always an integer
+            // Ensure branch_count is always an integer
         $result->branch_count = (int) $result->branch_count;
 
         return $result;
@@ -481,6 +496,7 @@
     }
      
     // Di CustomerModel.php
+    /*
     public function getProvinsiOptions() {
         return apply_filters('wilayah_indonesia_get_province_options', [
             '' => __('Pilih Provinsi', 'wp-customer')
@@ -495,5 +511,7 @@
             true
         );
     }
+    */
+
  
  }
