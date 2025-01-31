@@ -25,93 +25,96 @@
  * - Added map initialization
  * - Added marker management
  * - Added coordinate sync with form fields
+ *
+ * Enhanced MapPicker Component
+ * Includes improved initialization and error handling
  */
-/**
- * MapPicker Component
- *
- * @package     WP_Customer
- * @subpackage  Assets/JS/Branch
- * @version     1.0.0
- * @author      arisciwek
- *
- * Path: /wp-customer/assets/js/branch/map-picker.js
- *
- * Description: Handler untuk map picker menggunakan Leaflet.js.
- *              Includes map initialization, marker management,
- *              dan koordinat updating untuk form branch.
- *              Terintegrasi dengan OpenStreetMap tiles.
- *
- * Dependencies:
- * - jQuery
- * - Leaflet.js
- * - create-branch-form.js
- * - edit-branch-form.js
- *
- * Last modified: 2024-01-29
- */
-
 (function($) {
     'use strict';
 
     const MapPicker = {
         map: null,
         marker: null,
-        defaultLat: -6.200000,  // Default ke Jakarta
+        defaultLat: -6.200000,
         defaultLng: 106.816666,
         defaultZoom: 12,
         mapContainer: null,
         isInitialized: false,
+        initAttempts: 0,
+        maxInitAttempts: 3,
+        initTimeout: null,
 
         /**
-         * Initialize map picker component
-         * @returns {void}
+         * Initialize map picker with improved error handling
          */
         init() {
-            console.log('MapPicker init called');
-            this.defaultLat = wpCustomerMapSettings?.defaultLat || this.defaultLat;
-            this.defaultLng = wpCustomerMapSettings?.defaultLng || this.defaultLng;
-            this.defaultZoom = wpCustomerMapSettings?.defaultZoom || this.defaultZoom;
+            this.debugLog('MapPicker init called');
+            
+            // Clear any existing timeout
+            if (this.initTimeout) {
+                clearTimeout(this.initTimeout);
+            }
 
-            this.mapContainer = $('.branch-coordinates-map')[0];
+            // Reset container reference
+            this.mapContainer = $('.branch-coordinates-map:visible')[0];
+            
             if (!this.mapContainer) {
-                console.warn('Map container not found - initialization deferred');
+                this.debugLog('Map container not found or not visible');
+                this.waitForContainer();
                 return;
             }
 
-            // Wait for container to be fully visible
-            if ($(this.mapContainer).is(':visible')) {
-                this.initMap();
-            } else {
-                // Use MutationObserver to detect when container becomes visible
-                const observer = new MutationObserver((mutations, obs) => {
-                    if ($(this.mapContainer).is(':visible')) {
-                        this.initMap();
-                        obs.disconnect(); // Stop observing once initialized
-                    }
-                });
+            // Get container dimensions
+            const containerWidth = $(this.mapContainer).width();
+            const containerHeight = $(this.mapContainer).height();
 
-                observer.observe(this.mapContainer.parentElement, {
-                    attributes: true,
-                    childList: true,
-                    subtree: true
-                });
+            if (containerWidth === 0 || containerHeight === 0) {
+                this.debugLog('Container has zero dimensions, waiting...');
+                this.waitForContainer();
+                return;
             }
+
+            this.initMap();
         },
 
         /**
-         * Initialize Leaflet map and marker
-         * @returns {void}
+         * Wait for container to be ready
+         */
+        waitForContainer() {
+            this.initAttempts++;
+            
+            if (this.initAttempts > this.maxInitAttempts) {
+                this.debugLog('Max init attempts reached');
+                this.handleMapError(new Error('Failed to initialize map after multiple attempts'));
+                return;
+            }
+
+            this.debugLog(`Waiting for container, attempt ${this.initAttempts}`);
+            
+            this.initTimeout = setTimeout(() => {
+                this.init();
+            }, 250 * this.initAttempts); // Exponential backoff
+        },
+
+        /**
+         * Initialize Leaflet map with error handling
          */
         initMap() {
             try {
                 if (this.isInitialized) {
-                    // If already initialized, just invalidate size
+                    this.debugLog('Map already initialized, updating size');
                     this.map.invalidateSize();
                     return;
                 }
 
+                // Initialize map with current coordinates if available
+                const startLat = parseFloat($('[name="latitude"]').val()) || this.defaultLat;
+                const startLng = parseFloat($('[name="longitude"]').val()) || this.defaultLng;
+
+                this.debugLog('Initializing map with coordinates:', { startLat, startLng });
+
                 this.map = L.map(this.mapContainer).setView(
-                    [this.defaultLat, this.defaultLng],
+                    [startLat, startLng],
                     this.defaultZoom
                 );
 
@@ -121,140 +124,174 @@
                 }).addTo(this.map);
 
                 this.marker = L.marker(
-                    [this.defaultLat, this.defaultLng],
+                    [startLat, startLng],
                     { draggable: true }
                 ).addTo(this.map);
-
-                this.updateFields({
-                    lat: this.defaultLat,
-                    lng: this.defaultLng
-                });
 
                 this.bindEvents();
                 this.isInitialized = true;
 
-                // Force a resize after initialization
+                // Force resize after short delay
                 setTimeout(() => {
                     this.map.invalidateSize();
+                    this.debugLog('Map size updated');
                 }, 250);
 
             } catch (error) {
-                console.error('Error initializing map:', error);
+                this.debugLog('Error in initMap:', error);
                 this.handleMapError(error);
             }
         },
 
         /**
-         * Bind all map and form events
-         * @returns {void}
+         * Bind events with error handling
          */
         bindEvents() {
             if (!this.map || !this.marker) {
-                console.warn('Cannot bind events - map or marker not initialized');
+                this.debugLog('Cannot bind events - map components not ready');
                 return;
             }
 
-            // Map click event for marker placement
+            // Map click handler
             this.map.on('click', (e) => {
-                const latlng = e.latlng;
-                this.marker.setLatLng(latlng);
-                this.updateFields(latlng);
+                try {
+                    const latlng = e.latlng;
+                    this.marker.setLatLng(latlng);
+                    this.updateFields(latlng);
+                } catch (error) {
+                    this.debugLog('Error in map click handler:', error);
+                }
             });
 
-            // Marker drag event
+            // Marker drag handler
             this.marker.on('dragend', (e) => {
-                const latlng = e.target.getLatLng();
-                this.updateFields(latlng);
+                try {
+                    const latlng = e.target.getLatLng();
+                    this.updateFields(latlng);
+                } catch (error) {
+                    this.debugLog('Error in marker drag handler:', error);
+                }
             });
 
-            // Field change events for manual coordinate updates
-            $('[name="latitude"], [name="longitude"]').on('change', () => {
-                this.updateMapFromFields();
+            // Field change handler with debounce
+            let fieldUpdateTimeout;
+            $('[name="latitude"], [name="longitude"]').on('input', (e) => {
+                clearTimeout(fieldUpdateTimeout);
+                fieldUpdateTimeout = setTimeout(() => {
+                    this.updateMapFromFields();
+                }, 300);
             });
 
-            console.log('Map events bound successfully');
+            this.debugLog('Events bound successfully');
         },
 
         /**
          * Update form fields with coordinates
-         * @param {Object} latlng - Latitude and longitude object
-         * @returns {void}
          */
         updateFields(latlng) {
-            console.log('Updating fields with coordinates:', latlng);
-
-            let lat, lng;
-
             try {
-                // Handle various possible coordinate formats
+                let lat, lng;
+
                 if (typeof latlng === 'object') {
                     if (latlng.lat && typeof latlng.lat === 'function') {
-                        // L.LatLng object
                         lat = latlng.lat();
                         lng = latlng.lng();
                     } else if (latlng._latlng) {
-                        // Marker event
                         lat = latlng._latlng.lat;
                         lng = latlng._latlng.lng;
                     } else {
-                        // Plain object
                         lat = parseFloat(latlng.lat);
                         lng = parseFloat(latlng.lng);
                     }
                 }
 
-                // Validate coordinates
                 if (!isNaN(lat) && !isNaN(lng)) {
-                    $('[name="latitude"]').val(lat.toFixed(8));
-                    $('[name="longitude"]').val(lng.toFixed(8));
-                } else {
-                    console.warn('Invalid coordinates:', {lat, lng});
+                    // Ensure coordinates are within valid range
+                    lat = Math.max(-90, Math.min(90, lat));
+                    lng = Math.max(-180, Math.min(180, lng));
+                    
+                    // Update form fields
+                    $('[name="latitude"]').val(lat.toFixed(6));
+                    $('[name="longitude"]').val(lng.toFixed(6));
+                    
+                    // Update Google Maps link
+                    this.updateGoogleMapsLink({lat, lng});
+                    
+                    this.debugLog('Fields updated:', { lat, lng });
                 }
-
             } catch (error) {
-                console.error('Error updating coordinate fields:', error);
-                this.handleFieldUpdateError(error);
+                this.debugLog('Error updating fields:', error);
             }
         },
 
-        /**
-         * Update map position from form fields
-         * @returns {void}
-         */
+        updateGoogleMapsLink(latlng) {
+            const link = `https://www.google.com/maps?q=${latlng.lat},${latlng.lng}`;
+            $('.google-maps-link')
+                .attr('href', link)
+                .show();
+        },
+        
         updateMapFromFields() {
             try {
-                const lat = parseFloat($('[name="latitude"]').val());
-                const lng = parseFloat($('[name="longitude"]').val());
+                console.log('Starting updateMapFromFields');
+                
+                // Get field values
+                const latField = $('[name="latitude"]');
+                const lngField = $('[name="longitude"]');
+                
+                console.log('Found form fields:', {
+                    latField: latField.length,
+                    lngField: lngField.length
+                });
 
-                if (!isNaN(lat) && !isNaN(lng) && this.map && this.marker) {
-                    const latlng = L.latLng(lat, lng);
-                    this.marker.setLatLng(latlng);
-                    this.map.setView(latlng);
-                } else {
-                    console.warn('Invalid field values or map not initialized');
+                // Parse values
+                const lat = parseFloat(latField.val());
+                const lng = parseFloat(lngField.val());
+                
+                console.log('Parsed coordinates:', { lat, lng });
+
+                // Basic validation
+                if (isNaN(lat) || isNaN(lng)) {
+                    console.warn('Invalid coordinates - NaN values');
+                    return;
                 }
 
+                // Range validation
+                if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+                    console.warn('Coordinates out of valid range');
+                    return;
+                }
+
+                // Check map components
+                if (!this.map || !this.marker) {
+                    console.warn('Map or marker not initialized');
+                    return;
+                }
+
+                console.log('Updating map position');
+                
+                // Create LatLng object and update map
+                const latlng = L.latLng(lat, lng);
+                this.marker.setLatLng(latlng);
+                this.map.setView(latlng);
+                
+                // Update Google Maps link
+                this.updateGoogleMapsLink({ lat, lng });
+                
+                console.log('Map position updated successfully');
+                
             } catch (error) {
-                console.error('Error updating map from fields:', error);
-                this.handleFieldUpdateError(error);
+                console.error('Error in updateMapFromFields:', error);
             }
         },
 
         /**
-         * Handle map initialization errors
-         * @param {Error} error - Error object
-         * @returns {void}
+         * Handle map errors
          */
         handleMapError(error) {
-            // Log error
-            console.error('Map initialization failed:', error);
+            this.debugLog('Map error:', error);
+            this.cleanup();
 
-            // Reset map state
-            this.isInitialized = false;
-            this.map = null;
-            this.marker = null;
-
-            // Show error message in map container
             if (this.mapContainer) {
                 $(this.mapContainer)
                     .addClass('map-error')
@@ -265,27 +302,17 @@
                         </div>
                     `);
 
-                // Add retry handler
-                $('.retry-map-load').on('click', () => {
+                $('.retry-map-load').on('click', (e) => {
+                    e.preventDefault();
                     $(this.mapContainer).empty().removeClass('map-error');
+                    this.initAttempts = 0;
                     this.init();
                 });
             }
         },
 
         /**
-         * Handle field update errors
-         * @param {Error} error - Error object
-         * @returns {void}
-         */
-        handleFieldUpdateError(error) {
-            console.error('Field update error:', error);
-            // Here you could add user feedback or error recovery logic
-        },
-
-        /**
          * Clean up map instance
-         * @returns {void}
          */
         cleanup() {
             if (this.map) {
@@ -293,32 +320,35 @@
                 this.map = null;
                 this.marker = null;
                 this.isInitialized = false;
+                this.initAttempts = 0;
+                if (this.initTimeout) {
+                    clearTimeout(this.initTimeout);
+                }
             }
         },
 
         /**
-         * Force map reinitialization
-         * @returns {void}
+         * Debug logging
          */
-        reinitialize() {
-            this.cleanup();
-            this.init();
+        debugLog(...args) {
+            if (window.wpCustomerMapSettings?.debug) {
+                console.log('MapPicker:', ...args);
+            }
         }
     };
 
     // Make MapPicker globally available
     window.MapPicker = MapPicker;
 
-    // Modified initialization
+    // Enhanced initialization
     $(document).ready(() => {
+        // Handle modal events
         $(document).on('branch:modalOpened', () => {
-            // Longer delay to ensure modal transition is complete
             setTimeout(() => {
                 window.MapPicker.init();
             }, 300);
         });
 
-        // Add resize handler for when modal is fully visible
         $(document).on('branch:modalFullyOpen', () => {
             if (window.MapPicker.map) {
                 window.MapPicker.map.invalidateSize();
