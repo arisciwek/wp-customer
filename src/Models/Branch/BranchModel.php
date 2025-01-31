@@ -24,18 +24,21 @@
 
 namespace WPCustomer\Models\Branch;
 
+use WPCustomer\Cache\CacheManager;
 use WPCustomer\Models\Customer\CustomerModel;
 
 class BranchModel {
     private $table;
     private $customer_table;
     private CustomerModel $customerModel;
+    private $cache;
 
     public function __construct() {
         global $wpdb;
         $this->table = $wpdb->prefix . 'app_branches';
         $this->customer_table = $wpdb->prefix . 'app_customers';
-        $this->customerModel = new CustomerModel();        
+        $this->customerModel = new CustomerModel();
+        $this->cache = new CacheManager();   
     }
     
     public function findPusatByCustomer(int $customer_id): ?object {
@@ -144,13 +147,28 @@ class BranchModel {
     public function find(int $id): ?object {
         global $wpdb;
 
-        return $wpdb->get_row($wpdb->prepare("
+        // Cek cache dulu
+        $cached = $this->cache->getBranch($id);
+        if ($cached !== null) {
+            return $cached;
+        }
+        
+        // Jika tidak ada di cache, ambil dari database
+        $result  = $wpdb->get_row($wpdb->prepare("
             SELECT r.*, p.name as customer_name
             FROM {$this->table} r
             LEFT JOIN {$this->customer_table} p ON r.customer_id = p.id
             WHERE r.id = %d
         ", $id));
+
+        // Simpan ke cache
+        if ($result) {
+            $this->cache->setBranch($id, $result);
+        }
+        
+        return $result;
     }
+
     public function update(int $id, array $data): bool {
         global $wpdb;
 
@@ -199,6 +217,8 @@ class BranchModel {
 
         if ($result === false) {
             error_log('Update branch error: ' . $wpdb->last_error);
+            $this->cache->invalidateBranchCache($id);
+            $this->cache->invalidateBranchListCache();            
             return false;
         }
 
@@ -310,14 +330,6 @@ class BranchModel {
     public function getTotalCount($customer_id): int {
         global $wpdb;
 
-        // Debug capabilities
-        error_log('--- Debug User Capabilities ---');
-        error_log('User ID: ' . get_current_user_id());
-        error_log('Can view_branch_list: ' . (current_user_can('view_branch_list') ? 'yes' : 'no'));
-        error_log('Can view_own_branch: ' . (current_user_can('view_own_branch') ? 'yes' : 'no'));
-        error_log('Can view_own_branch: ' . (current_user_can('view_own_customer') ? 'yes' : 'no'));
-        error_log('Customer ID param: ' . $customer_id);
-
         // Base query parts
         $select = "SELECT SQL_CALC_FOUND_ROWS r.*, p.name as customer_name";
         $from = " FROM {$this->table} r";
@@ -384,6 +396,5 @@ class BranchModel {
         
         return $wpdb->get_results($query);
     }
-
 
 }
