@@ -193,17 +193,53 @@
         return $result;
     }
 
+    /**
+     * Get all active customer IDs with cache implementation
+     *
+     * @return array Array of customer IDs
+     */
     public function getAllCustomerIds(): array {
+        // Define cache key
+        $cache_key = 'customer_all_active_ids';
+        
+        // Try to get from cache first
+        $cached_ids = $this->cache->get($cache_key);
+        if ($cached_ids !== null) {
+            error_log('Cache hit: getAllCustomerIds');
+            return $cached_ids;
+        }
+        
+        error_log('Cache miss: getAllCustomerIds - fetching from database');
+        
         global $wpdb;
         
-        $results = $wpdb->get_col("
-            SELECT id 
-            FROM {$this->table}
-            WHERE status = 'active'
-            ORDER BY id ASC
-        ");
-        
-        return array_map('intval', $results);
+        try {
+            // Get fresh data from database
+            $results = $wpdb->get_col("
+                SELECT id 
+                FROM {$this->table}
+                WHERE status = 'active'
+                ORDER BY id ASC
+            ");
+            
+            if ($wpdb->last_error) {
+                throw new \Exception('Database error: ' . $wpdb->last_error);
+            }
+            
+            // Convert all IDs to integers
+            $customer_ids = array_map('intval', $results);
+            
+            // Cache the results for 1 hour
+            // Using shorter cache time since this data might change frequently
+            $this->cache->set($cache_key, $customer_ids, HOUR_IN_SECONDS);
+            
+            return $customer_ids;
+            
+        } catch (\Exception $e) {
+            error_log('Error in getAllCustomerIds: ' . $e->getMessage());
+            // Return empty array on error to maintain type consistency
+            return [];
+        }
     }
 
     public function getCustomer(?int $id = null): ?object {
@@ -284,7 +320,154 @@
 
         return $result !== false;
     }
-    
+
+    /**
+     * Get data for DataTables with cache implementation while maintaining existing functionality
+     * 
+     * @param int    $start      Starting index for pagination
+     * @param int    $length     Number of records to display
+     * @param string $search     Search term
+     * @param string $orderColumn Column to sort by
+     * @param string $orderDir   Sort direction (asc/desc)
+     * @return array Array containing data, total count, and filtered count
+     */
+    public function getDataTableData(int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
+        global $wpdb;
+        $current_user_id = get_current_user_id();
+
+        // Generate cache key incorporating all parameters and user context
+        $cache_key = sprintf(
+            'datatable_data_%d_%d_%d_%s_%s_%s',
+            $current_user_id,
+            $start,
+            $length,
+            md5($search), // Hash search term as it might contain special chars
+            $orderColumn,
+            $orderDir
+        );
+
+        // Debug logging for cache attempt
+        error_log('Attempting to fetch DataTable data from cache with key: ' . $cache_key);
+
+        // Only try cache for empty searches and standard sorting
+        // This prevents cache abuse for unique/rare search queries
+        if (empty($search) && $orderColumn === 'code' && $orderDir === 'asc') {
+            $cached_result = $this->cache->get($cache_key);
+            if ($cached_result !== null) {
+                error_log('Cache hit for DataTable data');
+                return $cached_result;
+            }
+        }
+
+        error_log('Cache miss or skipped for DataTable data - fetching from database');
+
+        // Existing debug logging - preserved
+        error_log('--- Debug User Capabilities ---');
+        error_log('User ID: ' . $current_user_id);
+        error_log('Can view_customer_list: ' . (current_user_can('view_customer_list') ? 'yes' : 'no'));
+        error_log('Can view_own_customer: ' . (current_user_can('view_own_customer') ? 'yes' : 'no'));
+
+        // Existing query building logic - preserved
+        $select = "SELECT SQL_CALC_FOUND_ROWS p.*, COUNT(b.id) as branch_count";
+        $from = " FROM {$this->table} p";
+        $join = " LEFT JOIN {$this->branch_table} b ON p.id = b.customer_id";
+        $where = " WHERE 1=1";
+
+        // Existing debug logging - preserved
+        error_log('Building WHERE clause:');
+        error_log('Initial WHERE: ' . $where);
+
+        // Check user relationships - preserved
+        $has_customer = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$this->table} WHERE user_id = %d",
+            $current_user_id
+        ));
+        error_log('User has customer: ' . ($has_customer > 0 ? 'yes' : 'no'));
+
+        $employee_customer = $wpdb->get_var($wpdb->prepare(
+            "SELECT customer_id FROM {$this->employee_table} WHERE user_id = %d",
+            $current_user_id
+        ));
+        error_log('User is employee of customer: ' . ($employee_customer ? $employee_customer : 'no'));
+
+        $branch_admin = $wpdb->get_var($wpdb->prepare(
+            "SELECT customer_id FROM {$this->branch_table} WHERE user_id = %d",
+            $current_user_id
+        ));
+        error_log('User is branch admin of customer: ' . ($branch_admin ? $branch_admin : 'no'));
+
+        // Existing permission handling - preserved
+        if (current_user_can('edit_all_customers')) {
+            error_log('User can edit all customers - no additional restrictions');
+        }
+        else if ($has_customer > 0 && current_user_can('view_own_customer')) {
+            $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
+            error_log('Added owner restriction: ' . $where);
+        }
+        else if ($employee_customer && current_user_can('view_own_customer')) {
+            $where .= $wpdb->prepare(" AND p.id = %d", $employee_customer);
+            error_log('Added employee restriction: ' . $where);
+        }
+        else if ($branch_admin && current_user_can('view_own_customer')) {
+            $where .= $wpdb->prepare(" AND p.id = %d", $branch_admin);
+            error_log('Added branch admin restriction: ' . $where);
+        }
+        else {
+            $where .= " AND 1=0";
+            error_log('User has no access - restricting all results');
+        }
+
+        // Existing search handling - preserved
+        if (!empty($search)) {
+            $where .= $wpdb->prepare(" AND (p.name LIKE %s OR p.code LIKE %s)",
+                '%' . $wpdb->esc_like($search) . '%',
+                '%' . $wpdb->esc_like($search) . '%'
+            );
+            error_log('Added search: ' . $where);
+        }
+
+        // Existing query completion - preserved
+        $group = " GROUP BY p.id";
+        $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
+        $limit = $wpdb->prepare(" LIMIT %d, %d", $start, $length);
+
+        $sql = $select . $from . $join . $where . $group . $order . $limit;
+        error_log('Final Query: ' . $sql);
+
+        // Execute query and get results
+        $results = $wpdb->get_results($sql);
+        error_log('Results count: ' . count($results));
+
+        $filtered = $wpdb->get_var("SELECT FOUND_ROWS()");
+        error_log('Filtered count: ' . $filtered);
+
+        $total = $this->getTotalCount();
+        error_log('Total count: ' . $total);
+
+        // Prepare result array
+        $result = [
+            'data' => $results,
+            'total' => (int) $total,
+            'filtered' => (int) $filtered
+        ];
+
+        // Cache only if:
+        // 1. No search term (as search results shouldn't be cached)
+        // 2. Using default sorting
+        // 3. Results actually exist
+        if (empty($search) && $orderColumn === 'code' && $orderDir === 'asc' && !empty($results)) {
+            // Cache for a short duration (2 minutes) as this data can change frequently
+            $this->cache->set($cache_key, $result, 2 * MINUTE_IN_SECONDS);
+            error_log('Cached DataTable results for 2 minutes');
+        }
+
+        error_log('--- End Debug ---');
+
+        return $result;
+    }
+
+
+    /*
     public function getDataTableData(int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
        global $wpdb;
        $current_user_id = get_current_user_id();
@@ -378,6 +561,8 @@
            'filtered' => (int) $filtered
        ];
     }
+    */
+
      public function delete(int $id): bool {
          global $wpdb;
 
@@ -494,18 +679,18 @@
 
         return $total;
     }
-     
+
     // Di CustomerModel.php
     /*
-    public function getProvinsiOptions() {
-        return apply_filters('wilayah_indonesia_get_province_options', [
-            '' => __('Pilih Provinsi', 'wp-customer')
+    public function getCustomerOptions() {
+        return apply_filters('wp_customer_get_customer_options', [
+            '' => __('Pilih Customer', 'wp-customer')
         ], true);
     }
 
-    public function getRegencyOptions($provinsi_id) {
+    public function getBranchOptions($customer_id) {
         return apply_filters(
-            'wilayah_indonesia_get_regency_options',
+            'wp_customer_get_branch_options',
             [],
             $provinsi_id,
             true
@@ -513,5 +698,4 @@
     }
     */
 
- 
- }
+}
