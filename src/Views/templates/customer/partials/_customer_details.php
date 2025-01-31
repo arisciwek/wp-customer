@@ -5,8 +5,8 @@ $access = isset($panel_data['access']) ? $panel_data['access'] : null;
 
 // Debug log if needed
 if (defined('WP_DEBUG') && WP_DEBUG) {
-    error_log('=== Customer Details Template Debug ===');
-    error_log('Customer Data: ' . print_r($customer, true));
+    //error_log('=== Customer Details Template Debug ===');
+    //error_log('Customer Data: ' . print_r($customer, true));
     //error_log('Access Data: ' . print_r($access, true));
 }
 ?>
