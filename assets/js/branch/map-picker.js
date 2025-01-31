@@ -223,65 +223,50 @@
                 this.debugLog('Error updating fields:', error);
             }
         },
-
+        
         updateGoogleMapsLink(latlng) {
             const link = `https://www.google.com/maps?q=${latlng.lat},${latlng.lng}`;
             $('.google-maps-link')
                 .attr('href', link)
                 .show();
         },
-        
+
+        /**
+         * Update map from form fields with validation
+         */
         updateMapFromFields() {
             try {
-                console.log('Starting updateMapFromFields');
-                
-                // Get field values
-                const latField = $('[name="latitude"]');
-                const lngField = $('[name="longitude"]');
-                
-                console.log('Found form fields:', {
-                    latField: latField.length,
-                    lngField: lngField.length
-                });
-
-                // Parse values
-                const lat = parseFloat(latField.val());
-                const lng = parseFloat(lngField.val());
-                
-                console.log('Parsed coordinates:', { lat, lng });
+                const lat = parseFloat($('[name="latitude"]').val());
+                const lng = parseFloat($('[name="longitude"]').val());
 
                 // Basic validation
                 if (isNaN(lat) || isNaN(lng)) {
-                    console.warn('Invalid coordinates - NaN values');
+                    this.debugLog('Invalid coordinates in fields');
                     return;
                 }
 
                 // Range validation
                 if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-                    console.warn('Coordinates out of valid range');
+                    this.debugLog('Coordinates out of valid range');
                     return;
                 }
 
-                // Check map components
-                if (!this.map || !this.marker) {
-                    console.warn('Map or marker not initialized');
-                    return;
+                if (this.map && this.marker) {
+                    const latlng = L.latLng(lat, lng);
+                    
+                    // Update marker position
+                    this.marker.setLatLng(latlng);
+                    
+                    // Center map on new position
+                    this.map.setView(latlng);
+                    
+                    // Update Google Maps link
+                    this.updateGoogleMapsLink({ lat, lng });
+                    
+                    this.debugLog('Map updated from fields:', { lat, lng });
                 }
-
-                console.log('Updating map position');
-                
-                // Create LatLng object and update map
-                const latlng = L.latLng(lat, lng);
-                this.marker.setLatLng(latlng);
-                this.map.setView(latlng);
-                
-                // Update Google Maps link
-                this.updateGoogleMapsLink({ lat, lng });
-                
-                console.log('Map position updated successfully');
-                
             } catch (error) {
-                console.error('Error in updateMapFromFields:', error);
+                this.debugLog('Error updating map from fields:', error);
             }
         },
 
