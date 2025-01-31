@@ -22,13 +22,13 @@
  */
 
 defined('ABSPATH') || exit;
-error_log('=== Debug Branch List Template ===');
-error_log('Access variable On Branch Template: ' . print_r($access ?? 'null', true));
-error_log('Customer variable On Branch Template: ' . print_r($customer ?? 'null', true));
+//error_log('=== Debug Branch List Template ===');
+//error_log('Access variable On Branch Template: ' . print_r($access ?? 'null', true));
+//error_log('Customer variable On Branch Template: ' . print_r($customer ?? 'null', true));
 
 // Sebelum permission check
-error_log('Access type On Branch Template: ' . ($access['access_type'] ?? 'undefined'));
-error_log('Can add branch On Branch Template: ' . (current_user_can('add_branch') ? 'yes' : 'no'));
+//error_log('Access type On Branch Template: ' . ($access['access_type'] ?? 'undefined'));
+//error_log('Can add branch On Branch Template: ' . (current_user_can('add_branch') ? 'yes' : 'no'));
 ?>
 
 <div id="branch-list" class="tab-content">
