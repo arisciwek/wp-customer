@@ -86,6 +86,7 @@
         hideModal() {
             this.modal.fadeOut(300, () => {
                 this.resetForm();
+                $(document).trigger('branch:modalClosed');
             });
         },
 
@@ -126,49 +127,67 @@
             }
         },
 
+        showEditForm(data) {
+            if (!data?.branch) {
+                CustomerToast.error('Data cabang tidak valid');
+                return;
+            }
 
+            this.resetForm();
 
+            // Populate all form fields
+            const branch = data.branch;
+            this.form.find('#branch-id').val(branch.id);
+            this.form.find('[name="name"]').val(branch.name);
+            this.form.find('[name="type"]').val(branch.type);
+            this.form.find('[name="nitku"]').val(branch.nitku);
+            this.form.find('[name="postal_code"]').val(branch.postal_code);
+            this.form.find('[name="latitude"]').val(branch.latitude);
+            this.form.find('[name="longitude"]').val(branch.longitude);
+            this.form.find('[name="address"]').val(branch.address);
+            this.form.find('[name="phone"]').val(branch.phone);
+            this.form.find('[name="email"]').val(branch.email);
+            this.form.find('[name="provinsi_id"]').val(branch.provinsi_id);
+            this.form.find('[name="regency_id"]').val(branch.regency_id);
+            this.form.find('[name="status"]').val(branch.status);
 
-    showEditForm(data) {
-        if (!data?.branch) {
-            CustomerToast.error('Data cabang tidak valid');
-            return;
-        }
+            // Province and Regency fields
+            if (branch.provinsi_id) {
+                this.form.find('[name="provinsi_id"]').val(branch.provinsi_id).trigger('change');
+                
+                // Wait for province change to complete before setting regency
+                setTimeout(() => {
+                    if (branch.regency_id) {
+                        this.form.find('[name="regency_id"]').val(branch.regency_id);
+                    }
+                }, 500);
+            }
 
-        this.resetForm();
-
-        // Populate all form fields
-        const branch = data.branch;
-        this.form.find('#branch-id').val(branch.id);
-        this.form.find('[name="name"]').val(branch.name);
-        this.form.find('[name="type"]').val(branch.type);
-        this.form.find('[name="nitku"]').val(branch.nitku);
-        this.form.find('[name="postal_code"]').val(branch.postal_code);
-        this.form.find('[name="latitude"]').val(branch.latitude);
-        this.form.find('[name="longitude"]').val(branch.longitude);
-        this.form.find('[name="address"]').val(branch.address);
-        this.form.find('[name="phone"]').val(branch.phone);
-        this.form.find('[name="email"]').val(branch.email);
-        this.form.find('[name="provinsi_id"]').val(branch.provinsi_id);
-        this.form.find('[name="regency_id"]').val(branch.regency_id);
-        this.form.find('[name="status"]').val(branch.status);
-
+            this.modal.find('.modal-header h3').text(`Edit Cabang: ${branch.name}`);
         
-        // Province and Regency fields
-        if (branch.provinsi_id) {
-            this.form.find('[name="provinsi_id"]').val(branch.provinsi_id).trigger('change');
-            
-            // Wait for province change to complete before setting regency
-            setTimeout(() => {
-                if (branch.regency_id) {
-                    this.form.find('[name="regency_id"]').val(branch.regency_id);
-                }
-            }, 500);
+            // Show modal with animation and trigger events
+            this.modal.fadeIn(300, () => {
+                this.form.find('[name="name"]').focus();
+                $(document).trigger('branch:modalOpened');
+                
+                // Add additional trigger after modal is fully visible
+                setTimeout(() => {
+                    $(document).trigger('branch:modalFullyOpen');
+                }, 350);
+            });
+        if ($('#edit-branch-modal:visible').length) {
+            MapPicker.init('edit-branch-modal');
         }
-
-
-        this.modal.find('.modal-header h3').text(`Edit Cabang: ${branch.name}`);
-        this.modal.fadeIn(300, () => this.form.find('[name="name"]').focus());
+        
+        // If map exists, update marker position
+        if (window.MapPicker && window.MapPicker.map) {
+            const lat = parseFloat(branch.latitude);
+            const lng = parseFloat(branch.longitude);
+            if (!isNaN(lat) && !isNaN(lng)) {
+                window.MapPicker.marker.setLatLng([lat, lng]);
+                window.MapPicker.map.setView([lat, lng]);
+            }
+        }
     },
 
     initializeValidation() {

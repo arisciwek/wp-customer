@@ -591,3 +591,34 @@ div#branch-table_filter input {
     width: 100%;
     min-height: 300px;
 }
+
+.google-maps-wrapper {
+    margin-top: 12px;
+    text-align: right;
+}
+
+.google-maps-link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    color: #2271b1;
+    background: #f0f0f1;
+    padding: 6px 12px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    border: 1px solid #c3c4c7;
+}
+
+.google-maps-link:hover {
+    background: #2271b1;
+    color: #ffffff;
+    border-color: #2271b1;
+}
+
+.google-maps-link .dashicons {
+    margin-right: 6px;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+

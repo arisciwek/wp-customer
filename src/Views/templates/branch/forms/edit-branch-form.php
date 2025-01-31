@@ -169,6 +169,17 @@
                                 <input type="text" id="create-branch-longitude" name="longitude" required>
                                 <span class="field-hint"><?php _e('Contoh: 106.123456', 'wp-customer'); ?></span>
                             </div>
+
+                            <div class="branch-form-group google-maps-wrapper">
+                                <a href="#" 
+                                   class="google-maps-link" 
+                                   target="_blank" 
+                                   style="display: none;">
+                                    <span class="dashicons dashicons-location"></span>
+                                    Lihat di Google Maps
+                                </a>
+                            </div>
+                                                    
                         </div>
 
                     </div>
