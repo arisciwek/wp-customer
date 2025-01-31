@@ -102,14 +102,22 @@
         initMap() {
             try {
                 if (this.isInitialized) {
-                    this.debugLog('Map already initialized, updating size');
+                    console.log('Map already initialized, updating size');
                     this.map.invalidateSize();
                     return;
                 }
 
-                // Initialize map with current coordinates if available
-                const startLat = parseFloat($('[name="latitude"]').val()) || this.defaultLat;
-                const startLng = parseFloat($('[name="longitude"]').val()) || this.defaultLng;
+                // Get initial coordinates from form
+                const $latInput = $('[name="latitude"]');
+                const $lngInput = $('[name="longitude"]');
+                
+                console.log('Form input elements:', {
+                    latitudeFound: $latInput.length > 0,
+                    longitudeFound: $lngInput.length > 0
+                });
+
+                const startLat = parseFloat($latInput.val()) || this.defaultLat;
+                const startLng = parseFloat($lngInput.val()) || this.defaultLng;
 
                 this.debugLog('Initializing map with coordinates:', { startLat, startLng });
 
@@ -143,9 +151,12 @@
             }
         },
 
+
         /**
          * Bind events with error handling
          */
+        
+        
         bindEvents() {
             if (!this.map || !this.marker) {
                 this.debugLog('Cannot bind events - map components not ready');
@@ -176,13 +187,48 @@
             // Field change handler with debounce
             let fieldUpdateTimeout;
             $('[name="latitude"], [name="longitude"]').on('input', (e) => {
+                const $input = $(e.target);
+                const fieldName = $input.attr('name');
+                const newValue = $input.val();
+
+                console.log('Field changed:', fieldName);
+                console.log('New value:', newValue);
+
                 clearTimeout(fieldUpdateTimeout);
                 fieldUpdateTimeout = setTimeout(() => {
-                    this.updateMapFromFields();
-                }, 300);
-            });
+                    const currentPos = this.marker.getLatLng();
+                    let lat = currentPos.lat;
+                    let lng = currentPos.lng;
 
+                    // Hanya ubah nilai yang diinput
+                    if (fieldName === 'longitude') {
+                        lng = parseFloat(newValue);
+                    } else if (fieldName === 'latitude') {
+                        lat = parseFloat(newValue);
+                    }
+
+                    // Update marker and map
+                    const newPos = L.latLng(lat, lng);
+                    this.marker.setLatLng(newPos);
+                    this.map.setView(newPos, this.map.getZoom(), {
+                        animate: true,
+                        duration: 0.5
+                    });
+                }, 100);
+            });
             this.debugLog('Events bound successfully');
+        },
+        
+
+        // Tambahan fungsi helper untuk format koordinat
+        formatCoordinate(value, type) {
+            if (typeof value !== 'number') {
+                console.warn(`Invalid ${type} value:`, value);
+                return '';
+            }
+            const formatted = value.toFixed(6);
+            console.log(`Formatted ${type}: ${formatted}`);
+            return formatted;
         },
 
         /**
@@ -234,39 +280,64 @@
         /**
          * Update map from form fields with validation
          */
-        updateMapFromFields() {
+
+        updateMapFromFields(changedField, newValue) {
             try {
-                const lat = parseFloat($('[name="latitude"]').val());
-                const lng = parseFloat($('[name="longitude"]').val());
+                console.group('MapPicker: Updating from fields');
+                
+                // Get current position from marker
+                const currentPos = this.marker.getLatLng();
+                
+                // Update only the changed coordinate, keep the other one
+                let lat = currentPos.lat;
+                let lng = currentPos.lng;
+                
+                if (changedField === 'latitude') {
+                    lat = parseFloat(newValue);
+                    console.log('Updating latitude to:', lat);
+                } else if (changedField === 'longitude') {
+                    lng = parseFloat(newValue);
+                    console.log('Updating longitude to:', lng);
+                }
 
-                // Basic validation
-                if (isNaN(lat) || isNaN(lng)) {
-                    this.debugLog('Invalid coordinates in fields');
+                console.log('Final coordinates:', { lat, lng });
+
+                // Validate the changed value
+                if (changedField === 'latitude' && (isNaN(lat) || lat < -11 || lat > 6)) {
+                    console.warn('Invalid latitude value:', lat);
+                    return;
+                }
+                if (changedField === 'longitude' && (isNaN(lng) || lng < 95 || lng > 141)) {
+                    console.warn('Invalid longitude value:', lng);
                     return;
                 }
 
-                // Range validation
-                if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-                    this.debugLog('Coordinates out of valid range');
-                    return;
+                // Update map with new position
+                const latlng = L.latLng(lat, lng);
+                this.marker.setLatLng(latlng);
+                
+                // Determine zoom based on distance
+                const distance = this.map.getCenter().distanceTo(latlng);
+                let zoom = this.map.getZoom();
+                if (distance > 1000000) { // > 1000 km
+                    zoom = 4;
+                } else if (distance > 100000) { // > 100 km
+                    zoom = 5;
                 }
 
-                if (this.map && this.marker) {
-                    const latlng = L.latLng(lat, lng);
-                    
-                    // Update marker position
-                    this.marker.setLatLng(latlng);
-                    
-                    // Center map on new position
-                    this.map.setView(latlng);
-                    
-                    // Update Google Maps link
-                    this.updateGoogleMapsLink({ lat, lng });
-                    
-                    this.debugLog('Map updated from fields:', { lat, lng });
-                }
+                this.map.setView(latlng, zoom, {
+                    animate: true,
+                    duration: 0.5
+                });
+
+                this.updateGoogleMapsLink({ lat, lng });
+                
+                console.log('Map updated with new position:', latlng);
+                console.groupEnd();
+                
             } catch (error) {
-                this.debugLog('Error updating map from fields:', error);
+                console.error('Error in updateMapFromFields:', error);
+                console.groupEnd();
             }
         },
 
