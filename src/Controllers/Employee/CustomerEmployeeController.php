@@ -132,7 +132,7 @@ class CustomerEmployeeController {
             $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
 
             // Map column index to column name
-            $columns = ['name', 'position', 'keterangan', 'email', 'branch_name', 'status', 'actions'];
+            $columns = ['name', 'position', 'department', 'email', 'branch_name', 'status', 'actions'];
             $orderBy = isset($columns[$orderColumn]) ? $columns[$orderColumn] : 'name';
 
             if ($orderBy === 'actions') {
@@ -148,7 +148,7 @@ class CustomerEmployeeController {
                         'id' => $employee->id,
                         'name' => esc_html($employee->name),
                         'position' => esc_html($employee->position),
-                        'keterangan' => esc_html($employee->keterangan),
+                        'department' => esc_html($employee->department),
                         'email' => esc_html($employee->email),
                         'branch_name' => esc_html($employee->branch_name),
                         'status' => esc_html($employee->status),
@@ -355,7 +355,7 @@ class CustomerEmployeeController {
                 'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0,
                 'name' => sanitize_text_field($_POST['name'] ?? ''),
                 'position' => sanitize_text_field($_POST['position'] ?? ''),
-                'keterangan' => sanitize_text_field($_POST['keterangan'] ?? ''),
+                'department' => sanitize_text_field($_POST['department'] ?? ''),
                 'email' => sanitize_email($_POST['email'] ?? ''),
                 'phone' => sanitize_text_field($_POST['phone'] ?? ''),
             ];
@@ -408,7 +408,7 @@ class CustomerEmployeeController {
             $data = [
                 'name' => sanitize_text_field($_POST['name'] ?? ''),
                 'position' => sanitize_text_field($_POST['position'] ?? ''),
-                'keterangan' => sanitize_text_field($_POST['keterangan'] ?? ''),
+                'department' => sanitize_text_field($_POST['department'] ?? ''),
                 'email' => sanitize_email($_POST['email'] ?? ''),
                 'phone' => sanitize_text_field($_POST['phone'] ?? ''),
                 'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0

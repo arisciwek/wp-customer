@@ -1,6 +1,6 @@
 /**
  * File: customer.css
- * Path: /wp-customer/assets/css/customer/customer-style.css
+ * Path: /wp-customer/assets/css/customer.css
  * Description: Styles for customer management interface
  * Last modified: 2024-11-23
  */
@@ -271,10 +271,6 @@ div#customers-table_length select {
     color: #2271b1;
 }
 
-#membership-info.active {
-    display: block !important;
-}
-
 .tab-content {
     display: none;
 }
@@ -435,7 +431,7 @@ div#customers-table_length select {
     color: #b32d2e;
 }
 
-/* Customer Details Styles */
+
 .customer-header {
     margin-bottom: 20px;
     display: flex;

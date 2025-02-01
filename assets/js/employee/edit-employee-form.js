@@ -137,7 +137,7 @@
             this.form.find('#edit-employee-id').val(data.id);
             this.form.find('[name="name"]').val(data.name);
             this.form.find('[name="position"]').val(data.position);
-            this.form.find('[name="keterangan"]').val(data.keterangan);
+            this.form.find('[name="department"]').val(data.department);
             this.form.find('[name="email"]').val(data.email);
             this.form.find('[name="phone"]').val(data.phone);
             this.form.find('[name="status"]').val(data.status);
@@ -174,7 +174,7 @@
                         minlength: 2,
                         maxlength: 100
                     },
-                    keterangan: {
+                    department: {
                         required: true,
                         minlength: 2,
                         maxlength: 100
@@ -206,10 +206,10 @@
                         minlength: 'Jabatan minimal 2 karakter',
                         maxlength: 'Jabatan maksimal 100 karakter'
                     },
-                    keterangan: {
-                        required: 'Keterangan wajib diisi',
-                        minlength: 'Keterangan minimal 2 karakter',
-                        maxlength: 'Keterangan maksimal 100 karakter'
+                    department: {
+                        required: 'Departemen wajib diisi',
+                        minlength: 'Departemen minimal 2 karakter',
+                        maxlength: 'Departemen maksimal 100 karakter'
                     },
                     email: {
                         required: 'Email wajib diisi',
@@ -305,7 +305,7 @@
                 name: this.form.find('[name="name"]').val().trim(),
                 branch_id: this.form.find('[name="branch_id"]').val(),
                 position: this.form.find('[name="position"]').val().trim(),
-                keterangan: this.form.find('[name="keterangan"]').val().trim(),
+                department: this.form.find('[name="department"]').val().trim(),
                 email: this.form.find('[name="email"]').val().trim(),
                 phone: this.form.find('[name="phone"]').val().trim(),
                 status: this.form.find('[name="status"]').val()

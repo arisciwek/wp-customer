@@ -1,6 +1,6 @@
 /**
  * File: toast.js
- * Path: /wp-customer/assets/js/customer/toast.js
+ * Path: /wp-customer/assets/js/components/toast.js
  * Description: Komponen notifikasi untuk feedback UI
  * Version: 2.0.0
  * Last modified: 2024-11-28 09:45:00

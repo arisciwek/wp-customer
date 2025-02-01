@@ -73,24 +73,14 @@
                  this.refresh();
              });
 
-            // Event delegation for action buttons
-            $('#branch-table')
-                .off('click', '.delete-branch, .edit-branch')
-                .on('click', '.delete-branch', (e) => {
-                    e.preventDefault();
-                    const id = $(e.currentTarget).data('id');
-                    if (id) {
-                        this.handleDelete(id);
-                    }
-                })
-                .on('click', '.edit-branch', (e) => {
-                    e.preventDefault();
-                    const id = $(e.currentTarget).data('id');
-                    if (id && window.EditBranchForm) {
-                        window.EditBranchForm.loadBranchData(id);
-                    }
-                });
-                
+             // Direct event binding for action buttons
+             $('#branch-table').off('click', '.delete-branch').on('click', '.delete-branch', (e) => {
+                 e.preventDefault();
+                 const id = $(e.currentTarget).data('id');
+                 if (id) {
+                     this.handleDelete(id);
+                 }
+             });
          },
 
          async handleDelete(id) {
@@ -137,101 +127,89 @@
              });
          },
 
-        initDataTable() {
-            if ($.fn.DataTable.isDataTable('#branch-table')) {
-                $('#branch-table').DataTable().destroy();
-            }
+         initDataTable() {
+             if ($.fn.DataTable.isDataTable('#branch-table')) {
+                 $('#branch-table').DataTable().destroy();
+             }
 
-            $('#branch-table').empty().html(`
-                <thead>
-                    <tr>
-                        <th>Kode</th>
-                        <th>Nama</th>
-                        <th>Admin</th>
-                        <th>Tipe</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            `);
+             // Initialize clean table structure
+             $('#branch-table').empty().html(`
+                 <thead>
+                     <tr>
+                         <th>Kode</th>
+                         <th>Nama</th>
+                         <th>Tipe</th>
+                         <th>Aksi</th>
+                     </tr>
+                 </thead>
+                 <tbody></tbody>
+             `);
 
-            const self = this;
-            this.table = $('#branch-table').DataTable({
-                processing: true,
-                serverSide: true,
-                ajax: {
-                    url: wpCustomerData.ajaxUrl,
-                    type: 'POST',
-                    data: (d) => {
-                        return {
-                            ...d,
-                            action: 'handle_branch_datatable',
-                            customer_id: this.customerId,
-                            nonce: wpCustomerData.nonce
-                        };
-                    },
-                    error: (xhr, error, thrown) => {
-                        console.error('DataTables Error:', error);
-                        this.showError();
-                    },
-                    dataSrc: function(response) {
-                        if (!response.data || response.data.length === 0) {
-                            self.showEmpty();
-                        } else {
-                            self.showTable();
-                        }
-                        return response.data;
-                    }
-                },
+             const self = this;
+             this.table = $('#branch-table').DataTable({
+                 processing: true,
+                 serverSide: true,
+                 ajax: {
+                     url: wpCustomerData.ajaxUrl,
+                     type: 'POST',
+                     data: (d) => {
+                         return {
+                             ...d,
+                             action: 'handle_branch_datatable',
+                             customer_id: this.customerId,
+                             nonce: wpCustomerData.nonce
+                         };
+                     },
+                     error: (xhr, error, thrown) => {
+                         console.error('DataTables Error:', error);
+                         this.showError();
+                     },
+                     dataSrc: function(response) {
+                         if (!response.data || response.data.length === 0) {
+                             self.showEmpty();
+                         } else {
+                             self.showTable();
+                         }
+                         return response.data;
+                     }
+                 },
+                 columns: [
+                     { data: 'code', width: '18%' },
+                     { data: 'name', width: '45%' },
+                     { data: 'type', width: '17%' },
+                     {
+                         data: 'actions',
+                         width: '20%',
+                         orderable: false,
+                         className: 'text-center'
+                     }
+                 ],
+                 order: [[0, 'asc']],
+                 pageLength: wpCustomerData.perPage || 10,
+                 language: {
+                     "emptyTable": "Tidak ada data yang tersedia",
+                     "info": "Menampilkan _START_ hingga _END_ dari _TOTAL_ entri",
+                     "infoEmpty": "Menampilkan 0 hingga 0 dari 0 entri",
+                     "infoFiltered": "(disaring dari _MAX_ total entri)",
+                     "lengthMenu": "Tampilkan _MENU_ entri",
+                     "loadingRecords": "Memuat...",
+                     "processing": "Memproses...",
+                     "search": "Cari:",
+                     "zeroRecords": "Tidak ditemukan data yang sesuai",
+                     "paginate": {
+                         "first": "Pertama",
+                         "last": "Terakhir",
+                         "next": "Selanjutnya",
+                         "previous": "Sebelumnya"
+                     }
+                 },
+                 drawCallback: (settings) => {
+                     this.bindActionButtons();
+                 }
+             });
 
-                columns: [
-                    { data: 'code', width: '10%', className: 'column-code' },
-                    { data: 'name', width: '35%', className: 'column-name' },
-                    { 
-                        data: 'admin_name', 
-                        width: '25%',
-                        className: 'column-admin',
-                        render: (data) => data || '-'
-                    },
-                    { 
-                        data: 'type', 
-                        width: '15%',
-                        className: 'column-type',
-                        render: (data) => data === 'pusat' ? 'Pusat' : 'Cabang'
-                    },
-                    {
-                        data: 'actions',
-                        width: '15%',
-                        orderable: false,
-                        className: 'column-actions text-center'
-                    }
-                ],
-                order: [[0, 'asc']],
-                pageLength: wpCustomerData.perPage || 10,
-                language: {
-                    "emptyTable": "Tidak ada data yang tersedia",
-                    "info": "Menampilkan _START_ hingga _END_ dari _TOTAL_ entri",
-                    "infoEmpty": "Menampilkan 0 hingga 0 dari 0 entri",
-                    "infoFiltered": "(disaring dari _MAX_ total entri)",
-                    "lengthMenu": "Tampilkan _MENU_ entri",
-                    "loadingRecords": "Memuat...",
-                    "processing": "Memproses...",
-                    "search": "Cari:",
-                    "zeroRecords": "Tidak ditemukan data yang sesuai",
-                    "paginate": {
-                        "first": "Pertama",
-                        "last": "Terakhir",
-                        "next": "Selanjutnya",
-                        "previous": "Sebelumnya"
-                    }
-                },
-                drawCallback: (settings) => {
-                    this.bindActionButtons();
-                }
-            });
-
-            this.initialized = true;
-        },
+             this.initialized = true;
+         },
 
          bindActionButtons() {
              // No need to rebind delete buttons as we're using event delegation above

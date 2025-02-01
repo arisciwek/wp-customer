@@ -169,7 +169,7 @@
                 <thead>
                     <tr>
                         <th>Nama</th>
-                        <th>Keterangan</th>
+                        <th>Departemen</th>
                         <th>Cabang</th>
                         <th>Status</th>
                         <th>Aksi</th>
@@ -216,7 +216,7 @@
                 },
                 columns: [
                     { data: 'name', width: '20%' },
-                    { data: 'keterangan', width: '15%' },
+                    { data: 'department', width: '15%' },
                     { data: 'branch_name', width: '15%' },
                     {
                         data: 'status',

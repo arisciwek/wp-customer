@@ -22,13 +22,7 @@
  */
 
 defined('ABSPATH') || exit;
-//error_log('=== Debug Branch List Template ===');
-//error_log('Access variable On Branch Template: ' . print_r($access ?? 'null', true));
-//error_log('Customer variable On Branch Template: ' . print_r($customer ?? 'null', true));
 
-// Sebelum permission check
-//error_log('Access type On Branch Template: ' . ($access['access_type'] ?? 'undefined'));
-//error_log('Can add branch On Branch Template: ' . (current_user_can('add_branch') ? 'yes' : 'no'));
 ?>
 
 <div id="branch-list" class="tab-content">
@@ -39,9 +33,11 @@ defined('ABSPATH') || exit;
         </div>
 
             <div class="branch-header-actions">
-                <?php if (($access['access_type'] === 'admin' || 
-                           $access['access_type'] === 'owner') && 
-                          current_user_can('add_branch')) : ?>
+                <?php 
+                // Show Add Branch button based on permissions
+                if (($access['access_type'] === 'admin' || $access['access_type'] === 'owner') && 
+                    current_user_can('add_branch')) : 
+                ?>
                     <button type="button" class="button button-primary" id="add-branch-btn">
                         <span class="dashicons dashicons-plus-alt"></span>
                         <?php _e('Tambah Cabang', 'wp-customer'); ?>
@@ -90,7 +86,6 @@ defined('ABSPATH') || exit;
                     <tr>
                         <th><?php _e('Kode', 'wp-customer'); ?></th>
                         <th><?php _e('Nama', 'wp-customer'); ?></th>
-                        <th><?php _e('Admin', 'wp-customer'); ?></th>
                         <th><?php _e('Tipe', 'wp-customer'); ?></th>
                         <th class="text-center no-sort">
                             <?php _e('Aksi', 'wp-customer'); ?>
@@ -104,7 +99,6 @@ defined('ABSPATH') || exit;
                     <tr>
                         <th><?php _e('Kode', 'wp-customer'); ?></th>
                         <th><?php _e('Nama', 'wp-customer'); ?></th>
-                        <th><?php _e('Admin', 'wp-customer'); ?></th>
                         <th><?php _e('Tipe', 'wp-customer'); ?></th>
                         <th><?php _e('Aksi', 'wp-customer'); ?></th>
                     </tr>
@@ -140,3 +134,9 @@ defined('ABSPATH') || exit;
         </div>
     <?php endif; ?>
 </div>
+
+<?php
+// Include related modals
+require_once WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/create-branch-form.php';
+require_once WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/edit-branch-form.php';
+?>

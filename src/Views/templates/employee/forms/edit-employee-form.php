@@ -75,14 +75,14 @@ defined('ABSPATH') || exit;
                            required>
                 </div>
 
-                <!-- Keterangan -->
+                <!-- Departemen -->
                 <div class="employee-form-group">
-                    <label for="edit-employee-keterangan" class="required-field">
-                        <?php _e('Keterangan', 'wp-customer'); ?>
+                    <label for="edit-employee-department" class="required-field">
+                        <?php _e('Departemen', 'wp-customer'); ?>
                     </label>
                     <input type="text"
-                           id="edit-employee-keterangan"
-                           name="keterangan"
+                           id="edit-employee-department"
+                           name="department"
                            class="regular-text"
                            maxlength="100"
                            required>

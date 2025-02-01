@@ -6,7 +6,7 @@
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/assets/js/customer/customer-script.js
+ * Path: /wp-customer/assets/js/customer.js
  *
  * Description: Main JavaScript handler untuk halaman customer.
  *              Mengatur interaksi antar komponen seperti DataTable,
@@ -82,9 +82,18 @@
                  .on('customer:created.Customer', (e, data) => this.handleCreated(data))
                  .on('customer:updated.Customer', (e, data) => this.handleUpdated(data))
                  .on('customer:deleted.Customer', () => this.handleDeleted())
-                 //.on('customer:display.Customer', (e, data) => this.displayData(data))
+                 .on('customer:display.Customer', (e, data) => this.displayData(data))
                  .on('customer:loading.Customer', () => this.showLoading())
                  .on('customer:loaded.Customer', () => this.hideLoading());
+
+             // Panel events
+             $('.wp-customer-close-panel').off('click').on('click', () => this.closePanel());
+
+             // Panel navigation
+             $('.nav-tab').off('click').on('click', (e) => {
+                 e.preventDefault();
+                 this.switchTab($(e.currentTarget).data('tab'));
+             });
 
              // Window events
              $(window).off('hashchange.Customer').on('hashchange.Customer', () => this.handleHashChange());
@@ -114,20 +123,15 @@
                     }
                 });
             },
-
-            handleInitialState() {
+            
+        handleInitialState() {
             const hash = window.location.hash;
             if (hash && hash.startsWith('#')) {
                 const customerId = parseInt(hash.substring(1));
                 if (customerId) {
                     this.validateCustomerAccess(
                         customerId,
-                        (data) => {
-                            // On successful validation
-                            this.load_customer_preview(customerId);
-                            this.components.container.addClass('with-right-panel');
-                            this.components.rightPanel.addClass('visible');
-                        },
+                        (data) => this.loadCustomerData(customerId),
                         (error) => {
                             window.location.href = 'admin.php?page=wp-customer';
                             CustomerToast.error(error.message);
@@ -137,77 +141,23 @@
             }
         },
 
-        handleHashChange() {
-            const hash = window.location.hash;
-            if (!hash) {
-                this.closePanel();
-                return;
-            }
+         handleHashChange() {
+             const hash = window.location.hash;
+             if (!hash) {
+                 this.closePanel();
+                 return;
+             }
 
-            const id = hash.substring(1);
-            if (id) {
-                this.load_customer_preview(id);
-                $('.tab-content').removeClass('active');
-                $('#customer-details').addClass('active');
-                $('.nav-tab').removeClass('nav-tab-active');
-                $('.nav-tab[data-tab="customer-details"]').addClass('nav-tab-active');
-            }
-        },
+             const id = hash.substring(1);
+             if (id && id !== this.currentId) {
+                 $('.tab-content').removeClass('active');
+                 $('#customer-details').addClass('active');
+                 $('.nav-tab').removeClass('nav-tab-active');
+                 $('.nav-tab[data-tab="customer-details"]').addClass('nav-tab-active');
 
-
-        load_customer_preview(id) {
-            if (this.isLoading) return;
-            this.isLoading = true;
-
-            $.ajax({
-                url: wpCustomerData.ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'get_customer_data_ajax',
-                    id: id,
-                    nonce: wpCustomerData.nonce
-                },
-                success: (response) => {
-                    $('#wp-customer-right-panel').html(response);
-                    this.currentId = id;
-                    this.components.container.addClass('with-right-panel');
-                    this.components.rightPanel.addClass('visible');
-
-                    // Reinitialize components after content update
-                    if (window.BranchDataTable) {
-                        window.BranchDataTable.init(id);
-                    }
-                    if (window.CreateBranchForm) {
-                        window.CreateBranchForm.init();
-                    }
-                    if (window.EditBranchForm) {
-                        window.EditBranchForm.init(); 
-                    }
-
-                    if (window.CreateEmployeeForm) {
-                        window.CreateEmployeeForm.init();
-                    }
-                    if (window.EditEmployeeForm) {
-                        window.EditEmployeeForm.init();
-                    }
-                    if (window.EmployeeDataTable) {
-                        window.EmployeeDataTable.init(id);
-                    }
-                    if (window.MapPicker) {
-                        window.MapPicker.init(); // Ini akan error karena modal belum dibuka
-                    }
-
-                    // Bind new events setelah content diupdate
-                    this.bindEvents();
-                },
-                error: (xhr) => {
-                    CustomerToast.error('Gagal memuat data customer');
-                },
-                complete: () => {
-                    this.isLoading = false;
-                }
-            });
-        },
+                 this.loadCustomerData(id);
+             }
+         },
 
          async loadCustomerData(id) {
              if (!id || this.isLoading) return;
@@ -232,7 +182,7 @@
                     console.log('Load customer response:', response);  // Debug load response
 
                  if (response.success) {
-                     //this.displayData(response.data);
+                     this.displayData(response.data);
                      this.currentId = id;
                  } else {
                      CustomerToast.error(response.data?.message || 'Gagal memuat data customer');
@@ -247,7 +197,82 @@
                  this.hideLoading();
              }
          },
-         
+
+         displayData(data) {
+             if (!data || !data.customer) {
+                 CustomerToast.error('Data customer tidak valid');
+                 return;
+             }
+            
+            console.log('Initial data received:', data);
+            console.log('Current customer ID:', data.customer.id);
+
+            // Dapatkan URL dan parameter saat ini
+            const currentUrl = new URL(window.location.href);
+            const currentId = currentUrl.searchParams.get('id');
+            console.log('Current URL param id:', currentId);
+            console.log('New customer id:', data.customer.id);
+
+
+             $('.tab-content').removeClass('active');
+             $('#customer-details').addClass('active');
+             $('.nav-tab').removeClass('nav-tab-active');
+             $('.nav-tab[data-tab="customer-details"]').addClass('nav-tab-active');
+
+             this.components.container.addClass('with-right-panel');
+             this.components.rightPanel.addClass('visible');
+
+             const createdAt = new Date(data.customer.created_at).toLocaleString('id-ID');
+             const updatedAt = new Date(data.customer.updated_at).toLocaleString('id-ID');
+
+             $('#customer-header-name').text(data.customer.name);
+             $('#customer-name').text(data.customer.name);
+             $('#customer-branch-count').text(data.branch_count);
+             $('#customer-employee-count').text(data.employee_count);
+             $('#customer-created-at').text(createdAt);
+             $('#customer-updated-at').text(updatedAt);
+
+             if (window.CustomerDataTable) {
+                 window.CustomerDataTable.highlightRow(data.customer.id);
+             }
+
+            // Tambahkan handling untuk membership data
+            if (data.customer.membership) {
+                // Update membership badge
+                $('#current-level-badge').text(data.customer.membership.level);
+                
+                // Update staff usage
+                const staffUsage = data.customer.staff_count || 0;
+                const staffLimit = data.customer.membership.max_staff;
+                $('#staff-usage-count').text(staffUsage);
+                $('#staff-usage-limit').text(staffLimit === -1 ? 'Unlimited' : staffLimit);
+                
+                // Calculate progress bar percentage
+                if (staffLimit !== -1) {
+                    const percentage = (staffUsage / staffLimit) * 100;
+                    $('#staff-usage-bar').css('width', `${percentage}%`);
+                }
+
+                // Update capabilities list
+                const $capList = $('#active-capabilities').empty();
+                Object.entries(data.customer.membership.capabilities).forEach(([cap, enabled]) => {
+                    if (enabled) {
+                        $capList.append(`<li>${this.getCapabilityLabel(cap)}</li>`);
+                    }
+                });
+
+                // Show/hide upgrade buttons based on current level
+                const currentLevel = data.customer.membership.level;
+                $('.upgrade-card').each(function() {
+                    const cardLevel = $(this).attr('id').replace('-plan', '');
+                    $(this).toggle(this.shouldShowUpgradeOption(currentLevel, cardLevel));
+                });
+            }
+
+
+
+         },
+
             // Helper function untuk label capability
             getCapabilityLabel(cap) {
                 const labels = {
@@ -266,57 +291,30 @@
                 return targetIdx > currentIdx;
             },
 
-            switchTab(tabId) {
-                // Pastikan kita punya currentId sebelum switch tab
-                if (!this.currentId) {
-                    return;
-                }
-
-                // Update URL tanpa reload halaman
-                const currentHash = window.location.hash;
-                if (!currentHash || !currentHash.includes(this.currentId)) {
-                    // Gunakan replaceState untuk update URL tanpa trigger hashchange
-                    window.history.replaceState(null, '', `#${this.currentId}`);
-                }
-
-                // Update UI
+            switchTab(tabId) { 
                 $('.nav-tab').removeClass('nav-tab-active');
                 $(`.nav-tab[data-tab="${tabId}"]`).addClass('nav-tab-active');
 
-                $('.tab-content').removeClass('active');
+                // Hide all tab content first
+                $('.tab-content-panel').removeClass('active');
+
+                $('.tab-content').hide(); // Hide all tab content first
+                $(`#${tabId}`).show(); // Show only the selected tab
+                                
+                // Show selected tab content
                 $(`#${tabId}`).addClass('active');
 
-                // Load content jika diperlukan
-                if (tabId === 'branch-list') {
-                    this.initializeBranchTable();
-                } 
-                else if (tabId === 'employee-list') {
-                    this.initializeEmployeeTable();
-                }
-            },
-
-            initializeBranchTable() {
-                const checkAndInit = () => {
+                // Initialize specific tab content if needed
+                if (tabId === 'branch-list' && this.currentId) {
                     if (window.BranchDataTable) {
                         window.BranchDataTable.init(this.currentId);
-                        $(`#branch-list .loading-placeholder`).hide();
-                    } else {
-                        setTimeout(checkAndInit, 100);
                     }
-                };
-                checkAndInit();
-            },
-
-            initializeEmployeeTable() {
-                const checkAndInit = () => {
+                }
+                if (tabId === 'employee-list' && this.currentId) {
                     if (window.EmployeeDataTable) {
                         window.EmployeeDataTable.init(this.currentId);
-                        $(`#employee-list .loading-placeholder`).hide();
-                    } else {
-                        setTimeout(checkAndInit, 100);
                     }
-                };
-                checkAndInit();
+                }
             },
 
          closePanel() {
@@ -380,6 +378,48 @@
              }
          },
 
+
+         /**
+         * Get current customer ID for logged in user.
+         * This method makes an AJAX call to server to determine the active customer ID
+         * based on user's relationship (owner or employee) with customers.
+         * 
+         * @async
+         * @returns {Promise<number>} Resolves with customer ID (0 if no customer found)
+         * @throws {Error} When AJAX call fails or server returns error
+         * 
+         * @example
+         * try {
+         *   const customerId = await Customer.getCurrentCustomerId();
+         *   console.log('Active customer ID:', customerId);
+         * } catch (error) {
+         *   console.error('Failed to get customer ID:', error);
+         * }
+         *
+        getCurrentCustomerId() {
+            return new Promise((resolve, reject) => {
+                $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'get_current_customer_id',
+                        nonce: wpCustomerData.nonce
+                    },
+                    success: (response) => {
+                        if (response.success) {
+                            resolve(response.data.customer_id);
+                        } else {
+                            reject(new Error(response.data.message));
+                        }
+                    },
+                    error: (xhr) => {
+                        reject(new Error('Failed to get customer ID'));
+                    }
+                });
+            });
+        },
+        */
+
         /**
          * Load customer statistics including total customers and branches.
          * Uses getCurrentCustomerId() to determine which customer's stats to load.
@@ -425,14 +465,6 @@
         }
 
      };
-    
-    $(document).on('click', '.nav-tab', function(e) {
-        e.preventDefault();
-        const tabId = $(this).data('tab');
-        if (Customer.currentId) {
-            Customer.switchTab(tabId);
-        }
-    });
 
      // Initialize when document is ready
      $(document).ready(() => {

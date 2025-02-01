@@ -33,7 +33,6 @@ class SettingsController {
     // Add this to your SettingsController or appropriate controller class
     public function register_ajax_handlers() {
         add_action('wp_ajax_reset_permissions', [$this, 'handle_reset_permissions']);
-        add_action('wp_ajax_generate_demo_data', [$this, 'handle_generate_demo_data']);      
     }
 
     public function handle_reset_permissions() {
@@ -113,26 +112,6 @@ class SettingsController {
                 )
             )
         );
-
-        // Development Settings
-        register_setting(
-            'wp_customer_development_settings',
-            'wp_customer_development_settings',
-            array(
-                'sanitize_callback' => [$this, 'sanitize_development_settings'],
-                'default' => array(
-                    'enable_development' => 0,
-                    'clear_data_on_deactivate' => 0
-                )
-            )
-        );
-    }
-
-    public function sanitize_development_settings($input) {
-        $sanitized = array();
-        $sanitized['enable_development'] = isset($input['enable_development']) ? 1 : 0;
-        $sanitized['clear_data_on_deactivate'] = isset($input['clear_data_on_deactivate']) ? 1 : 0;
-        return $sanitized;
     }
 
     public function sanitize_settings($input) {
@@ -181,78 +160,6 @@ class SettingsController {
         return $sanitized;
     }
 
-    /**
-     * Get the appropriate generator class based on data type
-     *
-     * @param string $type The type of data to generate
-     * @return AbstractDemoData Generator instance
-     * @throws \Exception If invalid type specified
-     */
-    private function getGeneratorClass($type) {
-        switch ($type) {
-            case 'users':
-                return new \WPCustomer\Database\Demo\WPUserGenerator();
-            case 'customer':
-                return new \WPCustomer\Database\Demo\CustomerDemoData();
-            case 'branch':
-                return new \WPCustomer\Database\Demo\BranchDemoData();
-            case 'employee':
-                return new \WPCustomer\Database\Demo\CustomerEmployeeDemoData();
-            case 'membership':
-                return new \WPCustomer\Database\Demo\MembershipDemoData();
-            default:
-                throw new \Exception('Invalid demo data type: ' . $type);
-        }
-    }
-
-    public function handle_generate_demo_data() {
-        try {
-            // Validate nonce and permissions first
-            if (!current_user_can('manage_options')) {
-                throw new \Exception('Permission denied');
-            }
-
-            $type = sanitize_text_field($_POST['type']);
-            $nonce = sanitize_text_field($_POST['nonce']);
-
-            if (!wp_verify_nonce($nonce, "generate_demo_{$type}")) {
-                throw new \Exception('Invalid security token');
-            }
-
-            // Get the generator class based on type
-            $generator = $this->getGeneratorClass($type);
-            
-            // Check if development mode is enabled before proceeding
-            if (!$generator->isDevelopmentMode()) {
-                wp_send_json_error([
-                    'message' => 'Cannot generate demo data - Development mode is not enabled. Please enable it in settings first.',
-                    'type' => 'dev_mode_off'  // Menandakan error karena development mode off
-                ]);
-                return;
-            }
-
-            // If development mode is on, proceed with generation
-            if ($generator->run()) {
-                wp_send_json_success([
-                    'message' => ucfirst($type) . ' data generated successfully.',
-                    'type' => 'success'
-                ]);
-            } else {
-                wp_send_json_error([
-                    'message' => 'Failed to generate demo data.',
-                    'type' => 'error'  // Menandakan error teknis
-                ]);
-            }
-
-        } catch (\Exception $e) {
-            $this->debug('Demo data generation failed: ' . $e->getMessage());
-            wp_send_json_error([
-                'message' => 'Failed to generate demo data.',
-                'type' => 'error'
-            ]);
-        }
-    }
-
     public function renderPage() {
         if (!current_user_can('manage_options')) {
             wp_die(__('Anda tidak memiliki izin untuk mengakses halaman ini.', 'wp-customer'));
@@ -269,8 +176,7 @@ class SettingsController {
         $allowed_tabs = [
             'general' => 'tab-general.php',
             'permissions' => 'tab-permissions.php',
-            'membership' => 'tab-membership.php',
-            'demo-data' => 'tab-demo-data.php'
+            'membership' => 'tab-membership.php'
         ];
         
         // Validate tab exists

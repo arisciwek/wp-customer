@@ -20,7 +20,7 @@
  * - Staff usage progress bar
  * - Active capabilities list
  * - Upgrade plan cards (Regular/Priority/Utama)
- *
+ * 
  * Dependencies:
  * - wp-customer-membership.css
  * - wp-customer-membership.js
@@ -38,113 +38,77 @@
  */
 
 defined('ABSPATH') || exit;
-
-// Pastikan data membership tersedia
-$membership = $membership ?? [];
-$staff_count = $membership['staff_count'] ?? 0;
-$max_staff = $membership['max_staff'] ?? 2;
-$level = $membership['level'] ?? 'regular';
-$capabilities = $membership['capabilities'] ?? [];
-
 ?>
-
 <div id="membership-info" class="tab-content">
-    <!-- Membership Status Card -->
-  <div class="membership-status-wrapper clearfix">
-      <div class="membership-status-header">
-          <h3>Status Membership Saat Ini</h3>
-          <span class="membership-badge regular">Level Regular</span>
-      </div>
+    <!-- Current Membership Status in a card -->
+    <div class="membership-status-card">
+        <h3><?php _e('Status Membership Saat Ini', 'wp-customer'); ?></h3>
+        <div class="membership-content">
+            <!-- Staff Usage -->
+            <div class="staff-usage-section">
+                <h4><?php _e('Penggunaan Staff', 'wp-customer'); ?></h4>
+                <div class="staff-progress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="staff-usage-bar"></div>
+                    </div>
+                    <div class="usage-text">
+                        <span id="staff-usage-count"></span> / <span id="staff-usage-limit"></span> staff
+                    </div>
+                </div>
+            </div>
 
-      <div class="membership-info-grid">
-          <!-- Staff Usage Section -->
-          <div class="info-card">
-              <div class="info-card-header">
-                  <i class="dashicons dashicons-groups"></i>
-                  <h4>Penggunaan Staff</h4>
-              </div>
-              <div class="staff-usage">
-                  <div class="usage-bar">
-                      <div class="usage-fill" style="width: 0%"></div>
-                  </div>
-                  <div class="usage-stats">
-                      <span class="usage-current"><?php echo isset($employees['employee_count']) ? (int)$employees['employee_count'] : 0; ?></span>
-                      <span class="usage-separator">/</span>
-                      <span class="usage-limit">2</span>
-                      <span class="usage-label">staff</span>
-                  </div>
-              </div>
-          </div>
+            <!-- Capabilities -->
+            <div class="capabilities-section">
+                <h4><?php _e('Fitur Aktif', 'wp-customer'); ?></h4>
+                <ul class="capability-list" id="active-capabilities"></ul>
+            </div>
+        </div>
+    </div>
 
-          <!-- Active Features Section -->
-          <div class="info-card">
-              <div class="info-card-header">
-                  <i class="dashicons dashicons-star-filled"></i>
-                  <h4>Fitur Aktif</h4>
-              </div>
-              <ul class="feature-list">
-                  <li><i class="dashicons dashicons-yes"></i>Dapat menambah staff</li>
-                  <li><i class="dashicons dashicons-yes"></i>1 departemen</li>
-              </ul>
-          </div>
+    <!-- Upgrade Section Title -->
+    <h3 class="upgrade-section-title"><?php _e('Upgrade Membership', 'wp-customer'); ?></h3>
 
-          <!-- Membership Details Section -->
-          <div class="info-card">
-              <div class="info-card-header">
-                  <i class="dashicons dashicons-info"></i>
-                  <h4>Detail Membership</h4>
-              </div>
-              <div class="membership-details">
-                  <div class="detail-item">
-                      <span class="detail-label">Status:</span>
-                      <span class="detail-value status-active">Aktif</span>
-                  </div>
-                  <div class="detail-item">
-                      <span class="detail-label">Masa Berlaku:</span>
-                      <span class="detail-value">31 Des 2024</span>
-                  </div>
-              </div>
-          </div>
-      </div>
-  </div>
+    <!-- Upgrade Cards Container -->
+    <div class="upgrade-cards-container">
+        <!-- Regular Plan Card -->
+        <div class="upgrade-card">
+            <h4><?php _e('Regular', 'wp-customer'); ?></h4>
+            <ul class="plan-features">
+                <li><?php _e('Maksimal 2 staff', 'wp-customer'); ?></li>
+                <li><?php _e('Dapat menambah staff', 'wp-customer'); ?></li>
+                <li><?php _e('1 departemen', 'wp-customer'); ?></li>
+            </ul>
+            <button type="button" class="button upgrade-button" data-plan="regular">
+                <?php _e('Upgrade ke Regular', 'wp-customer'); ?>
+            </button>
+        </div>
 
-  <!-- Available Upgrades Section -->
-  <div class="membership-upgrades clearfix">
-      <h3>Pilihan Upgrade Membership</h3>
-      <div class="upgrade-cards">
-          <!-- Priority Card -->
-          <div class="upgrade-card priority">
-              <div class="card-header">
-                  <h4>Priority</h4>
-                  <span class="level-badge">Level 2</span>
-              </div>
-              <div class="card-features">
-                  <ul>
-                      <li>Maksimal 5 staff</li>
-                      <li>Dapat menambah staff</li>
-                      <li>Dapat export data</li>
-                      <li>3 departemen</li>
-                  </ul>
-              </div>
-              <button class="upgrade-button">Upgrade ke Priority</button>
-          </div>
+        <!-- Priority Plan Card -->
+        <div class="upgrade-card">
+            <h4><?php _e('Priority', 'wp-customer'); ?></h4>
+            <ul class="plan-features">
+                <li><?php _e('Maksimal 5 staff', 'wp-customer'); ?></li>
+                <li><?php _e('Dapat menambah staff', 'wp-customer'); ?></li>
+                <li><?php _e('Dapat export data', 'wp-customer'); ?></li>
+                <li><?php _e('3 departemen', 'wp-customer'); ?></li>
+            </ul>
+            <button type="button" class="button upgrade-button" data-plan="priority">
+                <?php _e('Upgrade ke Priority', 'wp-customer'); ?>
+            </button>
+        </div>
 
-          <!-- Utama Card -->
-          <div class="upgrade-card utama">
-              <div class="card-header">
-                  <h4>Utama</h4>
-                  <span class="level-badge">Level 3</span>
-              </div>
-              <div class="card-features">
-                  <ul>
-                      <li>Unlimited staff</li>
-                      <li>Semua fitur Priority</li>
-                      <li>Dapat bulk import</li>
-                      <li>Unlimited departemen</li>
-                  </ul>
-              </div>
-              <button class="upgrade-button">Upgrade ke Utama</button>
-          </div>
-      </div>
-  </div>
+        <!-- Utama Plan Card -->
+        <div class="upgrade-card">
+            <h4><?php _e('Utama', 'wp-customer'); ?></h4>
+            <ul class="plan-features">
+                <li><?php _e('Unlimited staff', 'wp-customer'); ?></li>
+                <li><?php _e('Semua fitur Priority', 'wp-customer'); ?></li>
+                <li><?php _e('Dapat bulk import', 'wp-customer'); ?></li>
+                <li><?php _e('Unlimited departemen', 'wp-customer'); ?></li>
+            </ul>
+            <button type="button" class="button upgrade-button" data-plan="utama">
+                <?php _e('Upgrade ke Utama', 'wp-customer'); ?>
+            </button>
+        </div>
+    </div>
 </div>

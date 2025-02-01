@@ -24,20 +24,16 @@
 
 namespace WPCustomer\Models\Employee;
 
-use WPCustomer\Cache\CacheManager;
-
 class CustomerEmployeeModel {
     private $table;
     private $customer_table;
     private $branch_table;
-    private $cache;
 
     public function __construct() {
         global $wpdb;
         $this->table = $wpdb->prefix . 'app_customer_employees';
         $this->customer_table = $wpdb->prefix . 'app_customers';
         $this->branch_table = $wpdb->prefix . 'app_branches';
-        $this->cache = new CacheManager();
     }
 
     public function create(array $data): ?int {
@@ -50,7 +46,7 @@ class CustomerEmployeeModel {
                 'branch_id' => $data['branch_id'],
                 'name' => $data['name'],
                 'position' => $data['position'],
-                'keterangan' => $data['keterangan'],
+                'department' => $data['department'],
                 'email' => $data['email'],
                 'phone' => $data['phone'],
                 'created_by' => get_current_user_id(),
@@ -70,14 +66,8 @@ class CustomerEmployeeModel {
 
     public function find(int $id): ?object {
         global $wpdb;
-        
-        // Cek cache dulu
-        $cached = $this->cache->getEmployee($id);
-        if ($cached !== null) {
-            return $cached;
-        }
 
-        $result = $wpdb->get_row($wpdb->prepare("
+        return $wpdb->get_row($wpdb->prepare("
             SELECT e.*, 
                    c.name as customer_name,
                    b.name as branch_name,
@@ -88,13 +78,6 @@ class CustomerEmployeeModel {
             LEFT JOIN {$wpdb->users} u ON e.created_by = u.ID
             WHERE e.id = %d
         ", $id));
-
-        // Simpan ke cache
-        if ($result) {
-            $this->cache->setEmployee($id, $result);
-        }
-
-        return $result;        
     }
 
     public function update(int $id, array $data): bool {
@@ -106,7 +89,7 @@ class CustomerEmployeeModel {
         // Add format for each field
         if (isset($data['name'])) $format[] = '%s';
         if (isset($data['position'])) $format[] = '%s';
-        if (isset($data['keterangan'])) $format[] = '%s';
+        if (isset($data['department'])) $format[] = '%s';
         if (isset($data['email'])) $format[] = '%s';
         if (isset($data['phone'])) $format[] = '%s';
         if (isset($data['status'])) $format[] = '%s';
@@ -120,12 +103,6 @@ class CustomerEmployeeModel {
             $format,
             ['%d']
         );
-        
-        // Invalidate cache
-        if ($result !== false) {
-            $this->cache->invalidateEmployeeCache($id);
-            $this->cache->invalidateEmployeeListCache();
-        }
 
         return $result !== false;
     }
@@ -185,7 +162,7 @@ class CustomerEmployeeModel {
 
         // Add search if provided
         if (!empty($search)) {
-            $where .= " AND (e.name LIKE %s OR e.keterangan LIKE %s)";
+            $where .= " AND (e.name LIKE %s OR e.department LIKE %s)";
             $search_param = '%' . $wpdb->esc_like($search) . '%';
             $params = array_merge($params, [$search_param, $search_param, $search_param, $search_param]);
             error_log('Search Where Clause Added: ' . $where);
@@ -193,7 +170,7 @@ class CustomerEmployeeModel {
         }
 
         // Validate order column
-        $validColumns = ['name', 'keterangan', 'branch_name', 'status'];
+        $validColumns = ['name', 'department', 'branch_name', 'status'];
         if (!in_array($orderColumn, $validColumns)) {
             $orderColumn = 'name';
         }
@@ -202,7 +179,7 @@ class CustomerEmployeeModel {
         // Map frontend column to actual column
         $orderColumnMap = [
             'name' => 'e.name',
-            'keterangan' => 'e.keterangan',
+            'department' => 'e.department',
             'branch_name' => 'b.name',
             'status' => 'e.status'
         ];
@@ -314,37 +291,5 @@ class CustomerEmployeeModel {
             ['%s', '%s'],
             ['%d']
         ) !== false;
-    }
-
-    
-    public function getByCustomer($customer_id) {
-        global $wpdb;
-        
-        $query = $wpdb->prepare(
-            "SELECT e.*, b.name as branch_name 
-             FROM {$this->table} e
-             LEFT JOIN {$this->branch_table} b ON e.branch_id = b.id
-             WHERE e.customer_id = %d 
-             AND e.status = 'active'
-             ORDER BY e.name ASC",
-            $customer_id
-        );
-        
-        return $wpdb->get_results($query);
-    }
-
-    public function getEmployeeData(int $user_id, int $customer_id): ?object {
-        global $wpdb;
-        
-        return $wpdb->get_row($wpdb->prepare(
-            "SELECT e.*, b.name as branch_name
-             FROM {$this->table} e
-             LEFT JOIN {$this->branch_table} b ON e.branch_id = b.id
-             WHERE e.user_id = %d 
-             AND e.customer_id = %d 
-             AND e.status = 'active'",
-            $user_id,
-            $customer_id
-        ));
     }
 }

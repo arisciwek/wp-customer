@@ -28,7 +28,21 @@
  */
 
 defined('ABSPATH') || exit;
+
+//extract($template_data);
+
+
 ?>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const hash = window.location.hash;
+    if (hash) {
+        const customerId = hash.substring(1);
+        document.getElementById('current-customer-id').value = customerId;
+    }
+});
+</script>
+
 <div class="wrap">
  <input type="hidden" id="current-customer-id" name="current_customer_id" 
            value="<?php echo isset($_GET['id']) ? (int)$_GET['id'] : (isset($_POST['current_customer_id']) ? (int)$_POST['current_customer_id'] : 0); ?>">
@@ -62,8 +76,19 @@ defined('ABSPATH') || exit;
 
             <!-- Right Panel -->
             <div id="wp-customer-right-panel" class="wp-customer-right-panel hidden">
-                <?php //require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-right-panel.php'; ?>
+                <?php require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-right-panel.php'; ?>
             </div>
         </div>
     </div>
-    
+
+    <!-- Modal Forms -->
+    <?php
+    require_once WP_CUSTOMER_PATH . 'src/Views/templates/forms/create-customer-form.php';
+    require_once WP_CUSTOMER_PATH . 'src/Views/templates/forms/edit-customer-form.php';
+    ?>
+    <!-- Modal Templates -->
+    <?php
+    if (function_exists('wp_customer_render_confirmation_modal')) {
+        wp_customer_render_confirmation_modal();
+    }
+    ?>

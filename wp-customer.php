@@ -33,44 +33,11 @@ class WPCustomer {
         define('WP_CUSTOMER_FILE', __FILE__);
         define('WP_CUSTOMER_PATH', plugin_dir_path(__FILE__));
         define('WP_CUSTOMER_URL', plugin_dir_url(__FILE__));
-        define('WP_CUSTOMER_DEVELOPMENT', false);
     }
 
     private function __construct() {
         $this->plugin_name = 'wp-customer';
         $this->version = WP_CUSTOMER_VERSION;
-
-
-        // Register autoloader first
-        spl_autoload_register(function ($class) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                //error_log("Autoloader attempting to load: " . $class);
-            }
-
-            $prefix = 'WPCustomer\\';
-            $base_dir = plugin_dir_path(__FILE__) . 'src/';
-            
-            $len = strlen($prefix);
-            if (strncmp($prefix, $class, $len) !== 0) {
-                return;
-            }
-            
-            $relative_class = substr($class, $len);
-            $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
-            
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                //error_log("Looking for file: " . $file);
-                //error_log("File exists: " . (file_exists($file) ? 'yes' : 'no'));
-            }
-
-            if (file_exists($file)) {
-                require $file;
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    //error_log("Successfully loaded: " . $file);
-                    return true;
-                }
-            }
-        });
 
         $this->defineConstants();
         $this->includeDependencies();
@@ -83,6 +50,52 @@ class WPCustomer {
         require_once WP_CUSTOMER_PATH . 'includes/class-deactivator.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-dependencies.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-init-hooks.php';
+
+        require_once WP_CUSTOMER_PATH . 'src/Database/Installer.php';
+
+        require_once WP_CUSTOMER_PATH . 'src/Controllers/Auth/CustomerRegistrationHandler.php';
+        require_once WP_CUSTOMER_PATH . 'src/Controllers/SettingsController.php';
+        require_once WP_CUSTOMER_PATH . 'src/Controllers/MenuManager.php';
+
+
+        require_once WP_CUSTOMER_PATH . 'src/Models/Settings/SettingsModel.php';
+        require_once WP_CUSTOMER_PATH . 'src/Models/Settings/PermissionModel.php';
+
+        require_once WP_CUSTOMER_PATH . 'src/Controllers/CustomerController.php';
+        require_once WP_CUSTOMER_PATH . 'src/Models/CustomerModel.php';
+
+        require_once WP_CUSTOMER_PATH . 'src/Validators/CustomerValidator.php';
+        require_once WP_CUSTOMER_PATH . 'src/Cache/CacheManager.php';
+
+        require_once WP_CUSTOMER_PATH . 'src/Views/components/confirmation-modal.php';
+
+        // Branch Related
+        require_once WP_CUSTOMER_PATH . 'src/Controllers/branch/BranchController.php';
+        require_once WP_CUSTOMER_PATH . 'src/Models/Branch/BranchModel.php';
+        require_once WP_CUSTOMER_PATH . 'src/Validators/Branch/BranchValidator.php';
+
+        // Employee
+        require_once WP_CUSTOMER_PATH . 'src/Controllers/Employee/CustomerEmployeeController.php';
+        require_once WP_CUSTOMER_PATH . 'src/Models/Employee/CustomerEmployeeModel.php';
+        require_once WP_CUSTOMER_PATH . 'src/Validators/Employee/CustomerEmployeeValidator.php';
+
+        // Add autoloader
+        /*
+        spl_autoload_register(function ($class) {
+            $prefix = 'WPCustomer\\';
+            $base_dir = __DIR__ . '/src/';
+            $len = strlen($prefix);
+            if (strncmp($prefix, $class, $len) !== 0) {
+                return;
+            }
+            $relative_class = substr($class, $len);
+            $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
+
+            if (file_exists($file)) {
+                require $file;
+            }
+        });
+        */
 
         $this->loader = new WP_Customer_Loader();
 

@@ -20,27 +20,8 @@
     background-color: #218838;
 }
 
-.branch-form-group .error {
-    border-color: #dc3545;
-    background-color: #fff;
-}
-
-.branch-form-group .error:focus {
-    border-color: #dc3545;
-    box-shadow: 0 0 0 1px #dc3545;
-    outline: none;
-}
-
-.branch-form-group .error ~ .form-error {
-    color: #dc3545;
-    font-size: 12px;
-    margin-top: 4px;
-    display: block;
-}
-
 .branch-toast-error {
-    background-color: #dc3545;
-    border: 1px solid #dc3545;
+    background-color: #C82333;
 }
 
 .branch-toast-warning {
@@ -55,7 +36,7 @@
     position: fixed;
     top: 32px;
     right: 20px;
-    z-index: 160010; /* Higher than modal overlay (160001) */
+    z-index: 160001; /* Sedikit lebih tinggi dari customer toast */
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -66,5 +47,4 @@
 .branch-toast p {
     margin: 5px 0;
     color: #fff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3); /* Enhanced shadow for better visibility */
 }

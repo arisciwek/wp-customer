@@ -67,23 +67,11 @@ class Installer {
             require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomerMembershipLevelsDB.php';
             require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomerEmployeesDB.php';
 
-
-            try {
-                error_log('Starting table creation');
-                dbDelta(Tables\CustomerMembershipLevelsDB::get_schema());
-                error_log('Created customer_membership_levels table');
-                dbDelta(Tables\CustomersDB::get_schema());
-                error_log('Created customers table');
-                dbDelta(Tables\BranchesDB::get_schema());
-                error_log('Created branches table');
-                dbDelta(Tables\CustomerEmployeesDB::get_schema());
-                error_log('Created customer_employees table');
-                // ...
-            } catch (\Exception $e) {
-                error_log('Table creation failed: ' . $e->getMessage());
-                // ...
-            }
-
+            // Create tables in correct order
+            dbDelta(Tables\CustomerMembershipLevelsDB::get_schema());
+            dbDelta(Tables\CustomersDB::get_schema());
+            dbDelta(Tables\BranchesDB::get_schema());
+            dbDelta(Tables\CustomerEmployeesDB::get_schema());
 
             // Verify tables were created
             self::verify_tables();
@@ -95,7 +83,21 @@ class Installer {
             self::add_foreign_keys();
 
             // Di Installer.php
-            
+            /*
+            $demo_data_file = WP_CUSTOMER_PATH . 'src/Database/DemoData.php';
+            if (file_exists($demo_data_file)) {
+                require_once $demo_data_file;
+                if (class_exists('\WPCustomer\Database\DemoData')) {
+                    DemoData::load();
+                } else {
+                    error_log('DemoData class not found after including file');
+                }
+            } else {
+                error_log('DemoData file not found: ' . $demo_data_file);
+            }
+            */
+
+
             $wpdb->query('COMMIT');
             return true;
 

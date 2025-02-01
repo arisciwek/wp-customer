@@ -6,7 +6,7 @@
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: assets/js/components/customer/customer-toast.js
+ * Path: assets/js/components/customer-toast.js
  *
  * Description: Komponen toast notification khusus untuk manajemen customer.
  *              Menangani feedback untuk operasi CRUD customer.

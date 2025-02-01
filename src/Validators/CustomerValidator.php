@@ -7,7 +7,7 @@
  * @version     2.0.0
  * @author      arisciwek
  *
- * Path: src/Validators/Customer/CustomerValidator.php
+ * Path: src/Validators/CustomerValidator.php
  *
  * Description: Validator untuk memvalidasi operasi CRUD Customer.
  *              Menangani validasi form dan permission check.
@@ -30,9 +30,9 @@
  * - Initial release
  */
 
-namespace WPCustomer\Validators\Customer;
+namespace WPCustomer\Validators;
 
-use WPCustomer\Models\Customer\CustomerModel;
+use WPCustomer\Models\CustomerModel;
 
 class CustomerValidator {
     private CustomerModel $model;
@@ -143,6 +143,7 @@ class CustomerValidator {
      * @param int $customer_id
      * @return array Array containing is_admin, is_owner, is_employee flags
      */
+    
     public function getUserRelation(int $customer_id): array {
         global $wpdb;
         $current_user_id = get_current_user_id();
@@ -155,66 +156,63 @@ class CustomerValidator {
         $relation = [
             'is_admin' => current_user_can('edit_all_customers'),
             'is_owner' => false,
-            'is_employee' => false,
-            'is_branch_admin' => false
+            'is_employee' => false
         ];
 
-        // Get customer data
-        $customer = $this->model->find($customer_id);
-        if ($customer) {
-            $relation['is_owner'] = ((int)$customer->user_id === $current_user_id);
+        if ($customer_id === 0) {
+            // Cek apakah user adalah owner dari customer manapun
+            $owner_check = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}app_customers 
+                 WHERE user_id = %d 
+                 LIMIT 1",
+                $current_user_id
+            ));
+
+            if ($owner_check) {
+                $relation['is_owner'] = true;
+                $customer_id = (int)$owner_check;
+            } else {
+                // Jika bukan owner, cek apakah employee
+                $employee_check = $wpdb->get_var($wpdb->prepare(
+                    "SELECT customer_id 
+                     FROM {$wpdb->prefix}app_customer_employees 
+                     WHERE user_id = %d 
+                     AND status = 'active' 
+                     LIMIT 1",
+                    $current_user_id
+                ));
+
+                if ($employee_check) {
+                    $relation['is_employee'] = true;
+                    $customer_id = (int)$employee_check;
+                }
+            }
+        } else {
+            // Existing logic for specific customer_id
+            $customer = $this->model->find($customer_id);
+            if ($customer) {
+                $relation['is_owner'] = ((int)$customer->user_id === $current_user_id);
+            }
+
+            // Check if user is employee
+            $is_employee = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) 
+                 FROM {$wpdb->prefix}app_customer_employees 
+                 WHERE customer_id = %d 
+                 AND user_id = %d 
+                 AND status = 'active'",
+                $customer_id,
+                $current_user_id
+            ));
+
+            $relation['is_employee'] = (int)$is_employee > 0;
         }
 
-        // Check if employee
-        $is_employee = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
-             WHERE customer_id = %d AND user_id = %d AND status = 'active'",
-            $customer_id,
-            $current_user_id
-        ));
-        $relation['is_employee'] = (bool)$is_employee;
-
-        // Check if branch admin
-        $is_branch_admin = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}app_branches 
-             WHERE customer_id = %d AND user_id = %d",
-            $customer_id,
-            $current_user_id
-        ));
-        $relation['is_branch_admin'] = (bool)$is_branch_admin;
-
-        // Cache the result
+        // Save to cache with actual customer_id
         $this->relationCache[$customer_id] = $relation;
 
         return $relation;
     }
-
-    public function canView(array $relation): bool {
-        return $relation['is_admin'] || 
-               ($relation['is_owner'] && current_user_can('view_own_customer')) ||
-               ($relation['is_employee'] && current_user_can('view_own_customer')) ||
-               ($relation['is_branch_admin'] && current_user_can('view_own_customer'));
-    }
-
-    public function canUpdate(array $relation): bool {
-        return $relation['is_admin'] || 
-               ($relation['is_owner'] && current_user_can('edit_own_customer')) ||
-               ($relation['is_branch_admin'] && current_user_can('edit_own_customer'));
-    }
-
-    public function canDelete(array $relation): bool {
-        return ($relation['is_admin'] && current_user_can('delete_customer')) ||
-               ($relation['is_owner'] && current_user_can('delete_own_customer'));
-    }
-
-    private function getAccessType(array $relation): string {
-        if ($relation['is_admin']) return 'admin';
-        if ($relation['is_owner']) return 'owner';  
-        if ($relation['is_branch_admin']) return 'branch_admin';
-        if ($relation['is_employee']) return 'employee';
-        return 'none';
-    }
-
 
     public function validateAccess(int $customer_id): array {
         $relation = $this->getUserRelation($customer_id);
@@ -227,6 +225,40 @@ class CustomerValidator {
         ];
     }
     
+    private function getAccessType(array $relation): string {
+        if ($relation['is_admin']) return 'admin';
+        if ($relation['is_owner']) return 'owner';
+        if ($relation['is_employee']) return 'employee';
+        return 'none';
+    }
+
+
+    /**
+     * Check if user can view customer
+     */
+    public function canView(array $relation): bool {
+        if ($relation['is_admin']) return true;
+        if ($relation['is_owner'] && current_user_can('view_own_customer')) return true;
+        if ($relation['is_employee'] && current_user_can('view_own_customer')) return true;
+        return false;
+    }
+
+    /**
+     * Check if user can update customer
+     */
+    public function canUpdate(array $relation): bool {
+        if ($relation['is_admin']) return true;
+        if ($relation['is_owner'] && current_user_can('edit_own_customer')) return true;
+        return false;
+    }
+
+    /**
+     * Check if user can delete customer
+     */
+    public function canDelete(array $relation): bool {
+        return $relation['is_admin'] && current_user_can('delete_customer');
+    }
+
     /**
      * Validate basic permissions that don't require customer ID
      */

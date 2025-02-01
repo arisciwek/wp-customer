@@ -22,15 +22,6 @@
  */
 
 defined('ABSPATH') || exit;
-
-error_log('=== Debug Employee List Template ===');
-error_log('Access variable On Employee Template: ' . print_r($access ?? 'null', true));
-error_log('Customer variable On Employee Template: ' . print_r($customer ?? 'null', true));
-
-// Sebelum permission check
-error_log('Access type On Employee Template: ' . ($access['access_type'] ?? 'undefined'));
-error_log('Can add branch On Employee Template: ' . (current_user_can('add_branch') ? 'yes' : 'no'));
-
 ?>
 
 <div id="employee-list" class="tab-content">
@@ -39,10 +30,11 @@ error_log('Can add branch On Employee Template: ' . (current_user_can('add_branc
             <h3><?php _e('Daftar Karyawan', 'wp-customer'); ?></h3>
         </div>
         <div class="employee-header-actions">
-            <?php if (($access['access_type'] === 'admin' || 
-                       $access['access_type'] === 'owner' || 
-                       $access['access_type'] === 'branch_admin') && 
-                      current_user_can('add_employee')) : ?>
+                <?php 
+                // Show Add Branch button based on permissions
+                if (($access['access_type'] === 'admin' || $access['access_type'] === 'owner') && 
+                    current_user_can('add_employee')) : 
+                ?>
                 <button type="button" class="button button-primary" id="add-employee-btn">
                     <span class="dashicons dashicons-plus-alt"></span>
                     <?php _e('Tambah Karyawan', 'wp-customer'); ?>
@@ -82,7 +74,7 @@ error_log('Can add branch On Employee Template: ' . (current_user_can('add_branc
                     <tr>
                         <th><?php _e('Nama', 'wp-customer'); ?></th>
                         <th><?php _e('Jabatan', 'wp-customer'); ?></th>
-                        <th><?php _e('Keterangan', 'wp-customer'); ?></th>
+                        <th><?php _e('Departemen', 'wp-customer'); ?></th>
                         <th><?php _e('Email', 'wp-customer'); ?></th>
                         <th><?php _e('Cabang', 'wp-customer'); ?></th>
                         <th><?php _e('Status', 'wp-customer'); ?></th>
@@ -98,7 +90,7 @@ error_log('Can add branch On Employee Template: ' . (current_user_can('add_branc
                     <tr>
                         <th><?php _e('Nama', 'wp-customer'); ?></th>
                         <th><?php _e('Jabatan', 'wp-customer'); ?></th>
-                        <th><?php _e('Keterangan', 'wp-customer'); ?></th>
+                        <th><?php _e('Departemen', 'wp-customer'); ?></th>
                         <th><?php _e('Email', 'wp-customer'); ?></th>
                         <th><?php _e('Cabang', 'wp-customer'); ?></th>
                         <th><?php _e('Status', 'wp-customer'); ?></th>
@@ -137,3 +129,8 @@ error_log('Can add branch On Employee Template: ' . (current_user_can('add_branc
     <?php endif; ?>
 </div>
 
+<?php
+// Include related modals
+require_once WP_CUSTOMER_PATH . 'src/Views/templates/employee/forms/create-employee-form.php';
+require_once WP_CUSTOMER_PATH . 'src/Views/templates/employee/forms/edit-employee-form.php';
+?>

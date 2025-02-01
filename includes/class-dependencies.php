@@ -33,7 +33,6 @@ class WP_Customer_Dependencies {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
         add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_assets']);
-        add_action('admin_enqueue_scripts', [$this, 'leaflet_enqueue_scripts']); // Add this line
 
     }
 
@@ -65,7 +64,7 @@ public function enqueue_frontend_assets() {
 
         wp_enqueue_style(
             'wp-customer-toast',
-            WP_CUSTOMER_URL . 'assets/css/customer/toast.css',
+            WP_CUSTOMER_URL . 'assets/css/components/toast.css',
             [],
             $this->version
         );
@@ -83,7 +82,7 @@ public function enqueue_frontend_assets() {
         // Toast component
         wp_enqueue_script(
             'wp-customer-toast',
-            WP_CUSTOMER_URL . 'assets/js/customer/toast.js',
+            WP_CUSTOMER_URL . 'assets/js/components/toast.js',
             ['jquery'],
             $this->version,
             true
@@ -126,7 +125,7 @@ public function enqueue_frontend_assets() {
         if (get_query_var('wp_customer_register')) {
             // Enqueue registration-specific styles
             wp_enqueue_style('wp-customer-register', WP_CUSTOMER_URL . 'assets/css/auth/register.css', [], $this->version);
-            wp_enqueue_style('wp-customer-toast', WP_CUSTOMER_URL . 'assets/css/customer/toast.css', [], $this->version);
+            wp_enqueue_style('wp-customer-toast', WP_CUSTOMER_URL . 'assets/css/components/toast.css', [], $this->version);
             return;
         }
 
@@ -136,7 +135,7 @@ public function enqueue_frontend_assets() {
            // Common styles for settings page
            wp_enqueue_style('wp-customer-common', WP_CUSTOMER_URL . 'assets/css/settings/common-style.css', [], $this->version);
            wp_enqueue_style('wp-customer-settings', WP_CUSTOMER_URL . 'assets/css/settings/settings-style.css', ['wp-customer-common'], $this->version);
-           wp_enqueue_style('wp-customer-modal', WP_CUSTOMER_URL . 'assets/css/customer/confirmation-modal.css', [], $this->version);
+           wp_enqueue_style('wp-customer-modal', WP_CUSTOMER_URL . 'assets/css/components/confirmation-modal.css', [], $this->version);
 
            // Get current tab and permission tab
            $current_tab = isset($_GET['tab']) ? sanitize_key($_GET['tab']) : 'general';
@@ -169,23 +168,14 @@ public function enqueue_frontend_assets() {
                        $this->version
                    );
                    break;
-
-               case 'demo-data':
-                   wp_enqueue_style(
-                       'wp-customer-demo-data-tab',
-                       WP_CUSTOMER_URL . 'assets/css/settings/demo-data-tab-style.css',
-                       ['wp-customer-settings'],
-                       $this->version
-                   );
-                   break;
            }
         }
 
         // Customer and Branch pages styles
         if ($screen->id === 'toplevel_page_wp-customer') {
             // Core styles
-            wp_enqueue_style('wp-customer-toast', WP_CUSTOMER_URL . 'assets/css/customer/toast.css', [], $this->version);
-            wp_enqueue_style('wp-customer-modal', WP_CUSTOMER_URL . 'assets/css/customer/confirmation-modal.css', [], $this->version);
+            wp_enqueue_style('wp-customer-toast', WP_CUSTOMER_URL . 'assets/css/components/toast.css', [], $this->version);
+            wp_enqueue_style('wp-customer-modal', WP_CUSTOMER_URL . 'assets/css/components/confirmation-modal.css', [], $this->version);
             // Branch toast - terpisah
             wp_enqueue_style('branch-toast', WP_CUSTOMER_URL . 'assets/css/branch/branch-toast.css', [], $this->version);
 
@@ -193,15 +183,14 @@ public function enqueue_frontend_assets() {
             wp_enqueue_style('datatables', 'https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css', [], '1.13.7');
 
             // Customer styles
-            wp_enqueue_style('wp-customer-customer', WP_CUSTOMER_URL . 'assets/css/customer/customer-style.css', [], $this->version);
-            wp_enqueue_style('wp-customer-membership-tab', WP_CUSTOMER_URL . 'assets/css/customer/customer-membership-tab-style.css', [], $this->version);
-            wp_enqueue_style('wp-customer-customer-form', WP_CUSTOMER_URL . 'assets/css/customer/customer-form.css', [], $this->version);
+            wp_enqueue_style('wp-customer-customer', WP_CUSTOMER_URL . 'assets/css/customer.css', [], $this->version);
+            wp_enqueue_style('wp-customer-customer-form', WP_CUSTOMER_URL . 'assets/css/customer-form.css', [], $this->version);
 
             // Branch styles
-            wp_enqueue_style('wp-customer-branch', WP_CUSTOMER_URL . 'assets/css/branch/branch-style.css', [], $this->version);
+            wp_enqueue_style('wp-customer-branch', WP_CUSTOMER_URL . 'assets/css/branch/branch.css', [], $this->version);
 
             // Tambahkan Employee styles
-            wp_enqueue_style('wp-customer-employee', WP_CUSTOMER_URL . 'assets/css/employee/employee-style.css', [], $this->version);
+            wp_enqueue_style('wp-customer-employee', WP_CUSTOMER_URL . 'assets/css/employee/employee.css', [], $this->version);
             wp_enqueue_style('employee-toast', WP_CUSTOMER_URL . 'assets/css/employee/employee-toast.css', [], $this->version);
 
         }
@@ -215,7 +204,7 @@ public function enqueue_frontend_assets() {
         if (get_query_var('wp_customer_register')) {
             // Enqueue registration-specific scripts
             wp_enqueue_script('jquery-validate', 'https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js', ['jquery'], '1.19.5', true);
-            wp_enqueue_script('wp-customer-toast', WP_CUSTOMER_URL . 'assets/js/customer/toast.js', ['jquery'], $this->version, true);
+            wp_enqueue_script('wp-customer-toast', WP_CUSTOMER_URL . 'assets/js/components/toast.js', ['jquery'], $this->version, true);
             wp_enqueue_script('wp-customer-register', WP_CUSTOMER_URL . 'assets/js/auth/register.js', ['jquery', 'jquery-validate', 'wp-customer-toast'], $this->version, true);
             
             // Localize script
@@ -229,8 +218,8 @@ public function enqueue_frontend_assets() {
         // Settings page scripts
         if ($screen->id === 'wp-customer_page_wp-customer-settings') {
             // Common scripts for settings page
-            wp_enqueue_script('wp-customer-toast', WP_CUSTOMER_URL . 'assets/js/customer/toast.js', ['jquery'], $this->version, true);
-            wp_enqueue_script('confirmation-modal', WP_CUSTOMER_URL . 'assets/js/customer/confirmation-modal.js', ['jquery'], $this->version, true);
+            wp_enqueue_script('wp-customer-toast', WP_CUSTOMER_URL . 'assets/js/components/toast.js', ['jquery'], $this->version, true);
+            wp_enqueue_script('confirmation-modal', WP_CUSTOMER_URL . 'assets/js/components/confirmation-modal.js', ['jquery'], $this->version, true);
             wp_enqueue_script('wp-customer-settings', WP_CUSTOMER_URL . 'assets/js/settings/settings-script.js', ['jquery', 'wp-customer-toast'], $this->version, true);
             
             // Get current tab and permission tab
@@ -280,24 +269,6 @@ public function enqueue_frontend_assets() {
                         true
                     );
                     break;
-
-                case 'demo-data':
-                    wp_enqueue_script(
-                        'wp-customer-demo-data-tab',
-                        WP_CUSTOMER_URL . 'assets/js/settings/demo-data-tab-script.js',
-                        ['jquery', 'wp-customer-settings'],
-                        $this->version,
-                        true
-                    );
-
-                    wp_localize_script('wp-customer-demo-data-tab', 'wpCustomerDemoData', [
-                        'i18n' => [
-                            'errorMessage' => __('An error occurred while generating demo data.', 'wp-customer'),
-                            'generating' => __('Generating...', 'wp-customer')
-                        ]
-                    ]);
-                    
-                    break;
             }
         }
 
@@ -308,22 +279,32 @@ public function enqueue_frontend_assets() {
             wp_enqueue_script('datatables', 'https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js', ['jquery'], '1.13.7', true);
 
             // Components
-            wp_enqueue_script('customer-toast', WP_CUSTOMER_URL . 'assets/js/customer/customer-toast.js', ['jquery'], $this->version, true);
-            wp_enqueue_script('confirmation-modal', WP_CUSTOMER_URL . 'assets/js/customer/confirmation-modal.js', ['jquery'], $this->version, true);
+            wp_enqueue_script('customer-toast', WP_CUSTOMER_URL . 'assets/js/components/customer-toast.js', ['jquery'], $this->version, true);
+            wp_enqueue_script('confirmation-modal', WP_CUSTOMER_URL . 'assets/js/components/confirmation-modal.js', ['jquery'], $this->version, true);
             // Branch toast
             wp_enqueue_script('branch-toast', WP_CUSTOMER_URL . 'assets/js/branch/branch-toast.js', ['jquery'], $this->version, true);
-        
+
+
+            // Existing handler untuk user select
+            // $this->enqueue_select_handler();
+            
             // Tambah handler untuk wilayah
             $this->enqueue_wilayah_handler();
 
 
             // Customer scripts - path fixed according to tree.md
-            wp_enqueue_script('customer-datatable', WP_CUSTOMER_URL . 'assets/js/customer/customer-datatable.js', ['jquery', 'datatables', 'customer-toast'], $this->version, true);
-            wp_enqueue_script('create-customer-form', WP_CUSTOMER_URL . 'assets/js/customer/create-customer-form.js', ['jquery', 'jquery-validate', 'customer-toast'], $this->version, true);
-            wp_enqueue_script('edit-customer-form', WP_CUSTOMER_URL . 'assets/js/customer/edit-customer-form.js', ['jquery', 'jquery-validate', 'customer-toast'], $this->version, true);
+            wp_enqueue_script('customer-datatable', WP_CUSTOMER_URL . 'assets/js/components/customer-datatable.js', ['jquery', 'datatables', 'customer-toast'], $this->version, true);
+            wp_enqueue_script('create-customer-form', WP_CUSTOMER_URL . 'assets/js/components/create-customer-form.js', ['jquery', 'jquery-validate', 'customer-toast'], $this->version, true);
+            wp_enqueue_script('edit-customer-form', WP_CUSTOMER_URL . 'assets/js/components/edit-customer-form.js', ['jquery', 'jquery-validate', 'customer-toast'], $this->version, true);
+
+            // Employee scripts - mengikuti pola branch yang sudah berhasil
+            wp_enqueue_script('employee-datatable', WP_CUSTOMER_URL . 'assets/js/employee/employee-datatable.js', ['jquery', 'datatables', 'customer-toast', 'customer'], $this->version, true);
+            wp_enqueue_script('employee-toast', WP_CUSTOMER_URL . 'assets/js/employee/employee-toast.js', ['jquery'], $this->version, true);
+            wp_enqueue_script('create-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/create-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
+            wp_enqueue_script('edit-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/edit-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
 
             wp_enqueue_script('customer',
-                WP_CUSTOMER_URL . 'assets/js/customer/customer-script.js',
+                WP_CUSTOMER_URL . 'assets/js/customer.js',
                 [
                     'jquery',
                     'customer-toast',
@@ -350,15 +331,33 @@ public function enqueue_frontend_assets() {
             wp_enqueue_script('create-branch-form', WP_CUSTOMER_URL . 'assets/js/branch/create-branch-form.js', ['jquery', 'jquery-validate', 'branch-toast', 'branch-datatable'], $this->version, true);
             wp_enqueue_script('edit-branch-form', WP_CUSTOMER_URL . 'assets/js/branch/edit-branch-form.js', ['jquery', 'jquery-validate', 'branch-toast', 'branch-datatable'], $this->version, true);
 
-            // Employee scripts - mengikuti pola branch yang sudah berhasil
-            wp_enqueue_script('employee-datatable', WP_CUSTOMER_URL . 'assets/js/employee/employee-datatable.js', ['jquery', 'datatables', 'customer-toast', 'customer'], $this->version, true);
-            wp_enqueue_script('employee-toast', WP_CUSTOMER_URL . 'assets/js/employee/employee-toast.js', ['jquery'], $this->version, true);
-            wp_enqueue_script('create-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/create-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
-            wp_enqueue_script('edit-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/edit-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
-
         }
     }
 
+    public function enqueue_select_handler() {
+        // Cek apakah sudah di-enqueue sebelumnya
+        if (wp_script_is('wp-customer-select-handler', 'enqueued')) {
+            return;
+        }
+
+        wp_enqueue_script('wp-customer-select-handler', 
+            WP_CUSTOMER_URL . 'assets/js/components/select-handler.js', 
+            ['jquery'], 
+            $this->version, 
+            true
+        );
+
+        wp_localize_script('wp-customer-select-handler', 'wpCustomerSelectData', [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('wp_customer_nonce'),
+            'texts' => [
+                'select_customer' => __('Pilih Customer', 'wp-customer'),
+                'select_branch' => __('Pilih Cabang', 'wp-customer'),
+                'loading' => __('Memuat...', 'wp-customer')
+            ]
+        ]);
+    }
+    
     private function enqueue_wilayah_handler() {
         // Use direct constant check first
         if (!defined('WILAYAH_INDONESIA_URL')) {
@@ -401,49 +400,6 @@ public function enqueue_frontend_assets() {
                 'error' => __('Gagal memuat data', 'wp-customer')
             ]
         ]);
-    }
-
-    public function leaflet_enqueue_scripts() {
-        $screen = get_current_screen();
-        if (!$screen) return;
-        
-        if ($screen->id === 'toplevel_page_wp-customer') {
-            // Leaflet CSS & JS
-            wp_enqueue_style(
-                'leaflet',
-                'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-                [],
-                '1.9.4'
-            );
-            
-            wp_enqueue_script(
-                'leaflet',
-                'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-                [],
-                '1.9.4',
-                true
-            );
-
-            // Custom map picker
-            wp_enqueue_script(
-                'wp-customer-map-picker',
-                WP_CUSTOMER_URL . 'assets/js/branch/map-picker.js',
-                ['jquery', 'leaflet'],
-                $this->version,
-                true
-            );
-
-            // Localize script dengan settings
-            wp_localize_script(
-                'wp-customer-map-picker',
-                'wpCustomerMapSettings',
-                [
-                    'defaultLat' => get_option('wp_customer_settings')['map_default_lat'] ?? -6.200000,
-                    'defaultLng' => get_option('wp_customer_settings')['map_default_lng'] ?? 106.816666,
-                    'defaultZoom' => get_option('wp_customer_settings')['map_default_zoom'] ?? 12
-                ]
-            );
-        }
     }
 
 }
