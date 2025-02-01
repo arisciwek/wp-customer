@@ -18,6 +18,13 @@ if (defined('WP_DEBUG') && WP_DEBUG) {
         <h3><?php echo esc_html($customer->name); ?></h3>
         <div id="customer-name"></div>
     <?php endif; ?>
+    <div class="export-actions">
+        <button type="button" class="button export-pdf">
+            <span class="dashicons dashicons-pdf"></span>
+            <?php _e('Export PDF', 'wp-customer'); ?>
+        </button>
+    </div>
+    
     <div class="meta-info">
         <p><strong>--Jumlah Cabang:</strong> <span id="customer-branch-count"></span></p>
         <p><strong>--Dibuat:</strong> <span id="customer-created-at"></span></p>

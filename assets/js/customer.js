@@ -466,6 +466,37 @@
 
      };
 
+        // Di customer.js
+        $('.export-pdf').on('click', function() {
+            const customerId = $('#current-customer-id').val();
+            
+            $.ajax({
+                url: wpCustomerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'generate_customer_pdf',
+                    id: customerId,
+                    nonce: wpCustomerData.nonce
+                },
+                xhrFields: {
+                    responseType: 'blob'
+                },
+                success: function(response) {
+                    const blob = new Blob([response], { type: 'application/pdf' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `customer-${customerId}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                },
+                error: function() {
+                    CustomerToast.error('Failed to generate PDF');
+                }
+            });
+        });
+        
      // Initialize when document is ready
      $(document).ready(() => {
          window.Customer = Customer;

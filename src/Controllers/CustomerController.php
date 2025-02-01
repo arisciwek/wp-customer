@@ -96,9 +96,52 @@ class CustomerController {
         add_action('wp_ajax_delete_customer', [$this, 'delete']);
         add_action('wp_ajax_validate_customer_access', [$this, 'validateCustomerAccess']);
         //add_action('wp_ajax_get_current_customer_id', [$this, 'getCurrentCustomerId']);
+        add_action('wp_ajax_generate_customer_pdf', [$this, 'generate_customer_pdf']);
 
     }
 
+    public function generate_customer_pdf() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+            
+            $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+            if (!$id) {
+                throw new \Exception('Invalid customer ID');
+            }
+
+            // Cek akses
+            $access = $this->validator->validateAccess($id);
+            if (!$access['has_access']) {
+                throw new \Exception('You do not have permission to view this customer');
+            }
+
+            // Ambil data customer
+            $customer = $this->getCustomerData($id);
+            if (!$customer) {
+                throw new \Exception('Customer not found');
+            }
+
+            // Dalam method generate_customer_pdf()
+            ob_start();
+            include WP_CUSTOMER_PATH . 'src/Views/templates/customer/pdf/customer-detail-pdf.php';
+            $html = ob_get_clean();
+
+            // Buat PDF menggunakan WP mPDF
+            $mpdf = wp_mpdf()->generate_pdf($html, [
+                'format' => 'A4',
+                'margin_left' => 15,
+                'margin_right' => 15,
+                'margin_top' => 16,
+                'margin_bottom' => 16
+            ]);
+
+            // Output PDF untuk download
+            $mpdf->Output('customer-' . $customer->code . '.pdf', \Mpdf\Output\Destination::DOWNLOAD);
+
+        } catch (\Exception $e) {
+            wp_send_json_error(['message' => $e->getMessage()]);
+        }
+    }
 
     /**
      * Validate customer access - public endpoint untuk AJAX
