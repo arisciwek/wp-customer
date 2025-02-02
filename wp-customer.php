@@ -76,7 +76,30 @@ class WPCustomer {
         $this->includeDependencies();
         $this->initHooks();
     }
+    /*
+    private function includeDependencies() {
+        // Register includes autoloader first
+        require_once WP_CUSTOMER_PATH . 'includes/class-includes-autoloader.php';
+        $includes_autoloader = new WP_Customer_Includes_Autoloader(WP_CUSTOMER_PATH . 'includes');
+        $includes_autoloader->register();
 
+        // Initialize wp-mpdf if available
+        if (file_exists(WP_CUSTOMER_PATH . '../wp-mpdf/wp-mpdf.php')) {
+            require_once WP_CUSTOMER_PATH . '../wp-mpdf/wp-mpdf.php';
+            if (function_exists('wp_mpdf_init')) {
+                wp_mpdf_init();
+            }
+        }
+
+        // Initialize loader
+        $this->loader = new WP_Customer_Loader();
+
+        // Initialize settings controller
+        new \WPCustomer\Controllers\SettingsController();
+    }
+    */
+
+    
     private function includeDependencies() {
         require_once WP_CUSTOMER_PATH . 'includes/class-loader.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-activator.php';
@@ -95,6 +118,8 @@ class WPCustomer {
         new \WPCustomer\Controllers\SettingsController();
 
     }
+
+    
 
     private function initHooks() {
         register_activation_hook(__FILE__, array('WP_Customer_Activator', 'activate'));

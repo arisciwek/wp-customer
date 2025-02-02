@@ -32,7 +32,7 @@
 
 namespace WPCustomer\Validators;
 
-use WPCustomer\Models\CustomerModel;
+use WPCustomer\Models\Customer\CustomerModel;
 
 class CustomerValidator {
     private CustomerModel $model;

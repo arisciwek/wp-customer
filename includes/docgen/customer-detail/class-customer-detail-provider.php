@@ -1,6 +1,12 @@
 <?php
+/**
+* Generate customer detail document using WP DocGen
+* 
+* File: class-customer-detail-document-provider.php
+* Path: /wp-customer/includes/docgen/customer-detail/class-customer-detail-provider.php
+*/ 
 
-class Customer_Document_Provider implements WP_DocGen_Provider {
+class WP_Customer_Customer_Detail_Provider implements WP_DocGen_Provider {
     private $customer;
     private $template_path;
     private $output_dir;

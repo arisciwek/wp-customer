@@ -7,7 +7,7 @@
  * @version     2.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Models/CustomerModel.php
+ * Path: /wp-customer/src/Models/Customer/CustomerModel.php
  *
  * Description: Model untuk mengelola data customer di database.
  *              Handles operasi CRUD dengan caching terintegrasi.
@@ -22,30 +22,78 @@
  * - Added method untuk DataTables server-side
  */
 
- namespace WPCustomer\Models;
+ namespace WPCustomer\Models\Customer;
 
+ use WPCustomer\Cache\CacheManager;
+ 
  class CustomerModel {
      private $table;
      private $branch_table;
      private $employee_table;
+     private $cache;
+     static $used_codes = [];
+
 
      public function __construct() {
          global $wpdb;
          $this->table = $wpdb->prefix . 'app_customers';
          $this->branch_table = $wpdb->prefix . 'app_branches';
          $this->employee_table = $wpdb->prefix . 'app_customer_employees';
+         $this->cache = new CacheManager();
      }
 
-    private function generateCustomerCode(): string {
+    /**
+     * Generate unique customer code
+     * Format: TTTTRRXxRRXx
+     * TTTT = 4 digit timestamp
+     * Xx = 1 uppercase + 1 lowercase letters
+     * RR = 2 digit random number
+     * Xx = 1 uppercase + 1 lowercase letters
+     */
+    public static function generateCustomerCode(): string {
         do {
+            // Get 4 digits from timestamp
             $timestamp = substr(time(), -4);
-            $random = str_pad(rand(0, 9999), 4, '0', STR_PAD_LEFT);
-            $code = 'CUST-' . $timestamp . $random;
+                        
+            // Generate first Xx (1 upper + 1 lower)
+            $upperLetter1 = substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 1);
+            $lowerLetter1 = substr(str_shuffle('abcdefghijklmnopqrstuvwxyz'), 0, 1);
             
-            $exists = $this->existsByCode($code);
+            // Generate second RR (2 random digits)
+            $random2 = str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
+            
+            // Generate second Xx (1 upper + 1 lower)
+            $upperLetter2 = substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 1);
+            $lowerLetter2 = substr(str_shuffle('abcdefghijklmnopqrstuvwxyz'), 0, 1);
+            
+            $code = sprintf('%s%s%s%s%s%s', 
+                $timestamp,
+                $upperLetter1,
+                $lowerLetter1,
+                $random2,
+                $upperLetter2,
+                $lowerLetter2
+            );
+            
+            $exists = in_array($code, self::$used_codes) || self::codeExists($code);
         } while ($exists);
-        
+
+        self::$used_codes[] = $code;
         return $code;
+    }
+
+    /**
+     * Check if code exists in database
+     */
+    public static function codeExists(string $code): bool {
+        global $wpdb;
+        return (bool) $wpdb->get_var($wpdb->prepare(
+            "SELECT EXISTS (
+                SELECT 1 FROM {$wpdb->prefix}app_customers 
+                WHERE code = %s
+            ) as result",
+            $code
+        ));
     }
 
     public function create(array $data): ?int {

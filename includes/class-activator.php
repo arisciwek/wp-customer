@@ -68,19 +68,6 @@ class WP_Customer_Activator {
                 self::logError('Error adding capabilities: ' . $e->getMessage());
             }
 
-            // After permissions are set, load demo data
-            try {
-                require_once WP_CUSTOMER_PATH . 'src/Database/DemoData.php';
-                if (class_exists('\WPCustomer\Database\DemoData')) {
-                    \WPCustomer\Database\DemoData::load();
-                    error_log('Demo data loaded successfully');
-                } else {
-                    self::logError('DemoData class not found');
-                }
-            } catch (\Exception $e) {
-                self::logError('Error loading demo data: ' . $e->getMessage());
-            }
-
             // 4. Continue with rest of activation (demo data, version, etc)
             self::addVersion();
             self::setupMembershipDefaults();

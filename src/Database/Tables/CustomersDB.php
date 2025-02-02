@@ -16,7 +16,7 @@
  *
  * Fields:
  * - id             : Primary key
- * - code           : Format CUST-TTTTRRRR (T=timestamp, R=random)
+ * - code           : Format 
  * - name           : Nama customer
  * - nik            : Nomor Induk Kependudukan
  * - npwp           : Nomor Pokok Wajib Pajak
@@ -53,7 +53,7 @@ class CustomersDB {
 
         return "CREATE TABLE {$table_name} (
             id bigint(20) UNSIGNED NOT NULL auto_increment,
-            code varchar(13) NOT NULL,
+            code varchar(10) NOT NULL,
             name varchar(100) NOT NULL,
             npwp varchar(20) NULL,
             nib varchar(20) NULL,

@@ -26,7 +26,7 @@
 namespace WPCustomer\Validators\Branch;
 
 use WPCustomer\Models\Branch\BranchModel;
-use WPCustomer\Models\CustomerModel;
+use WPCustomer\Models\Customer\CustomerModel;
 
 class BranchValidator {
     private $branch_model;

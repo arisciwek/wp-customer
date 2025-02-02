@@ -24,7 +24,7 @@
 
 namespace WPCustomer\Models\Branch;
 
-use WPCustomer\Models\CustomerModel;
+use WPCustomer\Models\Customer\CustomerModel;
 
 class BranchModel {
     private $table;

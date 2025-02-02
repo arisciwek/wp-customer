@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Cache
- * @version     2.0.0
+ * @version     3.0.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Cache/CacheManager.php
@@ -12,26 +12,36 @@
  * Description: Manager untuk menangani caching data customer.
  *              Menggunakan WordPress Object Cache API.
  *              Includes cache untuk:
- *              - Single customer data
- *              - Customer lists
- *              - Customer statistics
- *              - User-customer relations
- *              Mendukung operasi CRUD dengan cache invalidation.
- * 
+ *              - Single customer/branch/employee data
+ *              - Lists (customer/branch/employee)
+ *              - Statistics
+ *              - Relations
+ *
  * Cache Groups:
- * - wp_customer: Grup utama untuk semua cache customer
+ * - wp_customer: Grup utama untuk semua cache
  * 
  * Cache Keys:
  * - customer_{id}: Data single customer
  * - customer_list: Daftar semua customer
  * - customer_stats: Statistik customer
+ * - branch_{id}: Data single branch
+ * - branch_list: Daftar semua branch
+ * - branch_stats: Statistik branch
+ * - employee_{id}: Data single employee
+ * - employee_list: Daftar semua employee
+ * - employee_stats: Statistik employee
  * - user_customers_{user_id}: Relasi user-customer
  * 
  * Dependencies:
  * - WordPress Object Cache API
- * - WPCustomer\Models\CustomerModel untuk data
  * 
  * Changelog:
+ * 3.0.0 - 2024-01-31
+ * - Added branch caching support
+ * - Added employee caching support
+ * - Extended cache key management
+ * - Added statistics caching for all entities
+ * 
  * 2.0.0 - 2024-01-20
  * - Added customer statistics cache
  * - Added user-customer relations cache
@@ -44,112 +54,140 @@
  * - Basic customer data caching
  * - List caching functionality
  */
+/**
+ * Cache Management Class
+ * 
+ * @package     WP_Customer
+ * @subpackage  Cache
+ */
 namespace WPCustomer\Cache;
 
 class CacheManager {
     private const CACHE_GROUP = 'wp_customer';
     private const CACHE_EXPIRY = 12 * HOUR_IN_SECONDS;
     
-    // Cache keys
-    private const KEY_CUSTOMER = 'customer_';
-    private const KEY_CUSTOMER_LIST = 'customer_list';
-    private const KEY_CUSTOMER_STATS = 'customer_stats';
-    private const KEY_USER_CUSTOMERS = 'user_customers_';
+    /**
+     * Generates valid cache key based on components
+     */
+    private function generateKey(string ...$components): string {
+        // Filter out empty components
+        $validComponents = array_filter($components, function($component) {
+            return !empty($component) && is_string($component);
+        });
+        
+        if (empty($validComponents)) {
+            return 'default_key_' . md5(microtime());
+        }
 
-    public function getCustomer(int $id): ?object {
-        $result = wp_cache_get(self::KEY_CUSTOMER . $id, self::CACHE_GROUP);
+        // Join with underscore and ensure valid length
+        $key = implode('_', $validComponents);
+        
+        // WordPress has a key length limit of 172 characters
+        if (strlen($key) > 172) {
+            $key = substr($key, 0, 140) . '_' . md5($key);
+        }
+        
+        return $key;
+    }
+
+    /**
+     * Get value from cache with validation
+     */
+    public function get(string $type, ...$keyComponents) {
+        $key = $this->generateKey($type, ...$keyComponents);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Cache attempt - Key: {$key}, Type: {$type}");
+        }
+        
+        $result = wp_cache_get($key, self::CACHE_GROUP);
+        
         if ($result === false) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Cache miss - Key: {$key}");
+            }
             return null;
         }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Cache hit - Key: {$key}");
+        }
+        
         return $result;
     }
 
-    public function setCustomer(int $id, object $data): bool {
-        return wp_cache_set(
-            self::KEY_CUSTOMER . $id, 
-            $data, 
-            self::CACHE_GROUP, 
-            self::CACHE_EXPIRY
+    /**
+     * Set value in cache with validation
+     */
+    public function set(string $type, $value, int $expiry = null, ...$keyComponents): bool {
+        $key = $this->generateKey($type, ...$keyComponents);
+        
+        if ($expiry === null) {
+            $expiry = self::CACHE_EXPIRY;
+        }
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Setting cache - Key: {$key}, Type: {$type}, Expiry: {$expiry}s");
+        }
+        
+        return wp_cache_set($key, $value, self::CACHE_GROUP, $expiry);
+    }
+
+    /**
+     * Delete value from cache
+     */
+    public function delete(string $type, ...$keyComponents): bool {
+        $key = $this->generateKey($type, ...$keyComponents);
+        
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Deleting cache - Key: {$key}, Type: {$type}");
+        }
+        
+        return wp_cache_delete($key, self::CACHE_GROUP);
+    }
+
+    /**
+     * Check if key exists in cache
+     */
+    public function exists(string $type, ...$keyComponents): bool {
+        $key = $this->generateKey($type, ...$keyComponents);
+        return wp_cache_get($key, self::CACHE_GROUP) !== false;
+    }
+
+    /**
+     * Example method for DataTable caching
+     */
+    public function getDataTableCache(int $userId, int $start, int $length, string $search, string $orderColumn, string $orderDir) {
+        return $this->get('datatable', 
+            (string)$userId,
+            (string)$start,
+            (string)$length, 
+            md5($search),
+            $orderColumn,
+            $orderDir
         );
     }
 
-    public function invalidateCustomerCache(int $id): void {
-        wp_cache_delete(self::KEY_CUSTOMER . $id, self::CACHE_GROUP);
-    }
-
-    public function getCustomerList(): ?array {
-        return wp_cache_get(self::KEY_CUSTOMER_LIST, self::CACHE_GROUP);
-    }
-
-    public function setCustomerList(array $data): bool {
-        return wp_cache_set(
-            self::KEY_CUSTOMER_LIST,
+    /**
+     * Example method for setting DataTable cache
+     */
+    public function setDataTableCache(int $userId, int $start, int $length, string $search, string $orderColumn, string $orderDir, $data) {
+        return $this->set('datatable',
             $data,
-            self::CACHE_GROUP,
-            self::CACHE_EXPIRY
-        );
-    }
-
-    public function invalidateCustomerListCache(): void {
-        wp_cache_delete(self::KEY_CUSTOMER_LIST, self::CACHE_GROUP);
-    }
-
-    /**
-     * Get customer statistics from cache
-     */
-    public function getCustomerStats(): ?array {
-        return wp_cache_get(self::KEY_CUSTOMER_STATS, self::CACHE_GROUP);
-    }
-
-    /**
-     * Set customer statistics in cache
-     */
-    public function setCustomerStats(array $stats): bool {
-        return wp_cache_set(
-            self::KEY_CUSTOMER_STATS, 
-            $stats, 
-            self::CACHE_GROUP, 
-            self::CACHE_EXPIRY
+            2 * MINUTE_IN_SECONDS,
+            (string)$userId,
+            (string)$start,
+            (string)$length,
+            md5($search),
+            $orderColumn,
+            $orderDir
         );
     }
 
     /**
-     * Invalidate customer statistics cache
+     * Clear all caches in group
      */
-    public function invalidateCustomerStatsCache(): void {
-        wp_cache_delete(self::KEY_CUSTOMER_STATS, self::CACHE_GROUP);
-    }
-
-    /**
-     * Get customers associated with a user
-     */
-    public function getUserCustomers(int $user_id): ?array {
-        return wp_cache_get(self::KEY_USER_CUSTOMERS . $user_id, self::CACHE_GROUP);
-    }
-
-    /**
-     * Set customers associated with a user
-     */
-    public function setUserCustomers(int $user_id, array $customers): bool {
-        return wp_cache_set(
-            self::KEY_USER_CUSTOMERS . $user_id,
-            $customers,
-            self::CACHE_GROUP,
-            self::CACHE_EXPIRY
-        );
-    }
-
-    /**
-     * Invalidate user's customers cache
-     */
-    public function invalidateUserCustomersCache(int $user_id): void {
-        wp_cache_delete(self::KEY_USER_CUSTOMERS . $user_id, self::CACHE_GROUP);
-    }
-
-    /**
-     * Clear all customer related caches
-     */
-    public function clearAllCustomerCaches(): void {
-        wp_cache_delete_group(self::CACHE_GROUP);
+    public function clearAll(): bool {
+        return wp_cache_delete_group(self::CACHE_GROUP);
     }
 }

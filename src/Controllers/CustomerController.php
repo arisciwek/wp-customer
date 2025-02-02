@@ -32,7 +32,7 @@
 
 namespace WPCustomer\Controllers;
 
-use WPCustomer\Models\CustomerModel;
+use WPCustomer\Models\Customer\CustomerModel;
 use WPCustomer\Models\Branch\BranchModel;
 use WPCustomer\Validators\CustomerValidator;
 use WPCustomer\Cache\CacheManager;
@@ -871,7 +871,7 @@ class CustomerController {
                 return null;
             }
 
-            $customer = $this->cache->getCustomer($id) ?? $this->model->find($id);
+            $customer = $this->cache->get('customer', $id) ?? $this->model->find($id);
             if ($customer) {
                 $customer->branch_count = $this->model->getBranchCount($id);
                 return $customer;
