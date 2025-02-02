@@ -97,7 +97,130 @@ class CustomerController {
         add_action('wp_ajax_validate_customer_access', [$this, 'validateCustomerAccess']);
         //add_action('wp_ajax_get_current_customer_id', [$this, 'getCurrentCustomerId']);
         add_action('wp_ajax_generate_customer_pdf', [$this, 'generate_customer_pdf']);
+        add_action('wp_ajax_generate_wp_docgen_customer_detail_document', [$this, 'generate_wp_docgen_customer_detail_document']);
+        add_action('wp_ajax_generate_wp_docgen_customer_detail_pdf', [$this, 'generate_wp_docgen_customer_detail_pdf']);
+    }
 
+    /**
+     * Generate DOCX document
+     */
+    public function generate_wp_docgen_customer_detail_document() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+            
+            $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+            if (!$id) {
+                throw new \Exception('Invalid customer ID');
+            }
+
+            // Validate access
+            $access = $this->validator->validateAccess($id);
+            if (!$access['has_access']) {
+                throw new \Exception('You do not have permission to view this customer');
+            }
+
+            // Get customer data
+            $customer = $this->getCustomerData($id);
+            if (!$customer) {
+                throw new \Exception('Customer not found');
+            }
+
+            // Initialize WP DocGen
+            //$docgen = new \WPDocGen\Generator();
+            $docgen = wp_docgen();
+
+            // Set template variables
+            $variables = [
+                'customer_name' => $customer->name,
+                'customer_code' => $customer->code,
+                'total_branches' => $customer->branch_count,
+                'created_date' => date('d F Y H:i', strtotime($customer->created_at)),
+                'updated_date' => date('d F Y H:i', strtotime($customer->updated_at)),
+                'npwp' => $customer->npwp ?? '-',
+                'nib' => $customer->nib ?? '-',
+                'generated_date' => date('d F Y H:i')
+            ];
+
+            // Get template path
+            $template_path = WP_CUSTOMER_PATH . 'templates/docx/customer-detail.docx';
+
+            // Generate DOCX
+            $output_path = wp_upload_dir()['path'] . '/customer-' . $customer->code . '.docx';
+            $docgen->generateFromTemplate($template_path, $variables, $output_path);
+
+            // Prepare download response
+            $file_url = wp_upload_dir()['url'] . '/customer-' . $customer->code . '.docx';
+            wp_send_json_success([
+                'file_url' => $file_url,
+                'filename' => 'customer-' . $customer->code . '.docx'
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error(['message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Generate PDF from DOCX
+     */
+    public function generate_wp_docgen_customer_detail_pdf() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+            
+            $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+            if (!$id) {
+                throw new \Exception('Invalid customer ID');
+            }
+
+            // Similar validation as DOCX generation
+            $access = $this->validator->validateAccess($id);
+            if (!$access['has_access']) {
+                throw new \Exception('You do not have permission to view this customer');
+            }
+
+            $customer = $this->getCustomerData($id);
+            if (!$customer) {
+                throw new \Exception('Customer not found');
+            }
+
+            // Initialize WP DocGen
+            $docgen = new \WPDocGen\Generator();
+
+            // Generate DOCX first (similar to generate_wp_docgen_customer_detail_document)
+            $variables = [
+                'customer_name' => $customer->name,
+                'customer_code' => $customer->code,
+                'total_branches' => $customer->branch_count,
+                'created_date' => date('d F Y H:i', strtotime($customer->created_at)),
+                'updated_date' => date('d F Y H:i', strtotime($customer->updated_at)),
+                'npwp' => $customer->npwp ?? '-',
+                'nib' => $customer->nib ?? '-',
+                'generated_date' => date('d F Y H:i')
+            ];
+
+            $template_path = WP_CUSTOMER_PATH . 'templates/docx/customer-detail.docx';
+            $docx_path = wp_upload_dir()['path'] . '/customer-' . $customer->code . '.docx';
+            
+            // Generate DOCX first
+            $docgen->generateFromTemplate($template_path, $variables, $docx_path);
+
+            // Convert DOCX to PDF
+            $pdf_path = wp_upload_dir()['path'] . '/customer-' . $customer->code . '.pdf';
+            $docgen->convertToPDF($docx_path, $pdf_path);
+
+            // Clean up DOCX file
+            unlink($docx_path);
+
+            // Send PDF URL back
+            $pdf_url = wp_upload_dir()['url'] . '/customer-' . $customer->code . '.pdf';
+            wp_send_json_success([
+                'file_url' => $pdf_url,
+                'filename' => 'customer-' . $customer->code . '.pdf'
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error(['message' => $e->getMessage()]);
+        }
     }
 
     public function generate_customer_pdf() {
@@ -696,102 +819,6 @@ class CustomerController {
             wp_send_json_error(['message' => $e->getMessage()]);
         }
     }
-
-    /**
-     * Get customer ID associated with current logged in user.
-     * Checks both owner and employee relationships to determine the active customer.
-     * Used internally by other methods requiring customer context.
-     * 
-     * @access private
-     * @since 1.0.0
-     * @return int Customer ID if found, 0 otherwise
-     * 
-     * @example
-     * // Inside another controller method:
-     * $customer_id = $this->getCurrentUserCustomerId();
-     * if ($customer_id > 0) {
-     *     // Process for specific customer
-     * }
-     */
-    /*
-    private function getCurrentUserCustomerId() {
-        global $wpdb;
-        $current_user_id = get_current_user_id();
-
-        // Check if user is owner of any customer
-        $customer_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}app_customers 
-             WHERE user_id = %d 
-             LIMIT 1",
-            $current_user_id
-        ));
-
-        if ($customer_id) {
-            return (int)$customer_id;
-        }
-
-        // If not owner, check if user is employee
-        $customer_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT customer_id 
-             FROM {$wpdb->prefix}app_customer_employees 
-             WHERE user_id = %d 
-             AND status = 'active' 
-             LIMIT 1",
-            $current_user_id
-        ));
-
-        return $customer_id ? (int)$customer_id : 0;
-    }
-    */
-
-    /**
-     * AJAX endpoint to provide current user's customer ID to frontend.
-     * Returns the customer ID based on user's relationship (owner/employee).
-     * Used by JavaScript to determine active customer context.
-     * 
-     * @access public
-     * @since 1.0.0
-     * @uses WP_Customer_Controller::getCurrentUserCustomerId()
-     * @uses check_ajax_referer() For security validation
-     * @uses wp_send_json_success() To return customer ID
-     * @uses wp_send_json_error() To return error message
-     * 
-     * @fires wp_ajax_get_current_customer_id
-     * 
-     * @example
-     * // From JavaScript:
-     * $.ajax({
-     *     url: wpCustomerData.ajaxUrl,
-     *     data: {
-     *         action: 'get_current_customer_id',
-     *         nonce: wpCustomerData.nonce
-     *     },
-     *     success: function(response) {
-     *         const customerId = response.data.customer_id;
-     *     }
-     * });
-     */
-    /*
-    public function getCurrentCustomerId() {
-        try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
-            
-            $customer_id = $this->getCurrentUserCustomerId();
-            
-            $this->debug_log("Got customer ID for current user: " . $customer_id);
-            
-            wp_send_json_success([
-                'customer_id' => $customer_id
-            ]);
-
-        } catch (\Exception $e) {
-            $this->debug_log("Error getting customer ID: " . $e->getMessage());
-            wp_send_json_error([
-                'message' => $e->getMessage()
-            ]);
-        }
-    }
-    */
 
     // Di CustomerController
     public function getStats() {
