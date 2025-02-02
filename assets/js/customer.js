@@ -467,7 +467,7 @@
      };
 
         // Di customer.js
-        $('.export-pdf').on('click', function() {
+        $('.wp-mpdf-customer-detail-export-pdf').on('click', function() {
             const customerId = $('#current-customer-id').val();
             
             $.ajax({
@@ -496,6 +496,68 @@
                 }
             });
         });
+
+        // Document generation handlers
+        $('.wp-docgen-customer-detail-expot-document').on('click', function() {
+            const customerId = $('#current-customer-id').val();
+            
+            $.ajax({
+                url: wpCustomerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'generate_wp_docgen_customer_detail_document',
+                    id: customerId,
+                    nonce: wpCustomerData.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Create hidden link and trigger download
+                        const a = document.createElement('a');
+                        a.href = response.data.file_url;
+                        a.download = response.data.filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    } else {
+                        CustomerToast.error(response.data.message || 'Failed to generate DOCX');
+                    }
+                },
+                error: function() {
+                    CustomerToast.error('Failed to generate DOCX');
+                }
+            });
+        });
+
+        $('.wp-docgen-customer-detail-expot-pdf').on('click', function() {
+            const customerId = $('#current-customer-id').val();
+            
+            $.ajax({
+                url: wpCustomerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'generate_wp_docgen_customer_detail_pdf',
+                    id: customerId,
+                    nonce: wpCustomerData.nonce
+                },
+                success: function(response) {
+                    if (response.success) {
+                        // Create hidden link and trigger download
+                        const a = document.createElement('a');
+                        a.href = response.data.file_url;
+                        a.download = response.data.filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    } else {
+                        CustomerToast.error(response.data.message || 'Failed to generate PDF');
+                    }
+                },
+                error: function() {
+                    CustomerToast.error('Failed to generate PDF');
+                }
+            });
+        });
+
         
      // Initialize when document is ready
      $(document).ready(() => {
