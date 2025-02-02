@@ -886,75 +886,7 @@ class CustomerController {
     }
 
     public function renderMainPage() {
-        global $wpdb;
-        $current_user_id = get_current_user_id();
-
-        $this->debug_log('--- Debug Controller renderMainPage ---');
-        $this->debug_log('User ID: ' . $current_user_id);
-
-        // Get customer_id dari hash URL jika ada
-        $customer_id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-        if (!$customer_id && isset($_SERVER['REQUEST_URI'])) {
-            if (preg_match('/#(\d+)/', $_SERVER['REQUEST_URI'], $matches)) {
-                $customer_id = (int)$matches[1];
-            }
-        }
-
-        // Jika ada customer_id, ambil datanya seperti di method show()
-        if ($customer_id > 0) {
-            // Coba ambil dari cache dulu
-            $customer = $this->cache->getCustomer($customer_id);
-            
-            // Jika tidak ada di cache, ambil dari database
-            if (!$customer) {
-                $customer = $this->model->find($customer_id);
-            }
-
-            if ($customer) {
-                // Validasi akses
-                $access = $this->validator->validateAccess($customer_id);
-                $this->logPermissionCheck(
-                    'view_customer_detail',
-                    $current_user_id, 
-                    $customer_id,
-                    null,
-                    $access['has_access']
-                );
-
-                if ($access['has_access']) {
-                    // Tambah informasi tambahan
-                    $customer->branch_count = $this->model->getBranchCount($customer_id);
-                    $customer->access_type = $access['access_type'];
-                    $customer->has_access = $access['has_access'];
-                }
-            }
-        }
-
-        // Setup template data
-        $template_data = [
-            'customer' => $customer ?? null,
-            'access' => $access ?? [
-                'has_access' => true,
-                'access_type' => current_user_can('edit_all_customers') ? 'admin' : 'owner',
-                'relation' => [
-                    'is_admin' => current_user_can('edit_all_customers'),
-                    'is_owner' => true,
-                    'is_employee' => false
-                ]
-            ],
-            'controller' => $this,
-            'branches' => [],
-            'employees' => []
-        ];
-
-        if (isset($customer)) {
-            $this->debug_log('Customer data loaded: ' . print_r($customer, true));
-        }
-
         // Render template
         require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-dashboard.php';
-    }
-    
-    
-    
+    }    
 }

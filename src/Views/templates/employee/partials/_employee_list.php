@@ -32,8 +32,7 @@ defined('ABSPATH') || exit;
         <div class="employee-header-actions">
                 <?php 
                 // Show Add Branch button based on permissions
-                if (($access['access_type'] === 'admin' || $access['access_type'] === 'owner') && 
-                    current_user_can('add_employee')) : 
+                if (current_user_can('add_employee')) : 
                 ?>
                 <button type="button" class="button button-primary" id="add-employee-btn">
                     <span class="dashicons dashicons-plus-alt"></span>

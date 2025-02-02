@@ -1,4 +1,8 @@
 
+<?php
+
+
+?>
 
 
 <div class="wp-customer-panel-header">
@@ -8,42 +12,6 @@
 
 <div class="wp-customer-panel-content">
 
-<?php
-
-
-// Debug untuk memastikan data ada
-if (defined('WP_DEBUG') && WP_DEBUG) {
-    error_log('=== Customer Right Panel Debug ===');
-    error_log('Template Data Available:');
-    //error_log(print_r(get_defined_vars(), true));
-}
-
-// Make data available for all tabs
-$panel_data = [
-    'customer' => isset($customer) && is_object($customer) ? $customer : null,
-    'access' => isset($access) ? $access : null,
-    'controller' => isset($controller) ? $controller : null
-];
-
-// Di _branch_list.php
-$branches = isset($panel_data['branches']) ? $panel_data['branches'] : [];
-//$branch_model = isset($panel_data['branch_model']) ? $panel_data['branch_model'] : null;
-
-// Di _employee_list.php 
-$employees = isset($panel_data['employees']) ? $panel_data['employees'] : [];
-//$employee_model = isset($panel_data['employee_model']) ? $panel_data['employee_model'] : null;
-
-// Debug panel data
-if (defined('WP_DEBUG') && WP_DEBUG) {
-    //error_log('Panel Data Prepared:');
-    //error_log(print_r($panel_data, true));
-    //error_log('Panel Data [Customer]:' . print_r($panel_data['customer'], true));
-}
-
-
-
-
-?>
 
 <div class="nav-tab-wrapper">
     <a href="#" class="nav-tab nav-tab-customer-details nav-tab-active" data-tab="customer-details">Data Customer</a>
@@ -54,7 +22,7 @@ if (defined('WP_DEBUG') && WP_DEBUG) {
 
 <?php
 // Pass data ke semua partial templates
-$template_data = isset($panel_data) ? $panel_data : [];
+
 
 foreach ([
     'customer/partials/_customer_details.php',

@@ -35,8 +35,7 @@ defined('ABSPATH') || exit;
             <div class="branch-header-actions">
                 <?php 
                 // Show Add Branch button based on permissions
-                if (($access['access_type'] === 'admin' || $access['access_type'] === 'owner') && 
-                    current_user_can('add_branch')) : 
+                if (current_user_can('add_branch')) : 
                 ?>
                     <button type="button" class="button button-primary" id="add-branch-btn">
                         <span class="dashicons dashicons-plus-alt"></span>
@@ -44,14 +43,6 @@ defined('ABSPATH') || exit;
                     </button>
                 <?php endif; ?>
             </div>
-
-        <div class="branch-header-actions">
-            <?php 
-            if (isset($customer) && is_object($customer)) {
-                //echo $controller->generateAddBranchButton($customer);
-            }
-            ?>
-        </div>
 
     </div>
 

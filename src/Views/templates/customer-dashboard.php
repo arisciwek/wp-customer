@@ -29,11 +29,9 @@
 
 defined('ABSPATH') || exit;
 
-//extract($template_data);
-
-
 ?>
 <script>
+/*
 document.addEventListener('DOMContentLoaded', function() {
     const hash = window.location.hash;
     if (hash) {
@@ -41,6 +39,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('current-customer-id').value = customerId;
     }
 });
+*/
 </script>
 
 <div class="wrap">
