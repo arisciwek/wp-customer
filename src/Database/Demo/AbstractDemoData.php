@@ -39,6 +39,8 @@
 
 namespace WPCustomer\Database\Demo;
 
+use WPCustomer\Cache\CustomerCacheManager;
+
 defined('ABSPATH') || exit;
 
 abstract class AbstractDemoData {
@@ -50,6 +52,9 @@ abstract class AbstractDemoData {
     public function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;
+        
+        // Initialize cache manager immediately since it doesn't require plugins_loaded
+        $this->cache = new CustomerCacheManager();
         
         // Initialize models after plugins are loaded to prevent memory issues
         add_action('plugins_loaded', [$this, 'initModels'], 30);
@@ -103,23 +108,6 @@ abstract class AbstractDemoData {
             $this->debug("Demo data generation failed: " . $e->getMessage());
             return false;
         }
-    }
-    /**
-     * Check if development mode is enabled
-     * This can be enabled via settings or WP_CUSTOMER_DEVELOPMENT constant
-     * 
-     * @return bool True if development mode is enabled
-     */
-    public function isDevelopmentMode(): bool {
-        $dev_settings = get_option('wp_customer_development_settings');
-        return (isset($dev_settings['enable_development']) && $dev_settings['enable_development']) 
-               || (defined('WP_CUSTOMER_DEVELOPMENT') && WP_CUSTOMER_DEVELOPMENT);
-    }
-
-    public function shouldClearData(): bool {
-        $dev_settings = get_option('wp_customer_development_settings');
-        return isset($dev_settings['clear_data_on_deactivate']) && 
-               $dev_settings['clear_data_on_deactivate'];
     }
 
     protected function debug($message) {
