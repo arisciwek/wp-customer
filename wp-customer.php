@@ -140,10 +140,10 @@ class WPCustomer {
         register_deactivation_hook(__FILE__, array('WP_Customer_Deactivator', 'deactivate'));
         
         // Set auto increment untuk user ID
-        register_activation_hook(__FILE__, function() {
-            global $wpdb;
-            $wpdb->query("ALTER TABLE {$wpdb->prefix}users AUTO_INCREMENT = 11");
-        });
+        //register_activation_hook(__FILE__, function() {
+        //    global $wpdb;
+        //    $wpdb->query("ALTER TABLE {$wpdb->prefix}users AUTO_INCREMENT = 211");
+        //});
 
         $this->initControllers(); 
 
