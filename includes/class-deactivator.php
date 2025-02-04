@@ -22,7 +22,7 @@
  * - Initial creation
  * - Added cache cleanup
  */
-use WP_Customer\Cache\CacheManager;
+use WPCustomer\Cache\CustomerCacheManager;
 
 class WP_Customer_Deactivator {
     private static function debug($message) {
@@ -89,11 +89,11 @@ class WP_Customer_Deactivator {
             self::cleanupMembershipOptions();
 
 
-            // Clear cache using CacheManager
+            // Clear cache using CustomerCacheManager
             try {
-                $cache_manager = new WP_Customer\Cache\CacheManager();
+                $cache_manager = new WPCustomer\Cache\CustomerCacheManager();
                 $cache_manager->clearAllCaches();
-                self::debug("All caches cleared via CacheManager");
+                self::debug("All caches cleared via CustomerCacheManager");
             } catch (\Exception $e) {
                 self::debug("Error clearing cache: " . $e->getMessage());
                 // Don't throw the exception - continue with deactivation
