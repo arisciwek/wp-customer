@@ -235,7 +235,28 @@
             $regencySelect
                 .html('<option value="">Pilih Kabupaten/Kota</option>')
                 .prop('disabled', true);
+        },
+        rules: {
+            npwp: {
+                pattern: /^\d{2}\.\d{3}\.\d{3}\.\d{1}-\d{3}\.\d{3}$/
+            },
+            nib: {
+                minlength: 13,
+                maxlength: 13,
+                digits: true
+            }
+        },
+        messages: {
+            npwp: {
+                pattern: 'Format NPWP tidak valid'
+            },
+            nib: {
+                minlength: 'NIB harus 13 digit',
+                maxlength: 'NIB harus 13 digit', 
+                digits: 'NIB hanya boleh berisi angka'
+            }
         }
+
     };
 
     // Initialize when document is ready
