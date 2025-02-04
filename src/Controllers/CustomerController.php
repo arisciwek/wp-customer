@@ -35,13 +35,13 @@ namespace WPCustomer\Controllers;
 use WPCustomer\Models\Customer\CustomerModel;
 use WPCustomer\Models\Branch\BranchModel;
 use WPCustomer\Validators\CustomerValidator;
-use WPCustomer\Cache\CacheManager;
+use WPCustomer\Cache\CustomerCacheManager;
 
 class CustomerController {
     private $error_messages;
     private CustomerModel $model;
     private CustomerValidator $validator;
-    private CacheManager $cache;
+    private CustomerCacheManager $cache;
     private BranchModel $branchModel;  // Tambahkan ini
 
     private string $log_file;
@@ -66,7 +66,7 @@ class CustomerController {
         $this->model = new CustomerModel();
         $this->branchModel = new BranchModel();  // Inisialisasi di constructor
         $this->validator = new CustomerValidator();
-        $this->cache = new CacheManager();
+        $this->cache = new CustomerCacheManager();
 
         // Inisialisasi error messages
         $this->error_messages = [
@@ -99,6 +99,25 @@ class CustomerController {
         add_action('wp_ajax_generate_customer_pdf', [$this, 'generate_customer_pdf']);
         add_action('wp_ajax_generate_wp_docgen_customer_detail_document', [$this, 'generate_wp_docgen_customer_detail_document']);
         add_action('wp_ajax_generate_wp_docgen_customer_detail_pdf', [$this, 'generate_wp_docgen_customer_detail_pdf']);
+
+
+        // Debug cache di folder uploads 
+        /*
+        $upload_dir = wp_upload_dir();
+        $debug_file = $upload_dir['basedir'] . '/wp-customer/cache-debug.txt';
+
+        // Capture cache state
+        global $wp_object_cache;
+        $cache_data = print_r($wp_object_cache->cache, true);
+
+        // Append with timestamp
+        $debug_content = "[" . date('Y-m-d H:i:s') . "]\n";
+        $debug_content .= $cache_data . "\n\n";
+
+        // Save to file
+        file_put_contents($debug_file, $debug_content, FILE_APPEND);
+        */
+
     }
 
     /**
