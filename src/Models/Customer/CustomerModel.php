@@ -42,6 +42,78 @@
          $this->cache = new CacheManager();
      }
 
+    public function find($id): ?object {
+        global $wpdb;
+        $id = (int) $id;
+
+        // Check cache first
+        $cached_result = $this->cache->get('customer_detail', $id);
+        if ($cached_result !== null) {
+            return $cached_result;
+        }
+
+        $result = $wpdb->get_row($wpdb->prepare("
+            SELECT p.*, 
+                   COUNT(r.id) as branch_count,
+                   u.display_name as owner_name
+            FROM {$this->table} p
+            LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id
+            LEFT JOIN {$wpdb->users} u ON p.user_id = u.ID
+            WHERE p.id = %d
+            GROUP BY p.id
+        ", $id));
+
+        if ($result) {
+            // Cache for 2 minutes
+            $this->cache->set('customer_detail', $result, 120, $id);
+        }
+
+        return $result;
+    }
+
+    public function getCustomer(?int $id = null): ?object {
+        // Check cache first
+        if ($id !== null) {
+            $cached_result = $this->cache->get('customer', $id);
+            if ($cached_result !== null) {
+                return $cached_result;
+            }
+        }
+
+        global $wpdb;
+        $current_user_id = get_current_user_id();
+
+        // Base query structure
+        $select = "SELECT p.*, 
+                   COUNT(r.id) as branch_count,
+                   u.display_name as owner_name";
+        $from = " FROM {$this->table} p";
+        $join = " LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id
+                  LEFT JOIN {$wpdb->users} u ON p.user_id = u.ID";
+
+        // Handle different cases
+        if (current_user_can('edit_all_customers')) {
+            $where = $id ? $wpdb->prepare(" WHERE p.id = %d", $id) : "";
+        } else {
+            $where = $wpdb->prepare(" WHERE p.user_id = %d", $current_user_id);
+            if ($id) {
+                $where .= $wpdb->prepare(" AND p.id = %d", $id);
+            }
+        }
+
+        $group = " GROUP BY p.id";
+        $sql = $select . $from . $join . $where . $group;
+
+        $result = $wpdb->get_row($sql);
+
+        if ($result && $id !== null) {
+            // Cache for 2 minutes
+            $this->cache->set('customer', $result, 120, $id);
+        }
+
+        return $result;
+    }
+
     /**
      * Generate unique customer code
      * Format: TTTTRRXxRRXx
@@ -152,71 +224,10 @@
 
         $new_id = (int) $wpdb->insert_id;
         error_log('CustomerModel::create() - Insert successful. New ID: ' . $new_id);
-
+        
+        $this->cache->invalidateCustomerCache($new_id);
+        
         return $new_id;
-    }
-
-    public function find($id): ?object {
-        global $wpdb;
-
-        // Ensure integer type for ID
-        $id = (int) $id;
-
-        $result = $wpdb->get_row($wpdb->prepare("
-            SELECT p.*, 
-                   COUNT(r.id) as branch_count,
-                   u.display_name as owner_name
-            FROM {$this->table} p
-            LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id
-            LEFT JOIN {$wpdb->users} u ON p.user_id = u.ID
-            WHERE p.id = %d
-            GROUP BY p.id
-        ", $id));
-
-        if ($result === null) {
-            return null;
-        }
-
-        // Ensure branch_count is always an integer
-        $result->branch_count = (int) $result->branch_count;
-
-        return $result;
-    }
-
-    // Di CustomerModel// Di CustomerModel
-    public function getCustomer(?int $id = null): ?object {
-        global $wpdb;
-
-        // Basic query structure
-        $select = "SELECT p.*, 
-                   COUNT(r.id) as branch_count,
-                   u.display_name as owner_name";
-        $from = " FROM {$this->table} p";
-        $join = " LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id
-                  LEFT JOIN {$wpdb->users} u ON p.user_id = u.ID";
-
-        // Handle different cases
-        if (current_user_can('edit_all_customers')) {
-            // Admin bisa akses semua customer
-            $where = $id ? $wpdb->prepare(" WHERE p.id = %d", $id) : "";
-        } else {
-            // Regular user hanya bisa lihat customer sendiri
-            $where = $wpdb->prepare(" WHERE p.user_id = %d", get_current_user_id());
-            if ($id) {
-                $where .= $wpdb->prepare(" AND p.id = %d", $id);
-            }
-        }
-
-        $group = " GROUP BY p.id";
-        $sql = $select . $from . $join . $where . $group;
-
-        $result = $wpdb->get_row($sql);
-
-        if ($result) {
-            $result->branch_count = (int) $result->branch_count;
-        }
-
-        return $result;
     }
 
     private function getMembershipData(int $customer_id): array {
@@ -259,102 +270,218 @@
             ['%d']
         );
 
+        $this->cache->invalidateCustomerCache($id);
+
         return $result !== false;
     }
 
-public function getDataTableData(int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
-    global $wpdb;
-    
-    $current_user_id = get_current_user_id();
+    // Di CustomerModel.php
+    // VERSION 1: getTotalCount dengan query terpisah + cache
+    public function getTotalCount(): int {
+        global $wpdb;
+        
+        error_log('--- Debug CustomerModel getTotalCount ---');
+        error_log('Checking cache first...');
+        
+        // Cek cache
+        $cached_total = $this->cache->get('customer_total_count', get_current_user_id());
+        if ($cached_total !== null) {
+            error_log('Found cached total: ' . $cached_total);
+            return (int) $cached_total;
+        }
 
-    // Debug capabilities
-    error_log('--- Debug User Capabilities ---');
-    error_log('User ID: ' . $current_user_id);
-    error_log('Can view_customer_list: ' . (current_user_can('view_customer_list') ? 'yes' : 'no'));
-    error_log('Can view_own_customer: ' . (current_user_can('view_own_customer') ? 'yes' : 'no'));
+        error_log('No cache found, getting fresh count...');
+        error_log('User ID: ' . get_current_user_id());
+        error_log('Can view_customer_list: ' . (current_user_can('view_customer_list') ? 'yes' : 'no'));
+        error_log('Can view_own_customer: ' . (current_user_can('view_own_customer') ? 'yes' : 'no'));
 
-    // Base query parts
-    $select = "SELECT SQL_CALC_FOUND_ROWS p.*, COUNT(r.id) as branch_count";
-    $from = " FROM {$this->table} p";
-    $join = " LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id";
-    $where = " WHERE 1=1";
+        // Base query parts
+        $select = "SELECT COUNT(DISTINCT p.id)";
+        $from = " FROM {$this->table} p";
+        $where = " WHERE 1=1";
 
-    // Debug query building process
-    error_log('Building WHERE clause:');
-    error_log('Initial WHERE: ' . $where);
+        error_log('Building WHERE clause:');
+        error_log('Initial WHERE: ' . $where);
 
-    // Cek apakah user memiliki akses sebagai owner
-    $has_customer = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM {$this->table} WHERE user_id = %d",
-        $current_user_id
-    ));
-    error_log('User has customer: ' . ($has_customer > 0 ? 'yes' : 'no'));
+        $current_user_id = get_current_user_id();
 
-    // Cek apakah user adalah employee dari customer
-    $employee_customer = $wpdb->get_var($wpdb->prepare(
-        "SELECT customer_id FROM {$this->employee_table} WHERE user_id = %d",
-        $current_user_id
-    ));
-    error_log('User is employee of customer: ' . ($employee_customer ? $employee_customer : 'no'));
+        $has_customer = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$this->table} WHERE user_id = %d",
+            $current_user_id
+        ));
+        error_log('User has customer: ' . ($has_customer > 0 ? 'yes' : 'no'));
 
-    // Permission based filtering
-    if (current_user_can('edit_all_customers')) {
-        error_log('User can edit all customers - no additional restrictions');
+        if ($has_customer > 0 && current_user_can('view_customer_list') && current_user_can('edit_own_customer')) {
+            $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
+            error_log('Added own customer restriction: ' . $where);
+        } elseif (current_user_can('view_customer_list') && current_user_can('edit_all_customers')) {
+            error_log('User can view all customers - no additional restrictions');
+        }
+
+        $sql = $select . $from . $where;
+        error_log('Final Query: ' . $sql);
+        
+        $total = (int) $wpdb->get_var($sql);
+        
+        // Set cache
+        $this->cache->set('customer_total_count', $total, 120, get_current_user_id());
+        error_log('Set new cache value: ' . $total);
+        
+        error_log('Total count result: ' . $total);
+        error_log('--- End Debug ---');
+
+        return $total;
     }
-    else if ($has_customer > 0 && current_user_can('view_own_customer')) {
-        // User sebagai owner
-        $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
-        error_log('Added owner restriction: ' . $where);
-    }
-    else if ($employee_customer && current_user_can('view_own_customer')) {
-        // User sebagai employee
-        $where .= $wpdb->prepare(" AND p.id = %d", $employee_customer);
-        error_log('Added employee restriction: ' . $where);
-    }
-    else {
-        // Tidak punya akses
-        $where .= " AND 1=0";
-        error_log('User has no access - restricting all results');
-    }
 
-    // Complete query parts
-    $group = " GROUP BY p.id";
-    $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
-    $limit = $wpdb->prepare(" LIMIT %d, %d", $start, $length);
-
-    $sql = $select . $from . $join . $where . $group . $order . $limit;
-    error_log('Final Query: ' . $sql);
-
-    // Execute query
-    $results = $wpdb->get_results($sql);
-    
-    // Get counts  
-    $filtered = $wpdb->get_var("SELECT FOUND_ROWS()");
-    $total = $this->getTotalCount();
-
-    error_log('Filtered count: ' . $filtered);
-    error_log('Total count: ' . $total);
-    error_log('--- End Debug ---');
-
-    return [
-        'data' => $results,
-        'total' => (int) $total,
-        'filtered' => (int) $filtered
-    ];
-}
-     public function delete(int $id): bool {
-         global $wpdb;
-
-         return $wpdb->delete(
-             $this->table,
-             ['id' => $id],
-             ['%d']
-         ) !== false;
-     }
-
-    public function existsByCode(string $code, ?int $excludeId = null): bool {
+    public function getDataTableData(int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
         global $wpdb;
 
+        error_log("=== getDataTableData start ===");
+        error_log("Query params: start=$start, length=$length, search=$search");
+
+        $current_user_id = get_current_user_id();
+
+        // Debug capabilities
+        error_log('--- Debug User Capabilities ---');
+        error_log('User ID: ' . $current_user_id);
+        error_log('Can view_customer_list: ' . (current_user_can('view_customer_list') ? 'yes' : 'no'));
+        error_log('Can view_own_customer: ' . (current_user_can('view_own_customer') ? 'yes' : 'no'));
+
+        // Base query parts
+        $select = "SELECT SQL_CALC_FOUND_ROWS p.*, COUNT(r.id) as branch_count, u.display_name as owner_name";
+
+        $from = " FROM {$this->table} p";
+        $join = " LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id";
+        $join .= " LEFT JOIN {$wpdb->users} u ON p.user_id = u.ID";
+        $where = " WHERE 1=1";
+
+        error_log('Building WHERE clause:');
+        error_log('Initial WHERE: ' . $where);
+
+        // Cek relasi user dengan customer
+        $has_customer = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$this->table} WHERE user_id = %d",
+            $current_user_id
+        ));
+        error_log('User has customer: ' . ($has_customer > 0 ? 'yes' : 'no'));
+
+        // Cek status employee
+        $employee_customer = $wpdb->get_var($wpdb->prepare(
+            "SELECT customer_id FROM {$this->employee_table} WHERE user_id = %d",
+            $current_user_id
+        ));
+        error_log('User is employee of customer: ' . ($employee_customer ? $employee_customer : 'no'));
+
+        // Permission based filtering
+        if (current_user_can('edit_all_customers')) {
+            error_log('User can edit all customers - no additional restrictions');
+        }
+        else if ($has_customer > 0 && current_user_can('view_own_customer')) {
+            $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
+            error_log('Added owner restriction: ' . $where);
+        }
+        else if ($employee_customer && current_user_can('view_own_customer')) {
+            $where .= $wpdb->prepare(" AND p.id = %d", $employee_customer);
+            error_log('Added employee restriction: ' . $where);
+        }
+        else {
+            $where .= " AND 1=0";
+            error_log('User has no access - restricting all results');
+        }
+
+        // Add search condition if present
+        if (!empty($search)) {
+            $where .= $wpdb->prepare(
+                " AND (p.name LIKE %s OR p.code LIKE %s)",
+                '%' . $wpdb->esc_like($search) . '%',
+                '%' . $wpdb->esc_like($search) . '%'
+            );
+            error_log('Added search condition: ' . $where);
+        }
+
+        // Complete query parts
+        $group = " GROUP BY p.id";
+        $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
+        $limit = $wpdb->prepare(" LIMIT %d, %d", $start, $length);
+
+        $sql = $select . $from . $join . $where . $group . $order . $limit;
+        error_log('Final Query: ' . $sql);
+
+        // Execute query
+        $results = $wpdb->get_results($sql);
+
+        // Get filtered count from SQL_CALC_FOUND_ROWS
+        $filtered = $wpdb->get_var("SELECT FOUND_ROWS()");
+        
+        // Calculate total count using same WHERE clause but without search
+        $total_sql = "SELECT COUNT(DISTINCT p.id)" . $from . $join . $where;
+        // Remove search condition from WHERE for total count if it exists
+        if (!empty($search)) {
+            $total_sql = str_replace(
+                $wpdb->prepare(
+                    " AND (p.name LIKE %s OR p.code LIKE %s)",
+                    '%' . $wpdb->esc_like($search) . '%',
+                    '%' . $wpdb->esc_like($search) . '%'
+                ),
+                '',
+                $total_sql
+            );
+        }
+        $total = (int) $wpdb->get_var($total_sql);
+
+        error_log("Found rows (filtered): " . $filtered);
+        error_log("Total count: " . $total);
+        error_log("Results count: " . count($results));
+        error_log("=== getDataTableData end ===");
+
+        return [
+            'data' => $results,
+            'total' => $total,
+            'filtered' => (int) $filtered
+        ];
+    }
+
+    public function delete(int $id): bool {
+        global $wpdb;
+        
+        // Store the current customer data before deletion (for cache invalidation)
+        $customer = $this->find($id);
+        if (!$customer) {
+            return false; // Customer not found
+        }
+
+        $result = $wpdb->delete(
+            $this->table,
+            ['id' => $id],
+            ['%d']
+        );
+
+        if ($result !== false) {
+            // Clear all related cache
+            $this->cache->invalidateCustomerCache($id);
+            
+            // If customer had a user_id, clear that user's cache too
+            if (!empty($customer->user_id)) {
+                $this->cache->delete('user_customers', $customer->user_id);
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public function existsByCode(string $code, ?int $excludeId = null): bool {
+        // Generate unique cache key based on parameters
+        $cache_key = 'code_exists_' . md5($code . ($excludeId ?? ''));
+        
+        // Check cache first
+        $cached_result = $this->cache->get('code_exists', $cache_key);
+        if ($cached_result !== null) {
+            return (bool) $cached_result;
+        }
+
+        global $wpdb;
         $sql = "SELECT EXISTS (SELECT 1 FROM {$this->table} WHERE code = %s";
         $params = [$code];
 
@@ -364,10 +491,13 @@ public function getDataTableData(int $start, int $length, string $search, string
         }
 
         $sql .= ") as result";
+        $exists = (bool) $wpdb->get_var($wpdb->prepare($sql, $params));
 
-        return (bool) $wpdb->get_var($wpdb->prepare($sql, $params));
+        // Cache for 5 minutes since this rarely changes
+        $this->cache->set('code_exists', $exists, 300, $cache_key);
+
+        return $exists;
     }
-
     /**
      * Get total branch count for a specific customer
      * 
@@ -383,82 +513,99 @@ public function getDataTableData(int $start, int $length, string $search, string
      * @return int Total number of branches owned by the customer
      */
     public function getBranchCount(int $id): int {
+        // Check cache first
+        $cached_count = $this->cache->get('branch_count', $id);
+        if ($cached_count !== null) {
+            return (int) $cached_count;
+        }
+
         global $wpdb;
-        return (int) $wpdb->get_var($wpdb->prepare("
+        $count = (int) $wpdb->get_var($wpdb->prepare("
             SELECT COUNT(*)
             FROM {$this->branch_table}
             WHERE customer_id = %d
         ", $id));
+
+        // Cache for 2 minutes
+        $this->cache->set('branch_count', $count, 120, $id);
+
+        return $count;
     }
 
-     public function existsByName(string $name, ?int $excludeId = null): bool {
-         global $wpdb;
-
-         $sql = "SELECT EXISTS (SELECT 1 FROM {$this->table} WHERE name = %s";
-         $params = [$name];
-
-         if ($excludeId) {
-             $sql .= " AND id != %d";
-             $params[] = $excludeId;
-         }
-
-         $sql .= ") as result";
-
-         return (bool) $wpdb->get_var($wpdb->prepare($sql, $params));
-     }
-
-    public function getTotalCount(): int {
-        global $wpdb;
+    public function existsByName(string $name, ?int $excludeId = null): bool {
+        // Generate unique cache key based on parameters
+        $cache_key = 'name_exists_' . md5($name . ($excludeId ?? ''));
         
-        // Debug capabilities
-        error_log('--- Debug CustomerModel getTotalCount ---');
-        error_log('User ID: ' . get_current_user_id());
-        error_log('Can view_customer_list: ' . (current_user_can('view_customer_list') ? 'yes' : 'no'));
-        error_log('Can view_own_customer: ' . (current_user_can('view_own_customer') ? 'yes' : 'no'));
-
-        // Base query parts
-        $select = "SELECT COUNT(DISTINCT p.id)";
-        $from = " FROM {$this->table} p";
-        $where = " WHERE 1=1";
-        $params = [];
-
-        // Debug query building process
-        error_log('Building WHERE clause:');
-        error_log('Initial WHERE: ' . $where);
-
-        $current_user_id = get_current_user_id();
-
-        // Dapatkan relasi User ID wordpress dengan customer User ID
-        $has_customer = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table} WHERE user_id = %d",
-            $current_user_id
-        ));
-        error_log('User has customer: ' . ($has_customer > 0 ? 'yes' : 'no'));
-
-        // Kondisi permission check
-        if ($has_customer > 0 && current_user_can('view_customer_list') && current_user_can('edit_own_customer')) {
-            // User hanya bisa melihat customer miliknya
-            $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
-            error_log('Added own customer restriction: ' . $where);
-        } elseif (current_user_can('view_customer_list') && current_user_can('edit_all_customers')) {
-            // Admin/user dengan akses penuh bisa melihat semua customer
-            error_log('User can view all customers - no additional restrictions');
+        // Check cache first
+        $cached_result = $this->cache->get('name_exists', $cache_key);
+        if ($cached_result !== null) {
+            return (bool) $cached_result;
         }
 
-        // Complete query
-        $sql = $select . $from . $where;
-        $final_query = !empty($params) ? $wpdb->prepare($sql, $params) : $sql;
-        
-        error_log('Final Query: ' . $final_query);
-        
-        // Execute query dan get total
-        $total = (int) $wpdb->get_var($final_query);
-        error_log('Total count result: ' . $total);
-        error_log('--- End Debug ---');
+        global $wpdb;
+        $sql = "SELECT EXISTS (SELECT 1 FROM {$this->table} WHERE name = %s";
+        $params = [$name];
 
-        return $total;
+        if ($excludeId) {
+            $sql .= " AND id != %d";
+            $params[] = $excludeId;
+        }
+
+        $sql .= ") as result";
+        $exists = (bool) $wpdb->get_var($wpdb->prepare($sql, $params));
+
+        // Cache for 5 minutes since this rarely changes
+        $this->cache->set('name_exists', $exists, 300, $cache_key);
+
+        return $exists;
     }
-     
+
+    /**
+     * Get all active customer IDs with cache implementation
+     *
+     * @return array Array of customer IDs
+     */
+    public function getAllCustomerIds(): array {
+        try {
+            // Try to get from cache first using the cache manager
+            $cached_ids = $this->cache->get('customer_ids', 'active');
+            
+            if ($cached_ids !== null) {
+                error_log('Cache hit: getAllCustomerIds');
+                return $cached_ids;
+            }
+            
+            error_log('Cache miss: getAllCustomerIds - fetching from database');
+            
+            global $wpdb;
+            
+            // Get fresh data from database
+            $results = $wpdb->get_col("
+                SELECT id 
+                FROM {$this->table}
+                WHERE status = 'active'
+                ORDER BY id ASC
+            ");
+            
+            if ($wpdb->last_error) {
+                throw new \Exception('Database error: ' . $wpdb->last_error);
+            }
+            
+            // Convert all IDs to integers
+            $customer_ids = array_map('intval', $results);
+            
+            // Cache the results using cache manager
+            // Using 2 minutes cache time to match other cache durations in the system
+            $this->cache->set('customer_ids', $customer_ids, 120, 'active');
+            
+            return $customer_ids;
+            
+        } catch (\Exception $e) {
+            error_log('Error in getAllCustomerIds: ' . $e->getMessage());
+            return [];
+        }
+    }
+
     // Di CustomerModel.php
     public function getProvinsiOptions() {
         return apply_filters('wilayah_indonesia_get_province_options', [

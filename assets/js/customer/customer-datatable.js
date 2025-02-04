@@ -102,7 +102,7 @@
                         title: 'Nama Customer'
                     },
                     {
-                        data: 'owner_name', // Kolom baru
+                        data: 'owner_name',
                         title: 'Admin',
                         defaultContent: '-'
                     },

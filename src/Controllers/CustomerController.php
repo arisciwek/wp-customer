@@ -444,33 +444,60 @@ class CustomerController {
                 throw new \Exception('Security check failed');
             }
 
-            // Get parameters
+            // Get parameters with safe defaults
             $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
             $start = isset($_POST['start']) ? intval($_POST['start']) : 0;
             $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
             $search = isset($_POST['search']['value']) ? sanitize_text_field($_POST['search']['value']) : '';
             
-            // Get data using shared method
-            $result = $this->getCustomerTableData($start, $length, $search);
+            // Get order parameters
+            $orderColumn = isset($_POST['order'][0]['column']) && isset($_POST['columns'][$_POST['order'][0]['column']]['data']) 
+                ? sanitize_text_field($_POST['columns'][$_POST['order'][0]['column']]['data'])
+                : 'name';
+            $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
+
+            // Additional parameters if needed
+            $additionalParams = [];
             
-            if (!$result) {
-                wp_send_json_error(['message' => 'Failed to get data']);
+            // If filtering by specific parameters
+            if (isset($_POST['status'])) {
+                $additionalParams['status'] = sanitize_text_field($_POST['status']);
+            }
+            if (isset($_POST['type'])) {
+                $additionalParams['type'] = sanitize_text_field($_POST['type']);
+            }
+
+            // Check cache first
+            $cached_result = $this->cache->getDataTableCache(
+                'customer_list',          // Specific context for main customer listing
+                get_current_user_id(),
+                $start,
+                $length,
+                $search,
+                $orderColumn,
+                $orderDir,
+                $additionalParams        // Additional filtering parameters if any
+            );
+
+            if ($cached_result) {
+                wp_send_json($cached_result);
                 return;
             }
 
-            $data = [];
-            foreach ($result['data'] as $customer) {  // Ini bagiannya! 
-                $owner_name = '-';
-                if (!empty($customer->user_id)) {
-                    $user = get_userdata($customer->user_id);
-                    $owner_name = $user ? $user->display_name : '-';
-                }
+            // Get fresh data if no cache
+            $result = $this->getCustomerTableData($start, $length, $search, $orderColumn, $orderDir);
+            if (!$result) {
+                throw new \Exception('Failed to fetch customer data');
+            }
 
+            // Format data for response
+            $data = [];
+            foreach ($result['data'] as $customer) {
                 $data[] = [
                     'id' => $customer->id,
                     'code' => esc_html($customer->code),
                     'name' => esc_html($customer->name),
-                    'owner_name' => esc_html($owner_name), // Tambahkan ini
+                    'owner_name' => esc_html($customer->owner_name ?? '-'),
                     'branch_count' => intval($customer->branch_count),
                     'actions' => $this->generateActionButtons($customer)
                 ];
@@ -483,9 +510,23 @@ class CustomerController {
                 'data' => $data,
             ];
 
+            // Set cache
+            $this->cache->setDataTableCache(
+                'customer_list',         // Same context as get
+                get_current_user_id(),
+                $start,
+                $length,
+                $search,
+                $orderColumn,
+                $orderDir,
+                $response,
+                $additionalParams       // Same additional parameters
+            );
+
             wp_send_json($response);
 
         } catch (\Exception $e) {
+            $this->debug_log('DataTable error: ' . $e->getMessage());
             wp_send_json_error([
                 'message' => $e->getMessage()
             ]);
@@ -620,13 +661,6 @@ class CustomerController {
                 throw new \Exception(__('Failed to retrieve created customer', 'wp-customer'));
             }
 
-            // 8. Clear cache yang relevan
-            $this->cache->invalidateCustomerListCache();
-            $this->cache->invalidateCustomerStatsCache();
-            if ($data['user_id']) {
-                $this->cache->invalidateUserCustomersCache($data['user_id']);
-            }
-
             // 9. Return success response
             $response_data = [
                 'id' => $id,
@@ -698,11 +732,6 @@ class CustomerController {
             if (!$updated) {
                 throw new \Exception('Failed to update customer');
             }
-
-            // 5. Invalidate cache
-            $this->cache->invalidateCustomerCache($id);
-            $this->cache->invalidateCustomerListCache();
-            $this->cache->invalidateCustomerStatsCache();
 
             // 6. Get fresh data untuk response
             $customer = $this->model->find($id);
@@ -820,15 +849,20 @@ class CustomerController {
         }
     }
 
-    // Di CustomerController
     public function getStats() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
             // Get customer_id from query param
             $customer_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
-
-            //error_log('Query param customer_id: ' . $customer_id);
+            
+            // Validate access if customer_id provided
+            if ($customer_id) {
+                $access = $this->validator->validateAccess($customer_id);
+                if (!$access['has_access']) {
+                    throw new \Exception('You do not have permission to view this customer');
+                }
+            }
 
             $stats = [
                 'total_customers' => $this->model->getTotalCount(),
