@@ -27,12 +27,12 @@ namespace WPCustomer\Controllers\Employee;
 
 use WPCustomer\Models\Employee\CustomerEmployeeModel;
 use WPCustomer\Validators\Employee\CustomerEmployeeValidator;
-use WPCustomer\Cache\CacheManager;
+use WPCustomer\Cache\CustomerCacheManager;
 
 class CustomerEmployeeController {
     private CustomerEmployeeModel $model;
     private CustomerEmployeeValidator $validator;
-    private CacheManager $cache;
+    private CustomerCacheManager $cache;
     private string $log_file;
 
     /**
@@ -43,7 +43,7 @@ class CustomerEmployeeController {
     public function __construct() {
         $this->model = new CustomerEmployeeModel();
         $this->validator = new CustomerEmployeeValidator();
-        $this->cache = new CacheManager();
+        $this->cache = new CustomerCacheManager();
 
         // Initialize log file in plugin directory
         $this->log_file = WP_CUSTOMER_PATH . self::DEFAULT_LOG_FILE;
