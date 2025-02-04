@@ -34,6 +34,7 @@ class CustomerDemoData extends AbstractDemoData {
     public $used_nib = [];
     protected $customer_users = [];
 
+
     // Data statis customer
     private static $customers = [
         ['id' => 1, 'name' => 'PT Maju Bersama', 'provinsi_id' => '16', 'regency_id' => '34'],
@@ -190,11 +191,8 @@ class CustomerDemoData extends AbstractDemoData {
                     'updated_at' => current_time('mysql')
                 ];
 
-                // Insert customer baru
-                $result = $this->wpdb->insert(
-                    $this->wpdb->prefix . 'app_customers',
-                    $customer_data
-                );
+                // Langsung pakai Model::create() yang sudah ada
+                $result = $this->customerModel->create($customer_data);
 
                 if ($result === false) {
                     throw new \Exception($this->wpdb->last_error);
@@ -211,9 +209,16 @@ class CustomerDemoData extends AbstractDemoData {
             }
         }
 
+        // Add cache handling after bulk generation
+        foreach (self::$customer_ids as $customer_id) {
+            $this->cache->invalidateCustomerCache($customer_id);
+            $this->cache->delete('customer_total_count', get_current_user_id());
+            $this->cache->invalidateDataTableCache('customer_list');
+        }
+
         // Reset auto_increment
         $this->wpdb->query(
-            "ALTER TABLE {$this->wpdb->prefix}app_customers AUTO_INCREMENT = 11"
+            "ALTER TABLE {$this->wpdb->prefix}app_customers AUTO_INCREMENT = 211"
         );
     }
 
