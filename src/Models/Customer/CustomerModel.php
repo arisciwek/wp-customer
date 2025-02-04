@@ -24,7 +24,7 @@
 
  namespace WPCustomer\Models\Customer;
 
- use WPCustomer\Cache\CacheManager;
+ use WPCustomer\Cache\CustomerCacheManager;
  
  class CustomerModel {
      private $table;
@@ -39,7 +39,7 @@
          $this->table = $wpdb->prefix . 'app_customers';
          $this->branch_table = $wpdb->prefix . 'app_branches';
          $this->employee_table = $wpdb->prefix . 'app_customer_employees';
-         $this->cache = new CacheManager();
+         $this->cache = new CustomerCacheManager();
      }
 
     public function find($id): ?object {
