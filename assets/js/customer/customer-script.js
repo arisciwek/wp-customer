@@ -379,47 +379,6 @@
          },
 
 
-         /**
-         * Get current customer ID for logged in user.
-         * This method makes an AJAX call to server to determine the active customer ID
-         * based on user's relationship (owner or employee) with customers.
-         * 
-         * @async
-         * @returns {Promise<number>} Resolves with customer ID (0 if no customer found)
-         * @throws {Error} When AJAX call fails or server returns error
-         * 
-         * @example
-         * try {
-         *   const customerId = await Customer.getCurrentCustomerId();
-         *   console.log('Active customer ID:', customerId);
-         * } catch (error) {
-         *   console.error('Failed to get customer ID:', error);
-         * }
-         *
-        getCurrentCustomerId() {
-            return new Promise((resolve, reject) => {
-                $.ajax({
-                    url: wpCustomerData.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: 'get_current_customer_id',
-                        nonce: wpCustomerData.nonce
-                    },
-                    success: (response) => {
-                        if (response.success) {
-                            resolve(response.data.customer_id);
-                        } else {
-                            reject(new Error(response.data.message));
-                        }
-                    },
-                    error: (xhr) => {
-                        reject(new Error('Failed to get customer ID'));
-                    }
-                });
-            });
-        },
-        */
-
         /**
          * Load customer statistics including total customers and branches.
          * Uses getCurrentCustomerId() to determine which customer's stats to load.
