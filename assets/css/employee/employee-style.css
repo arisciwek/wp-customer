@@ -196,7 +196,7 @@
 
 .empty-state-content h4,
 .error-state-content h4 {
-    margin: 0 0 10px;
+    margin: 0 0 2px;
     font-size: 16px;
     font-weight: 600;
 }
@@ -374,3 +374,252 @@
         background: none !important;
     }
 }
+
+/* Departemen Checkboxes Styling */
+.department-checkboxes {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    padding: 10px;
+}
+
+.checkbox-wrapper {
+    padding: 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+/* Finance - Warna Biru */
+.checkbox-wrapper:has(input[name="finance"]) {
+    background: #E3F2FD;
+    border-left: 4px solid #2196F3;
+}
+
+.checkbox-wrapper:has(input[name="finance"]:checked) {
+    background: #2196F3;
+    color: white;
+}
+
+/* Operation - Warna Hijau */
+.checkbox-wrapper:has(input[name="operation"]) {
+    background: #E8F5E9;
+    border-left: 4px solid #4CAF50;
+}
+
+.checkbox-wrapper:has(input[name="operation"]:checked) {
+    background: #4CAF50;
+    color: white;
+}
+
+/* Legal - Warna Ungu */
+.checkbox-wrapper:has(input[name="legal"]) {
+    background: #F3E5F5;
+    border-left: 4px solid #9C27B0;
+}
+
+.checkbox-wrapper:has(input[name="legal"]:checked) {
+    background: #9C27B0;
+    color: white;
+}
+
+/* Purchase - Warna Orange */
+.checkbox-wrapper:has(input[name="purchase"]) {
+    background: #FFF3E0;
+    border-left: 4px solid #FF9800;
+}
+
+.checkbox-wrapper:has(input[name="purchase"]:checked) {
+    background: #FF9800;
+    color: white;
+}
+
+/* Hover Effect */
+.checkbox-wrapper:hover {
+    transform: translateX(5px);
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Checkbox Custom Style */
+.checkbox-wrapper input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+/* Layout dan Card Styling */
+.modal-content {
+   display: flex;
+   gap: 20px;
+}
+
+.row {
+   width: 50%;
+}
+
+.employee-form-section {
+   background: #fff;
+   border-radius: 8px;
+   padding: 20px;
+   margin-bottom: 20px;
+   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.employee-form-section h4 {
+   margin: 0 0 15px;
+   padding: 10px;
+   font-size: 14px;
+   font-weight: 600;
+   border-bottom: 2px solid #e0e0e0;
+}
+
+/* Form Groups */
+.employee-form-group {
+   margin-bottom: 15px;
+}
+
+.employee-form-group label {
+   display: block;
+   margin-bottom: 8px;
+   font-weight: 500;
+}
+
+.employee-form-group input,
+.employee-form-group select {
+   width: 100%;
+   padding: 8px;
+   border: 1px solid #ddd;
+   border-radius: 4px;
+}
+
+/* Status Styling */
+#edit-employee-status {
+   padding: 8px;
+   border-radius: 4px;
+}
+
+#edit-employee-status option[value="active"] {
+   color: #4CAF50;
+}
+
+#edit-employee-status option[value="inactive"] {
+   color: #f44336;
+}
+
+/* Required Fields */
+.required-field::after {
+   content: '*';
+   color: #f44336;
+   margin-left: 4px;
+}
+
+/* Description Text */
+.description {
+   font-size: 12px;
+   color: #666;
+   margin-top: 4px;
+}
+
+/* Responsive */
+@media screen and (max-width: 782px) {
+   .modal-content {
+       flex-direction: column;
+   }
+   
+   .row {
+       width: 100%;
+   }
+}
+
+/* Modal Styling */
+.modal-overlay {
+   background: rgba(0, 0, 0, 0.5);
+   z-index: 160000;
+}
+
+.modal-container {
+   max-width: 1024px;
+   max-height: 90vh;
+   background: #f8f9fa;
+}
+
+.modal-header {
+   background: #fff;
+   padding: 15px 20px;
+   border-bottom: 1px solid #ddd;
+}
+
+.modal-header h3 {
+   margin: 0;
+   font-size: 16px;
+   font-weight: 600;
+}
+
+.modal-close {
+   padding: 5px;
+   font-size: 20px;
+   color: #666;
+}
+
+/* Footer */
+.modal-footer {
+   background: #fff;
+   padding: 15px 20px;
+   border-top: 1px solid #ddd;
+   display: flex;
+   justify-content: flex-end;
+   gap: 10px;
+}
+
+.button.cancel-edit {
+   color: #666;
+}
+
+.button.button-primary {
+   background: #2196F3;
+}
+
+.spinner {
+   margin: 4px 10px 0;
+}
+
+/* Loading State */
+.loading .spinner {
+   visibility: visible;
+}
+
+.loading .button {
+   opacity: 0.7;
+   pointer-events: none;
+}
+
+/* Section Headers */
+.section-header {
+   background: #ddd;
+   padding: 1px 15px;
+   margin: -20px -20px 20px -20px;
+   border-radius: 8px 8px 0 0;
+   border-bottom: 2px solid #3e3939;
+}
+
+/* Department Colors */
+.section-header.finance {
+   background: #E3F2FD;
+   border-bottom: 2px solid #2196F3;
+}
+
+.section-header.operation {
+   background: #E8F5E9; 
+   border-bottom: 2px solid #4CAF50;
+}
+
+.section-header.legal {
+   background: #F3E5F5;
+   border-bottom: 2px solid #9C27B0;
+}
+
+.section-header.purchase {
+   background: #FFF3E0;
+   border-bottom: 2px solid #FF9800;
+}
+

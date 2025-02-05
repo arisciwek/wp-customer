@@ -124,7 +124,7 @@
             }
         },
 
-        showEditForm(data) {
+        async showEditForm(data) {
             if (!data) {
                 CustomerToast.error('Data karyawan tidak valid');
                 return;
@@ -133,16 +133,24 @@
             // Reset form first
             this.resetForm();
 
+            // Load branches first
+            await this.loadBranches(data.customer_id, data.branch_id);
+
             // Populate form data
             this.form.find('#edit-employee-id').val(data.id);
             this.form.find('[name="name"]').val(data.name);
             this.form.find('[name="position"]').val(data.position);
-            this.form.find('[name="department"]').val(data.department);
             this.form.find('[name="email"]').val(data.email);
             this.form.find('[name="phone"]').val(data.phone);
             this.form.find('[name="status"]').val(data.status);
 
-            // Update modal title with employee name
+            // Set department checkboxes
+            this.form.find('[name="finance"]').prop('checked', data.finance);
+            this.form.find('[name="operation"]').prop('checked', data.operation);
+            this.form.find('[name="legal"]').prop('checked', data.legal);
+            this.form.find('[name="purchase"]').prop('checked', data.purchase);
+
+            // Update modal title
             this.modal.find('.modal-header h3').text(`Edit Karyawan: ${data.name}`);
 
             // Show modal with animation
@@ -305,7 +313,10 @@
                 name: this.form.find('[name="name"]').val().trim(),
                 branch_id: this.form.find('[name="branch_id"]').val(),
                 position: this.form.find('[name="position"]').val().trim(),
-                department: this.form.find('[name="department"]').val().trim(),
+                finance: this.form.find('[name="finance"]').is(':checked'),
+                operation: this.form.find('[name="operation"]').is(':checked'), 
+                legal: this.form.find('[name="legal"]').is(':checked'),
+                purchase: this.form.find('[name="purchase"]').is(':checked'),
                 email: this.form.find('[name="email"]').val().trim(),
                 phone: this.form.find('[name="phone"]').val().trim(),
                 status: this.form.find('[name="status"]').val()

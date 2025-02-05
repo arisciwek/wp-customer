@@ -18,6 +18,8 @@ use WPCustomer\Models\Employee\CustomerEmployeeModel;
 defined('ABSPATH') || exit;
 
 class CustomerEmployeeDemoData extends AbstractDemoData {
+    use CustomerDemoDataHelperTrait;
+
     private $employeeModel;
     private $wpUserGenerator;
     private static $employee_users;
