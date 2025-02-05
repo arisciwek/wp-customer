@@ -48,11 +48,12 @@ abstract class AbstractDemoData {
     protected $customerMembershipModel;
     protected $customerModel;
     protected $branchModel;
-    
+    protected CustomerCacheManager $cache;
+
     public function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;
-        
+
         // Initialize cache manager immediately since it doesn't require plugins_loaded
         $this->cache = new CustomerCacheManager();
         

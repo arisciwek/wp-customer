@@ -127,8 +127,18 @@ class CustomerDemoData extends AbstractDemoData {
                 );
 
                 if ($existing_customer) {
-                    $this->debug("Customer exists with ID: {$customer['id']}, skipping...");
-                    continue;
+                    if ($this->shouldClearData()) {
+                        // Delete existing customer if shouldClearData is true
+                        $this->wpdb->delete(
+                            $this->wpdb->prefix . 'app_customers',
+                            ['id' => $customer['id']],
+                            ['%d']
+                        );
+                        $this->debug("Deleted existing customer with ID: {$customer['id']}");
+                    } else {
+                        $this->debug("Customer exists with ID: {$customer['id']}, skipping...");
+                        continue;
+                    }
                 }
 
                 // 2. Cek dan buat WP User jika belum ada
@@ -151,13 +161,17 @@ class CustomerDemoData extends AbstractDemoData {
                 self::$user_ids[$customer['id']] = $wp_user_id;
 
                 // 3. Generate customer data baru
-                $provinsi_id = isset($customer['provinsi_id']) ? 
-                    $customer['provinsi_id'] : 
-                    $this->getRandomProvinceId();
-
-                $regency_id = isset($customer['regency_id']) ? 
-                    $customer['regency_id'] : 
-                    $this->getRandomRegencyId($provinsi_id);
+                if (isset($customer['provinsi_id'])) {
+                    $provinsi_id = (int)$customer['provinsi_id'];
+                    // Pastikan regency sesuai dengan provinsi ini
+                    $regency_id = isset($customer['regency_id']) ? 
+                        (int)$customer['regency_id'] : 
+                        $this->getRandomRegencyId($provinsi_id);
+                } else {
+                    // Get random valid province-regency pair
+                    $provinsi_id = $this->getRandomProvinceId();
+                    $regency_id = $this->getRandomRegencyId($provinsi_id);
+                }
 
                 // Validate location relationship
                 if (!$this->validateLocation($provinsi_id, $regency_id)) {
@@ -191,17 +205,15 @@ class CustomerDemoData extends AbstractDemoData {
                     'updated_at' => current_time('mysql')
                 ];
 
-                // Langsung pakai Model::create() yang sudah ada
-                $result = $this->customerModel->create($customer_data);
-
-                if ($result === false) {
-                    throw new \Exception($this->wpdb->last_error);
+                // Use createDemoData instead of create
+                if (!$this->customerModel->createDemoData($customer_data)) {
+                    throw new \Exception("Failed to create customer with fixed ID");
                 }
 
                 // Track customer ID
                 self::$customer_ids[] = $customer['id'];
 
-                $this->debug("Created customer: {$customer['name']} with ID: {$customer['id']} and WP User ID: {$wp_user_id}");
+                $this->debug("Created customer: {$customer['name']} with fixed ID: {$customer['id']} and WP User ID: {$wp_user_id}");
 
             } catch (\Exception $e) {
                 $this->debug("Error processing customer {$customer['name']}: " . $e->getMessage());

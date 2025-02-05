@@ -46,7 +46,7 @@ class CustomerController {
 
     private string $log_file;
 
-    private function logPermissionCheck($action, $user_id, $customer_id, $branch_id = null, $result) {
+    private function logPermissionCheck($action, $user_id, $customer_id, $result, $branch_id = null) {
         // $this->debug_log(sprintf(
         //    'Permission check for %s - User: %d, Customer: %d, Branch: %s, Result: %s',
         //    $action,
@@ -605,101 +605,43 @@ class CustomerController {
      */
     public function store() {
         try {
-            // Debug incoming data
-            error_log('Create customer request data: ' . print_r($_POST, true));
-            
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            // 1. Validasi permission terlebih dahulu
             $permission_errors = $this->validator->validatePermission('create');
             if (!empty($permission_errors)) {
-                error_log('Permission validation failed: ' . print_r($permission_errors, true));
-                wp_send_json_error([
-                    'message' => __('Insufficient permissions', 'wp-customer'),
-                    'errors' => $permission_errors
-                ]);
+                wp_send_json_error(['message' => reset($permission_errors)]);
                 return;
             }
 
-            $current_user_id = get_current_user_id();
-            
-            // 2. Siapkan data dasar
             $data = [
                 'name' => sanitize_text_field($_POST['name']),
-                'created_by' => $current_user_id,
+                'npwp' => isset($_POST['npwp']) ? sanitize_text_field($_POST['npwp']) : null,
+                'nib' => isset($_POST['nib']) ? sanitize_text_field($_POST['nib']) : null,
+                'status' => isset($_POST['status']) ? sanitize_text_field($_POST['status']) : 'active',
                 'provinsi_id' => isset($_POST['provinsi_id']) ? (int)$_POST['provinsi_id'] : null,
                 'regency_id' => isset($_POST['regency_id']) ? (int)$_POST['regency_id'] : null,
-                'status' => 'active'
+                'user_id' => isset($_POST['user_id']) ? (int)$_POST['user_id'] : get_current_user_id(),
+                'created_by' => get_current_user_id()
             ];
 
-            error_log('Prepared data for creation: ' . print_r($data, true));
-
-            // 3. Handle user_id dengan beberapa skenario
-            if (isset($_POST['user_id']) && !empty($_POST['user_id'])) {
-                // Admin membuat customer untuk user lain
-                $data['user_id'] = absint($_POST['user_id']);
-            } else {
-                // User yang create menjadi owner
-                $data['user_id'] = $current_user_id;
-            }
-
-            // 4. Tambahkan data opsional
-            if (!empty($_POST['npwp'])) {
-                $data['npwp'] = sanitize_text_field($_POST['npwp']);
-            }
-            if (!empty($_POST['nib'])) {
-                $data['nib'] = sanitize_text_field($_POST['nib']);
-            }
-
-            // 5. Validasi form data
             $form_errors = $this->validator->validateForm($data);
             if (!empty($form_errors)) {
-                error_log('Form validation failed: ' . print_r($form_errors, true));
-                wp_send_json_error([
-                    'message' => implode(', ', $form_errors),
-                    'errors' => $form_errors
-                ]);
+                wp_send_json_error(['message' => implode(', ', $form_errors)]);
                 return;
             }
 
-            error_log('Attempting to create customer with data: ' . print_r($data, true));
-
-            // 6. Buat customer baru
             $id = $this->model->create($data);
             if (!$id) {
-                error_log('Failed to create customer - no ID returned');
-                throw new \Exception(__('Failed to create customer', 'wp-customer'));
+                throw new \Exception('Failed to create customer');
             }
 
-            error_log('Customer created successfully with ID: ' . $id);
-
-            // 7. Get fresh data untuk response
-            $customer = $this->model->find($id);
-            if (!$customer) {
-                error_log('Failed to retrieve created customer with ID: ' . $id);
-                throw new \Exception(__('Failed to retrieve created customer', 'wp-customer'));
-            }
-
-            // 9. Return success response
-            $response_data = [
-                'id' => $id,
-                'customer' => $customer,
-                'branch_count' => 0,
-                'message' => __('Customer created successfully', 'wp-customer')
-            ];
-            
-            error_log('Sending success response: ' . print_r($response_data, true));
-            
-            wp_send_json_success($response_data);
+            wp_send_json_success([
+                'message' => __('Customer berhasil ditambahkan', 'wp-customer'),
+                'data' => $this->model->find($id)
+            ]);
 
         } catch (\Exception $e) {
-            error_log('Create customer error: ' . $e->getMessage());
-            error_log('Stack trace: ' . $e->getTraceAsString());
-            
-            wp_send_json_error([
-                'message' => $e->getMessage() ?: 'Terjadi kesalahan saat menambah customer',
-                'error_details' => WP_DEBUG ? $e->getTraceAsString() : null
-            ]);
+            wp_send_json_error(['message' => $e->getMessage()]);
         }
     }
 
@@ -716,7 +658,7 @@ class CustomerController {
                 throw new \Exception('Invalid customer ID');
             }
 
-            // 1. Validasi permission terlebih dahulu
+            // 1. Permission validation
             $permission_errors = $this->validator->validatePermission('update', $id);
             if (!empty($permission_errors)) {
                 wp_send_json_error([
@@ -725,19 +667,22 @@ class CustomerController {
                 return;
             }
 
-            // 2. Siapkan data untuk validasi dan update
+            // 2. Prepare update data
             $data = [
                 'name' => sanitize_text_field($_POST['name']),
-                'provinsi_id' => isset($_POST['provinsi_id']) ? intval($_POST['provinsi_id']) : null,
-                'regency_id' => isset($_POST['regency_id']) ? intval($_POST['regency_id']) : null
+                'npwp' => !empty($_POST['npwp']) ? sanitize_text_field($_POST['npwp']) : null,
+                'nib' => !empty($_POST['nib']) ? sanitize_text_field($_POST['nib']) : null,
+                'status' => sanitize_text_field($_POST['status']),
+                'provinsi_id' => !empty($_POST['provinsi_id']) ? intval($_POST['provinsi_id']) : null,
+                'regency_id' => !empty($_POST['regency_id']) ? intval($_POST['regency_id']) : null
             ];
 
-            // Handle user_id jika ada
-            if (isset($_POST['user_id'])) {
+            // Handle user_id if present and user has permission
+            if (isset($_POST['user_id']) && current_user_can('edit_all_customers')) {
                 $data['user_id'] = !empty($_POST['user_id']) ? intval($_POST['user_id']) : null;
             }
 
-            // 3. Validasi form data
+            // 3. Form validation
             $form_errors = $this->validator->validateForm($data, $id);
             if (!empty($form_errors)) {
                 wp_send_json_error([
@@ -746,24 +691,35 @@ class CustomerController {
                 return;
             }
 
-            // 4. Lakukan update
+            // 4. Perform update
             $updated = $this->model->update($id, $data);
             if (!$updated) {
                 throw new \Exception('Failed to update customer');
             }
 
-            // 6. Get fresh data untuk response
+            // Clear relevant caches
+            $this->cache->invalidateCustomerCache($id);
+
+            // 5. Get updated data for response
             $customer = $this->model->find($id);
             if (!$customer) {
                 throw new \Exception('Failed to retrieve updated customer');
             }
 
-            // 7. Return success response
+            // Get additional data for response
+            $branch_count = $this->model->getBranchCount($id);
+            $access = $this->validator->validateAccess($id);
+
+            // 6. Return success response with complete data
             wp_send_json_success([
-                'message' => __('Customer updated successfully', 'wp-customer'),
+                'message' => __('Customer berhasil diperbarui', 'wp-customer'),
                 'data' => [
-                    'customer' => $customer,
-                    'branch_count' => $this->model->getBranchCount($id)
+                    'customer' => array_merge((array)$customer, [
+                        'access_type' => $access['access_type'],
+                        'has_access' => $access['has_access']
+                    ]),
+                    'branch_count' => $branch_count,
+                    'access_type' => $access['access_type']
                 ]
             ]);
 

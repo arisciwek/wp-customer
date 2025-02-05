@@ -30,21 +30,7 @@
 defined('ABSPATH') || exit;
 
 ?>
-<script>
-/*
-document.addEventListener('DOMContentLoaded', function() {
-    const hash = window.location.hash;
-    if (hash) {
-        const customerId = hash.substring(1);
-        document.getElementById('current-customer-id').value = customerId;
-    }
-});
-*/
-</script>
-
 <div class="wrap">
- <input type="hidden" id="current-customer-id" name="current_customer_id" 
-           value="<?php echo isset($_GET['id']) ? (int)$_GET['id'] : (isset($_POST['current_customer_id']) ? (int)$_POST['current_customer_id'] : 0); ?>">
     <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
     <!-- Dashboard Section -->
     <div class="wp-customer-dashboard">
@@ -82,6 +68,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     <!-- Modal Forms -->
     <?php
+    require_once WP_CUSTOMER_PATH . 'src/Views/components/confirmation-modal.php';
+
     require_once WP_CUSTOMER_PATH . 'src/Views/templates/forms/create-customer-form.php';
     require_once WP_CUSTOMER_PATH . 'src/Views/templates/forms/edit-customer-form.php';
     ?>

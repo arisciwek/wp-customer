@@ -24,28 +24,67 @@
 
 namespace WPCustomer\Models\Branch;
 
+use WPCustomer\Cache\CustomerCacheManager;
 use WPCustomer\Models\Customer\CustomerModel;
 
 class BranchModel {
+
+    // Cache keys - pindahkan dari CustomerCacheManager ke sini untuk akses langsung
+    private const KEY_BRANCH = 'branch';
+    private const KEY_CUSTOMER_BRANCH_LIST = 'customer_branch_list';
+    private const KEY_CUSTOMER_BRANCH = 'customer_branch';
+    private const KEY_BRANCH_LIST = 'branch_list';
+    private const CACHE_EXPIRY = 7200; // 2 hours in seconds
+
     private $table;
     private $customer_table;
     private CustomerModel $customerModel;
+    private $cache;
 
     public function __construct() {
         global $wpdb;
         $this->table = $wpdb->prefix . 'app_branches';
         $this->customer_table = $wpdb->prefix . 'app_customers';
-        $this->customerModel = new CustomerModel();        
+        $this->customerModel = new CustomerModel();
+        $this->cache = new CustomerCacheManager();   
+    }
+    
+    public function findPusatByCustomer(int $customer_id): ?object {
+        global $wpdb;
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->table} 
+             WHERE customer_id = %d 
+             AND type = 'pusat' 
+             AND status = 'active'
+             LIMIT 1",
+            $customer_id
+        ));
+    }
+
+    public function countPusatByCustomer(int $customer_id): int {
+        global $wpdb;
+        return (int)$wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$this->table} 
+             WHERE customer_id = %d 
+             AND type = 'pusat' 
+             AND status = 'active'",
+            $customer_id
+        ));
     }
 
     private function generateBranchCode(int $customer_id): string {
-        // Get customer code using the properly initialized customerModel property
+        // Get customer code 
         $customer = $this->customerModel->find($customer_id);
-        $customer_code = $customer->code ?? '';
+        if (!$customer || empty($customer->code)) {
+            throw new \Exception('Invalid customer code');
+        }
         
         do {
-            $sequence = str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT);
-            $branch_code = "BR-" . substr($customer_code, 5) . $sequence;
+            // Generate 2 digit random number (RR)
+            $random = str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
+            
+            // Format: customer_code + '-' + RR
+            $branch_code = $customer->code . '-' . $random;
             
             $exists = $this->existsByCode($branch_code);
         } while ($exists);
@@ -57,21 +96,56 @@ class BranchModel {
         global $wpdb;
 
         $data['code'] = $this->generateBranchCode($data['customer_id']);
+        
+        $insertData = [
+            'customer_id' => $data['customer_id'],
+            'code' => $data['code'],
+            'name' => $data['name'],
+            'type' => $data['type'],
+            'nitku' => $data['nitku'] ?? null,
+            'postal_code' => $data['postal_code'] ?? null,
+            'latitude' => $data['latitude'] ?? null,
+            'longitude' => $data['longitude'] ?? null,
+            'address' => $data['address'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'email' => $data['email'] ?? null,
+            'provinsi_id' => $data['provinsi_id'] ?? null,
+            'regency_id' => $data['regency_id'] ?? null,
+            'user_id' => $data['user_id'] ?? null,
+            'created_by' => $data['created_by'],
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql'),
+            'status' => $data['status'] ?? 'active'
+        ];
+
         $result = $wpdb->insert(
             $this->table,
+            $insertData,
             [
-                'customer_id' => $data['customer_id'],
-                'code' => $data['code'],
-                'name' => $data['name'],
-                'type' => $data['type'],
-                'created_by' => get_current_user_id(),
-                'created_at' => current_time('mysql'),
-                'updated_at' => current_time('mysql')
-            ],
-            ['%d', '%s', '%s', '%s', '%d', '%s', '%s']
+                '%d', // customer_id
+                '%s', // code
+                '%s', // name 
+                '%s', // type
+                '%s', // nitku
+                '%s', // postal_code
+                '%f', // latitude
+                '%f', // longitude 
+                '%s', // address
+                '%s', // phone
+                '%s', // email
+                '%d', // provinsi_id
+                '%d', // regency_id
+                '%d', // user_id
+                '%d', // created_by
+                '%s', // created_at
+                '%s', // updated_at
+                '%s'  // status
+            ]
         );
 
         if ($result === false) {
+            error_log('Failed to insert branch: ' . $wpdb->last_error);
+            error_log('Insert data: ' . print_r($insertData, true));
             return null;
         }
 
@@ -81,35 +155,82 @@ class BranchModel {
     public function find(int $id): ?object {
         global $wpdb;
 
-        return $wpdb->get_row($wpdb->prepare("
+        // Cek cache dulu
+        $cached = $this->cache->get(self::KEY_BRANCH, $id);
+        if ($cached !== null) {
+            return $cached;
+        }
+        
+        // Jika tidak ada di cache, ambil dari database
+        $result  = $wpdb->get_row($wpdb->prepare("
             SELECT r.*, p.name as customer_name
             FROM {$this->table} r
             LEFT JOIN {$this->customer_table} p ON r.customer_id = p.id
             WHERE r.id = %d
         ", $id));
+
+        // Simpan ke cache
+        if ($result) {
+            $this->cache->set(self::KEY_BRANCH, $data, self::CACHE_EXPIRY, $id);
+        }
+        
+        return $result;
     }
 
     public function update(int $id, array $data): bool {
         global $wpdb;
 
-        $updateData = array_merge($data, ['updated_at' => current_time('mysql')]);
-        $format = [];
+        $updateData = [
+            'name' => $data['name'] ?? null,
+            'type' => $data['type'] ?? null,
+            'nitku' => $data['nitku'] ?? null,
+            'postal_code' => $data['postal_code'] ?? null,
+            'latitude' => $data['latitude'] ?? null,
+            'longitude' => $data['longitude'] ?? null,
+            'address' => $data['address'] ?? null,
+            'phone' => $data['phone'] ?? null,
+            'email' => $data['email'] ?? null,
+            'provinsi_id' => $data['provinsi_id'] ?? null,
+            'regency_id' => $data['regency_id'] ?? null,
+            'user_id' => $data['user_id'] ?? null,
+            'status' => $data['status'] ?? null,
+            'updated_at' => current_time('mysql')
+        ];
 
-        // Add format for each field
-        if (isset($data['code'])) $format[] = '%d';
-        if (isset($data['name'])) $format[] = '%s';
-        if (isset($data['type'])) $format[] = '%s';
-        $format[] = '%s'; // for updated_at
+        // Remove null values
+        $updateData = array_filter($updateData, function($value) {
+            return $value !== null;
+        });
+
+        $formats = array_map(function($key) {
+            switch($key) {
+                case 'latitude':
+                case 'longitude':
+                    return '%f';
+                case 'provinsi_id':
+                case 'regency_id':
+                    return '%d';
+                default:
+                    return '%s';
+            }
+        }, array_keys($updateData));
 
         $result = $wpdb->update(
             $this->table,
             $updateData,
             ['id' => $id],
-            $format,
+            $formats,
             ['%d']
         );
 
-        return $result !== false;
+        if ($result === false) {
+            error_log('Update branch error: ' . $wpdb->last_error);
+            $this->cache->delete(self::KEY_BRANCH, $id);
+            $this->cache->delete(self::KEY_BRANCH_LIST);          
+            return false;
+        }
+
+        return true;
     }
 
     public function delete(int $id): bool {
@@ -217,14 +338,6 @@ class BranchModel {
     public function getTotalCount($customer_id): int {
         global $wpdb;
 
-        // Debug capabilities
-        error_log('--- Debug User Capabilities ---');
-        error_log('User ID: ' . get_current_user_id());
-        error_log('Can view_branch_list: ' . (current_user_can('view_branch_list') ? 'yes' : 'no'));
-        error_log('Can view_own_branch: ' . (current_user_can('view_own_branch') ? 'yes' : 'no'));
-        error_log('Can view_own_branch: ' . (current_user_can('view_own_customer') ? 'yes' : 'no'));
-        error_log('Customer ID param: ' . $customer_id);
-
         // Base query parts
         $select = "SELECT SQL_CALC_FOUND_ROWS r.*, p.name as customer_name";
         $from = " FROM {$this->table} r";
@@ -291,6 +404,5 @@ class BranchModel {
         
         return $wpdb->get_results($query);
     }
-
 
 }

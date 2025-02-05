@@ -122,7 +122,8 @@
                 }
             });
         },
-        
+
+        // Di edit-customer-form.js
         showEditForm(data) {
             if (!data || !data.customer) {
                 CustomerToast.error('Data customer tidak valid');
@@ -131,23 +132,41 @@
 
             // Reset form first
             this.resetForm();
-
+            
+            const customer = data.customer;
+            
             // Populate form data
-            this.form.find('#customer-id').val(data.customer.id);
-            this.form.find('[name="name"]').val(data.customer.name);
-            this.form.find('[name="provinsi_id"]').val(data.customer.provinsi_id || '');
-            this.form.find('[name="regency_id"]').val(data.customer.regency_id || '');
-                        
-            // Set user_id if exists
-            const userSelect = this.form.find('[name="user_id"]');
-            if (userSelect.length && data.customer.user_id) {
-                userSelect.val(data.customer.user_id);
+            this.form.find('#customer-id').val(customer.id);
+            this.form.find('[name="name"]').val(customer.name);
+            this.form.find('[name="npwp"]').val(customer.npwp || '');
+            this.form.find('[name="nib"]').val(customer.nib || '');
+            this.form.find('[name="status"]').val(customer.status || 'active');
+
+            // Handle provinsi and regency
+            const $provinsi = this.form.find('[name="provinsi_id"]');
+            const $regency = this.form.find('[name="regency_id"]');
+            
+            // First set provinsi
+            if (customer.provinsi_id) {
+                $provinsi.val(customer.provinsi_id).trigger('change');
+                
+                // Set up one-time event handler for when regency options are loaded
+                $regency.one('wilayah:loaded', () => {
+                    // Set regency value after options are loaded
+                    if (customer.regency_id) {
+                        $regency.val(customer.regency_id);
+                    }
+                });
             }
 
-            // Update modal title with customer name
-            this.modal.find('.modal-header h3').text(`Edit Customer: ${data.customer.name}`);
+            // Set user if exists
+            const userSelect = this.form.find('[name="user_id"]');
+            if (userSelect.length && customer.user_id) {
+                userSelect.val(customer.user_id);
+            }
 
-            // Show modal with animation
+            // Update modal title and show
+            this.modal.find('.modal-header h3').text(`Edit Customer: ${customer.name}`);
             this.modal.fadeIn(300, () => {
                 this.form.find('[name="name"]').focus();
             });

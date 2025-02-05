@@ -309,6 +309,7 @@ class BranchDemoData extends AbstractDemoData {
         }
 
         $regency_name = $this->getRegencyName($customer->regency_id);
+        $location = $this->generateValidLocation();
         
         $branch_data = [
             'customer_id' => $customer->id,
@@ -318,8 +319,8 @@ class BranchDemoData extends AbstractDemoData {
             'type' => 'pusat',
             'nitku' => $this->generateNITKU(),
             'postal_code' => $this->generatePostalCode(),
-            'latitude' => $this->generateLatitude(),
-            'longitude' => $this->generateLongitude(),
+            'latitude' => $location['latitude'],
+            'longitude' => $location['longitude'],
             'address' => $this->generateAddress($regency_name),
             'phone' => $this->generatePhone(),
             'email' => $this->generateEmail($customer->name, 'pusat'),
@@ -382,6 +383,7 @@ class BranchDemoData extends AbstractDemoData {
             // Get random regency from selected province
             $regency_id = $this->getRandomRegencyId($provinsi_id);
             $regency_name = $this->getRegencyName($regency_id);
+            $location = $this->generateValidLocation();
 
             $branch_data = [
                 'customer_id' => $customer->id,
@@ -391,8 +393,8 @@ class BranchDemoData extends AbstractDemoData {
                 'type' => 'cabang',
                 'nitku' => $this->generateNITKU(),
                 'postal_code' => $this->generatePostalCode(),
-                'latitude' => $this->generateLatitude(),
-                'longitude' => $this->generateLongitude(),
+                'latitude' => $location['latitude'],
+                'longitude' => $location['longitude'],
                 'address' => $this->generateAddress($regency_name),
                 'phone' => $this->generatePhone(),
                 'email' => $this->generateEmail($customer->name, $cabang_key),
@@ -429,19 +431,19 @@ class BranchDemoData extends AbstractDemoData {
         return (string) rand(10000, 99999);
     }
 
-    private function generateLatitude(): float {
-        return rand(-6000000, -5000000) / 100000;
-    }
-
-    private function generateLongitude(): float {
-        return rand(106000000, 107000000) / 100000;
-    }
-
     private function generatePhone(): string {
-        return sprintf('%s%s', 
-            rand(0, 1) ? '021-' : '022-',
-            rand(1000000, 9999999)
-        );
+        $isMobile = rand(0, 1) === 1;
+        $prefix = rand(0, 1) ? '+62' : '0';
+        
+        if ($isMobile) {
+            // Mobile format: +62/0 8xx xxxxxxxx
+            return $prefix . '8' . rand(1, 9) . str_pad(rand(0, 99999999), 8, '0', STR_PAD_LEFT);
+        } else {
+            // Landline format: +62/0 xxx xxxxxxx
+            $areaCodes = ['21', '22', '24', '31', '711', '61', '411', '911']; // Jakarta, Bandung, Semarang, Surabaya, Palembang, etc
+            $areaCode = $areaCodes[array_rand($areaCodes)];
+            return $prefix . $areaCode . str_pad(rand(0, 9999999), 7, '0', STR_PAD_LEFT);
+        }
     }
 
     private function generateEmail($customer_name, $type): string {
@@ -465,4 +467,68 @@ class BranchDemoData extends AbstractDemoData {
     public function getBranchIds(): array {
         return $this->branch_ids;
     }
+
+    // Define location bounds untuk wilayah Indonesia
+    private const LOCATION_BOUNDS = [
+        'LAT_MIN' => -11.0,    // Batas selatan (Pulau Rote)
+        'LAT_MAX' => 6.0,      // Batas utara (Sabang)
+        'LONG_MIN' => 95.0,    // Batas barat (Pulau Weh)
+        'LONG_MAX' => 141.0    // Batas timur (Pulau Merauke)
+    ];
+
+    /**
+     * Generate random latitude dalam format decimal
+     * dengan 8 digit di belakang koma
+     */
+    private function generateLatitude(): float {
+        $min = self::LOCATION_BOUNDS['LAT_MIN'] * 100000000;
+        $max = self::LOCATION_BOUNDS['LAT_MAX'] * 100000000;
+        $randomInt = rand($min, $max);
+        return $randomInt / 100000000;
+    }
+
+    /**
+     * Generate random longitude dalam format decimal
+     * dengan 8 digit di belakang koma
+     */
+    private function generateLongitude(): float {
+        $min = self::LOCATION_BOUNDS['LONG_MIN'] * 100000000;
+        $max = self::LOCATION_BOUNDS['LONG_MAX'] * 100000000;
+        $randomInt = rand($min, $max);
+        return $randomInt / 100000000;
+    }
+
+    /**
+     * Helper method untuk format koordinat dengan 8 digit decimal
+     */
+    private function formatCoordinate(float $coordinate): string {
+        return number_format($coordinate, 8, '.', '');
+    }
+
+    /**
+     * Generate dan validasi koordinat
+     */
+    private function generateValidLocation(): array {
+        $latitude = $this->generateLatitude();
+        $longitude = $this->generateLongitude();
+
+        return [
+            'latitude' => $this->formatCoordinate($latitude),
+            'longitude' => $this->formatCoordinate($longitude)
+        ];
+    }
+
+    /**
+     * Debug method untuk test hasil generate
+     */
+    private function debugLocation(): void {
+        $location = $this->generateValidLocation();
+        $this->debug(sprintf(
+            "Generated location - Lat: %s, Long: %s",
+            $location['latitude'],
+            $location['longitude']
+        ));
+    }
+
+
 }

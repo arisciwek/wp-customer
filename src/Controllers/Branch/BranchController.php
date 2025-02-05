@@ -25,14 +25,16 @@
 
 namespace WPCustomer\Controllers\Branch;
 
+use WPCustomer\Models\Customer\CustomerModel;
 use WPCustomer\Models\Branch\BranchModel;
 use WPCustomer\Validators\Branch\BranchValidator;
-use WPCustomer\Cache\CacheManager;
+use WPCustomer\Cache\CustomerCacheManager;
 
 class BranchController {
+    private CustomerModel $customerModel;
     private BranchModel $model;
     private BranchValidator $validator;
-    private CacheManager $cache;
+    private CustomerCacheManager $cache;
     private string $log_file;
 
     /**
@@ -41,9 +43,10 @@ class BranchController {
     private const DEFAULT_LOG_FILE = 'logs/branch.log';
 
     public function __construct() {
+        $this->customerModel = new CustomerModel();
         $this->model = new BranchModel();
         $this->validator = new BranchValidator();
-        $this->cache = new CacheManager();
+        $this->cache = new CustomerCacheManager();
 
         // Initialize log file inside plugin directory
         $this->log_file = WP_CUSTOMER_PATH . self::DEFAULT_LOG_FILE;
@@ -61,6 +64,58 @@ class BranchController {
         add_action('wp_ajax_create_branch', [$this, 'store']);
         add_action('wp_ajax_update_branch', [$this, 'update']);
         add_action('wp_ajax_delete_branch', [$this, 'delete']);
+        add_action('wp_ajax_validate_branch_type_change', [$this, 'validateBranchTypeChange']);
+    }
+
+    public function validateBranchTypeChange() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+            
+            $branch_id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+            $new_type = isset($_POST['new_type']) ? sanitize_text_field($_POST['new_type']) : '';
+            
+            if (!$branch_id || !$new_type) {
+                throw new \Exception('Missing required parameters');
+            }
+
+            // Get current branch data
+            $branch = $this->model->find($branch_id);
+            if (!$branch) {
+                throw new \Exception('Branch not found');
+            }
+
+            // Get all branches for this customer
+            $existing_pusat = $this->model->findPusatByCustomer($branch->customer_id);
+            
+            // If changing to 'pusat' and there's already a pusat branch
+            if ($new_type === 'pusat' && $existing_pusat && $existing_pusat->id !== $branch_id) {
+                wp_send_json_error([
+                    'message' => sprintf(
+                        'Customer sudah memiliki kantor pusat: %s. Tidak dapat mengubah cabang ini menjadi kantor pusat.',
+                        $existing_pusat->name
+                    ),
+                    'original_type' => $branch->type
+                ]);
+            }
+            
+            // If changing from 'pusat' to 'cabang', check if this is the only pusat
+            if ($branch->type === 'pusat' && $new_type === 'cabang') {
+                $pusat_count = $this->model->countPusatByCustomer($branch->customer_id);
+                if ($pusat_count <= 1) {
+                    wp_send_json_error([
+                        'message' => 'Tidak dapat mengubah tipe menjadi cabang karena ini adalah satu-satunya kantor pusat.',
+                        'original_type' => $branch->type
+                    ]);
+                }
+            }
+
+            wp_send_json_success(['message' => 'Valid']);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
     }
 
     /**
@@ -133,87 +188,31 @@ class BranchController {
             error_log('WP Customer Plugin: ' . $log_message);
         }
     }
-    /*
-public function getCheckCustomerAccess($customer_id) {
-    global $wpdb;
-    $current_user_id = get_current_user_id();
-
-    // 1. Admin Check
-    if (current_user_can('edit_all_customers')) {
-        error_log("User has admin access");
-        return [
-            'has_access' => true,
-            'access_type' => 'admin'
-        ];
-    }
-
-    // 2. Owner Check
-    $is_owner = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers 
-         WHERE id = %d AND user_id = %d",
-        $customer_id, $current_user_id
-    ));
-
-    if ($is_owner && current_user_can('view_own_customer')) {
-        error_log("User is owner");
-        return [
-            'has_access' => true,
-            'access_type' => 'owner'
-        ];
-    }
-
-    // 3. Employee Check
-    $is_employee = $wpdb->get_var($wpdb->prepare(
-        "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
-         WHERE customer_id = %d AND user_id = %d AND status = 'active'",
-        $customer_id, $current_user_id
-    ));
-
-    if ($is_employee && current_user_can('view_own_customer')) {
-        error_log("User is employee");
-        return [
-            'has_access' => true,
-            'access_type' => 'employee'
-        ];
-    }
-
-    error_log("No access found");
-    return [
-        'has_access' => false,
-        'access_type' => null
-    ];
-}
-*/
 
     public function handleDataTableRequest() {
         try {
-            // Verify nonce
             if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
                 throw new \Exception('Security check failed');
             }
 
-            // Get and validate customer_id
             $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
             if (!$customer_id) {
                 throw new \Exception('Invalid customer ID');
             }
 
-            // Get and validate parameters
             $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
             $start = isset($_POST['start']) ? intval($_POST['start']) : 0;
             $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
             $search = isset($_POST['search']['value']) ? sanitize_text_field($_POST['search']['value']) : '';
 
-            // Get order parameters
             $orderColumn = isset($_POST['order'][0]['column']) ? intval($_POST['order'][0]['column']) : 0;
             $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
 
-            // Map column index to column name
             $columns = ['name', 'type', 'actions'];
             $orderBy = isset($columns[$orderColumn]) ? $columns[$orderColumn] : 'name';
 
             if ($orderBy === 'actions') {
-                $orderBy = 'name'; // Default sort if actions column
+                $orderBy = 'name';
             }
 
             try {
@@ -232,12 +231,27 @@ public function getCheckCustomerAccess($customer_id) {
 
                 $data = [];
                 foreach ($result['data'] as $branch) {
+                    // Get WordPress user data for admin name
+                    $admin_name = '-';
+                    if (!empty($branch->user_id)) {
+                        $user = get_userdata($branch->user_id);
+                        if ($user) {
+                            $first_name = $user->first_name;
+                            $last_name = $user->last_name;
+                            if ($first_name || $last_name) {
+                                $admin_name = trim($first_name . ' ' . $last_name);
+                            } else {
+                                $admin_name = $user->display_name;
+                            }
+                        }
+                    }
+
                     $data[] = [
                         'id' => $branch->id,
                         'code' => esc_html($branch->code),
                         'name' => esc_html($branch->name),
+                        'admin_name' => esc_html($admin_name),
                         'type' => esc_html($branch->type),
-                        'customer_name' => esc_html($branch->customer_name),
                         'actions' => $this->generateActionButtons($branch)
                     ];
                 }
@@ -264,6 +278,7 @@ public function getCheckCustomerAccess($customer_id) {
     }
 
     // Contoh implementasi yang lebih sesuai untuk tombol tambah
+/*
     private function generateAddBranchButton($customer) {
         $current_user_id = get_current_user_id();
 
@@ -299,7 +314,7 @@ public function getCheckCustomerAccess($customer_id) {
 
         return '';
     }
-
+*/
     private function generateActionButtons($branch) {
             $actions = '';
             $current_user_id = get_current_user_id();
@@ -404,73 +419,87 @@ public function getCheckCustomerAccess($customer_id) {
             return $actions;
         }
 
+        public function store() {
+            try {
+                check_ajax_referer('wp_customer_nonce', 'nonce');
 
-    public function store() {
-        try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
+                if (!current_user_can('add_branch')) {
+                    throw new \Exception('Insufficient permissions');
+                }
 
-            if (!current_user_can('add_branch')) {
-                wp_send_json_error([
-                    'message' => __('Insufficient permissions', 'wp-customer')
+                // 1. Validate customer_id first
+                $customer_id = isset($_POST['customer_id']) ? (int)$_POST['customer_id'] : 0;
+                if (!$customer_id) {
+                    throw new \Exception('Invalid customer ID');
+                }
+
+                // 2. Validate branch type
+                $type = sanitize_text_field($_POST['type']);
+                $type_validation = $this->validator->validateBranchTypeCreate($type, $customer_id);
+                if (!$type_validation['valid']) {
+                    throw new \Exception($type_validation['message']);
+                }
+
+                // 3. Validate branch data
+                $branch_data = [
+                    'customer_id' => $customer_id,
+                    'name' => sanitize_text_field($_POST['name']),
+                    'type' => $type,
+                    'nitku' => sanitize_text_field($_POST['nitku']),
+                    'postal_code' => sanitize_text_field($_POST['postal_code']),
+                    'latitude' => (float)$_POST['latitude'],
+                    'longitude' => (float)$_POST['longitude'],
+                    'address' => sanitize_text_field($_POST['address']),
+                    'phone' => sanitize_text_field($_POST['phone']),
+                    'email' => sanitize_email($_POST['email']),
+                    'provinsi_id' => (int)$_POST['provinsi_id'],
+                    'regency_id' => (int)$_POST['regency_id'],
+                    'created_by' => get_current_user_id(),
+                    'status' => 'active'
+                ];
+
+                // Validate branch data
+                $branch_validation = $this->validator->validateCreate($branch_data);
+                if (!empty($branch_validation)) {
+                    throw new \Exception(reset($branch_validation));
+                }
+
+                // 4. Create WP User after all validations pass
+                $userdata = [
+                    'user_login' => sanitize_text_field($_POST['admin_username']),
+                    'user_email' => sanitize_email($_POST['admin_email']),
+                    'first_name' => sanitize_text_field($_POST['admin_firstname']),
+                    'last_name' => sanitize_text_field($_POST['admin_lastname']),
+                    'user_pass' => wp_generate_password(),
+                    'role' => 'customer'
+                ];
+
+                $user_id = wp_insert_user($userdata);
+                if (is_wp_error($user_id)) {
+                    throw new \Exception($user_id->get_error_message());
+                }
+
+                // 5. Add user_id to branch data and create branch
+                $branch_data['user_id'] = $user_id;
+                $branch_id = $this->model->create($branch_data);
+                
+                if (!$branch_id) {
+                    wp_delete_user($user_id);
+                    throw new \Exception('Failed to create branch');
+                }
+
+                // 6. Send password reset email
+                wp_new_user_notification($user_id, null, 'user');
+
+                wp_send_json_success([
+                    'message' => 'Branch dan admin berhasil dibuat',
+                    'branch_id' => $branch_id
                 ]);
-                return;
+
+            } catch (\Exception $e) {
+                wp_send_json_error(['message' => $e->getMessage()]);
             }
-
-            $data = [
-                'customer_id' => intval($_POST['customer_id']),
-                'code' => sanitize_text_field($_POST['code']),
-                'name' => sanitize_text_field($_POST['name']),
-                'type' => sanitize_text_field($_POST['type']),
-                'created_by' => get_current_user_id()
-            ];
-
-            // Validate input
-            $errors = $this->validator->validateCreate($data);
-            if (!empty($errors)) {
-                wp_send_json_error([
-                    'message' => is_array($errors) ? implode(', ', $errors) : $errors,
-                    'errors' => $errors
-                ]);
-                return;
-            }
-
-            // Get ID from creation
-            $id = $this->model->create($data);
-            if (!$id) {
-                $this->debug_log('Failed to create branch');
-                wp_send_json_error([
-                    'message' => __('Failed to create branch', 'wp-customer')
-                ]);
-                return;
-            }
-
-            //$this->debug_log('Branch created with ID: ' . $id);
-
-            // Get fresh data for response
-            $branch = $this->model->find($id);
-            if (!$branch) {
-                $this->debug_log('Failed to retrieve created branch');
-                wp_send_json_error([
-                    'message' => __('Failed to retrieve created branch', 'wp-customer')
-                ]);
-                return;
-            }
-
-            wp_send_json_success([
-                'message' => __('Branch created successfully', 'wp-customer'),
-                'branch' => $branch
-            ]);
-
-        } catch (\Exception $e) {
-            $this->debug_log('Store error: ' . $e->getMessage());
-            $this->debug_log('Stack trace: ' . $e->getTraceAsString());
-            wp_send_json_error([
-                'message' => $e->getMessage() ?: __('Failed to add branch', 'wp-customer'),
-                'error_details' => WP_DEBUG ? $e->getTraceAsString() : null
-            ]);
         }
-    }
-
 
 /**
  * Branch Permission Logic
@@ -509,6 +538,7 @@ private function canEditBranch($branch, $customer) {
     $this->debug_log([
         'branch_id' => (int)$branch->id,
         'customer_id' => (int)$branch->customer_id,
+        'branch_user_id' => (int)$branch->user_id,
         'customer_owner_id' => (int)$customer->user_id,
         'current_user_id' => (int)$current_user_id,
         'branch_created_by' => (int)$branch->created_by
@@ -601,10 +631,35 @@ private function canEditBranch($branch, $customer) {
             }
 
             // Validate input
-            $data = [
-                'name' => sanitize_text_field($_POST['name']),
-                'type' => sanitize_text_field($_POST['type'])
-            ];
+
+            $data = array_filter([
+                'name' => isset($_POST['name']) ? sanitize_text_field($_POST['name']) : null,
+                'type' => isset($_POST['type']) ? sanitize_text_field($_POST['type']) : null,
+                'nitku' => isset($_POST['nitku']) ? sanitize_text_field($_POST['nitku']) : null,
+                'postal_code' => isset($_POST['postal_code']) ? sanitize_text_field($_POST['postal_code']) : null,
+                'latitude' => isset($_POST['latitude']) ? (float)$_POST['latitude'] : null,
+                'longitude' => isset($_POST['longitude']) ? (float)$_POST['longitude'] : null,
+                'address' => isset($_POST['address']) ? sanitize_text_field($_POST['address']) : null,
+                'phone' => isset($_POST['phone']) ? sanitize_text_field($_POST['phone']) : null,
+                'email' => isset($_POST['email']) ? sanitize_email($_POST['email']) : null,
+                'provinsi_id' => isset($_POST['provinsi_id']) ? (int)$_POST['provinsi_id'] : null,
+                'regency_id' => isset($_POST['regency_id']) ? (int)$_POST['regency_id'] : null,
+                'user_id' => isset($_POST['user_id']) ? (int)$_POST['user_id'] : null,
+                'status' => isset($_POST['status']) ? sanitize_text_field($_POST['status']) : null
+            ], function($value) { return $value !== null; });
+
+            // Inside update() method before performing update
+            if ($data['type'] ?? false) {
+                $type_validation = $this->validator->validateBranchTypeChange(
+                    $id, 
+                    $data['type'], 
+                    $branch->customer_id
+                );
+                
+                if (!$type_validation['valid']) {
+                    throw new \Exception($type_validation['message']);
+                }
+            }
 
             $errors = $this->validator->validateUpdate($data, $id);
             if (!empty($errors)) {

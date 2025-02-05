@@ -78,6 +78,9 @@ class CustomerValidator {
             if (!preg_match('/^\d{2}\.\d{3}\.\d{3}\.\d{1}-\d{3}\.\d{3}$/', $npwp)) {
                 $errors['npwp'] = __('Format NPWP tidak valid.', 'wp-customer');
             }
+            if ($this->model->existsByNPWP($data['npwp'], $id)) {
+                $errors['npwp'] = __('NPWP sudah terdaftar.', 'wp-customer');
+            }
         }
 
         // NIB validation (optional)
@@ -85,6 +88,9 @@ class CustomerValidator {
             $nib = trim($data['nib']);
             if (!preg_match('/^\d{13}$/', $nib)) {
                 $errors['nib'] = __('Format NIB tidak valid.', 'wp-customer');
+            }
+            if ($this->model->existsByNIB($data['nib'], $id)) {
+                $errors['nib'] = __('NIB sudah terdaftar.', 'wp-customer');
             }
         }
 
@@ -337,5 +343,6 @@ class CustomerValidator {
         }
 
         return $errors;
-    }    
+    }
+
 }

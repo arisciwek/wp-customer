@@ -200,32 +200,38 @@
          },
 
          async loadCustomerForEdit(id) {
-             if (!id) return;
+            if (!id) return;
 
-             try {
-                 const response = await $.ajax({
-                     url: wpCustomerData.ajaxUrl,
-                     type: 'POST',
-                     data: {
-                         action: 'get_customer',
-                         id: id,
-                         nonce: wpCustomerData.nonce
-                     }
-                 });
+            try {
+                console.log('Loading customer data for ID:', id); // Debug log
 
-                 if (response.success) {
-                     if (window.EditCustomerForm) {
-                         window.EditCustomerForm.showEditForm(response.data);
-                     } else {
-                         CustomerToast.error('Komponen form edit tidak tersedia');
-                     }
-                 } else {
-                     CustomerToast.error(response.data?.message || 'Gagal memuat data customer');
-                 }
-             } catch (error) {
-                 console.error('Load customer error:', error);
-                 CustomerToast.error('Gagal menghubungi server');
-             }
+                const response = await $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'get_customer',
+                        id: id,
+                        nonce: wpCustomerData.nonce
+                    }
+                });
+
+                console.log('Response from get_customer:', response); // Debug response
+
+                if (response.success) {
+                    if (window.EditCustomerForm) {
+                        window.EditCustomerForm.showEditForm(response.data);
+                    } else {
+                        console.error('EditCustomerForm component not found'); // Debug component
+                        CustomerToast.error('Komponen form edit tidak tersedia');
+                    }
+                } else {
+                    console.error('Failed to load customer data:', response); // Debug error
+                    CustomerToast.error(response.data?.message || 'Gagal memuat data customer');
+                }
+            } catch (error) {
+                console.error('Load customer error:', error);
+                CustomerToast.error('Gagal menghubungi server');
+            }
          },
 
          async handleDelete(id) {

@@ -560,6 +560,29 @@
         return $exists;
     }
 
+    // Tambah method helper
+    private function existsByNPWP($npwp, $excludeId = null): bool 
+    {
+        global $wpdb;
+        $sql = "SELECT EXISTS (SELECT 1 FROM {$this->table} WHERE npwp = %s";
+        if ($excludeId) {
+            $sql .= " AND id != %d";
+        }
+        $sql .= ")";
+        return (bool)$wpdb->get_var($wpdb->prepare($sql, $npwp, $excludeId));
+    }
+
+    private function existsByNIB($nib, $excludeId = null): bool
+    {
+        global $wpdb;
+        $sql = "SELECT EXISTS (SELECT 1 FROM {$this->table} WHERE nib = %s";
+        if ($excludeId) {
+            $sql .= " AND id != %d";
+        }
+        $sql .= ")";
+        return (bool)$wpdb->get_var($wpdb->prepare($sql, $nib, $excludeId));
+    }
+
     /**
      * Get all active customer IDs with cache implementation
      *
@@ -620,6 +643,78 @@
             $provinsi_id,
             true
         );
+    }
+
+    public function createDemoData(array $data): bool {
+        global $wpdb;
+        
+        // Start transaction
+        $wpdb->query('START TRANSACTION');
+        
+        try {
+            // Disable foreign key checks temporarily
+            $wpdb->query('SET FOREIGN_KEY_CHECKS = 0');
+            
+            // First, delete any existing records with the same name-region combination
+            $wpdb->query($wpdb->prepare(
+                "DELETE FROM {$this->table} 
+                 WHERE name = %s AND provinsi_id = %d AND regency_id = %d",
+                $data['name'],
+                $data['provinsi_id'],
+                $data['regency_id']
+            ));
+            
+            // Then delete any existing record with the same ID
+            $wpdb->delete($this->table, ['id' => $data['id']], ['%d']);
+            
+            // Now insert the new record
+            $result = $wpdb->insert(
+                $this->table,
+                $data,
+                $this->getFormatArray($data)
+            );
+
+            if ($result === false) {
+                throw new \Exception($wpdb->last_error);
+            }
+
+            // Verify insertion
+            $inserted = $this->find($data['id']);
+            if (!$inserted) {
+                throw new \Exception("Failed to verify inserted data");
+            }
+
+            // Re-enable foreign key checks
+            $wpdb->query('SET FOREIGN_KEY_CHECKS = 1');
+            
+            // Commit transaction
+            $wpdb->query('COMMIT');
+            
+            return true;
+
+        } catch (\Exception $e) {
+            // Rollback on error
+            $wpdb->query('ROLLBACK');
+            error_log("Error in createDemoData: " . $e->getMessage());
+            throw $e;
+        } finally {
+            // Make sure foreign key checks are re-enabled
+            $wpdb->query('SET FOREIGN_KEY_CHECKS = 1');
+        }
+    }
+    
+    private function getFormatArray(array $data): array {
+        $formats = [];
+        foreach ($data as $value) {
+            if (is_int($value)) {
+                $formats[] = '%d';
+            } elseif (is_float($value)) {
+                $formats[] = '%f';
+            } else {
+                $formats[] = '%s';
+            }
+        }
+        return $formats;
     }
  
  }
