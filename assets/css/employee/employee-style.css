@@ -623,3 +623,54 @@
    border-bottom: 2px solid #FF9800;
 }
 
+/* Department Badges untuk DataTable */
+.department-badge {
+    display: inline-block;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-weight: 500;
+    color: #fff;
+    margin-right: 3px;
+    margin-bottom: 3px;
+    white-space: nowrap;
+}
+
+/* Department Colors */
+.department-badge.finance {
+    background-color: #2196F3;  /* Biru */
+}
+
+.department-badge.operation {
+    background-color: #4CAF50;  /* Hijau */
+}
+
+.department-badge.legal {
+    background-color: #9C27B0;  /* Ungu */
+}
+
+.department-badge.purchase {
+    background-color: #FF9800;  /* Orange */
+}
+
+/* Container untuk badges dalam table cell */
+.department-badges-container {
+    min-height: 24px;  /* Untuk konsistensi tinggi cell saat tidak ada badge */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+/* Style untuk teks dash ketika tidak ada department */
+.department-badges-container.empty {
+    color: #666;
+    padding: 4px 0;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+    .department-badges-container {
+        min-width: 200px;  /* Prevent badges from getting too cramped */
+    }
+}

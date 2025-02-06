@@ -79,6 +79,7 @@
                 });
 
                 if (response.success && response.data) {
+                    console.log('Response data: ', response.data);
                     // Store customer ID for branch loading
                     this.customerId = response.data.customer_id;
                     
@@ -145,10 +146,10 @@
             this.form.find('[name="status"]').val(data.status);
 
             // Set department checkboxes
-            this.form.find('[name="finance"]').prop('checked', data.finance);
-            this.form.find('[name="operation"]').prop('checked', data.operation);
-            this.form.find('[name="legal"]').prop('checked', data.legal);
-            this.form.find('[name="purchase"]').prop('checked', data.purchase);
+            this.form.find('[name="finance"]').prop('checked', data.finance === "1");
+            this.form.find('[name="operation"]').prop('checked', data.operation === "1");
+            this.form.find('[name="legal"]').prop('checked', data.legal === "1");
+            this.form.find('[name="purchase"]').prop('checked', data.purchase === "1");
 
             // Update modal title
             this.modal.find('.modal-header h3').text(`Edit Karyawan: ${data.name}`);
@@ -166,7 +167,18 @@
             });
         },
 
+        // Di bagian initializeValidation(), ganti validasi phone dengan custom method phoneID
         initializeValidation() {
+            // Tambahkan custom method untuk validasi nomor telepon Indonesia
+            $.validator.addMethod("phoneID", function(value, element) {
+                // Kosongkan value jika opsional
+                if (this.optional(element)) {
+                    return true;
+                }
+                // Validasi format nomor telepon Indonesia
+                return /^(\+62|62|0)[\s-]?8[1-9]{1}[\s-]?\d{1,4}[\s-]?\d{1,4}[\s-]?\d{1,4}$/.test(value);
+            }, "Format nomor telepon tidak valid");
+
             this.form.validate({
                 rules: {
                     name: {
@@ -182,11 +194,6 @@
                         minlength: 2,
                         maxlength: 100
                     },
-                    department: {
-                        required: true,
-                        minlength: 2,
-                        maxlength: 100
-                    },
                     email: {
                         required: true,
                         email: true,
@@ -194,7 +201,7 @@
                     },
                     phone: {
                         maxlength: 20,
-                        pattern: /^\+?[0-9\-\(\)\s]*$/
+                        phoneID: true  // Gunakan custom method phoneID
                     },
                     status: {
                         required: true
@@ -214,11 +221,6 @@
                         minlength: 'Jabatan minimal 2 karakter',
                         maxlength: 'Jabatan maksimal 100 karakter'
                     },
-                    department: {
-                        required: 'Departemen wajib diisi',
-                        minlength: 'Departemen minimal 2 karakter',
-                        maxlength: 'Departemen maksimal 100 karakter'
-                    },
                     email: {
                         required: 'Email wajib diisi',
                         email: 'Format email tidak valid',
@@ -226,7 +228,7 @@
                     },
                     phone: {
                         maxlength: 'Nomor telepon maksimal 20 karakter',
-                        pattern: 'Format nomor telepon tidak valid'
+                        phoneID: 'Format nomor telepon tidak valid'
                     },
                     status: {
                         required: 'Status wajib dipilih'
@@ -306,17 +308,33 @@
             }
 
             const id = this.form.find('#edit-employee-id').val();
+            // Get department selections
+            const finance = this.form.find('[name="finance"]').is(':checked') ? "1" : "0";
+            const operation = this.form.find('[name="operation"]').is(':checked') ? "1" : "0";
+            const legal = this.form.find('[name="legal"]').is(':checked') ? "1" : "0";
+            const purchase = this.form.find('[name="purchase"]').is(':checked') ? "1" : "0";
+
+            // Generate keterangan based on selected departments
+            const departments = [];
+            if (finance === "1") departments.push("Finance");
+            if (operation === "1") departments.push("Operation");
+            if (legal === "1") departments.push("Legal");
+            if (purchase === "1") departments.push("Purchase");
+            const keterangan = departments.join(", ");
+
             const formData = {
                 action: 'update_employee',
                 nonce: wpCustomerData.nonce,
                 id: id,
-                name: this.form.find('[name="name"]').val().trim(),
+                customer_id: this.customerId, // Added customer_id from class property
                 branch_id: this.form.find('[name="branch_id"]').val(),
+                name: this.form.find('[name="name"]').val().trim(),
                 position: this.form.find('[name="position"]').val().trim(),
-                finance: this.form.find('[name="finance"]').is(':checked'),
-                operation: this.form.find('[name="operation"]').is(':checked'), 
-                legal: this.form.find('[name="legal"]').is(':checked'),
-                purchase: this.form.find('[name="purchase"]').is(':checked'),
+                finance: finance,
+                operation: operation,
+                legal: legal,
+                purchase: purchase,
+                keterangan: keterangan,
                 email: this.form.find('[name="email"]').val().trim(),
                 phone: this.form.find('[name="phone"]').val().trim(),
                 status: this.form.find('[name="status"]').val()

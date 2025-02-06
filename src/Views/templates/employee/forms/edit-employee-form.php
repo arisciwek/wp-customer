@@ -72,37 +72,29 @@ defined('ABSPATH') || exit;
                 <!-- Departemen -->
                 <div class="employee-form-section">
                     <div class="section-header">
-                      <h4><?php _e('Departemen', 'wp-customer'); ?></h4>
+                        <h4><?php _e('Departemen', 'wp-customer'); ?></h4>
                     </div>              
-                  <div class="department-checkboxes">
-                    <div class="checkbox-wrapper">
-                      <label>
-                        <input type="checkbox" name="finance" value="1">
-                        <?php _e('Finance', 'wp-customer'); ?>
-                      </label>
-                    </div>
+                    <div class="department-checkboxes">
+                        <?php
+                        $departments = [
+                            'finance' => __('Finance', 'wp-customer'),
+                            'operation' => __('Operation', 'wp-customer'),
+                            'legal' => __('Legal', 'wp-customer'),
+                            'purchase' => __('Purchase', 'wp-customer')
+                        ];
 
-                    <div class="checkbox-wrapper">
-                      <label>
-                        <input type="checkbox" name="operation" value="1">
-                        <?php _e('Operation', 'wp-customer'); ?>
-                      </label>
+                        foreach ($departments as $key => $label) : ?>
+                            <div class="checkbox-wrapper">
+                                <label>
+                                    <input type="checkbox" 
+                                           name="<?php echo esc_attr($key); ?>" 
+                                           value="1"
+                                           data-department="<?php echo esc_attr($key); ?>">
+                                    <?php echo esc_html($label); ?>
+                                </label>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
-
-                    <div class="checkbox-wrapper">
-                      <label>
-                        <input type="checkbox" name="legal" value="1">
-                        <?php _e('Legal', 'wp-customer'); ?>
-                      </label>
-                    </div>
-
-                    <div class="checkbox-wrapper">
-                      <label>
-                        <input type="checkbox" name="purchase" value="1">
-                        <?php _e('Purchase', 'wp-customer'); ?>
-                      </label>
-                    </div>
-                  </div>
                 </div>
               </div>
                 <div class="row right-side">

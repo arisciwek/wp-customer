@@ -149,14 +149,6 @@ class CustomerEmployeeValidator {
             $errors['position'] = __('Jabatan maksimal 100 karakter.', 'wp-customer');
         }
 
-        // Department validation
-        $department = trim(sanitize_text_field($data['department'] ?? ''));
-        if (empty($department)) {
-            $errors['department'] = __('Departemen wajib diisi.', 'wp-customer');
-        } elseif (mb_strlen($department) > 100) {
-            $errors['department'] = __('Departemen maksimal 100 karakter.', 'wp-customer');
-        }
-
         // Phone validation (optional)
         if (!empty($data['phone'])) {
             $phone = trim(sanitize_text_field($data['phone']));
