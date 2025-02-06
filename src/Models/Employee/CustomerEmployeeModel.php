@@ -29,6 +29,9 @@ class CustomerEmployeeModel {
     private $customer_table;
     private $branch_table;
 
+    // Add class constant for valid status values
+    private const VALID_STATUSES = ['active', 'inactive'];
+
     public function __construct() {
         global $wpdb;
         $this->table = $wpdb->prefix . 'app_customer_employees';
@@ -39,29 +42,60 @@ class CustomerEmployeeModel {
     public function create(array $data): ?int {
         global $wpdb;
 
+        // Generate keterangan based on departments
+        $departments = [];
+        if ($data['finance']) $departments[] = 'Finance';
+        if ($data['operation']) $departments[] = 'Operation';
+        if ($data['legal']) $departments[] = 'Legal';
+        if ($data['purchase']) $departments[] = 'Purchase';
+        $keterangan = implode(', ', $departments);
+
+        // Ensure valid status or use default
+        $status = isset($data['status']) && in_array($data['status'], self::VALID_STATUSES) 
+            ? $data['status'] 
+            : 'active';
+
         $result = $wpdb->insert(
             $this->table,
             [
                 'customer_id' => $data['customer_id'],
                 'branch_id' => $data['branch_id'],
+                'user_id' => get_current_user_id(),
                 'name' => $data['name'],
                 'position' => $data['position'],
-                'department' => $data['department'],
+                'finance' => $data['finance'],
+                'operation' => $data['operation'],
+                'legal' => $data['legal'],
+                'purchase' => $data['purchase'],
+                'keterangan' => $keterangan,
                 'email' => $data['email'],
                 'phone' => $data['phone'],
                 'created_by' => get_current_user_id(),
                 'created_at' => current_time('mysql'),
                 'updated_at' => current_time('mysql'),
-                'status' => 'active'
+                'status' => $status
             ],
-            ['%d', '%d', '%s', '%s', '%s', '%s', '%s', '%d', '%s', '%s', '%s']
+            [
+                '%d', // customer_id
+                '%d', // branch_id
+                '%d', // user_id
+                '%s', // name
+                '%s', // position
+                '%d', // finance
+                '%d', // operation
+                '%d', // legal
+                '%d', // purchase
+                '%s', // keterangan
+                '%s', // email
+                '%s', // phone
+                '%d', // created_by
+                '%s', // created_at
+                '%s', // updated_at
+                '%s'  // status
+            ]
         );
 
-        if ($result === false) {
-            return null;
-        }
-
-        return (int) $wpdb->insert_id;
+        return ($result === false) ? null : (int) $wpdb->insert_id;
     }
 
     public function find(int $id): ?object {
@@ -83,28 +117,56 @@ class CustomerEmployeeModel {
     public function update(int $id, array $data): bool {
         global $wpdb;
 
-        $updateData = array_merge($data, ['updated_at' => current_time('mysql')]);
-        $format = [];
+        // Generate keterangan based on departments
+        $departments = [];
+        if ($data['finance']) $departments[] = 'Finance';
+        if ($data['operation']) $departments[] = 'Operation';
+        if ($data['legal']) $departments[] = 'Legal';
+        if ($data['purchase']) $departments[] = 'Purchase';
+        $keterangan = implode(', ', $departments);
 
-        // Add format for each field
-        if (isset($data['name'])) $format[] = '%s';
-        if (isset($data['position'])) $format[] = '%s';
-        if (isset($data['department'])) $format[] = '%s';
-        if (isset($data['email'])) $format[] = '%s';
-        if (isset($data['phone'])) $format[] = '%s';
-        if (isset($data['status'])) $format[] = '%s';
-        if (isset($data['branch_id'])) $format[] = '%d';
-        $format[] = '%s'; // for updated_at
+        // Only include status in update if it's provided and valid
+        $updateData = [
+            'name' => $data['name'],
+            'position' => $data['position'],
+            'finance' => $data['finance'],
+            'operation' => $data['operation'],
+            'legal' => $data['legal'],
+            'purchase' => $data['purchase'],
+            'keterangan' => $keterangan,
+            'email' => $data['email'],
+            'phone' => $data['phone'],
+            'branch_id' => $data['branch_id'],
+            'updated_at' => current_time('mysql')
+        ];
 
-        $result = $wpdb->update(
+        $format = [
+            '%s', // name
+            '%s', // position
+            '%d', // finance
+            '%d', // operation
+            '%d', // legal
+            '%d', // purchase
+            '%s', // keterangan
+            '%s', // email
+            '%s', // phone
+            '%d', // branch_id
+            '%s'  // updated_at
+        ];
+
+        // Add status to update data if provided and valid
+        if (isset($data['status']) && in_array($data['status'], self::VALID_STATUSES)) {
+            $updateData['status'] = $data['status'];
+            $format[] = '%s'; // status
+        }
+
+        return $wpdb->update(
             $this->table,
             $updateData,
             ['id' => $id],
             $format,
             ['%d']
-        );
-
-        return $result !== false;
+        ) !== false;
     }
 
     public function delete(int $id): bool {
@@ -275,12 +337,19 @@ class CustomerEmployeeModel {
         ", $branch_id));
     }
 
-    /**
-     * Change employee status
-     */
-    public function changeStatus(int $id, string $status): bool {
-        global $wpdb;
 
+    // Add method to validate status
+    public function isValidStatus(string $status): bool {
+        return in_array($status, self::VALID_STATUSES);
+    }
+
+    // Update changeStatus method to validate status
+    public function changeStatus(int $id, string $status): bool {
+        if (!$this->isValidStatus($status)) {
+            return false;
+        }
+
+        global $wpdb;
         return $wpdb->update(
             $this->table,
             [

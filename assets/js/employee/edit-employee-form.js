@@ -143,6 +143,7 @@
             this.form.find('[name="position"]').val(data.position);
             this.form.find('[name="email"]').val(data.email);
             this.form.find('[name="phone"]').val(data.phone);
+            console.log('Setting status to:', data.status); // Add this debug log
             this.form.find('[name="status"]').val(data.status);
 
             // Set department checkboxes

@@ -394,19 +394,26 @@ class CustomerEmployeeController {
 
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            // Basic data sanitization
+           // Basic data sanitization and validation
             $data = [
                 'customer_id' => isset($_POST['customer_id']) ? (int) $_POST['customer_id'] : 0,
                 'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0,
+                'user_id' => get_current_user_id(), // Set current user as user_id
                 'name' => sanitize_text_field($_POST['name'] ?? ''),
                 'position' => sanitize_text_field($_POST['position'] ?? ''),
                 'email' => sanitize_email($_POST['email'] ?? ''),
                 'phone' => sanitize_text_field($_POST['phone'] ?? ''),
-                // Boolean department fields
-                'finance' => isset($_POST['finance']) ? (bool) $_POST['finance'] : false,
-                'operation' => isset($_POST['operation']) ? (bool) $_POST['operation'] : false,
-                'legal' => isset($_POST['legal']) ? (bool) $_POST['legal'] : false,
-                'purchase' => isset($_POST['purchase']) ? (bool) $_POST['purchase'] : false
+                // Boolean department fields - convert "1"/"0" strings to booleans
+                'finance' => isset($_POST['finance']) && $_POST['finance'] === "1",
+                'operation' => isset($_POST['operation']) && $_POST['operation'] === "1",
+                'legal' => isset($_POST['legal']) && $_POST['legal'] === "1",
+                'purchase' => isset($_POST['purchase']) && $_POST['purchase'] === "1",
+                // Generate keterangan from departments
+                'keterangan' => $this->generateKeterangan($_POST),
+                    // Only include status if it's provided
+                    'status' => isset($_POST['status']) && in_array($_POST['status'], ['active', 'inactive']) 
+                        ? $_POST['status'] 
+                        : 'active' // Use default value from schema
             ];
 
             error_log('Sanitized data: ' . print_r($data, true));
@@ -449,37 +456,51 @@ class CustomerEmployeeController {
             if (!$id) {
                 throw new \Exception('Invalid employee ID');
             }
+    
+            error_log('Raw POST data in update: ' . print_r($_POST, true));
 
-            // Basic data sanitization
-            $data = [
-                'name' => sanitize_text_field($_POST['name'] ?? ''),
-                'position' => sanitize_text_field($_POST['position'] ?? ''),
-                'email' => sanitize_email($_POST['email'] ?? ''),
-                'phone' => sanitize_text_field($_POST['phone'] ?? ''),
-                'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0,
-                // Boolean department fields
-                'finance' => isset($_POST['finance']) ? (bool) $_POST['finance'] : false,
-                'operation' => isset($_POST['operation']) ? (bool) $_POST['operation'] : false,
-                'legal' => isset($_POST['legal']) ? (bool) $_POST['legal'] : false,
-                'purchase' => isset($_POST['purchase']) ? (bool) $_POST['purchase'] : false
-            ];
+              $data = [
+                    'name' => sanitize_text_field($_POST['name'] ?? ''),
+                    'position' => sanitize_text_field($_POST['position'] ?? ''),
+                    'email' => sanitize_email($_POST['email'] ?? ''),
+                    'phone' => sanitize_text_field($_POST['phone'] ?? ''),
+                    'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0,
+                    // Boolean department fields - convert "1"/"0" strings to booleans
+                    'finance' => isset($_POST['finance']) && $_POST['finance'] === "1",
+                    'operation' => isset($_POST['operation']) && $_POST['operation'] === "1",
+                    'legal' => isset($_POST['legal']) && $_POST['legal'] === "1",
+                    'purchase' => isset($_POST['purchase']) && $_POST['purchase'] === "1",
+                    // Generate keterangan from departments
+                    'keterangan' => sanitize_text_field($_POST['keterangan'] ?? ''),
+                    // Only include status if it's provided
+                    'status' => isset($_POST['status']) && in_array($_POST['status'], ['active', 'inactive']) 
+                        ? $_POST['status'] 
+                        : 'active' // Use default value from schema
+                ];
+    
+            error_log('Sanitized data before validation: ' . print_r($data, true));
 
             // Validate input
             $errors = $this->validator->validateUpdate($data, $id);
             if (!empty($errors)) {
                 throw new \Exception(implode(', ', $errors));
             }
+    
+            error_log('Data being sent to model update: ' . print_r($data, true));
 
             // Update employee
             if (!$this->model->update($id, $data)) {
                 throw new \Exception('Failed to update employee');
             }
+    
 
             // Get fresh data
             $employee = $this->model->find($id);
             if (!$employee) {
                 throw new \Exception('Failed to retrieve updated employee');
             }
+
+            error_log('Retrieved employee data after update: ' . print_r($employee, true));
 
             wp_send_json_success([
                 'message' => __('Data karyawan berhasil diperbarui', 'wp-customer'),
