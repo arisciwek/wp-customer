@@ -159,45 +159,138 @@
              }
          },
 
-         async loadCustomerData(id) {
-             if (!id || this.isLoading) return;
 
-             this.isLoading = true;
-             this.showLoading();
-        
-            console.log('loadCustomerData called for ID:', id);  // Debug load call
+        async loadCustomerData(id) {
+            if (!id || this.isLoading) return;
 
-             try {
-                 const response = await $.ajax({
-                     url: wpCustomerData.ajaxUrl,
-                     type: 'POST',
-                     data: {
-                         action: 'get_customer',
-                         id: id,
-                         nonce: wpCustomerData.nonce,
-                         _: new Date().getTime() // Cache busting
-                     }
-                 });
-        
-                    console.log('Load customer response:', response);  // Debug load response
+            this.isLoading = true;
+            this.showLoading();
 
-                 if (response.success) {
-                     this.displayData(response.data);
-                     this.currentId = id;
-                 } else {
-                     CustomerToast.error(response.data?.message || 'Gagal memuat data customer');
-                 }
-             } catch (error) {
-                 console.error('Load customer error:', error);
-                 if (this.isLoading) {
-                     CustomerToast.error('Gagal menghubungi server');
-                 }
-             } finally {
-                 this.isLoading = false;
-                 this.hideLoading();
-             }
-         },
+            try {
+                console.log('Loading customer data for ID:', id);
 
+                const response = await $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'get_customer',
+                        id: id,
+                        nonce: wpCustomerData.nonce
+                    }
+                });
+
+                console.log('Customer data response:', response);
+
+                if (response.success && response.data) {
+                    // Update URL hash without triggering reload
+                    const newHash = `#${id}`;
+                    if (window.location.hash !== newHash) {
+                        window.history.pushState(null, '', newHash);
+                    }
+
+                    // Update customer data in UI
+                    this.displayData(response.data);
+                    this.currentId = id;
+
+                    // Trigger success event
+                    $(document).trigger('customer:loaded', [response.data]);
+                } else {
+                    throw new Error(response.data?.message || 'Failed to load customer data');
+                }
+            } catch (error) {
+                console.error('Error loading customer:', error);
+                CustomerToast.error(error.message || 'Failed to load customer data');
+                this.handleLoadError();
+            } finally {
+                this.isLoading = false;
+                this.hideLoading();
+            }
+        },
+
+        displayData(data) {
+            if (!data?.customer) {
+                console.error('Invalid customer data:', data);
+                return;
+            }
+
+            console.log('Displaying customer data:', data);
+
+            // Show panel first
+            this.components.container.addClass('with-right-panel');
+            this.components.rightPanel.addClass('visible');
+
+            try {
+                // Basic Information
+                $('#customer-header-name').text(data.customer.name);
+                $('#customer-name').text(data.customer.name);
+                $('#customer-code').text(data.customer.code || '-');
+                $('#customer-npwp').text(data.customer.npwp || '-');
+                $('#customer-nib').text(data.customer.nib || '-');
+
+                // Status Badge
+                const statusBadge = $('#customer-status');
+                const status = data.customer.status || 'inactive';
+                statusBadge
+                    .text(status === 'active' ? 'Aktif' : 'Nonaktif')
+                    .removeClass('status-active status-inactive')
+                    .addClass(`status-${status}`);
+
+                // Pusat (Head Office) Information
+                $('#customer-pusat-address').text(data.customer.pusat_address || '-');
+                $('#customer-pusat-postal-code').text(data.customer.pusat_postal_code || '-');
+
+                // Location Information
+                $('#customer-province').text(data.customer.province_name || '-');
+                $('#customer-regency').text(data.customer.regency_name || '-');
+
+                if (data.customer.latitude && data.customer.longitude) {
+                    $('#customer-coordinates').text(`${data.customer.latitude}, ${data.customer.longitude}`);
+                    const mapsUrl = `https://www.google.com/maps?q=${data.customer.latitude},${data.customer.longitude}`;
+                    $('#customer-google-maps-link').attr('href', mapsUrl).show();
+                } else {
+                    $('#customer-coordinates').text('-');
+                    $('#customer-google-maps-link').hide();
+                }
+                
+                // Additional Information
+                $('#customer-owner').text(data.customer.owner_name || '-');
+                $('#customer-branch-count').text(data.customer.branch_count || '0');
+                $('#customer-employee-count').text(data.customer.employee_count || '0');
+
+                // Timeline Information
+                const createdAt = data.customer.created_at ? 
+                    new Date(data.customer.created_at).toLocaleString('id-ID') : '-';
+                const updatedAt = data.customer.updated_at ? 
+                    new Date(data.customer.updated_at).toLocaleString('id-ID') : '-';
+                
+                $('#customer-created-by').text(data.customer.created_by_name || '-');
+                $('#customer-created-at').text(createdAt);
+                $('#customer-updated-at').text(updatedAt);
+
+                // Highlight DataTable row if exists
+                if (window.CustomerDataTable) {
+                    window.CustomerDataTable.highlightRow(data.customer.id);
+                }
+
+                // Trigger success event
+                $(document).trigger('customer:displayed', [data]);
+                
+            } catch (error) {
+                console.error('Error displaying customer data:', error);
+                CustomerToast.error('Error displaying customer data');
+            }
+        }, 
+
+    handleLoadError() {
+        this.components.detailsPanel.html(
+            '<div class="error-message">' +
+            '<p>Failed to load customer data. Please try again.</p>' +
+            '<button class="button retry-load">Retry</button>' +
+            '</div>'
+        );
+    },
+
+         /*
          displayData(data) {
              if (!data || !data.customer) {
                  CustomerToast.error('Data customer tidak valid');
@@ -268,10 +361,8 @@
                     $(this).toggle(this.shouldShowUpgradeOption(currentLevel, cardLevel));
                 });
             }
-
-
-
          },
+         */
 
             // Helper function untuk label capability
             getCapabilityLabel(cap) {

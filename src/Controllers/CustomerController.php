@@ -139,7 +139,7 @@ class CustomerController {
             }
 
             // Get customer data
-            $customer = $this->getCustomerData($id);
+            $customer = $this->model->find($id);
             if (!$customer) {
                 throw new \Exception('Customer not found');
             }
@@ -197,7 +197,7 @@ class CustomerController {
                 throw new \Exception('You do not have permission to view this customer');
             }
 
-            $customer = $this->getCustomerData($id);
+            $customer = $this->model->find($id);
             if (!$customer) {
                 throw new \Exception('Customer not found');
             }
@@ -258,7 +258,7 @@ class CustomerController {
             }
 
             // Ambil data customer
-            $customer = $this->getCustomerData($id);
+            $customer = $this->model->find($id);
             if (!$customer) {
                 throw new \Exception('Customer not found');
             }
@@ -735,40 +735,47 @@ class CustomerController {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+            $this->debug_log("=== Start show() ===");
+            
+            // Get and validate ID
+            $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
             if (!$id) {
                 throw new \Exception('Invalid customer ID');
             }
 
-            // Cek akses dulu sebelum ambil data
+            // Validate access
             $access = $this->validator->validateAccess($id);
             if (!$access['has_access']) {
                 throw new \Exception('You do not have permission to view this customer');
             }
 
-            // Cache & DB fetch dalam satu operasi
-            $customer = $this->getCustomerData($id);
+            // Get customer data
+            $customer = $this->model->find($id);
             if (!$customer) {
                 throw new \Exception('Customer not found');
             }
 
-            // Hitung branch count sekali saja
-            $branch_count = $this->model->getBranchCount($id);
+            // Get membership data if needed
+            $membership = $this->model->getMembershipData($id);
 
-            // Enrichment data
-            $customer_data = $this->enrichCustomerData($customer, $access, $branch_count);
+            // Prepare response data
+            $response_data = [
+                'customer' => $customer,
+                'membership' => $membership,
+                'access_type' => $access['access_type']
+            ];
 
-            // Debug log lebih terstruktur
-            $this->logCustomerAccess($customer_data);
-
-            wp_send_json_success($customer_data);
+            $this->debug_log("Sending response: " . print_r($response_data, true));
+            
+            wp_send_json_success($response_data);
 
         } catch (\Exception $e) {
-            $this->debug_log('Error in show(): ' . $e->getMessage());
-            wp_send_json_error(['message' => $e->getMessage()]);
+            $this->debug_log("Error in show(): " . $e->getMessage());
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
         }
     }
-
     private function enrichCustomerData($customer, $access, $branch_count) {
         return [
             'customer' => array_merge((array)$customer, [
@@ -850,47 +857,6 @@ class CustomerController {
             wp_send_json_error([
                 'message' => $e->getMessage()
             ]);
-        }
-    }
-    
-    public function getCustomerData($id) {
-        global $wpdb;
-        $current_user_id = get_current_user_id();
-        
-        $this->debug_log("Getting customer data for ID: " . $id);
-
-        try {
-            // Jika id = 0, coba dapatkan customer berdasarkan user yang login
-            if ($id === 0) {
-                // Cek apakah user adalah owner atau employee dari customer
-                $relation = $this->validator->getUserRelation($id);
-                if ($relation['is_owner'] || $relation['is_employee']) {
-                    $customer = $this->model->find($id);
-                    if ($customer) {
-                        $customer->branch_count = $this->model->getBranchCount($id);
-                        return $customer;
-                    }
-                }
-                return null;
-            } 
-
-            // Untuk id spesifik
-            $access = $this->validator->validateAccess($id);
-            if (!$access['has_access']) {
-                return null;
-            }
-
-            $customer = $this->cache->get('customer', $id) ?? $this->model->find($id);
-            if ($customer) {
-                $customer->branch_count = $this->model->getBranchCount($id);
-                return $customer;
-            }
-
-            return null;
-
-        } catch (\Exception $e) {
-            $this->debug_log("Error getting customer data: " . $e->getMessage());
-            return null;
         }
     }
 

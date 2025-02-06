@@ -47,28 +47,56 @@
         $id = (int) $id;
 
         // Check cache first
-        $cached_result = $this->cache->get('customer_detail', $id);
+        $cached_result = $this->cache->get('customer', $id);
         if ($cached_result !== null) {
             return $cached_result;
         }
 
-        $result = $wpdb->get_row($wpdb->prepare("
-            SELECT p.*, 
-                   COUNT(r.id) as branch_count,
-                   u.display_name as owner_name
-            FROM {$this->table} p
-            LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id
-            LEFT JOIN {$wpdb->users} u ON p.user_id = u.ID
-            WHERE p.id = %d
-            GROUP BY p.id
-        ", $id));
+        try {
+            $sql = $wpdb->prepare("
+                SELECT 
+                    c.*,
+                    COUNT(DISTINCT b.id) as branch_count,
+                    COUNT(DISTINCT e.id) as employee_count,
+                    u.display_name as owner_name,
+                    creator.display_name as created_by_name,
+                    bp.name as pusat_name,
+                    bp.code as pusat_code,
+                    bp.address as pusat_address,
+                    bp.postal_code as pusat_postal_code,
+                    bp.latitude as latitude,
+                    bp.longitude as longitude,
+                    wp.name as province_name,
+                    wr.name as regency_name
+                FROM {$this->table} c
+                LEFT JOIN {$this->branch_table} b ON c.id = b.customer_id
+                LEFT JOIN {$this->employee_table} e ON c.id = e.customer_id
+                LEFT JOIN {$wpdb->users} u ON c.user_id = u.ID
+                LEFT JOIN {$wpdb->users} creator ON c.created_by = creator.ID
+                LEFT JOIN {$this->branch_table} bp ON (c.id = bp.customer_id AND bp.type = 'pusat')
+                LEFT JOIN wp_wi_provinces wp ON c.provinsi_id = wp.id 
+                LEFT JOIN wp_wi_regencies wr ON c.regency_id = wr.id
+                WHERE c.id = %d
+                GROUP BY c.id
+            ", $id);
 
-        if ($result) {
-            // Cache for 2 minutes
-            $this->cache->set('customer_detail', $result, 120, $id);
+            $result = $wpdb->get_row($sql);
+
+            if ($wpdb->last_error) {
+                throw new \Exception("Database error: " . $wpdb->last_error);
+            }
+
+            if ($result) {
+                // Cache the result for 2 minutes
+                $this->cache->set('customer', $result, 120, $id);
+            }
+
+            return $result;
+
+        } catch (\Exception $e) {
+            error_log("Error in CustomerModel::find(): " . $e->getMessage());
+            throw $e;
         }
-
-        return $result;
     }
 
     public function getCustomer(?int $id = null): ?object {
@@ -230,7 +258,7 @@
         return $new_id;
     }
 
-    private function getMembershipData(int $customer_id): array {
+    public function getMembershipData(int $customer_id): array {
         // Get membership settings
         $settings = get_option('wp_customer_membership_settings', []);
         
@@ -248,7 +276,6 @@
             ]
         ];
     }
-
 
     public function update(int $id, array $data): bool {
         global $wpdb;
@@ -716,5 +743,5 @@
         }
         return $formats;
     }
- 
+
  }
