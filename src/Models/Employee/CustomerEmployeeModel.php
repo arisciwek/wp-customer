@@ -345,4 +345,85 @@ class CustomerEmployeeModel {
             ['%d']
         ) !== false;
     }
+
+
+    /**
+     * Get employees in batches for efficient processing
+     * This helps when dealing with large datasets
+     */
+    public function getInBatches(int $customer_id, int $batch_size = 1000): \Generator {
+        global $wpdb;
+        
+        $offset = 0;
+        
+        while (true) {
+            $results = $wpdb->get_results($wpdb->prepare("
+                SELECT e.*, 
+                       b.name as branch_name,
+                       u.display_name as created_by_name
+                FROM {$this->table} e
+                LEFT JOIN {$this->branch_table} b ON e.branch_id = b.id
+                LEFT JOIN {$wpdb->users} u ON e.created_by = u.ID
+                WHERE e.customer_id = %d
+                LIMIT %d OFFSET %d
+            ", $customer_id, $batch_size, $offset));
+            
+            if (empty($results)) {
+                break;
+            }
+            
+            yield $results;
+            
+            $offset += $batch_size;
+            
+            if (count($results) < $batch_size) {
+                break;
+            }
+        }
+    }
+
+    /**
+     * Bulk update employees
+     * Useful for mass status changes or department updates
+     */
+    public function bulkUpdate(array $ids, array $data): int {
+        global $wpdb;
+        
+        $validFields = [
+            'branch_id',
+            'status',
+            'finance',
+            'operation',
+            'legal',
+            'purchase'
+        ];
+        
+        // Filter only valid fields
+        $updateData = array_intersect_key($data, array_flip($validFields));
+        
+        if (empty($updateData)) {
+            return 0;
+        }
+        
+        $sql = "UPDATE {$this->table} SET ";
+        $updates = [];
+        $values = [];
+        
+        foreach ($updateData as $field => $value) {
+            $updates[] = "{$field} = %s";
+            $values[] = $value;
+        }
+        
+        $sql .= implode(', ', $updates);
+        $sql .= " WHERE id IN (" . implode(',', array_map('intval', $ids)) . ")";
+        
+        // Add updated_at timestamp
+        $sql .= ", updated_at = %s";
+        $values[] = current_time('mysql');
+        
+        return $wpdb->query($wpdb->prepare($sql, $values));
+    }
+
+
 }
+

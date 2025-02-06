@@ -238,11 +238,6 @@
     gap: 5px;
 }
 
-/* Modal Customization for Employee */
-.employee-modal .modal-container {
-    max-width: 600px; /* Slightly wider than branch modal */
-}
-
 .employee-modal .modal-content {
     max-height: calc(100vh - 200px);
     overflow-y: auto;

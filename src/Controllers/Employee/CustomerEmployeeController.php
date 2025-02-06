@@ -107,14 +107,11 @@ class CustomerEmployeeController {
     }
 
     /**
-     * Handle DataTable AJAX request
+     * Handle DataTable AJAX request dengan cache
      */
     public function handleDataTableRequest() {
         try {
-            // Verify nonce
-            if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
-                throw new \Exception('Security check failed');
-            }
+            check_ajax_referer('wp_customer_nonce', 'nonce');
 
             // Get and validate parameters
             $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
@@ -122,64 +119,80 @@ class CustomerEmployeeController {
             $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
             $search = isset($_POST['search']['value']) ? sanitize_text_field($_POST['search']['value']) : '';
             $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
-
+            
             if (!$customer_id) {
                 throw new \Exception('Customer ID is required');
             }
 
-            // Get order parameters
             $orderColumn = isset($_POST['order'][0]['column']) ? intval($_POST['order'][0]['column']) : 0;
             $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
 
-            // Map column index to column name
-            $columns = ['name', 'position', 'departments', 'email', 'branch_name', 'status', 'actions'];
-            $orderBy = isset($columns[$orderColumn]) ? $columns[$orderColumn] : 'name';
+            // Cek cache
+            $cacheData = $this->cache->getDataTableCache(
+                'customer_employee_list',
+                get_current_user_id(),
+                $start,
+                $length,
+                $search,
+                $orderColumn,
+                $orderDir,
+                ['customer_id' => $customer_id]
+            );
 
-            if ($orderBy === 'actions' || $orderBy === 'departments') {
-                $orderBy = 'name'; // Default sort if actions or departments column
+            if ($cacheData !== null) {
+                wp_send_json($cacheData);
+                return;
             }
 
-            try {
-                $result = $this->model->getDataTableData($customer_id, $start, $length, $search, $orderBy, $orderDir);
+            // Jika tidak ada cache, ambil data dari database
+            $result = $this->model->getDataTableData($customer_id, $start, $length, $search, $orderColumn, $orderDir);
 
-                $data = [];
-                foreach ($result['data'] as $employee) {
-                    // Generate departments HTML
-                    $departments_html = $this->generateDepartmentsBadges([
+            // Format data
+            $data = [];
+            foreach ($result['data'] as $employee) {
+                $data[] = [
+                    'id' => $employee->id,
+                    'name' => esc_html($employee->name),
+                    'position' => esc_html($employee->position),
+                    'department' => $this->generateDepartmentsBadges([
                         'finance' => (bool)$employee->finance,
                         'operation' => (bool)$employee->operation,
                         'legal' => (bool)$employee->legal,
                         'purchase' => (bool)$employee->purchase
-                    ]);
-
-                    $data[] = [
-                        'id' => $employee->id,
-                        'name' => esc_html($employee->name),
-                        'position' => esc_html($employee->position),
-                        'department' => $departments_html,
-                        'email' => esc_html($employee->email),
-                        'branch_name' => esc_html($employee->branch_name),
-                        'status' => $employee->status,
-                        'actions' => $this->generateActionButtons($employee)
-                    ];
-                }
-
-                wp_send_json([
-                    'draw' => $draw,
-                    'recordsTotal' => $result['total'],
-                    'recordsFiltered' => $result['filtered'],
-                    'data' => $data
-                ]);
-
-            } catch (\Exception $modelException) {
-                throw new \Exception('Database error: ' . $modelException->getMessage());
+                    ]),
+                    'email' => esc_html($employee->email),
+                    'branch_name' => esc_html($employee->branch_name),
+                    'status' => $employee->status,
+                    'actions' => $this->generateActionButtons($employee)
+                ];
             }
+
+            $response = [
+                'draw' => $draw,
+                'recordsTotal' => $result['total'],
+                'recordsFiltered' => $result['filtered'],
+                'data' => $data
+            ];
+
+            // Simpan ke cache
+            $this->cache->setDataTableCache(
+                'customer_employee_list',
+                get_current_user_id(),
+                $start,
+                $length,
+                $search,
+                $orderColumn,
+                $orderDir,
+                $response,
+                ['customer_id' => $customer_id]
+            );
+
+            wp_send_json($response);
 
         } catch (\Exception $e) {
             wp_send_json_error([
-                'message' => $e->getMessage(),
-                'code' => $e->getCode()
-            ], 400);
+                'message' => $e->getMessage()
+            ]);
         }
     }
 
@@ -357,7 +370,7 @@ class CustomerEmployeeController {
         }
 
     /**
-     * Show employee details
+     * Show employee dengan cache
      */
     public function show() {
         try {
@@ -374,9 +387,18 @@ class CustomerEmployeeController {
                 throw new \Exception(reset($errors));
             }
 
-            $employee = $this->model->find($id);
+            // Cek cache
+            $cacheKey = "employee_{$id}";
+            $employee = $this->cache->get($cacheKey);
+
             if (!$employee) {
-                throw new \Exception('Employee not found');
+                $employee = $this->model->find($id);
+                if (!$employee) {
+                    throw new \Exception('Employee not found');
+                }
+
+                // Simpan ke cache
+                $this->cache->set($cacheKey, $employee);
             }
 
             wp_send_json_success($employee);
@@ -388,34 +410,29 @@ class CustomerEmployeeController {
         }
     }
 
+    /**
+     * Store dengan cache invalidation
+     */
     public function store() {
         try {
-            error_log('Received POST data: ' . print_r($_POST, true));
-
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
-           // Basic data sanitization and validation
             $data = [
                 'customer_id' => isset($_POST['customer_id']) ? (int) $_POST['customer_id'] : 0,
                 'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0,
-                'user_id' => get_current_user_id(), // Set current user as user_id
                 'name' => sanitize_text_field($_POST['name'] ?? ''),
                 'position' => sanitize_text_field($_POST['position'] ?? ''),
-                'email' => sanitize_email($_POST['email'] ?? ''),
-                'phone' => sanitize_text_field($_POST['phone'] ?? ''),
-                // Boolean department fields - convert "1"/"0" strings to booleans
                 'finance' => isset($_POST['finance']) && $_POST['finance'] === "1",
                 'operation' => isset($_POST['operation']) && $_POST['operation'] === "1",
                 'legal' => isset($_POST['legal']) && $_POST['legal'] === "1",
                 'purchase' => isset($_POST['purchase']) && $_POST['purchase'] === "1",
-                'keterangan' => sanitize_email($_POST['keterangan'] ?? ''),
-                // Only include status if it's provided
+                'keterangan' => sanitize_text_field($_POST['keterangan'] ?? ''),
+                'email' => sanitize_email($_POST['email'] ?? ''),
+                'phone' => sanitize_text_field($_POST['phone'] ?? ''),
                 'status' => isset($_POST['status']) && in_array($_POST['status'], ['active', 'inactive']) 
                     ? $_POST['status'] 
-                    : 'active' // Use default value from schema
+                    : 'active'
             ];
-
-            error_log('Sanitized data: ' . print_r($data, true));
 
             // Validate input
             $errors = $this->validator->validateCreate($data);
@@ -423,12 +440,47 @@ class CustomerEmployeeController {
                 throw new \Exception(implode(', ', $errors));
             }
 
-            // Create employee
+            // 1. Create WordPress User
+            $name_parts = explode(' ', $data['name'], 2);
+            $first_name = $name_parts[0];
+            $last_name = isset($name_parts[1]) ? $name_parts[1] : '';
+            
+            // Generate username from email or name
+            $username = strstr($data['email'], '@', true) ?: sanitize_user(strtolower(str_replace(' ', '', $data['name'])));
+            
+            $userdata = [
+                'user_login' => $username,
+                'user_email' => $data['email'],
+                'first_name' => $first_name,
+                'last_name' => $last_name,
+                'user_pass' => wp_generate_password(),
+                'role' => 'customer'
+            ];
+
+            $user_id = wp_insert_user($userdata);
+            if (is_wp_error($user_id)) {
+                throw new \Exception($user_id->get_error_message());
+            }
+
+            // 2. Add user_id to employee data
+            $data['user_id'] = $user_id;
+
+            // 3. Create employee
             $id = $this->model->create($data);
             if (!$id) {
+                // Rollback - delete created user if employee creation fails
+                wp_delete_user($user_id);
                 throw new \Exception('Failed to create employee');
             }
 
+            // 4. Send password reset email
+            wp_new_user_notification($user_id, null, 'user');
+
+            // Invalidate related caches
+            $this->cache->invalidateDataTableCache('customer_employee_list', [
+                'customer_id' => $data['customer_id']
+            ]);
+            
             // Get fresh data
             $employee = $this->model->find($id);
             if (!$employee) {
@@ -436,7 +488,7 @@ class CustomerEmployeeController {
             }
 
             wp_send_json_success([
-                'message' => __('Karyawan berhasil ditambahkan', 'wp-customer'),
+                'message' => __('Karyawan berhasil ditambahkan dan email aktivasi telah dikirim', 'wp-customer'),
                 'employee' => $employee
             ]);
 
@@ -447,6 +499,10 @@ class CustomerEmployeeController {
         }
     }
 
+
+    /**
+     * Update dengan cache invalidation
+     */
     public function update() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
@@ -455,51 +511,42 @@ class CustomerEmployeeController {
             if (!$id) {
                 throw new \Exception('Invalid employee ID');
             }
-    
-            error_log('Raw POST data in update: ' . print_r($_POST, true));
 
-              $data = [
-                    'name' => sanitize_text_field($_POST['name'] ?? ''),
-                    'position' => sanitize_text_field($_POST['position'] ?? ''),
-                    'email' => sanitize_email($_POST['email'] ?? ''),
-                    'phone' => sanitize_text_field($_POST['phone'] ?? ''),
-                    'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0,
-                    // Boolean department fields - convert "1"/"0" strings to booleans
-                    'finance' => isset($_POST['finance']) && $_POST['finance'] === "1",
-                    'operation' => isset($_POST['operation']) && $_POST['operation'] === "1",
-                    'legal' => isset($_POST['legal']) && $_POST['legal'] === "1",
-                    'purchase' => isset($_POST['purchase']) && $_POST['purchase'] === "1",
-                    // Generate keterangan from departments
-                    'keterangan' => sanitize_text_field($_POST['keterangan'] ?? ''),
-                    // Only include status if it's provided
-                    'status' => isset($_POST['status']) && in_array($_POST['status'], ['active', 'inactive']) 
-                        ? $_POST['status'] 
-                        : 'active' // Use default value from schema
-                ];
-    
-            error_log('Sanitized data before validation: ' . print_r($data, true));
+            $data = [
+                'name' => sanitize_text_field($_POST['name'] ?? ''),
+                'position' => sanitize_text_field($_POST['position'] ?? ''),
+                'email' => sanitize_email($_POST['email'] ?? ''),
+                'phone' => sanitize_text_field($_POST['phone'] ?? ''),
+                'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0,
+                'finance' => isset($_POST['finance']) && $_POST['finance'] === "1",
+                'operation' => isset($_POST['operation']) && $_POST['operation'] === "1",
+                'legal' => isset($_POST['legal']) && $_POST['legal'] === "1",
+                'purchase' => isset($_POST['purchase']) && $_POST['purchase'] === "1",
+                'keterangan' => sanitize_text_field($_POST['keterangan'] ?? ''),
+                'status' => isset($_POST['status']) && in_array($_POST['status'], ['active', 'inactive']) 
+                    ? $_POST['status'] 
+                    : 'active'
+            ];
 
-            // Validate input
+            // Validate
             $errors = $this->validator->validateUpdate($data, $id);
             if (!empty($errors)) {
                 throw new \Exception(implode(', ', $errors));
             }
-    
-            error_log('Data being sent to model update: ' . print_r($data, true));
 
-            // Update employee
+            // Update
             if (!$this->model->update($id, $data)) {
                 throw new \Exception('Failed to update employee');
             }
-    
 
-            // Get fresh data
+            // Invalidate caches
+            $this->cache->delete("employee_{$id}");
             $employee = $this->model->find($id);
-            if (!$employee) {
-                throw new \Exception('Failed to retrieve updated employee');
+            if ($employee) {
+                $this->cache->invalidateDataTableCache('customer_employee_list', [
+                    'customer_id' => $employee->customer_id
+                ]);
             }
-
-            error_log('Retrieved employee data after update: ' . print_r($employee, true));
 
             wp_send_json_success([
                 'message' => __('Data karyawan berhasil diperbarui', 'wp-customer'),
@@ -513,8 +560,9 @@ class CustomerEmployeeController {
         }
     }
 
+
     /**
-     * Delete employee
+     * Delete dengan cache invalidation
      */
     public function delete() {
         try {
@@ -523,6 +571,12 @@ class CustomerEmployeeController {
             $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
             if (!$id) {
                 throw new \Exception('Invalid employee ID');
+            }
+
+            // Get employee data before deletion for cache invalidation
+            $employee = $this->model->find($id);
+            if (!$employee) {
+                throw new \Exception('Employee not found');
             }
 
             // Validate delete operation
@@ -534,6 +588,12 @@ class CustomerEmployeeController {
             if (!$this->model->delete($id)) {
                 throw new \Exception('Failed to delete employee');
             }
+
+            // Invalidate caches
+            $this->cache->delete("employee_{$id}");
+            $this->cache->invalidateDataTableCache('customer_employee_list', [
+                'customer_id' => $employee->customer_id
+            ]);
 
             wp_send_json_success([
                 'message' => __('Karyawan berhasil dihapus', 'wp-customer')
@@ -547,7 +607,7 @@ class CustomerEmployeeController {
     }
 
     /**
-     * Change employee status
+     * Change status dengan cache invalidation
      */
     public function changeStatus() {
         try {
@@ -563,21 +623,21 @@ class CustomerEmployeeController {
                 throw new \Exception('Invalid status');
             }
 
-            // Validate edit permission
-            if (!current_user_can('edit_employee')) {
-                throw new \Exception(__('Anda tidak memiliki izin untuk mengubah status karyawan.', 'wp-customer'));
-            }
-
-            // Get employee data
+            // Get employee data for cache invalidation
             $employee = $this->model->find($id);
             if (!$employee) {
                 throw new \Exception('Employee not found');
             }
 
-            // Update status
             if (!$this->model->changeStatus($id, $status)) {
                 throw new \Exception('Failed to update employee status');
             }
+
+            // Invalidate caches
+            $this->cache->delete("employee_{$id}");
+            $this->cache->invalidateDataTableCache('customer_employee_list', [
+                'customer_id' => $employee->customer_id
+            ]);
 
             // Get fresh data
             $employee = $this->model->find($id);
@@ -593,4 +653,5 @@ class CustomerEmployeeController {
             ]);
         }
     }
+
 }

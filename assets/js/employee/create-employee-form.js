@@ -37,6 +37,7 @@
             this.initializeValidation();
         },
 
+
         bindEvents() {
             // Form events
             this.form.on('submit', (e) => this.handleCreate(e));
@@ -52,7 +53,7 @@
                 if (customerId) {
                     this.showModal(customerId);
                 } else {
-                    EmployeeToast.error('Silakan pilih customer terlebih dahulu');
+                    CustomerToast.error('Silakan pilih customer terlebih dahulu');
                 }
             });
 
@@ -269,10 +270,18 @@
                 action: 'create_employee',
                 nonce: wpCustomerData.nonce,
                 customer_id: this.customerId,
-                name: this.form.find('[name="name"]').val().trim(),
                 branch_id: this.form.find('[name="branch_id"]').val(),
+                name: this.form.find('[name="name"]').val().trim(),
                 position: this.form.find('[name="position"]').val().trim(),
-                department: this.form.find('[name="department"]').val().trim(),
+                // Status aktif secara default untuk karyawan baru
+                status: 'active',
+                // Department values
+                finance: this.form.find('[name="finance"]').is(':checked') ? "1" : "0",
+                operation: this.form.find('[name="operation"]').is(':checked') ? "1" : "0",
+                legal: this.form.find('[name="legal"]').is(':checked') ? "1" : "0",
+                purchase: this.form.find('[name="purchase"]').is(':checked') ? "1" : "0",
+                // Optional fields
+                keterangan: this.form.find('[name="keterangan"]').val().trim(),
                 email: this.form.find('[name="email"]').val().trim(),
                 phone: this.form.find('[name="phone"]').val().trim()
             };
