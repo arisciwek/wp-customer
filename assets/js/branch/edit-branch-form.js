@@ -37,7 +37,7 @@
         },
 
         bindEvents() {
-            // Form events
+            // Form submission event
             this.form.on('submit', (e) => this.handleUpdate(e));
 
             // Edit button handler for DataTable rows
