@@ -132,11 +132,11 @@ class CustomerEmployeeController {
             $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
 
             // Map column index to column name
-            $columns = ['name', 'position', 'department', 'email', 'branch_name', 'status', 'actions'];
+            $columns = ['name', 'position', 'departments', 'email', 'branch_name', 'status', 'actions'];
             $orderBy = isset($columns[$orderColumn]) ? $columns[$orderColumn] : 'name';
 
-            if ($orderBy === 'actions') {
-                $orderBy = 'name'; // Default sort if actions column
+            if ($orderBy === 'actions' || $orderBy === 'departments') {
+                $orderBy = 'name'; // Default sort if actions or departments column
             }
 
             try {
@@ -144,14 +144,22 @@ class CustomerEmployeeController {
 
                 $data = [];
                 foreach ($result['data'] as $employee) {
+                    // Generate departments HTML
+                    $departments_html = $this->generateDepartmentsBadges([
+                        'finance' => (bool)$employee->finance,
+                        'operation' => (bool)$employee->operation,
+                        'legal' => (bool)$employee->legal,
+                        'purchase' => (bool)$employee->purchase
+                    ]);
+
                     $data[] = [
                         'id' => $employee->id,
                         'name' => esc_html($employee->name),
                         'position' => esc_html($employee->position),
-                        'department' => esc_html($employee->department),
+                        'department' => $departments_html,
                         'email' => esc_html($employee->email),
                         'branch_name' => esc_html($employee->branch_name),
-                        'status' => esc_html($employee->status),
+                        'status' => $employee->status,
                         'actions' => $this->generateActionButtons($employee)
                     ];
                 }
@@ -173,6 +181,46 @@ class CustomerEmployeeController {
                 'code' => $e->getCode()
             ], 400);
         }
+    }
+
+    /**
+     * Generate HTML for department badges
+     */
+    private function generateDepartmentsBadges(array $departments): string {
+        // Check if any department is true
+        $has_departments = array_filter($departments);
+        if (empty($has_departments)) {
+            return '<div class="department-badges-container empty">-</div>';
+        }
+
+        $badges = [];
+        foreach ($departments as $dept => $active) {
+            if ($active) {
+                $label = ucfirst($dept); // Convert finance to Finance, etc.
+                $badges[] = sprintf(
+                    '<span class="department-badge %s">%s</span>',
+                    esc_attr($dept),
+                    esc_html($label)
+                );
+            }
+        }
+
+        return sprintf(
+            '<div class="department-badges-container">%s</div>',
+            implode('', $badges)
+        );
+    }
+
+    /**
+     * Generate HTML for status badge
+     */
+    private function generateStatusBadge(string $status): string {
+        $label = $status === 'active' ? __('Aktif', 'wp-customer') : __('Non-aktif', 'wp-customer');
+        return sprintf(
+            '<span class="status-badge status-%s">%s</span>',
+            esc_attr($status),
+            esc_html($label)
+        );
     }
 
     /**
@@ -340,9 +388,6 @@ class CustomerEmployeeController {
         }
     }
 
-    /**
-     * Store new employee
-     */
     public function store() {
         try {
             error_log('Received POST data: ' . print_r($_POST, true));
@@ -355,11 +400,15 @@ class CustomerEmployeeController {
                 'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0,
                 'name' => sanitize_text_field($_POST['name'] ?? ''),
                 'position' => sanitize_text_field($_POST['position'] ?? ''),
-                'department' => sanitize_text_field($_POST['department'] ?? ''),
                 'email' => sanitize_email($_POST['email'] ?? ''),
                 'phone' => sanitize_text_field($_POST['phone'] ?? ''),
+                // Boolean department fields
+                'finance' => isset($_POST['finance']) ? (bool) $_POST['finance'] : false,
+                'operation' => isset($_POST['operation']) ? (bool) $_POST['operation'] : false,
+                'legal' => isset($_POST['legal']) ? (bool) $_POST['legal'] : false,
+                'purchase' => isset($_POST['purchase']) ? (bool) $_POST['purchase'] : false
             ];
-    
+
             error_log('Sanitized data: ' . print_r($data, true));
 
             // Validate input
@@ -392,9 +441,6 @@ class CustomerEmployeeController {
         }
     }
 
-    /**
-     * Update employee
-     */
     public function update() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
@@ -408,10 +454,14 @@ class CustomerEmployeeController {
             $data = [
                 'name' => sanitize_text_field($_POST['name'] ?? ''),
                 'position' => sanitize_text_field($_POST['position'] ?? ''),
-                'department' => sanitize_text_field($_POST['department'] ?? ''),
                 'email' => sanitize_email($_POST['email'] ?? ''),
                 'phone' => sanitize_text_field($_POST['phone'] ?? ''),
-                'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0
+                'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0,
+                // Boolean department fields
+                'finance' => isset($_POST['finance']) ? (bool) $_POST['finance'] : false,
+                'operation' => isset($_POST['operation']) ? (bool) $_POST['operation'] : false,
+                'legal' => isset($_POST['legal']) ? (bool) $_POST['legal'] : false,
+                'purchase' => isset($_POST['purchase']) ? (bool) $_POST['purchase'] : false
             ];
 
             // Validate input

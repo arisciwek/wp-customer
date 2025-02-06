@@ -221,9 +221,25 @@
                     {
                         data: 'status',
                         width: '10%',
-                        render: function(data) {
-                            const statusClass = data === 'active' ? 'status-active' : 'status-inactive';
-                            const statusText = data === 'active' ? 'Aktif' : 'Nonaktif';
+                        render: function(data, type, row) {
+                            // Pastikan data status adalah string murni
+                            // dan bukan HTML yang sudah di-generate
+                            console.log('Raw status:', data);
+                            
+                            // Normalisasi nilai status untuk perbandingan
+                            let statusValue = data;
+                            if (typeof data === 'string' && data.includes('status-badge')) {
+                                // Jika data sudah dalam bentuk HTML, ekstrak nilai aslinya
+                                statusValue = data.includes('Aktif') ? 'active' : 'inactive';
+                            }
+                            
+                            // Normalisasi untuk perbandingan
+                            statusValue = String(statusValue).toLowerCase().trim();
+                            const isActive = statusValue === 'active';
+                            
+                            const statusClass = isActive ? 'status-active' : 'status-inactive';
+                            const statusText = isActive ? 'Aktif' : 'Nonaktif';
+                            
                             return `<span class="status-badge ${statusClass}">${statusText}</span>`;
                         }
                     },
