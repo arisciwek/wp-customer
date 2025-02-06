@@ -96,8 +96,7 @@ defined('ABSPATH') || exit;
                         <?php endforeach; ?>
                     </div>
                 </div>
-              </div>
-                <div class="row right-side">
+
                  <!-- Cabang -->
                  <div class="employee-form-section">
                     <div class="section-header">
@@ -114,7 +113,9 @@ defined('ABSPATH') || exit;
                      </select>
                    </div>
                  </div>
-
+                 
+              </div>
+                <div class="row right-side">
                  <!-- Kontak -->
                  <div class="employee-form-section">
                     <div class="section-header">
@@ -165,6 +166,27 @@ defined('ABSPATH') || exit;
                      </select>
                    </div>
                  </div>
+
+                <!-- Keterangan -->
+                <div class="employee-form-section">
+                    <div class="section-header">
+                        <h4><?php _e('Keterangan', 'wp-customer'); ?></h4>
+                    </div>
+                    
+                    <div class="employee-form-group">
+                        <label for="edit-employee-keterangan">
+                            <?php _e('Keterangan', 'wp-customer'); ?>
+                        </label>
+                        <textarea id="edit-employee-keterangan"
+                                name="keterangan"
+                                class="regular-text"
+                                maxlength="200"
+                                rows="3"></textarea>
+                        <p class="description">
+                            <?php _e('Maksimal 200 karakter', 'wp-customer'); ?>
+                        </p>
+                    </div>
+                </div>                 
                 </div>
             </div>
             <div class="modal-footer">

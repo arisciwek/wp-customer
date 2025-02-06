@@ -145,6 +145,7 @@
             this.form.find('[name="phone"]').val(data.phone);
             console.log('Setting status to:', data.status); // Add this debug log
             this.form.find('[name="status"]').val(data.status);
+            this.form.find('[name="keterangan"]').val(data.keterangan || '');
 
             // Set department checkboxes
             this.form.find('[name="finance"]').prop('checked', data.finance === "1");
@@ -204,6 +205,9 @@
                         maxlength: 20,
                         phoneID: true  // Gunakan custom method phoneID
                     },
+                    keterangan: {
+                        maxlength: 200
+                    },
                     status: {
                         required: true
                     }
@@ -230,6 +234,9 @@
                     phone: {
                         maxlength: 'Nomor telepon maksimal 20 karakter',
                         phoneID: 'Format nomor telepon tidak valid'
+                    },
+                    keterangan: {
+                        maxlength: 'Keterangan maksimal 200 karakter'
                     },
                     status: {
                         required: 'Status wajib dipilih'
@@ -315,13 +322,6 @@
             const legal = this.form.find('[name="legal"]').is(':checked') ? "1" : "0";
             const purchase = this.form.find('[name="purchase"]').is(':checked') ? "1" : "0";
 
-            // Generate keterangan based on selected departments
-            const departments = [];
-            if (finance === "1") departments.push("Finance");
-            if (operation === "1") departments.push("Operation");
-            if (legal === "1") departments.push("Legal");
-            if (purchase === "1") departments.push("Purchase");
-            const keterangan = departments.join(", ");
 
             const formData = {
                 action: 'update_employee',
@@ -335,7 +335,7 @@
                 operation: operation,
                 legal: legal,
                 purchase: purchase,
-                keterangan: keterangan,
+                keterangan: this.form.find('[name="keterangan"]').val().trim(),
                 email: this.form.find('[name="email"]').val().trim(),
                 phone: this.form.find('[name="phone"]').val().trim(),
                 status: this.form.find('[name="status"]').val()

@@ -408,12 +408,11 @@ class CustomerEmployeeController {
                 'operation' => isset($_POST['operation']) && $_POST['operation'] === "1",
                 'legal' => isset($_POST['legal']) && $_POST['legal'] === "1",
                 'purchase' => isset($_POST['purchase']) && $_POST['purchase'] === "1",
-                // Generate keterangan from departments
-                'keterangan' => $this->generateKeterangan($_POST),
-                    // Only include status if it's provided
-                    'status' => isset($_POST['status']) && in_array($_POST['status'], ['active', 'inactive']) 
-                        ? $_POST['status'] 
-                        : 'active' // Use default value from schema
+                'keterangan' => sanitize_email($_POST['keterangan'] ?? ''),
+                // Only include status if it's provided
+                'status' => isset($_POST['status']) && in_array($_POST['status'], ['active', 'inactive']) 
+                    ? $_POST['status'] 
+                    : 'active' // Use default value from schema
             ];
 
             error_log('Sanitized data: ' . print_r($data, true));

@@ -42,14 +42,6 @@ class CustomerEmployeeModel {
     public function create(array $data): ?int {
         global $wpdb;
 
-        // Generate keterangan based on departments
-        $departments = [];
-        if ($data['finance']) $departments[] = 'Finance';
-        if ($data['operation']) $departments[] = 'Operation';
-        if ($data['legal']) $departments[] = 'Legal';
-        if ($data['purchase']) $departments[] = 'Purchase';
-        $keterangan = implode(', ', $departments);
-
         // Ensure valid status or use default
         $status = isset($data['status']) && in_array($data['status'], self::VALID_STATUSES) 
             ? $data['status'] 
@@ -67,7 +59,7 @@ class CustomerEmployeeModel {
                 'operation' => $data['operation'],
                 'legal' => $data['legal'],
                 'purchase' => $data['purchase'],
-                'keterangan' => $keterangan,
+                'keterangan' => $data['keterangan'],
                 'email' => $data['email'],
                 'phone' => $data['phone'],
                 'created_by' => get_current_user_id(),
@@ -117,14 +109,6 @@ class CustomerEmployeeModel {
     public function update(int $id, array $data): bool {
         global $wpdb;
 
-        // Generate keterangan based on departments
-        $departments = [];
-        if ($data['finance']) $departments[] = 'Finance';
-        if ($data['operation']) $departments[] = 'Operation';
-        if ($data['legal']) $departments[] = 'Legal';
-        if ($data['purchase']) $departments[] = 'Purchase';
-        $keterangan = implode(', ', $departments);
-
         // Only include status in update if it's provided and valid
         $updateData = [
             'name' => $data['name'],
@@ -133,7 +117,7 @@ class CustomerEmployeeModel {
             'operation' => $data['operation'],
             'legal' => $data['legal'],
             'purchase' => $data['purchase'],
-            'keterangan' => $keterangan,
+            'keterangan' => $data['keterangan'],
             'email' => $data['email'],
             'phone' => $data['phone'],
             'branch_id' => $data['branch_id'],
