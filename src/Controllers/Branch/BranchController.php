@@ -189,6 +189,49 @@ class BranchController {
         }
     }
 
+    private function generateActionButtons($branch) {
+        $current_user_id = get_current_user_id();
+        $customer = $this->customerModel->find($branch->customer_id);
+        $actions = '';
+
+        // View button - gunakan canViewBranch
+        if ($this->validator->canViewBranch($branch, $customer)) {
+            $actions .= sprintf(
+                '<button type="button" class="button view-branch" data-id="%d" title="%s">
+                    <i class="dashicons dashicons-visibility"></i>
+                </button> ',
+                $branch->id,
+                __('Lihat', 'wp-customer')
+            );
+        }
+
+        // Edit button - gunakan canEditBranch
+        if ($this->validator->canEditBranch($branch, $customer)) {
+            $actions .= sprintf(
+                '<button type="button" class="button edit-branch" data-id="%d" title="%s">
+                    <i class="dashicons dashicons-edit"></i>
+                </button> ',
+                $branch->id,
+                __('Edit', 'wp-customer')
+            );
+        }
+
+        // Delete button - gunakan canDeleteBranch
+        if ($this->validator->canDeleteBranch($branch, $customer)) {
+            $type_validation = $this->validator->validateBranchTypeDelete($branch->id);
+            if ($type_validation['valid']) {
+                $actions .= sprintf(
+                    '<button type="button" class="button delete-branch" data-id="%d" title="%s">
+                        <i class="dashicons dashicons-trash"></i>
+                    </button>',
+                    $branch->id,
+                    __('Hapus', 'wp-customer')
+                );
+            }
+        }
+
+        return $actions;
+    }
     public function handleDataTableRequest() {
         try {
             if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
@@ -275,96 +318,8 @@ class BranchController {
                 'code' => $e->getCode()
             ], 400);
         }
-    }
+    
 
-    // Contoh implementasi yang lebih sesuai untuk tombol tambah
-/*
-    private function generateAddBranchButton($customer) {
-        $current_user_id = get_current_user_id();
-
-        // Debug logging
-        $this->debug_log("=== Add Branch Button Permission Check ===");
-        $this->debug_log([
-            'customer_id' => (int)$customer->id,
-            'customer_owner_id' => (int)$customer->user_id,
-            'current_user_id' => $current_user_id
-        ]);
-
-        // 1. Check if user is owner
-        $is_owner = ((int)$customer->user_id === $current_user_id);
-
-        // 2. Permission check
-        $can_add = current_user_can('add_branch') && $is_owner;
-
-        $this->debug_log([
-            'is_owner' => $is_owner,
-            'has_add_permission' => current_user_can('add_branch'),
-            'final_decision' => $can_add
-        ]);
-
-        if ($can_add) {
-            return sprintf(
-                '<button type="button" class="button button-primary" id="add-branch-btn">
-                    <span class="dashicons dashicons-plus-alt"></span>
-                    %s
-                </button>',
-                __('Tambah Cabang', 'wp-customer')
-            );
-        }
-
-        return '';
-    }
-*/
-    private function generateActionButtons($branch) {
-            $actions = '';
-            $current_user_id = get_current_user_id();
-
-            // Debug logging untuk transparansi
-            $this->debug_log("==== Generating Action Buttons for Branch ID: {$branch->id} ====");
-            
-            // 1. Dapatkan data customer untuk cek ownership
-            global $wpdb;
-            $customer = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}app_customers WHERE id = %d",
-                $branch->customer_id
-            ));
-
-            // Log customer data
-            $this->debug_log([
-                'branch_id' => (int)$branch->id,
-                'customer_id' => (int)$branch->customer_id,
-                'customer_owner_id' => $customer ? (int)$customer->user_id : 'not found',
-                'current_user_id' => (int)$current_user_id,
-                'branch_created_by' => (int)$branch->created_by
-            ]);
-
-            // 2. Cek apakah user adalah owner
-            $is_owner = $customer && ((int)$customer->user_id === (int)$current_user_id);
-            
-            // 3. Cek apakah user adalah staff
-            $is_staff = (bool)$wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
-                 WHERE customer_id = %d AND user_id = %d",
-                $branch->customer_id, 
-                $current_user_id
-            ));
-
-            // Log permission context
-            $this->debug_log("Permission Context:");
-            $this->debug_log([
-                'is_owner' => $is_owner,
-                'is_staff' => $is_staff,
-                'is_creator' => ((int)$branch->created_by === (int)$current_user_id),
-                'has_view_detail' => current_user_can('view_branch_detail'),
-                'has_edit_all' => current_user_can('edit_all_branches'),
-                'has_edit_own' => current_user_can('edit_own_branch'),
-                'has_delete' => current_user_can('delete_branch')
-            ]);
-
-            // 4. View Button Logic
-            // - Owner selalu bisa lihat
-            // - Staff bisa lihat semua dalam customernya
-            // - Admin dengan view_branch_detail bisa lihat semua
             if ($is_owner || $is_staff || current_user_can('view_branch_detail')) {
                 $actions .= sprintf(
                     '<button type="button" class="button view-branch" data-id="%d" title="%s">
@@ -376,10 +331,6 @@ class BranchController {
                 $this->debug_log("Added View Button");
             }
 
-            // 5. Edit Button Logic
-            // - Owner bisa edit semua cabang dalam customernya
-            // - Staff hanya bisa edit cabang yang dia buat
-            // - Admin dengan edit_all_branches bisa edit semua
             if (current_user_can('edit_all_branches') || 
                 $is_owner || 
                 (current_user_can('edit_own_branch') && (int)$branch->created_by === (int)$current_user_id)) {
@@ -501,246 +452,148 @@ class BranchController {
             }
         }
 
-/**
- * Branch Permission Logic
- * 
- * Permission hierarchy for branch management follows these rules:
- * 
- * 1. Customer Owner Rights:
- *    - Owner (user_id in customers table) has full control of ALL entities under their customer
- *    - No need for *_all_* capabilities
- *    - Can edit/delete any branch within their customer scope
- *    - This is ownership-based permission, not capability-based
- * 
- * 2. Regular User Rights:
- *    - Users with edit_own_branch can only edit branches they created
- *    - Created_by field determines ownership for regular users
- * 
- * 3. Staff Rights:
- *    - Staff members (in customer_employees table) can view but not edit
- *    - View rights are automatic for customer scope
- * 
- * 4. Administrator Rights:
- *    - Only administrators use edit_all_branches capability
- *    - This is for system-wide access, not customer-scope access
- *    
- * Example:
- * - If user is customer owner: Can edit all branches under their customer
- * - If user has edit_own_branch: Can only edit branches where created_by matches
- * - If user has edit_all_branches: System administrator with full access
- */
-
-private function canEditBranch($branch, $customer) {
-    $current_user_id = get_current_user_id();
-    
-    // Debug logging
-    $this->debug_log("=== Branch Edit Permission Check ===");
-    $this->debug_log([
-        'branch_id' => (int)$branch->id,
-        'customer_id' => (int)$branch->customer_id,
-        'branch_user_id' => (int)$branch->user_id,
-        'customer_owner_id' => (int)$customer->user_id,
-        'current_user_id' => (int)$current_user_id,
-        'branch_created_by' => (int)$branch->created_by
-    ]);
-
-    // 1. Customer Owner Check - highest priority
-    $is_customer_owner = ((int)$customer->user_id === (int)$current_user_id);
-    if ($is_customer_owner) {
-        $this->debug_log("Permission granted: User is customer owner");
-        return true;
-    }
-
-    // 2. System Admin Check - for super admins
-    if (current_user_can('edit_all_branches')) {
-        $this->debug_log("Permission granted: User has edit_all_branches capability");
-        return true;
-    }
-
-    // 3. Regular User Check - for branch creators
-    if (current_user_can('edit_own_branch') && (int)$branch->created_by === (int)$current_user_id) {
-        $this->debug_log("Permission granted: User created this branch");
-        return true;
-    }
-
-    $this->debug_log("Permission denied: No matching criteria");
-    return false;
-}
-
     /**
      * Implementation in update() method
      */
 
-    public function update() {
-        try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
+        public function update() {
+            try {
+                check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
-            if (!$id) {
-                throw new \Exception('Invalid branch ID');
-            }
-
-            // Get existing branch data
-            $branch = $this->model->find($id);
-            if (!$branch) {
-                throw new \Exception('Branch not found');
-            }
-
-            // Get customer data untuk check ownership
-            $customer = $this->customerModel->find($branch->customer_id);
-            if (!$customer) {
-                throw new \Exception('Customer not found');
-            }
-
-            // Check edit permission
-            if (!$this->canEditBranch($branch, $customer)) {
-                throw new \Exception('Anda tidak memiliki izin untuk mengedit cabang ini');
-            }
-
-            $current_user_id = get_current_user_id();
-
-            // Debug log for permission checking
-            $this->debug_log("=== Branch Update Permission Check ===");
-            $this->debug_log([
-                'branch_id' => $id,
-                'customer_id' => $branch->customer_id,
-                'customer_owner_id' => $customer->user_id,
-                'current_user_id' => $current_user_id,
-                'branch_created_by' => $branch->created_by
-            ]);
-
-            // Check if user is customer owner
-            $is_customer_owner = ((int)$customer->user_id === (int)$current_user_id);
-            
-            $this->debug_log("Permission Context:");
-            $this->debug_log([
-                'is_customer_owner' => $is_customer_owner,
-                'edit_all_branches' => current_user_can('edit_all_branches'),
-                'edit_own_branch' => current_user_can('edit_own_branch')
-            ]);
-
-            // Permission check
-            $can_edit = $is_customer_owner || 
-                       current_user_can('edit_all_branches') ||
-                       (current_user_can('edit_own_branch') && (int)$branch->created_by === (int)$current_user_id);
-
-            $this->debug_log("Final Edit Permission: " . ($can_edit ? 'Granted' : 'Denied'));
-
-            if (!$can_edit) {
-                throw new \Exception('Anda tidak memiliki izin untuk mengedit cabang ini');
-            }
-
-            // Validate input
-
-            $data = array_filter([
-                'name' => isset($_POST['name']) ? sanitize_text_field($_POST['name']) : null,
-                'type' => isset($_POST['type']) ? sanitize_text_field($_POST['type']) : null,
-                'nitku' => isset($_POST['nitku']) ? sanitize_text_field($_POST['nitku']) : null,
-                'postal_code' => isset($_POST['postal_code']) ? sanitize_text_field($_POST['postal_code']) : null,
-                'latitude' => isset($_POST['latitude']) ? (float)$_POST['latitude'] : null,
-                'longitude' => isset($_POST['longitude']) ? (float)$_POST['longitude'] : null,
-                'address' => isset($_POST['address']) ? sanitize_text_field($_POST['address']) : null,
-                'phone' => isset($_POST['phone']) ? sanitize_text_field($_POST['phone']) : null,
-                'email' => isset($_POST['email']) ? sanitize_email($_POST['email']) : null,
-                'provinsi_id' => isset($_POST['provinsi_id']) ? (int)$_POST['provinsi_id'] : null,
-                'regency_id' => isset($_POST['regency_id']) ? (int)$_POST['regency_id'] : null,
-                'user_id' => isset($_POST['user_id']) ? (int)$_POST['user_id'] : null,
-                'status' => isset($_POST['status']) ? sanitize_text_field($_POST['status']) : null
-            ], function($value) { return $value !== null; });
-
-            // Inside update() method before performing update
-            if ($data['type'] ?? false) {
-                $type_validation = $this->validator->validateBranchTypeChange(
-                    $id, 
-                    $data['type'], 
-                    $branch->customer_id
-                );
-                
-                if (!$type_validation['valid']) {
-                    throw new \Exception($type_validation['message']);
+                $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+                if (!$id) {
+                    throw new \Exception('Invalid branch ID');
                 }
+
+                // Get existing branch data
+                $branch = $this->model->find($id);
+                if (!$branch) {
+                    throw new \Exception('Branch not found');
+                }
+
+                // Get customer data untuk permission check
+                $customer = $this->customerModel->find($branch->customer_id);
+                if (!$customer) {
+                    throw new \Exception('Customer not found');
+                }
+
+                // Permission check di awal
+                if (!$this->validator->canEditBranch($branch, $customer)) {
+                    throw new \Exception('Anda tidak memiliki izin untuk mengedit cabang ini.');
+                }
+
+               // Validate input
+               $data = array_filter([
+                   'name' => isset($_POST['name']) ? sanitize_text_field($_POST['name']) : null,
+                   'type' => isset($_POST['type']) ? sanitize_text_field($_POST['type']) : null,
+                   'nitku' => isset($_POST['nitku']) ? sanitize_text_field($_POST['nitku']) : null,
+                   'postal_code' => isset($_POST['postal_code']) ? sanitize_text_field($_POST['postal_code']) : null,
+                   'latitude' => isset($_POST['latitude']) ? (float)$_POST['latitude'] : null,
+                   'longitude' => isset($_POST['longitude']) ? (float)$_POST['longitude'] : null,
+                   'address' => isset($_POST['address']) ? sanitize_text_field($_POST['address']) : null,
+                   'phone' => isset($_POST['phone']) ? sanitize_text_field($_POST['phone']) : null,
+                   'email' => isset($_POST['email']) ? sanitize_email($_POST['email']) : null,
+                   'provinsi_id' => isset($_POST['provinsi_id']) ? (int)$_POST['provinsi_id'] : null,
+                   'regency_id' => isset($_POST['regency_id']) ? (int)$_POST['regency_id'] : null,
+                   'user_id' => isset($_POST['user_id']) ? (int)$_POST['user_id'] : null,
+                   'status' => isset($_POST['status']) ? sanitize_text_field($_POST['status']) : null
+               ], function($value) { return $value !== null; });
+
+                // Business logic validation
+                $errors = $this->validator->validateUpdate($data, $id);
+                if (!empty($errors)) {
+                    throw new \Exception(reset($errors));
+                }
+
+                // Update data
+                $updated = $this->model->update($id, $data);
+                if (!$updated) {
+                    throw new \Exception('Failed to update branch');
+                }
+
+                wp_send_json_success([
+                    'message' => __('Branch updated successfully', 'wp-customer'),
+                    'branch' => $this->model->find($id)
+                ]);
+
+            } catch (\Exception $e) {
+                wp_send_json_error(['message' => $e->getMessage()]);
             }
-
-            $errors = $this->validator->validateUpdate($data, $id);
-            if (!empty($errors)) {
-                throw new \Exception(implode(', ', $errors));
-            }
-
-            // Update data
-            $updated = $this->model->update($id, $data);
-            if (!$updated) {
-                throw new \Exception('Failed to update branch');
-            }
-
-            // Get updated branch data
-            $branch = $this->model->find($id);
-            if (!$branch) {
-                throw new \Exception('Failed to retrieve updated branch');
-            }
-
-            wp_send_json_success([
-                'message' => __('Branch updated successfully', 'wp-customer'),
-                'branch' => $branch
-            ]);
-
-        } catch (\Exception $e) {
-            wp_send_json_error(['message' => $e->getMessage()]);
         }
-    }
 
-    public function show() {
-        try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
+        public function show() {
+            try {
+                check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
-            if (!$id) {
-                throw new \Exception('Invalid branch ID');
+                $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+                if (!$id) {
+                    throw new \Exception('Invalid branch ID');
+                }
+
+                // Get branch data
+                $branch = $this->model->find($id);
+                if (!$branch) {
+                    throw new \Exception('Branch not found');
+                }
+
+                // Get customer data
+                $customer = $this->customerModel->find($branch->customer_id);
+                if (!$customer) {
+                    throw new \Exception('Customer not found');
+                }
+
+                // Permission check di awal
+                if (!$this->validator->canViewBranch($branch, $customer)) {
+                    throw new \Exception('Anda tidak memiliki izin untuk melihat detail cabang ini.');
+                }
+
+                // Business logic validation dengan data yang sudah ada
+                $errors = $this->validator->validateView($branch, $customer);
+                if (!empty($errors)) {
+                    throw new \Exception(reset($errors));
+                }
+
+                wp_send_json_success([
+                    'branch' => $branch
+                ]);
+
+            } catch (\Exception $e) {
+                wp_send_json_error(['message' => $e->getMessage()]);
             }
-
-            $branch = $this->model->find($id);
-            if (!$branch) {
-                throw new \Exception('Branch not found');
-            }
-
-            // Add permission check
-            if (!current_user_can('view_branch_detail') &&
-                (!current_user_can('view_own_branch') || $branch->created_by !== get_current_user_id())) {
-                throw new \Exception('You do not have permission to view this branch');
-            }
-
-            wp_send_json_success([
-                'branch' => $branch
-            ]);
-
-        } catch (\Exception $e) {
-            wp_send_json_error(['message' => $e->getMessage()]);
         }
-    }
 
     public function delete() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
-
-            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+            
+            $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
             if (!$id) {
                 throw new \Exception('Invalid branch ID');
             }
-
-            // Validate delete operation
-            $errors = $this->validator->validateDelete($id);
-            if (!empty($errors)) {
-                throw new \Exception(reset($errors));
+            
+            // Get branch and customer for permission check
+            $branch = $this->model->find($id);
+            $customer = $this->customerModel->find($branch->customer_id);
+            
+            // Check edit permission first (since delete requires edit)
+            if (!$this->validator->canEditBranch($branch, $customer)) {
+                throw new \Exception('Permission denied');
             }
-
-            // Perform delete
+            
+            // Validate branch type deletion
+            $type_validation = $this->validator->validateBranchTypeDelete($id);
+            if (!$type_validation['valid']) {
+                throw new \Exception($type_validation['message']);
+            }
+            
+            // Proceed with deletion
             if (!$this->model->delete($id)) {
                 throw new \Exception('Failed to delete branch');
             }
-
+            
             wp_send_json_success([
-                'message' => __('Data Cabang berhasil dihapus', 'wp-customer')
+                'message' => __('Branch deleted successfully', 'wp-customer')
             ]);
-
         } catch (\Exception $e) {
             wp_send_json_error(['message' => $e->getMessage()]);
         }

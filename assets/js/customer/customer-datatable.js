@@ -95,7 +95,7 @@
                     {
                         data: 'code',
                         title: 'Kode',
-                        width: '120px'
+                        width: '100px'
                     },
                     {
                         data: 'name',
@@ -110,7 +110,8 @@
                         data: 'branch_count',
                         title: 'Cabang',
                         className: 'text-center',
-                        searchable: false
+                        searchable: false,
+                        width: '40px'
                     },
                     {
                         data: 'actions',

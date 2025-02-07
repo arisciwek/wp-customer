@@ -162,7 +162,6 @@
              }
          },
 
-
         async loadCustomerData(id) {
             if (!id || this.isLoading) return;
 
@@ -190,6 +189,15 @@
                     if (window.location.hash !== newHash) {
                         window.history.pushState(null, '', newHash);
                     }
+
+                    // Reset tab to default (Data Customer)
+                    $('.nav-tab').removeClass('nav-tab-active');
+                    $('.nav-tab[data-tab="customer-details"]').addClass('nav-tab-active');
+                    
+                    // Hide all tab content first
+                    $('.tab-content').removeClass('active').hide();
+                    // Show customer details tab
+                    $('#customer-details').addClass('active').show();
 
                     // Update customer data in UI
                     this.displayData(response.data);
