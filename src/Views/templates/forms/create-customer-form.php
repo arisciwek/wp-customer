@@ -65,19 +65,28 @@ error_log('Regency select hook exists: ' . (has_action('wilayah_indonesia_regenc
                                   required>
                        </div>
 
-                       <div class="wp-customer-form-group">
-                           <label for="customer-npwp">
-                               <?php _e('NPWP', 'wp-customer'); ?>
-                           </label>
-                           <input type="text" 
-                                  id="customer-npwp" 
-                                  name="npwp" 
-                                  class="regular-text" 
-                                  maxlength="20">
-                           <span class="field-description">
-                               <?php _e('Format: 00.000.000.0-000.000', 'wp-customer'); ?>
-                           </span>
-                       </div>
+                        <div class="wp-customer-form-group">
+                            <label for="customer-npwp">
+                                <?php _e('NPWP', 'wp-customer'); ?>
+                            </label>
+                            <div class="npwp-input-group">
+                                <input type="text" maxlength="2" size="2" class="npwp-segment">
+                                <span class="separator">.</span>
+                                <input type="text" maxlength="3" size="3" class="npwp-segment">
+                                <span class="separator">.</span>
+                                <input type="text" maxlength="3" size="3" class="npwp-segment">
+                                <span class="separator">.</span>
+                                <input type="text" maxlength="1" size="1" class="npwp-segment">
+                                <span class="separator">-</span>
+                                <input type="text" maxlength="3" size="3" class="npwp-segment">
+                                <span class="separator">.</span>
+                                <input type="text" maxlength="3" size="3" class="npwp-segment">
+                                <input type="hidden" name="npwp" id="customer-npwp">
+                            </div>
+                            <span class="field-description">
+                                Format: 00.000.000.0-000.000
+                            </span>
+                        </div>
 
                        <div class="wp-customer-form-group">
                            <label for="customer-nib">
