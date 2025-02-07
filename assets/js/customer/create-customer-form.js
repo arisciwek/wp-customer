@@ -46,20 +46,92 @@
             this.bindEvents();
             this.initializeValidation();
         },
+        
+        initializeInputMasks() {
+            // Input mask untuk NPWP
+            $('#customer-npwp').inputmask('99.999.999.9-999.999');
+            
+            // Input mask untuk NIB (13 digit)
+            $('#customer-nib').inputmask('9999999999999');
+        },
 
         bindEvents() {
-            // Form submission - menggunakan arrow function untuk menjaga context
+            // Form submission
             this.form.on('submit', (e) => this.handleCreate(e));
             
-            // Field validation - bind dengan proper context
+            // Field validation for name
             this.form.on('input', 'input[name="name"]', (e) => {
                 this.validateNameField(e.target);
             });
 
-            // Add button handler
-            $('#add-customer-btn').on('click', () => this.showModal());
+            // Handle NPWP input segments
+            $('.npwp-segment').on('input', function() {
+                // Bersihkan input dari karakter non-digit
+                let $this = $(this);
+                let val = $this.val().replace(/\D/g, '');
+                $this.val(val);
+
+                // Auto move to next input when filled
+                if (val.length === parseInt($this.attr('maxlength'))) {
+                    let $next = $this.next('.npwp-segment');
+                    if ($next.length) {
+                        $next.focus();
+                    }
+                }
+
+                // Combine all segments into hidden input
+                let npwp = '';
+                $('.npwp-segment').each(function(index) {
+                    npwp += $(this).val();
+                    if (index === 0) npwp += '.';
+                    if (index === 1) npwp += '.';
+                    if (index === 2) npwp += '.';
+                    if (index === 3) npwp += '-';
+                    if (index === 4) npwp += '.';
+                });
+                $('input[name="npwp"]').val(npwp);
+            });
+
+            // Handle backspace for NPWP segments
+            $('.npwp-segment').on('keydown', function(e) {
+                let $this = $(this);
+                
+                // Handle backspace
+                if (e.keyCode === 8) {
+                    // Jika input kosong dan ada previous input, pindah ke input sebelumnya
+                    if (!$this.val()) {
+                        let $prev = $this.prev('.npwp-segment');
+                        if ($prev.length) {
+                            $prev.focus();
+                        }
+                    }
+                }
+                // Handle arrow keys
+                else if (e.keyCode === 37) { // Left arrow
+                    let $prev = $this.prev('.npwp-segment');
+                    if ($prev.length) {
+                        $prev.focus();
+                    }
+                }
+                else if (e.keyCode === 39) { // Right arrow
+                    let $next = $this.next('.npwp-segment');
+                    if ($next.length) {
+                        $next.focus();
+                    }
+                }
+            });
+
+            // NIB validation - hanya angka, max 13 digit
+            this.form.find('[name="nib"]').on('input', function() {
+                let val = $(this).val().replace(/\D/g, '');
+                if (val.length > 13) {
+                    val = val.substr(0, 13);
+                }
+                $(this).val(val);
+            });
 
             // Modal events
+            $('#add-customer-btn').on('click', () => this.showModal());
             $('.modal-close', this.modal).on('click', () => this.hideModal());
             $('.cancel-create', this.modal).on('click', () => this.hideModal());
 
@@ -111,8 +183,10 @@
 
         async handleCreate(e) {
             e.preventDefault();
+            console.log('Form submitted'); // Debug 1
 
             if (!this.form.valid()) {
+                console.log('Form validation failed');
                 return;
             }
 
@@ -121,8 +195,11 @@
                 action: 'create_customer',
                 nonce: wpCustomerData.nonce,
                 name: this.form.find('[name="name"]').val().trim(),
+                npwp: this.form.find('[name="npwp"]').val().trim(), // Tambahkan ini
+                nib: this.form.find('[name="nib"]').val().trim(),   // Tambahkan ini
                 provinsi_id: this.form.find('[name="provinsi_id"]').val(),
-                regency_id: this.form.find('[name="regency_id"]').val()
+                regency_id: this.form.find('[name="regency_id"]').val(),
+                status: this.form.find('[name="status"]').val()     // Tambahkan ini
             };
 
             // Add user_id if available (admin only)
@@ -132,6 +209,8 @@
             }
 
             this.setLoadingState(true);
+        
+            console.log('Form data:', formData); // Debug 2
 
             try {
                 const response = await $.ajax({
@@ -139,15 +218,21 @@
                     type: 'POST',
                     data: formData
                 });
+        
+                console.log('Server response:', response); // Debug 3
 
                 if (response.success) {
+                    console.log('Success response data:', response.data); // Debug 4
                     CustomerToast.success('Customer berhasil ditambahkan');
                     this.hideModal();
                     $(document).trigger('customer:created', [response.data]);
-
+    
+                    console.log('Triggered customer:created event'); // Debug 5
+                    
                     if (window.CustomerDataTable) {
                         window.CustomerDataTable.refresh();
                     }
+
                 } else {
                     CustomerToast.error(response.data?.message || 'Gagal menambah customer');
                 }
@@ -173,6 +258,14 @@
                     regency_id: {
                         required: true
                     },
+                    npwp: {
+                        pattern: /^\d{2}\.\d{3}\.\d{3}\.\d{1}-\d{3}\.\d{3}$/
+                    },
+                    nib: {
+                        minlength: 13,
+                        maxlength: 13,
+                        digits: true
+                    },
                     user_id: {
                         required: this.form.find('#customer-owner').length > 0
                     }
@@ -182,6 +275,14 @@
                         required: 'Nama customer wajib diisi',
                         minlength: 'Nama customer minimal 3 karakter',
                         maxlength: 'Nama customer maksimal 100 karakter'
+                    },
+                    npwp: {
+                        pattern: 'Format NPWP tidak valid'
+                    },
+                    nib: {
+                        minlength: 'NIB harus 13 digit',
+                        maxlength: 'NIB harus 13 digit', 
+                        digits: 'NIB hanya boleh berisi angka'
                     },
                     provinsi_id: {
                         required: 'Provinsi wajib dipilih'
