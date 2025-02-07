@@ -450,8 +450,38 @@ class CustomerCacheManager {
 
     /**
      * Clear all caches in group
+     * Alias method to maintain backward compatibility
+     * 
+     * @return bool True if cache was cleared successfully
+     */
+    public function clearAllCaches(): bool {
+        return $this->clearAll();
+    }
+
+    /**
+     * Clear all caches in group with enhanced error handling
+     * 
+     * @return bool True if cache was cleared successfully
      */
     public function clearAll(): bool {
-        return wp_cache_delete_group(self::CACHE_GROUP);
+        try {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Attempting to clear all caches in group: ' . self::CACHE_GROUP);
+            }
+
+            $result = wp_cache_delete_group(self::CACHE_GROUP);
+
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Cache clear result: ' . ($result ? 'success' : 'failed'));
+            }
+
+            return $result;
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Error clearing cache: ' . $e->getMessage());
+            }
+            return false;
+        }
     }
+
 }
