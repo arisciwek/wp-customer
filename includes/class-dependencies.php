@@ -306,7 +306,7 @@ public function enqueue_frontend_assets() {
             // Core dependencies
             wp_enqueue_script('jquery-validate', 'https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js', ['jquery'], '1.19.5', true);
             wp_enqueue_script('datatables', 'https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js', ['jquery'], '1.13.7', true);
-
+            wp_enqueue_script('jquery-inputmask', 'https://cdnjs.cloudflare.com/ajax/libs/jquery.inputmask/5.0.8/jquery.inputmask.min.js', array('jquery'), null, true);
             // Components
             wp_enqueue_script('customer-toast', WP_CUSTOMER_URL . 'assets/js/customer/customer-toast.js', ['jquery'], $this->version, true);
             wp_enqueue_script('confirmation-modal', WP_CUSTOMER_URL . 'assets/js/customer/confirmation-modal.js', ['jquery'], $this->version, true);
@@ -335,14 +335,6 @@ public function enqueue_frontend_assets() {
                 true
             );
 
-            // Gunakan wpCustomerData untuk semua
-            $customer_nonce = wp_create_nonce('wp_customer_nonce');
-            wp_localize_script('customer', 'wpCustomerData', [
-                'ajaxUrl' => admin_url('admin-ajax.php'),
-                'nonce' => $customer_nonce,
-                'debug' => true
-            ]);
-
             // Branch scripts
             wp_enqueue_script('branch-datatable', WP_CUSTOMER_URL . 'assets/js/branch/branch-datatable.js', ['jquery', 'datatables', 'customer-toast', 'customer'], $this->version, true);
             wp_enqueue_script('branch-toast', WP_CUSTOMER_URL . 'assets/js/branch/branch-toast.js', ['jquery'], $this->version, true);
@@ -355,6 +347,17 @@ public function enqueue_frontend_assets() {
             wp_enqueue_script('employee-toast', WP_CUSTOMER_URL . 'assets/js/employee/employee-toast.js', ['jquery'], $this->version, true);
             wp_enqueue_script('create-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/create-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
             wp_enqueue_script('edit-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/edit-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
+
+
+            // Gunakan wpCustomerData untuk semua
+            $customer_nonce = wp_create_nonce('wp_customer_nonce');
+            wp_localize_script('customer', 'wpCustomerData', [
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce' => $customer_nonce,
+                'debug' => true
+            ]);
+
+
 
         }
     }
