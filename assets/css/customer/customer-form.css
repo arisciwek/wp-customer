@@ -14,7 +14,7 @@
  *              Mengikuti WordPress admin styling conventions.
  */
 
-/* Two-column layout */
+/* Layout & Grid */
 .modal-content .row {
     display: flex;
     flex-direction: column;
@@ -29,11 +29,19 @@
     }
 }
 
+/* Form Sections */
 .customer-form-section {
     background: #fff;
     padding: 20px;
     border-radius: 4px;
     border: 1px solid #dcdcde;
+    margin-bottom: 30px;
+}
+
+.customer-form-section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
 }
 
 .customer-form-section h4 {
@@ -42,20 +50,36 @@
     border-bottom: 1px solid #dcdcde;
 }
 
-/* Form Validation States */
+/* Form Groups */
 .wp-customer-form-group {
     position: relative;
-    margin-bottom: 15px;
+    margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
 }
-
 
 .wp-customer-form-group label {
-   margin-bottom: 5px;
-   font-weight: 500;
-   display: block;
-   clear: both;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    display: block;
+    clear: both;
 }
 
+.wp-customer-form-group input[type="text"],
+.wp-customer-form-group select {
+    width: 100%;
+    max-width: 25em;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.wp-customer-form-group input[type="text"]:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+}
+
+/* Form Validation States */
 .wp-customer-form-group input.error {
     border-color: #d63638;
 }
@@ -95,145 +119,23 @@
     opacity: 1;
 }
 
-/* Submit Button States */
-.wp-customer-form-group .submit-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding-top: 15px;
-    margin-top: 20px;
-    border-top: 1px solid #dcdcde;
-}
-
-.wp-customer-form-group .submit-wrapper .spinner {
-    float: none;
-    margin: 0;
-}
-
-/* Form Fields */
-
-.wp-customer-form-group input[type="text"] {
-    width: 100%;
-    max-width: 25em;
-}
-
-.wp-customer-form-group input[type="text"]:focus {
-    border-color: #2271b1;
-    box-shadow: 0 0 0 1px #2271b1;
-}
-
-/* Field Description */
-.wp-customer-form-group .field-description {
+/* Field Descriptions */
+.field-description {
+    font-size: 0.875rem;
     color: #646970;
-    font-size: 12px;
-    margin-top: 5px;
+    margin-top: 0.25rem;
+    display: block;
+    order: 3;
 }
 
-/* Required Field Indicator */
-.wp-customer-form-group .required-field::after {
-    content: '*';
+/* Required Fields */
+.required-field:after {
+    content: ' *';
     color: #d63638;
     margin-left: 4px;
 }
 
-/* Form Grid Layout */
-.wp-customer-form-grid {
-    display: grid;
-    grid-template-columns: 200px 1fr;
-    gap: 15px;
-    align-items: start;
-}
-#create-customer-form .submit-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-    padding: 15px 20px;
-    margin-top: 20px;
-    border-top: 1px solid #dcdcde;
-    background: #f6f7f7;
-}
-
-/* Responsive adjustment */
-
-@media screen and (max-width: 782px) {
-    .wp-customer-form-grid {
-        grid-template-columns: 1fr;
-    }
-    .wp-customer-form-group .submit-wrapper {
-        padding: 15px;
-        flex-direction: column;
-    }
-    
-    .wp-customer-form-group .submit-wrapper button {
-        width: 100%;
-    }
-}
-
-/* Responsive Adjustments */
-@media screen and (max-width: 782px) {
-    .wp-customer-form-group input[type="text"] {
-        max-width: none;
-    }
-
-    .wp-customer-form-group .submit-wrapper {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .wp-customer-form-group .submit-wrapper button {
-        width: 100%;
-    }
-}
-
-/* Form Section */
-.wp-customer-form-section {
-    margin-bottom: 30px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid #dcdcde;
-}
-
-.wp-customer-form-section:last-child {
-    margin-bottom: 0;
-    padding-bottom: 0;
-    border-bottom: none;
-}
-
-/* Help Text Toggle */
-.wp-customer-form-group .help-text-toggle {
-    color: #2271b1;
-    text-decoration: none;
-    font-size: 12px;
-    cursor: pointer;
-}
-
-.wp-customer-form-group .help-text {
-    display: none;
-    margin-top: 10px;
-    padding: 10px;
-    background: #f0f6fc;
-    border-left: 4px solid #72aee6;
-}
-
-.wp-customer-form-group .help-text.visible {
-    display: block;
-}
-
-/* Form Actions */
-.wp-customer-form-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.wp-customer-form-actions button {
-    min-width: 100px;
-}
-
-/* Modal Styles */
+/* Modal Structure */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -254,15 +156,67 @@
     width: 100%;
     max-width: 860px;
     margin: auto;
-
-    align-items: center; /* vertical center */
-    justify-content: center; /* horizontal center */
-    padding: 1rem; /* Beri padding agar tidak terlalu dekat dengan edge di mobile */
-
     position: relative;
     animation: modalFadeIn 0.3s ease;
+    z-index: 1000;
 }
 
+/* Modal Header */
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    position: relative;
+}
+
+.modal-header h3 {
+    margin: 0;
+    padding-right: 2rem;
+}
+
+.modal-close {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    padding: 0.25rem;
+    cursor: pointer;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+}
+
+.modal-close:hover {
+    background-color: #f3f4f6;
+    color: #1f2937;
+}
+
+/* Modal Content */
+.modal-content {
+    padding: 20px;
+}
+
+/* Modal Footer */
+.modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #dcdcde;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: #f6f7f7;
+}
+
+/* Animations */
 @keyframes modalFadeIn {
     from {
         opacity: 0;
@@ -274,33 +228,46 @@
     }
 }
 
-.modal-header {
-    padding: 15px 20px;
-    border-bottom: 1px solid #dcdcde;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.modal-header h3 {
-    margin: 0;
-    font-size: 1.3em;
-}
-
-.modal-close {
-    background: none;
-    border: none;
-    color: #666;
+/* Help Text Styling */
+.wp-customer-form-group .help-text-toggle {
+    color: #2271b1;
+    text-decoration: none;
+    font-size: 12px;
     cursor: pointer;
-    padding: 5px;
-    font-size: 20px;
-    line-height: 1;
 }
 
-.modal-close:hover {
-    color: #d63638;
+.wp-customer-form-group .help-text {
+    display: none;
+    margin-top: 10px;
+    padding: 10px;
+    background: #f0f6fc;
+    border-left: 4px solid #72aee6;
 }
 
-.modal-content {
-    padding: 20px;
+.wp-customer-form-group .help-text.visible {
+    display: block;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+    .wp-customer-form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .wp-customer-form-group input[type="text"] {
+        max-width: none;
+    }
+    
+    .modal-footer {
+        flex-direction: column;
+    }
+    
+    .modal-footer button {
+        width: 100%;
+    }
+    
+    .wp-customer-form-group .submit-wrapper {
+        padding: 15px;
+        flex-direction: column;
+    }
 }
