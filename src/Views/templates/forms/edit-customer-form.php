@@ -90,8 +90,12 @@ error_log('Regency select hook exists: ' . (has_action('wilayah_indonesia_regenc
                                 <?php _e('Status', 'wp-customer'); ?>
                             </label>
                             <select id="edit-status" name="status" required>
-                                <option value="active"><?php _e('Aktif', 'wp-customer'); ?></option>
-                                <option value="inactive"><?php _e('Tidak Aktif', 'wp-customer'); ?></option>
+                                <option value="active" <?php selected($customer->status ?? 'active', 'active'); ?>>
+                                    <?php _e('Aktif', 'wp-customer'); ?>
+                                </option>
+                                <option value="inactive" <?php selected($customer->status ?? 'active', 'inactive'); ?>>
+                                    <?php _e('Tidak Aktif', 'wp-customer'); ?>
+                                </option>
                             </select>
                         </div>
                     </div>

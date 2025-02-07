@@ -281,25 +281,43 @@
         global $wpdb;
 
         $updateData = array_merge($data, ['updated_at' => current_time('mysql')]);
-        $format = [];
+        
+        // Remove null values but keep empty strings for NPWP and NIB
+        $updateData = array_filter($updateData, function($value, $key) {
+            if ($key === 'npwp' || $key === 'nib') {
+                return $value !== null;
+            }
+            return $value !== null;
+        }, ARRAY_FILTER_USE_BOTH);
 
-        // Add format for each field
-        if (isset($data['code'])) $format[] = '%s';
-        if (isset($data['name'])) $format[] = '%s';
-        if (isset($data['user_id'])) $format[] = '%d';
-        $format[] = '%s'; // for updated_at
+        $formats = [];
+        foreach ($updateData as $key => $value) {
+            switch ($key) {
+                case 'provinsi_id':
+                case 'regency_id':
+                case 'user_id':
+                    $formats[] = '%d';
+                    break;
+                default:
+                    $formats[] = '%s';
+            }
+        }
 
         $result = $wpdb->update(
             $this->table,
             $updateData,
             ['id' => $id],
-            $format,
+            $formats,
             ['%d']
         );
 
-        $this->cache->invalidateCustomerCache($id);
+        if ($result === false) {
+            error_log('Update failed. Last error: ' . $wpdb->last_error);
+            error_log('Update data: ' . print_r($updateData, true));
+            return false;
+        }
 
-        return $result !== false;
+        return true;
     }
 
     // Di CustomerModel.php

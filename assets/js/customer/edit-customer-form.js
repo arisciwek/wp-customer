@@ -64,10 +64,15 @@
                     nonce: wpCustomerData.nonce,
                     id: id,
                     name: this.form.find('[name="name"]').val().trim(),
+                    npwp: this.form.find('[name="npwp"]').val().trim(),  // Add NPWP
+                    nib: this.form.find('[name="nib"]').val().trim(),    // Add NIB
+                    status: this.form.find('[name="status"]').val(),
                     provinsi_id: this.form.find('[name="provinsi_id"]').val(),
                     regency_id: this.form.find('[name="regency_id"]').val(),
                     user_id: this.form.find('#edit-user').val()
                 };
+        
+                console.log('Form data being sent:', requestData);
 
                 this.setLoadingState(true);
 
@@ -140,8 +145,12 @@
             this.form.find('[name="name"]').val(customer.name);
             this.form.find('[name="npwp"]').val(customer.npwp || '');
             this.form.find('[name="nib"]').val(customer.nib || '');
-            this.form.find('[name="status"]').val(customer.status || 'active');
-
+            if (customer.status) {
+                this.form.find('[name="status"]').val(customer.status);
+            } else {
+                // Default to 'active' if no status
+                this.form.find('[name="status"]').val('active');
+            }
             // Handle provinsi and regency
             const $provinsi = this.form.find('[name="provinsi_id"]');
             const $regency = this.form.find('[name="regency_id"]');
@@ -158,6 +167,9 @@
                     }
                 });
             }
+
+            console.log("Customer status from data:", customer.status); // Tambahkan debug
+            console.log("Status select value after set:", this.form.find('[name="status"]').val()); // Debug nilai setelah di-set
 
             // Set user if exists
             const userSelect = this.form.find('[name="user_id"]');

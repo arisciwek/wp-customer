@@ -680,15 +680,29 @@ class CustomerController {
                 'name' => sanitize_text_field($_POST['name']),
                 'npwp' => !empty($_POST['npwp']) ? sanitize_text_field($_POST['npwp']) : null,
                 'nib' => !empty($_POST['nib']) ? sanitize_text_field($_POST['nib']) : null,
-                'status' => sanitize_text_field($_POST['status']),
+                'status' => !empty($_POST['status']) ? sanitize_text_field($_POST['status']) : 'active',
                 'provinsi_id' => !empty($_POST['provinsi_id']) ? intval($_POST['provinsi_id']) : null,
                 'regency_id' => !empty($_POST['regency_id']) ? intval($_POST['regency_id']) : null
             ];
+
+            // Add validation for status field
+            if (empty($data['status'])) {
+                $data['status'] = 'active'; // Default value
+            }
+
+            // Validate status is one of allowed values
+            if (!in_array($data['status'], ['active', 'inactive'])) {
+                throw new \Exception('Invalid status value');
+            }
 
             // Handle user_id if present and user has permission
             if (isset($_POST['user_id']) && current_user_can('edit_all_customers')) {
                 $data['user_id'] = !empty($_POST['user_id']) ? intval($_POST['user_id']) : null;
             }
+
+            // Debug log
+            error_log('Update data received: ' . print_r($data, true));
+            error_log('Raw POST data: ' . print_r($_POST, true));
 
             // 3. Form validation
             $form_errors = $this->validator->validateForm($data, $id);
