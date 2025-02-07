@@ -51,7 +51,7 @@
  * Example:
  * - If user is customer owner: Can edit all branches under their customer
  * - If user has edit_own_branch: Can only edit branches where created_by matches
- * - If user has edit_all_branches: System administrator with full access
+ * - If user has edit_branch: System administrator with full access
  */
 
 namespace WPCustomer\Validators\Branch;
@@ -91,7 +91,29 @@ class BranchValidator {
             return true;
         }
 
+        $can_view = apply_filters('wp_customer_can_view_branch', false, $branch, $customer, $current_user_id);
+        if ($can_view) {
+            return true;
+        }
+
         return false;
+    }
+
+    public function canCreateBranch($customer_id): bool {
+        $current_user_id = get_current_user_id();
+
+        // 1. Customer Owner Check - per docs, this is exclusive to owner
+        $customer = $this->customer_model->find($customer_id);
+        if ($customer && (int)$customer->user_id === (int)$current_user_id) {
+            return true;
+        }
+
+        // 2. System Admin Check with explicit capability
+        if (current_user_can('create_branch')) {
+            return true;
+        }
+
+        return apply_filters('wp_customer_can_create_branch', false, $customer_id, $current_user_id);
     }
 
     public function canEditBranch($branch, $customer) {
@@ -112,8 +134,14 @@ class BranchValidator {
         if (current_user_can('edit_all_branches')) {
             return true;
         }
+        
+        $can_edit = apply_filters('wp_customer_can_edit_branch', false, $branch, $customer, $current_user_id);
+        if ($can_edit) {
+            return true;
+        }
 
         return false;
+
     }
 
     public function canDeleteBranch($branch, $customer): bool {
@@ -202,7 +230,6 @@ class BranchValidator {
 
         return $errors;
     }
-
 
     private function isStaffMember($user_id, $branch_id) {
         global $wpdb;
