@@ -25,11 +25,13 @@
 
 namespace WPCustomer\Controllers\Employee;
 
+use WPCustomer\Models\Customer\CustomerModel;
 use WPCustomer\Models\Employee\CustomerEmployeeModel;
 use WPCustomer\Validators\Employee\CustomerEmployeeValidator;
 use WPCustomer\Cache\CustomerCacheManager;
 
 class CustomerEmployeeController {
+    private CustomerModel $customerModel;
     private CustomerEmployeeModel $model;
     private CustomerEmployeeValidator $validator;
     private CustomerCacheManager $cache;
@@ -42,6 +44,7 @@ class CustomerEmployeeController {
 
     public function __construct() {
         $this->model = new CustomerEmployeeModel();
+        $this->customerModel = new CustomerModel();
         $this->validator = new CustomerEmployeeValidator();
         $this->cache = new CustomerCacheManager();
 
@@ -127,8 +130,8 @@ class CustomerEmployeeController {
             $orderColumn = isset($_POST['order'][0]['column']) ? intval($_POST['order'][0]['column']) : 0;
             $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
 
-            // Cek cache
-            $cacheData = $this->cache->getDataTableCache(
+            // Check cache first
+            $cached_result = $this->cache->getDataTableCache(
                 'customer_employee_list',
                 get_current_user_id(),
                 $start,
@@ -139,17 +142,34 @@ class CustomerEmployeeController {
                 ['customer_id' => $customer_id]
             );
 
-            if ($cacheData !== null) {
-                wp_send_json($cacheData);
+            if ($cached_result !== null) {
+                wp_send_json($cached_result);
                 return;
             }
 
-            // Jika tidak ada cache, ambil data dari database
-            $result = $this->model->getDataTableData($customer_id, $start, $length, $search, $orderColumn, $orderDir);
+            // Get fresh data if no cache
+            $result = $this->model->getDataTableData(
+                $customer_id, 
+                $start,
+                $length, 
+                $search,
+                $orderColumn,
+                $orderDir
+            );
 
-            // Format data
+            if (!$result) {
+                throw new \Exception('No data returned from model');
+            }
+
+            // Format data with validation
             $data = [];
             foreach ($result['data'] as $employee) {
+                // Get customer for permission check
+                $customer = $this->customerModel->find($employee->customer_id);
+                if (!$this->validator->canViewEmployee($employee, $customer)) {
+                    continue;
+                }
+
                 $data[] = [
                     'id' => $employee->id,
                     'name' => esc_html($employee->name),
@@ -174,7 +194,7 @@ class CustomerEmployeeController {
                 'data' => $data
             ];
 
-            // Simpan ke cache
+            // Cache the result
             $this->cache->setDataTableCache(
                 'customer_employee_list',
                 get_current_user_id(),
@@ -192,7 +212,7 @@ class CustomerEmployeeController {
         } catch (\Exception $e) {
             wp_send_json_error([
                 'message' => $e->getMessage()
-            ]);
+            ], 400);
         }
     }
 
@@ -240,263 +260,177 @@ class CustomerEmployeeController {
      * Generate action buttons HTML
      */
     private function generateActionButtons($employee) {
-            $actions = '';
-            $current_user_id = get_current_user_id();
+        $actions = '';
+        $current_user_id = get_current_user_id();
+        
+        // Get customer untuk validasi
+        $customer = $this->customerModel->find($employee->customer_id);
+        if (!$customer) return $actions;
 
-            // Debug header untuk karyawan ini
-            $this->debug_log("==== Generating Action Buttons for Employee ID: {$employee->id} ====");
-            
-            // 1. Dapatkan data customer untuk cek ownership
-            global $wpdb;
-            $customer = $wpdb->get_row($wpdb->prepare(
-                "SELECT * FROM {$wpdb->prefix}app_customers WHERE id = %d",
-                $employee->customer_id
-            ));
-
-            // Log employee data
-            $this->debug_log([
-                'employee_id' => (int)$employee->id,
-                'customer_id' => (int)$employee->customer_id,
-                'customer_owner_id' => $customer ? (int)$customer->user_id : 'not found',
-                'current_user_id' => (int)$current_user_id,
-                'employee_created_by' => (int)$employee->created_by
-            ]);
-
-            // 2. Cek apakah user adalah owner
-            $is_owner = $customer && ((int)$customer->user_id === (int)$current_user_id);
-            
-            // 3. Cek apakah user adalah staff
-            $is_staff = (bool)$wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
-                 WHERE customer_id = %d AND user_id = %d",
-                $employee->customer_id, 
-                $current_user_id
-            ));
-
-            // Log permission context
-            $this->debug_log("Permission Context:");
-            $this->debug_log([
-                'is_owner' => $is_owner,
-                'is_staff' => $is_staff,
-                'is_creator' => ((int)$employee->created_by === (int)$current_user_id),
-                'has_view_detail' => current_user_can('view_employee_detail'),
-                'has_edit_all' => current_user_can('edit_all_employees'),
-                'has_edit_own' => current_user_can('edit_own_employee'),
-                'has_delete' => current_user_can('delete_employee')
-            ]);
-
-            // 4. View Button Logic
-            // - Owner selalu bisa lihat
-            // - Staff bisa lihat semua dalam customernya
-            // - Admin dengan view_employee_detail bisa lihat semua
-            if ($is_owner || $is_staff || current_user_can('view_employee_detail')) {
-                $actions .= sprintf(
-                    '<button type="button" class="button view-employee" data-id="%d" title="%s">
-                        <i class="dashicons dashicons-visibility"></i>
-                    </button> ',
-                    $employee->id,
-                    __('Lihat', 'wp-customer')
-                );
-                $this->debug_log("Added View Button");
-            }
-
-            // 5. Edit Button Logic
-            // - Owner bisa edit semua karyawan dalam customernya
-            // - Staff hanya bisa edit karyawan yang dia tambahkan
-            // - Admin dengan edit_all_employees bisa edit semua
-            if (current_user_can('edit_all_employees') || 
-                $is_owner || 
-                (current_user_can('edit_own_employee') && (int)$employee->created_by === (int)$current_user_id)) {
-                
-                $actions .= sprintf(
-                    '<button type="button" class="button edit-employee" data-id="%d" title="%s">
-                        <i class="dashicons dashicons-edit"></i>
-                    </button> ',
-                    $employee->id,
-                    __('Edit', 'wp-customer')
-                );
-                $this->debug_log("Added Edit Button");
-            }
-
-            // 6. Delete Button Logic
-            // - Owner bisa hapus semua karyawan dalam customernya
-            // - Staff hanya bisa hapus karyawan yang dia tambahkan
-            // - Admin dengan delete_employee bisa hapus semua
-            if (current_user_can('delete_employee') || 
-                $is_owner || 
-                (current_user_can('delete_employee') && (int)$employee->created_by === (int)$current_user_id)) {
-                
-                $actions .= sprintf(
-                    '<button type="button" class="button delete-employee" data-id="%d" title="%s">
-                        <i class="dashicons dashicons-trash"></i>
-                    </button>',
-                    $employee->id,
-                    __('Hapus', 'wp-customer')
-                );
-                $this->debug_log("Added Delete Button");
-            }
-
-            // 7. Status Toggle Button (Aktif/Nonaktif)
-            // - Owner bisa mengubah status semua karyawan
-            // - Staff hanya bisa mengubah status karyawan yang dia tambahkan
-            // - Admin dengan edit_all_employees bisa mengubah semua
-            if (current_user_can('edit_all_employees') || 
-                $is_owner || 
-                (current_user_can('edit_own_employee') && (int)$employee->created_by === (int)$current_user_id)) {
-                
-                $newStatus = $employee->status === 'active' ? 'inactive' : 'active';
-                $statusTitle = $employee->status === 'active' ? 
-                    __('Nonaktifkan', 'wp-customer') : 
-                    __('Aktifkan', 'wp-customer');
-                $statusIcon = $employee->status === 'active' ? 'remove' : 'yes';
-                
-                $actions .= sprintf(
-                    '<button type="button" class="button toggle-status" data-id="%d" data-status="%s" title="%s">
-                        <i class="dashicons dashicons-%s"></i>
-                    </button>',
-                    $employee->id,
-                    $newStatus,
-                    $statusTitle,
-                    $statusIcon
-                );
-                $this->debug_log("Added Status Toggle Button");
-            }
-
-            // Log final buttons
-            $this->debug_log("Final action buttons HTML: " . $actions);
-            $this->debug_log("==== End Action Buttons Generation ====\n");
-
-            return $actions;
+        // View Button
+        if ($this->validator->canViewEmployee($employee, $customer)) {
+            $actions .= sprintf(
+                '<button type="button" class="button view-employee" data-id="%d" title="%s">
+                    <i class="dashicons dashicons-visibility"></i>
+                </button> ',
+                $employee->id,
+                __('Lihat', 'wp-customer')
+            );
         }
 
+        // Edit Button
+        if ($this->validator->canEditEmployee($employee, $customer)) {
+            $actions .= sprintf(
+                '<button type="button" class="button edit-employee" data-id="%d" title="%s">
+                    <i class="dashicons dashicons-edit"></i>
+                </button> ',
+                $employee->id,
+                __('Edit', 'wp-customer')
+            );
+        }
+
+        // Delete Button
+        if ($this->validator->canDeleteEmployee($employee, $customer)) {
+            $actions .= sprintf(
+                '<button type="button" class="button delete-employee" data-id="%d" title="%s">
+                    <i class="dashicons dashicons-trash"></i>
+                </button>',
+                $employee->id,
+                __('Hapus', 'wp-customer')
+            );
+        }
+
+        // Status Toggle Button
+        if ($this->validator->canEditEmployee($employee, $customer)) {
+            $newStatus = $employee->status === 'active' ? 'inactive' : 'active';
+            $statusTitle = $employee->status === 'active' ? 
+                __('Nonaktifkan', 'wp-customer') : 
+                __('Aktifkan', 'wp-customer');
+            $statusIcon = $employee->status === 'active' ? 'remove' : 'yes';
+            
+            $actions .= sprintf(
+                '<button type="button" class="button toggle-status" data-id="%d" data-status="%s" title="%s">
+                    <i class="dashicons dashicons-%s"></i>
+                </button>',
+                $employee->id,
+                $newStatus,
+                $statusTitle,
+                $statusIcon
+            );
+        }
+
+        return $actions;
+
+    }
     /**
      * Show employee dengan cache
      */
     public function show() {
-        try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
+       try {
+           check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
-            if (!$id) {
-                throw new \Exception('Invalid employee ID');
+           $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+           if (!$id) throw new \Exception('Invalid employee ID');
+
+            $employee = $this->model->find($id);
+            if (!$employee) throw new \Exception('Employee not found');
+
+            $customer = $this->customerModel->find($employee->customer_id);
+            if (!$customer) throw new \Exception('Customer not found');
+
+            // Tambahkan pengecekan permission
+            if (!$this->validator->canViewEmployee($employee, $customer)) {
+                throw new \Exception('Anda tidak memiliki izin untuk melihat detail karyawan ini.');
             }
 
-            // Validate view permission
-            $errors = $this->validator->validateView($id);
-            if (!empty($errors)) {
-                throw new \Exception(reset($errors));
-            }
 
-            // Cek cache
-            $cacheKey = "employee_{$id}";
-            $employee = $this->cache->get($cacheKey);
 
-            if (!$employee) {
-                $employee = $this->model->find($id);
-                if (!$employee) {
-                    throw new \Exception('Employee not found');
-                }
+           // Validate view permission
+           $errors = $this->validator->validateView($id);
+           if (!empty($errors)) {
+               throw new \Exception(reset($errors));
+           }
 
-                // Simpan ke cache
-                $this->cache->set($cacheKey, $employee);
-            }
+           // Check cache
+           $employee = $this->cache->get("employee_{$id}");
+           if (!$employee) {
+               $employee = $this->model->find($id);
+               if (!$employee) throw new \Exception('Employee not found');
+               $this->cache->set("employee_{$id}", $employee);
+           }
 
-            wp_send_json_success($employee);
+           wp_send_json_success($employee);
 
-        } catch (\Exception $e) {
-            wp_send_json_error([
-                'message' => $e->getMessage()
-            ]);
-        }
+       } catch (\Exception $e) {
+           wp_send_json_error(['message' => $e->getMessage()]);
+       }
     }
 
     /**
      * Store dengan cache invalidation
      */
     public function store() {
-        try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
+       try {
+           check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            $data = [
-                'customer_id' => isset($_POST['customer_id']) ? (int) $_POST['customer_id'] : 0,
-                'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0,
-                'name' => sanitize_text_field($_POST['name'] ?? ''),
-                'position' => sanitize_text_field($_POST['position'] ?? ''),
-                'finance' => isset($_POST['finance']) && $_POST['finance'] === "1",
-                'operation' => isset($_POST['operation']) && $_POST['operation'] === "1",
-                'legal' => isset($_POST['legal']) && $_POST['legal'] === "1",
-                'purchase' => isset($_POST['purchase']) && $_POST['purchase'] === "1",
-                'keterangan' => sanitize_text_field($_POST['keterangan'] ?? ''),
-                'email' => sanitize_email($_POST['email'] ?? ''),
-                'phone' => sanitize_text_field($_POST['phone'] ?? ''),
-                'status' => isset($_POST['status']) && in_array($_POST['status'], ['active', 'inactive']) 
-                    ? $_POST['status'] 
-                    : 'active'
-            ];
+           $data = [
+               'customer_id' => isset($_POST['customer_id']) ? (int)$_POST['customer_id'] : 0,
+               'branch_id' => isset($_POST['branch_id']) ? (int)$_POST['branch_id'] : 0,
+               'name' => sanitize_text_field($_POST['name'] ?? ''),
+               'position' => sanitize_text_field($_POST['position'] ?? ''),
+               'finance' => isset($_POST['finance']) && $_POST['finance'] === "1",
+               'operation' => isset($_POST['operation']) && $_POST['operation'] === "1", 
+               'legal' => isset($_POST['legal']) && $_POST['legal'] === "1",
+               'purchase' => isset($_POST['purchase']) && $_POST['purchase'] === "1",
+               'keterangan' => sanitize_text_field($_POST['keterangan'] ?? ''),
+               'email' => sanitize_email($_POST['email'] ?? ''),
+               'phone' => sanitize_text_field($_POST['phone'] ?? ''),
+               'status' => isset($_POST['status']) && in_array($_POST['status'], ['active', 'inactive']) 
+                   ? $_POST['status'] 
+                   : 'active'
+           ];
 
-            // Validate input
-            $errors = $this->validator->validateCreate($data);
-            if (!empty($errors)) {
-                throw new \Exception(implode(', ', $errors));
+            if (!$this->validator->canCreateEmployee($data['customer_id'], $data['branch_id'])) {
+                throw new \Exception('Anda tidak memiliki izin untuk menambah karyawan.');
             }
 
-            // 1. Create WordPress User
-            $name_parts = explode(' ', $data['name'], 2);
-            $first_name = $name_parts[0];
-            $last_name = isset($name_parts[1]) ? $name_parts[1] : '';
-            
-            // Generate username from email or name
-            $username = strstr($data['email'], '@', true) ?: sanitize_user(strtolower(str_replace(' ', '', $data['name'])));
-            
-            $userdata = [
-                'user_login' => $username,
-                'user_email' => $data['email'],
-                'first_name' => $first_name,
-                'last_name' => $last_name,
-                'user_pass' => wp_generate_password(),
-                'role' => 'customer'
-            ];
+           $errors = $this->validator->validateCreate($data);
+           if (!empty($errors)) throw new \Exception(implode(', ', $errors));
 
-            $user_id = wp_insert_user($userdata);
-            if (is_wp_error($user_id)) {
-                throw new \Exception($user_id->get_error_message());
-            }
+           $user_data = [
+               'user_login' => strstr($data['email'], '@', true) ?: sanitize_user(strtolower(str_replace(' ', '', $data['name']))),
+               'user_email' => $data['email'],
+               'first_name' => explode(' ', $data['name'], 2)[0],
+               'last_name' => explode(' ', $data['name'], 2)[1] ?? '',
+               'user_pass' => wp_generate_password(),
+               'role' => 'customer'
+           ];
 
-            // 2. Add user_id to employee data
-            $data['user_id'] = $user_id;
+           $user_id = wp_insert_user($user_data);
+           if (is_wp_error($user_id)) throw new \Exception($user_id->get_error_message());
 
-            // 3. Create employee
-            $id = $this->model->create($data);
-            if (!$id) {
-                // Rollback - delete created user if employee creation fails
-                wp_delete_user($user_id);
-                throw new \Exception('Failed to create employee');
-            }
+           $data['user_id'] = $user_id;
+           $id = $this->model->create($data);
+           if (!$id) {
+               wp_delete_user($user_id);
+               throw new \Exception('Failed to create employee');
+           }
 
-            // 4. Send password reset email
-            wp_new_user_notification($user_id, null, 'user');
+           wp_new_user_notification($user_id, null, 'user');
 
-            // Invalidate related caches
-            $this->cache->invalidateDataTableCache('customer_employee_list', [
-                'customer_id' => $data['customer_id']
-            ]);
-            
-            // Get fresh data
-            $employee = $this->model->find($id);
-            if (!$employee) {
-                throw new \Exception('Failed to retrieve created employee');
-            }
+           $this->cache->invalidateDataTableCache('customer_employee_list', [
+               'customer_id' => $data['customer_id']
+           ]);
 
-            wp_send_json_success([
-                'message' => __('Karyawan berhasil ditambahkan dan email aktivasi telah dikirim', 'wp-customer'),
-                'employee' => $employee
-            ]);
+           $employee = $this->model->find($id);
+           wp_send_json_success([
+               'message' => __('Karyawan berhasil ditambahkan dan email aktivasi telah dikirim', 'wp-customer'),
+               'employee' => $employee
+           ]);
 
-        } catch (\Exception $e) {
-            wp_send_json_error([
-                'message' => $e->getMessage()
-            ]);
-        }
+       } catch (\Exception $e) {
+           wp_send_json_error(['message' => $e->getMessage()]);
+       }
     }
 
 
@@ -504,154 +438,151 @@ class CustomerEmployeeController {
      * Update dengan cache invalidation
      */
     public function update() {
-        try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
+       try {
+           check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
-            if (!$id) {
-                throw new \Exception('Invalid employee ID');
-            }
+           $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+           if (!$id) throw new \Exception('Invalid employee ID');
 
-            $data = [
-                'name' => sanitize_text_field($_POST['name'] ?? ''),
-                'position' => sanitize_text_field($_POST['position'] ?? ''),
-                'email' => sanitize_email($_POST['email'] ?? ''),
-                'phone' => sanitize_text_field($_POST['phone'] ?? ''),
-                'branch_id' => isset($_POST['branch_id']) ? (int) $_POST['branch_id'] : 0,
-                'finance' => isset($_POST['finance']) && $_POST['finance'] === "1",
-                'operation' => isset($_POST['operation']) && $_POST['operation'] === "1",
-                'legal' => isset($_POST['legal']) && $_POST['legal'] === "1",
-                'purchase' => isset($_POST['purchase']) && $_POST['purchase'] === "1",
-                'keterangan' => sanitize_text_field($_POST['keterangan'] ?? ''),
-                'status' => isset($_POST['status']) && in_array($_POST['status'], ['active', 'inactive']) 
-                    ? $_POST['status'] 
-                    : 'active'
-            ];
-
-            // Validate
-            $errors = $this->validator->validateUpdate($data, $id);
-            if (!empty($errors)) {
-                throw new \Exception(implode(', ', $errors));
-            }
-
-            // Update
-            if (!$this->model->update($id, $data)) {
-                throw new \Exception('Failed to update employee');
-            }
-
-            // Invalidate caches
-            $this->cache->delete("employee_{$id}");
             $employee = $this->model->find($id);
-            if ($employee) {
-                $this->cache->invalidateDataTableCache('customer_employee_list', [
-                    'customer_id' => $employee->customer_id
-                ]);
+            if (!$employee) throw new \Exception('Employee not found');
+
+            $customer = $this->customerModel->find($employee->customer_id);
+            if (!$customer) throw new \Exception('Customer not found');
+
+            if (!$this->validator->canEditEmployee($employee, $customer)) {
+                throw new \Exception('Anda tidak memiliki izin untuk mengedit karyawan ini.');
             }
 
-            wp_send_json_success([
-                'message' => __('Data karyawan berhasil diperbarui', 'wp-customer'),
-                'employee' => $employee
-            ]);
+           $data = [
+               'name' => sanitize_text_field($_POST['name'] ?? ''),
+               'position' => sanitize_text_field($_POST['position'] ?? ''),
+               'email' => sanitize_email($_POST['email'] ?? ''),
+               'phone' => sanitize_text_field($_POST['phone'] ?? ''),
+               'branch_id' => isset($_POST['branch_id']) ? (int)$_POST['branch_id'] : 0,
+               'finance' => isset($_POST['finance']) && $_POST['finance'] === "1",
+               'operation' => isset($_POST['operation']) && $_POST['operation'] === "1",
+               'legal' => isset($_POST['legal']) && $_POST['legal'] === "1",
+               'purchase' => isset($_POST['purchase']) && $_POST['purchase'] === "1",
+               'keterangan' => sanitize_text_field($_POST['keterangan'] ?? ''),
+               'status' => isset($_POST['status']) && in_array($_POST['status'], ['active', 'inactive']) 
+                   ? $_POST['status'] 
+                   : 'active'
+           ];
 
-        } catch (\Exception $e) {
-            wp_send_json_error([
-                'message' => $e->getMessage()
-            ]);
-        }
+           $errors = $this->validator->validateUpdate($data, $id);
+           if (!empty($errors)) throw new \Exception(implode(', ', $errors));
+
+           if (!$this->model->update($id, $data)) {
+               throw new \Exception('Failed to update employee');
+           }
+
+           $this->cache->delete("employee_{$id}");
+           $employee = $this->model->find($id);
+           if ($employee) {
+               $this->cache->invalidateDataTableCache('customer_employee_list', [
+                   'customer_id' => $employee->customer_id
+               ]);
+           }
+
+           wp_send_json_success([
+               'message' => __('Data karyawan berhasil diperbarui', 'wp-customer'),
+               'employee' => $employee
+           ]);
+
+       } catch (\Exception $e) {
+           wp_send_json_error(['message' => $e->getMessage()]);
+       }
     }
-
 
     /**
      * Delete dengan cache invalidation
      */
     public function delete() {
-        try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
+       try {
+           check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
-            if (!$id) {
-                throw new \Exception('Invalid employee ID');
-            }
+           $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
 
-            // Get employee data before deletion for cache invalidation
+           if (!$id) throw new \Exception('Invalid employee ID');
+
             $employee = $this->model->find($id);
-            if (!$employee) {
-                throw new \Exception('Employee not found');
+            if (!$employee) throw new \Exception('Employee not found');
+
+            $customer = $this->customerModel->find($employee->customer_id);
+            if (!$customer) throw new \Exception('Customer not found');
+
+            if (!$this->validator->canDeleteEmployee($employee, $customer)) {
+                throw new \Exception('Anda tidak memiliki izin untuk menghapus karyawan ini.');
             }
 
-            // Validate delete operation
-            $errors = $this->validator->validateDelete($id);
-            if (!empty($errors)) {
-                throw new \Exception(reset($errors));
-            }
+           $errors = $this->validator->validateDelete($id);
+           if (!empty($errors)) throw new \Exception(reset($errors));
 
-            if (!$this->model->delete($id)) {
-                throw new \Exception('Failed to delete employee');
-            }
+           if (!$this->model->delete($id)) {
+               throw new \Exception('Failed to delete employee');
+           }
 
-            // Invalidate caches
-            $this->cache->delete("employee_{$id}");
-            $this->cache->invalidateDataTableCache('customer_employee_list', [
-                'customer_id' => $employee->customer_id
-            ]);
+           $this->cache->delete("employee_{$id}");
+           $this->cache->invalidateDataTableCache('customer_employee_list', [
+               'customer_id' => $employee->customer_id
+           ]);
 
-            wp_send_json_success([
-                'message' => __('Karyawan berhasil dihapus', 'wp-customer')
-            ]);
+           wp_send_json_success([
+               'message' => __('Karyawan berhasil dihapus', 'wp-customer')
+           ]);
 
-        } catch (\Exception $e) {
-            wp_send_json_error([
-                'message' => $e->getMessage()
-            ]);
-        }
+       } catch (\Exception $e) {
+           wp_send_json_error(['message' => $e->getMessage()]);
+       }
     }
 
     /**
      * Change status dengan cache invalidation
      */
     public function changeStatus() {
-        try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
+       try {
+           check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
-            if (!$id) {
-                throw new \Exception('Invalid employee ID');
-            }
+           $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+           if (!$id) throw new \Exception('Invalid employee ID');
 
-            $status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
-            if (!in_array($status, ['active', 'inactive'])) {
-                throw new \Exception('Invalid status');
-            }
-
-            // Get employee data for cache invalidation
             $employee = $this->model->find($id);
-            if (!$employee) {
-                throw new \Exception('Employee not found');
+            if (!$employee) throw new \Exception('Employee not found');
+
+            $customer = $this->customerModel->find($employee->customer_id);
+            if (!$customer) throw new \Exception('Customer not found');
+
+            if (!$this->validator->canEditEmployee($employee, $customer)) {
+                throw new \Exception('Anda tidak memiliki izin untuk mengubah status karyawan ini.');
             }
 
-            if (!$this->model->changeStatus($id, $status)) {
-                throw new \Exception('Failed to update employee status');
-            }
+           $status = isset($_POST['status']) ? sanitize_text_field($_POST['status']) : '';
+           if (!in_array($status, ['active', 'inactive'])) {
+               throw new \Exception('Invalid status');
+           }
 
-            // Invalidate caches
-            $this->cache->delete("employee_{$id}");
-            $this->cache->invalidateDataTableCache('customer_employee_list', [
-                'customer_id' => $employee->customer_id
-            ]);
+           $employee = $this->model->find($id);
+           if (!$employee) throw new \Exception('Employee not found');
 
-            // Get fresh data
-            $employee = $this->model->find($id);
+           if (!$this->model->changeStatus($id, $status)) {
+               throw new \Exception('Failed to update employee status');
+           }
 
-            wp_send_json_success([
-                'message' => __('Status karyawan berhasil diperbarui', 'wp-customer'),
-                'employee' => $employee
-            ]);
+           $this->cache->delete("employee_{$id}");
+           $this->cache->invalidateDataTableCache('customer_employee_list', [
+               'customer_id' => $employee->customer_id
+           ]);
 
-        } catch (\Exception $e) {
-            wp_send_json_error([
-                'message' => $e->getMessage()
-            ]);
-        }
+           $employee = $this->model->find($id);
+           wp_send_json_success([
+               'message' => __('Status karyawan berhasil diperbarui', 'wp-customer'),
+               'employee' => $employee
+           ]);
+
+       } catch (\Exception $e) {
+           wp_send_json_error(['message' => $e->getMessage()]);
+       }
     }
 
 }
