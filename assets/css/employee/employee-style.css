@@ -669,3 +669,24 @@
         min-width: 200px;  /* Prevent badges from getting too cramped */
     }
 }
+
+.npwp-input-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.npwp-input-group input {
+    text-align: center;
+    border: 1px solid #ddd;
+    padding: 5px;
+}
+
+.npwp-input-group .separator {
+    margin: 0 2px;
+    color: #666;
+}
+
+.npwp-segment {
+    width: auto;
+}
