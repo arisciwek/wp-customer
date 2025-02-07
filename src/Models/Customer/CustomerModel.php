@@ -588,26 +588,30 @@
     }
 
     // Tambah method helper
-    private function existsByNPWP($npwp, $excludeId = null): bool 
+    public function existsByNPWP($npwp, $excludeId = null): bool 
     {
         global $wpdb;
-        $sql = "SELECT EXISTS (SELECT 1 FROM {$this->table} WHERE npwp = %s";
+        
         if ($excludeId) {
-            $sql .= " AND id != %d";
+            $sql = "SELECT EXISTS (SELECT 1 FROM {$this->table} WHERE npwp = %s AND id != %d)";
+            return (bool)$wpdb->get_var($wpdb->prepare($sql, $npwp, $excludeId));
+        } else {
+            $sql = "SELECT EXISTS (SELECT 1 FROM {$this->table} WHERE npwp = %s)";
+            return (bool)$wpdb->get_var($wpdb->prepare($sql, $npwp));
         }
-        $sql .= ")";
-        return (bool)$wpdb->get_var($wpdb->prepare($sql, $npwp, $excludeId));
     }
 
-    private function existsByNIB($nib, $excludeId = null): bool
+    public function existsByNIB($nib, $excludeId = null): bool
     {
         global $wpdb;
-        $sql = "SELECT EXISTS (SELECT 1 FROM {$this->table} WHERE nib = %s";
+        
         if ($excludeId) {
-            $sql .= " AND id != %d";
+            $sql = "SELECT EXISTS (SELECT 1 FROM {$this->table} WHERE nib = %s AND id != %d)";
+            return (bool)$wpdb->get_var($wpdb->prepare($sql, $nib, $excludeId));
+        } else {
+            $sql = "SELECT EXISTS (SELECT 1 FROM {$this->table} WHERE nib = %s)";
+            return (bool)$wpdb->get_var($wpdb->prepare($sql, $nib));
         }
-        $sql .= ")";
-        return (bool)$wpdb->get_var($wpdb->prepare($sql, $nib, $excludeId));
     }
 
     /**
