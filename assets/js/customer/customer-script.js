@@ -156,7 +156,7 @@
                  $('.nav-tab').removeClass('nav-tab-active');
                  $('.nav-tab[data-tab="customer-details"]').addClass('nav-tab-active');
                  
-                 console.log('Loading customer data for ID:', id); // Debug 5
+                 console.log('Get customer data for ID:', id); // Debug 5
 
                  this.loadCustomerData(id);
              }
@@ -384,9 +384,10 @@
                 }
                 
                 // Refresh DataTable
-                if (window.CustomerDataTable) {
-                    window.CustomerDataTable.refresh();
-                }
+                //if (window.CustomerDataTable) {
+                //    window.CustomerDataTable.refresh();
+                //}
+
             }
         },
         

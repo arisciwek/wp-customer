@@ -195,11 +195,11 @@
                 action: 'create_customer',
                 nonce: wpCustomerData.nonce,
                 name: this.form.find('[name="name"]').val().trim(),
-                npwp: this.form.find('[name="npwp"]').val().trim(), // Tambahkan ini
-                nib: this.form.find('[name="nib"]').val().trim(),   // Tambahkan ini
+                npwp: this.form.find('[name="npwp"]').val().trim(),
+                nib: this.form.find('[name="nib"]').val().trim(),
                 provinsi_id: this.form.find('[name="provinsi_id"]').val(),
                 regency_id: this.form.find('[name="regency_id"]').val(),
-                status: this.form.find('[name="status"]').val()     // Tambahkan ini
+                status: this.form.find('[name="status"]').val()
             };
 
             // Add user_id if available (admin only)
@@ -210,7 +210,7 @@
 
             this.setLoadingState(true);
         
-            console.log('Form data:', formData); // Debug 2
+            console.log('Form data:', formData);
 
             try {
                 const response = await $.ajax({
@@ -228,10 +228,6 @@
                     $(document).trigger('customer:created', [response.data]);
     
                     console.log('Triggered customer:created event'); // Debug 5
-                    
-                    if (window.CustomerDataTable) {
-                        window.CustomerDataTable.refresh();
-                    }
 
                 } else {
                     CustomerToast.error(response.data?.message || 'Gagal menambah customer');

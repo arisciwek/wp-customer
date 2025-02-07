@@ -203,7 +203,7 @@
             if (!id) return;
 
             try {
-                console.log('Loading customer data for ID:', id); // Debug log
+                console.log('Loading customer data for edit ID:', id); // Debug log
 
                 const response = await $.ajax({
                     url: wpCustomerData.ajaxUrl,

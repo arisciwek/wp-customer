@@ -98,69 +98,16 @@
         },
 
         bindEvents() {
-            // Form submission handler
+            // 1. Form submission handler
             $(document).on('submit', '#edit-customer-form', async (e) => {
                 e.preventDefault();
-
                 if (!this.form.valid()) {
                     return;
                 }
-
-                const id = this.form.find('#customer-id').val();
-                const requestData = {
-                    action: 'update_customer',
-                    nonce: wpCustomerData.nonce,
-                    id: id,
-                    name: this.form.find('[name="name"]').val().trim(),
-                    npwp: this.form.find('#edit-npwp').val(),
-                    nib: this.form.find('[name="nib"]').val().trim(),
-                    status: this.form.find('[name="status"]').val(),
-                    provinsi_id: this.form.find('[name="provinsi_id"]').val(),
-                    regency_id: this.form.find('[name="regency_id"]').val(),
-                    user_id: this.form.find('#edit-user').val()
-                };
-
-                console.log('Form data being sent:', requestData);
-
-                this.setLoadingState(true);
-
-                try {
-                    const response = await $.ajax({
-                        url: wpCustomerData.ajaxUrl,
-                        type: 'POST',
-                        data: requestData
-                    });
-
-                    if (response.success) {
-                        CustomerToast.success('Customer berhasil diperbarui');
-                        this.hideModal();
-
-                        if (id) {
-                            window.location.hash = id;
-                        }
-
-                        $(document).trigger('customer:updated', [response]);
-
-                        if (window.CustomerDataTable) {
-                            window.CustomerDataTable.refresh();
-                        }
-                    } else {
-                        CustomerToast.error(response.data?.message || 'Gagal memperbarui customer');
-                    }
-                } catch (error) {
-                    console.error('Update customer error:', error);
-                    CustomerToast.error('Gagal menghubungi server');
-                } finally {
-                    this.setLoadingState(false);
-                }
+                await this.handleUpdate();
             });
 
-            // Name field validation
-            this.form.on('input', '[name="name"]', (e) => {
-                this.validateNameField(e.target);
-            });
-
-            // NIB validation - numbers only, max 13 digits
+            // 2. NIB validation
             this.form.find('[name="nib"]').on('input', function() {
                 let val = $(this).val().replace(/\D/g, '');
                 if (val.length > 13) {
@@ -169,7 +116,7 @@
                 $(this).val(val);
             });
 
-            // Province change handler
+            // 3. Province change handler
             this.form.find('[name="provinsi_id"]').on('change', function() {
                 const $regencySelect = $('#edit-regency');
                 $regencySelect
@@ -181,7 +128,7 @@
                 }
             });
 
-            // Status change handler with confirmation
+            // 4. Status change handler dengan konfirmasi
             this.form.find('[name="status"]').on('change', function() {
                 const status = $(this).val();
                 if (status === 'inactive') {
@@ -192,7 +139,7 @@
                 }
             });
 
-            // User select handler (admin only)
+            // 5. User select handler (admin only)
             if (this.form.find('#edit-user').length) {
                 this.form.find('#edit-user').on('change', function() {
                     const userId = $(this).val();
@@ -203,47 +150,44 @@
                 });
             }
 
-            // Modal close handlers
+            // 6. Modal close handlers
             $('.modal-close', this.modal).on('click', () => this.hideModal());
             $('.cancel-edit', this.modal).on('click', () => this.hideModal());
 
-            // Close modal when clicking outside
+            // 7. Modal overlay click handler
             this.modal.on('click', (e) => {
                 if ($(e.target).is('.modal-overlay')) {
                     this.hideModal();
                 }
             });
 
-            // Add input masking for NPWP when editing
+            // 8. NPWP input handler
             $('#edit-npwp').on('input', function() {
                 $(this).val(function(_, v) {
-                    // Keep only the first 15 digits
                     const digits = v.replace(/\D/g, '').slice(0, 15);
                     if (!digits) return '';
                     
-                    // Check if it's a complete NPWP
                     if (digits.length === 15) {
                         CustomerToast.success('Format NPWP lengkap');
                     }
                 });
             });
 
-            // Handle Enter key in form fields
+            // 9. Enter key handler dalam form fields
             this.form.find('input, select').on('keypress', function(e) {
-                if (e.which === 13) { // Enter key
+                if (e.which === 13) {
                     e.preventDefault();
                     const $inputs = $('#edit-customer-form').find('input, select');
                     const nextIndex = $inputs.index(this) + 1;
                     if (nextIndex < $inputs.length) {
                         $inputs.eq(nextIndex).focus();
                     } else {
-                        // If it's the last field, submit the form
                         $('#edit-customer-form').submit();
                     }
                 }
             });
 
-            // Validation events for required fields
+            // 10. Validasi fields yang required
             this.form.find('[required]').on('blur', function() {
                 if (!$(this).val()) {
                     $(this).addClass('error');
@@ -256,14 +200,13 @@
                 }
             });
 
-            // Remove error state on input
+            // 11. Remove error state on input
             this.form.find('input, select').on('input change', function() {
                 $(this).removeClass('error');
                 $(this).next('.form-error').remove();
             });
         },
 
-        // Di edit-customer-form.js
         showEditForm(data) {
             if (!data || !data.customer) {
                 CustomerToast.error('Data customer tidak valid');
@@ -547,45 +490,6 @@
             // Log validation initialization
             console.log('Form validation initialized');
         },
-
-        /*
-        validateField(field) {
-            const $field = $(field);
-            const value = $field.val().trim();
-            const errors = [];
-
-            if (!value) {
-                errors.push('Nama customer wajib diisi');
-            } else {
-                if (value.length < 3) {
-                    errors.push('Nama customer minimal 3 karakter');
-                }
-                if (value.length > 100) {
-                    errors.push('Nama customer maksimal 100 karakter');
-                }
-                if (!/^[a-zA-Z\s]+$/.test(value)) {
-                    errors.push('Nama customer hanya boleh mengandung huruf dan spasi');
-                }
-            }
-
-            const $error = $field.next('.form-error');
-            if (errors.length > 0) {
-                $field.addClass('error');
-                if ($error.length) {
-                    $error.text(errors[0]);
-                } else {
-                    $('<span class="form-error"></span>')
-                        .text(errors[0])
-                        .insertAfter($field);
-                }
-                return false;
-            } else {
-                $field.removeClass('error');
-                $error.remove();
-                return true;
-            }
-        },
-        */
         
         setLoadingState(loading) {
             const $submitBtn = this.form.find('[type="submit"]');
@@ -602,6 +506,49 @@
             }
         },
 
+        async handleUpdate() {
+            const id = this.form.find('#customer-id').val();
+            const requestData = {
+                action: 'update_customer',
+                nonce: wpCustomerData.nonce,
+                id: id,
+                name: this.form.find('[name="name"]').val().trim(),
+                npwp: this.form.find('#edit-npwp').val(),
+                nib: this.form.find('[name="nib"]').val().trim(),
+                status: this.form.find('[name="status"]').val(),
+                provinsi_id: this.form.find('[name="provinsi_id"]').val(),
+                regency_id: this.form.find('[name="regency_id"]').val(),
+                user_id: this.form.find('#edit-user').val()
+            };
+
+            this.setLoadingState(true);
+
+            try {
+                const response = await $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: requestData
+                });
+
+                if (response.success) {
+                    CustomerToast.success('Customer berhasil diperbarui');
+                    this.hideModal();
+
+                    if (id) {
+                        window.location.hash = id;
+                    }
+
+                    $(document).trigger('customer:updated', [response]);
+                } else {
+                    CustomerToast.error(response.data?.message || 'Gagal memperbarui customer');
+                }
+            } catch (error) {
+                console.error('Update customer error:', error);
+                CustomerToast.error('Gagal menghubungi server');
+            } finally {
+                this.setLoadingState(false);
+            }
+        },
         resetForm() {
             this.form[0].reset();
             this.form.find('.form-error').remove();
