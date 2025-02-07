@@ -142,6 +142,7 @@
         },
 
          handleHashChange() {
+             console.log('Hash changed to:', window.location.hash); // Debug 4
              const hash = window.location.hash;
              if (!hash) {
                  this.closePanel();
@@ -154,6 +155,8 @@
                  $('#customer-details').addClass('active');
                  $('.nav-tab').removeClass('nav-tab-active');
                  $('.nav-tab[data-tab="customer-details"]').addClass('nav-tab-active');
+                 
+                 console.log('Loading customer data for ID:', id); // Debug 5
 
                  this.loadCustomerData(id);
              }
@@ -290,81 +293,7 @@
         );
     },
 
-         /*
-         displayData(data) {
-             if (!data || !data.customer) {
-                 CustomerToast.error('Data customer tidak valid');
-                 return;
-             }
-            
-            console.log('Initial data received:', data);
-            console.log('Current customer ID:', data.customer.id);
-
-            // Dapatkan URL dan parameter saat ini
-            const currentUrl = new URL(window.location.href);
-            const currentId = currentUrl.searchParams.get('id');
-            console.log('Current URL param id:', currentId);
-            console.log('New customer id:', data.customer.id);
-
-
-             $('.tab-content').removeClass('active');
-             $('#customer-details').addClass('active');
-             $('.nav-tab').removeClass('nav-tab-active');
-             $('.nav-tab[data-tab="customer-details"]').addClass('nav-tab-active');
-
-             this.components.container.addClass('with-right-panel');
-             this.components.rightPanel.addClass('visible');
-
-             const createdAt = new Date(data.customer.created_at).toLocaleString('id-ID');
-             const updatedAt = new Date(data.customer.updated_at).toLocaleString('id-ID');
-
-             $('#customer-header-name').text(data.customer.name);
-             $('#customer-name').text(data.customer.name);
-             $('#customer-branch-count').text(data.branch_count);
-             $('#customer-employee-count').text(data.employee_count);
-             $('#customer-created-at').text(createdAt);
-             $('#customer-updated-at').text(updatedAt);
-
-             if (window.CustomerDataTable) {
-                 window.CustomerDataTable.highlightRow(data.customer.id);
-             }
-
-            // Tambahkan handling untuk membership data
-            if (data.customer.membership) {
-                // Update membership badge
-                $('#current-level-badge').text(data.customer.membership.level);
-                
-                // Update staff usage
-                const staffUsage = data.customer.staff_count || 0;
-                const staffLimit = data.customer.membership.max_staff;
-                $('#staff-usage-count').text(staffUsage);
-                $('#staff-usage-limit').text(staffLimit === -1 ? 'Unlimited' : staffLimit);
-                
-                // Calculate progress bar percentage
-                if (staffLimit !== -1) {
-                    const percentage = (staffUsage / staffLimit) * 100;
-                    $('#staff-usage-bar').css('width', `${percentage}%`);
-                }
-
-                // Update capabilities list
-                const $capList = $('#active-capabilities').empty();
-                Object.entries(data.customer.membership.capabilities).forEach(([cap, enabled]) => {
-                    if (enabled) {
-                        $capList.append(`<li>${this.getCapabilityLabel(cap)}</li>`);
-                    }
-                });
-
-                // Show/hide upgrade buttons based on current level
-                const currentLevel = data.customer.membership.level;
-                $('.upgrade-card').each(function() {
-                    const cardLevel = $(this).attr('id').replace('-plan', '');
-                    $(this).toggle(this.shouldShowUpgradeOption(currentLevel, cardLevel));
-                });
-            }
-         },
-         */
-
-            // Helper function untuk label capability
+              // Helper function untuk label capability
             getCapabilityLabel(cap) {
                 const labels = {
                     'can_add_staff': 'Dapat menambah staff',
@@ -425,11 +354,14 @@
          },
 
          handleCreated(data) {
-             if (data && data.id) {
-                     window.location.hash = data.id;
+            console.log('handleCreated called with data:', data); // Debug 1
+            if (data && data.data && data.data.id) {  // Akses id dari data.data
+                    console.log('Setting hash to:', data.id); // Debug 2
+                    window.location.hash = data.data.id;
              }
 
              if (window.CustomerDataTable) {
+                 console.log('Refreshing DataTable'); // Debug 3
                  window.CustomerDataTable.refresh();
              }
 
