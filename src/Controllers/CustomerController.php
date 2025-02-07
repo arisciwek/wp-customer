@@ -605,6 +605,7 @@ class CustomerController {
      */
     public function store() {
         try {
+            error_log('Store method called'); // Debug 1
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
             $permission_errors = $this->validator->validatePermission('create');
@@ -623,6 +624,8 @@ class CustomerController {
                 'user_id' => isset($_POST['user_id']) ? (int)$_POST['user_id'] : get_current_user_id(),
                 'created_by' => get_current_user_id()
             ];
+    
+            error_log('Received data: ' . print_r($data, true)); // Debug 2
 
             $form_errors = $this->validator->validateForm($data);
             if (!empty($form_errors)) {
@@ -634,10 +637,15 @@ class CustomerController {
             if (!$id) {
                 throw new \Exception('Failed to create customer');
             }
+            
+            error_log('Created customer ID: ' . $id); // Debug 3
+
+            $customer = $this->model->find($id);
+            error_log('Found customer: ' . print_r($customer, true)); // Debug 4
 
             wp_send_json_success([
                 'message' => __('Customer berhasil ditambahkan', 'wp-customer'),
-                'data' => $this->model->find($id)
+                'data' => $customer
             ]);
 
         } catch (\Exception $e) {
@@ -830,7 +838,7 @@ class CustomerController {
             wp_send_json_error(['message' => $e->getMessage()]);
         }
     }
-
+    
     public function getStats() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
