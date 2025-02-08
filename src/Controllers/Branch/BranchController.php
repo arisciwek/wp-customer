@@ -65,6 +65,43 @@ class BranchController {
         add_action('wp_ajax_update_branch', [$this, 'update']);
         add_action('wp_ajax_delete_branch', [$this, 'delete']);
         add_action('wp_ajax_validate_branch_type_change', [$this, 'validateBranchTypeChange']);
+        add_action('wp_ajax_create_branch_button', [$this, 'createBranchButton']);          
+    }
+
+    public function createBranchButton() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+            
+            $customer_id = isset($_POST['customer_id']) ? (int)$_POST['customer_id'] : 0;
+            
+            if (!$customer_id) {
+                throw new \Exception('ID Customer tidak valid');
+            }
+
+            $customer = $this->customerModel->find($customer_id);
+            if (!$customer) {
+                throw new \Exception('Customer tidak ditemukan');
+            }
+
+            if (!$this->validator->canCreateBranch($customer_id)) {
+                wp_send_json_success(['button' => '']);
+                return;
+            }
+
+            $button = '<button type="button" class="button button-primary" id="add-branch-btn">';
+            $button .= '<span class="dashicons dashicons-plus-alt"></span>';
+            $button .= __('Tambah Cabang', 'wp-customer');
+            $button .= '</button>';
+
+            wp_send_json_success([
+                'button' => $button
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
     }
 
     public function validateBranchTypeChange() {
@@ -457,6 +494,92 @@ class BranchController {
 
             } catch (\Exception $e) {
                 wp_send_json_error(['message' => $e->getMessage()]);
+            }
+        }
+
+        public function store() {
+            try {
+                check_ajax_referer('wp_customer_nonce', 'nonce');
+
+                $customer_id = isset($_POST['customer_id']) ? (int)$_POST['customer_id'] : 0;
+                if (!$customer_id) {
+                    throw new \Exception('ID Customer tidak valid');
+                }
+
+                // Cek permission
+                if (!$this->validator->canCreateBranch($customer_id)) {
+                    throw new \Exception('Anda tidak memiliki izin untuk menambah cabang');
+                }
+
+                // Sanitasi input
+                $data = [
+                    'customer_id' => $customer_id,
+                    'name' => sanitize_text_field($_POST['name'] ?? ''),
+                    'type' => sanitize_text_field($_POST['type'] ?? ''),
+                    'nitku' => sanitize_text_field($_POST['nitku'] ?? ''),
+                    'postal_code' => sanitize_text_field($_POST['postal_code'] ?? ''),
+                    'latitude' => (float)($_POST['latitude'] ?? 0),
+                    'longitude' => (float)($_POST['longitude'] ?? 0),
+                    'address' => sanitize_text_field($_POST['address'] ?? ''),
+                    'phone' => sanitize_text_field($_POST['phone'] ?? ''),
+                    'email' => sanitize_email($_POST['email'] ?? ''),
+                    'provinsi_id' => isset($_POST['provinsi_id']) ? (int)$_POST['provinsi_id'] : null,
+                    'regency_id' => isset($_POST['regency_id']) ? (int)$_POST['regency_id'] : null,
+                    'created_by' => get_current_user_id(),
+                    'status' => 'active'
+                ];
+
+                // Validasi type branch saat create
+                $type_validation = $this->validator->validateBranchTypeCreate($data['type'], $customer_id);
+                if (!$type_validation['valid']) {
+                    throw new \Exception($type_validation['message']);
+                }
+
+                // Buat user untuk admin branch jika data admin diisi
+                if (!empty($_POST['admin_email'])) {
+                    $user_data = [
+                        'user_login' => sanitize_user($_POST['admin_username']),
+                        'user_email' => sanitize_email($_POST['admin_email']),
+                        'first_name' => sanitize_text_field($_POST['admin_firstname']),
+                        'last_name' => sanitize_text_field($_POST['admin_lastname'] ?? ''),
+                        'user_pass' => wp_generate_password(),
+                        'role' => 'branch_admin'
+                    ];
+
+                    $user_id = wp_insert_user($user_data);
+                    if (is_wp_error($user_id)) {
+                        throw new \Exception($user_id->get_error_message());
+                    }
+
+                    $data['user_id'] = $user_id;
+                    
+                    // Kirim email aktivasi
+                    wp_new_user_notification($user_id, null, 'user');
+                }
+
+                // Simpan branch
+                $branch_id = $this->model->create($data);
+                if (!$branch_id) {
+                    if (!empty($user_id)) {
+                        wp_delete_user($user_id); // Rollback user creation jika gagal
+                    }
+                    throw new \Exception('Gagal menambah cabang');
+                }
+
+                // Invalidate cache
+                $this->cache->invalidateDataTableCache('branch_list', [
+                    'customer_id' => $customer_id
+                ]);
+
+                wp_send_json_success([
+                    'message' => 'Cabang berhasil ditambahkan',
+                    'branch' => $this->model->find($branch_id)
+                ]);
+
+            } catch (\Exception $e) {
+                wp_send_json_error([
+                    'message' => $e->getMessage()
+                ]);
             }
         }
 

@@ -33,15 +33,7 @@ defined('ABSPATH') || exit;
         </div>
 
             <div class="branch-header-actions">
-                <?php 
-                // Show Add Branch button based on permissions
-                if (current_user_can('add_branch')) : 
-                ?>
-                    <button type="button" class="button button-primary" id="add-branch-btn">
-                        <span class="dashicons dashicons-plus-alt"></span>
-                        <?php _e('Tambah Cabang', 'wp-customer'); ?>
-                    </button>
-                <?php endif; ?>
+                <div id="tombol-tambah-branch"></div>
             </div>
 
     </div>

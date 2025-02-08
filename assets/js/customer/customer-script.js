@@ -323,56 +323,78 @@
                 return targetIdx > currentIdx;
             },
 
-            switchTab(tabId) { 
-                $('.nav-tab').removeClass('nav-tab-active');
-                $(`.nav-tab[data-tab="${tabId}"]`).addClass('nav-tab-active');
+        switchTab(tabId) {
+            $('.nav-tab').removeClass('nav-tab-active');
+            $(`.nav-tab[data-tab="${tabId}"]`).addClass('nav-tab-active');
 
-                // Hide all tab content first
-                $('.tab-content-panel').removeClass('active');
+            // Hide all tab content first
+            $('.tab-content-panel').removeClass('active');
+            $('.tab-content').hide();
+            $(`#${tabId}`).show();
+            $(`#${tabId}`).addClass('active');
 
-                $('.tab-content').hide(); // Hide all tab content first
-                $(`#${tabId}`).show(); // Show only the selected tab
-                                
-                // Show selected tab content
-                $(`#${tabId}`).addClass('active');
-
-                // Initialize specific tab content if needed
-                if (tabId === 'branch-list' && this.currentId) {
-                    if (window.BranchDataTable) {
-                        window.BranchDataTable.init(this.currentId);
+            // Initialize specific tab content if needed
+            if (tabId === 'employee-list' && this.currentId) {
+                // Get tombol tambah karyawan
+                $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'create_employee_button',
+                        customer_id: this.currentId,
+                        nonce: wpCustomerData.nonce
+                    },
+                    success: (response) => {
+                        if (response.success) {
+                            $('#tombol-tambah-karyawan').html(response.data.button);
+                            
+                            // Bind click event using delegation
+                            $('#tombol-tambah-karyawan').off('click', '#add-employee-btn')
+                                .on('click', '#add-employee-btn', () => {
+                                    if (window.CreateEmployeeForm) {
+                                        window.CreateEmployeeForm.showModal(this.currentId);
+                                    }
+                                });
+                        }
                     }
-                }
-                if (tabId === 'employee-list' && this.currentId) {
-                       
-                       // Get tombol tambah karyawan
-                       $.ajax({
-                           url: wpCustomerData.ajaxUrl,
-                           type: 'POST',
-                           data: {
-                               action: 'create_employee_button',
-                               customer_id: this.currentId,
-                               nonce: wpCustomerData.nonce
-                           },
-                           success: (response) => {
-                               if (response.success) {
-                                   $('#tombol-tambah-karyawan').html(response.data.button);
-                                    
-                                    // Bind click event using delegation
-                                    $('#tombol-tambah-karyawan').off('click', '#add-employee-btn')
-                                        .on('click', '#add-employee-btn', () => {
-                                            if (window.CreateEmployeeForm) {
-                                                window.CreateEmployeeForm.showModal(this.currentId);
-                                            }
-                                        });
-                               }
-                           }
-                       });
+                });
 
-                    if (window.EmployeeDataTable) {
-                        window.EmployeeDataTable.init(this.currentId);
-                    }
+                if (window.EmployeeDataTable) {
+                    window.EmployeeDataTable.init(this.currentId);
                 }
-            },
+            }
+            
+            // Add branch tab handling
+            if (tabId === 'branch-list' && this.currentId) {
+                // Get tombol tambah branch
+                $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'create_branch_button',
+                        customer_id: this.currentId,
+                        nonce: wpCustomerData.nonce
+                    },
+                    success: (response) => {
+                        if (response.success) {
+                            $('#tombol-tambah-branch').html(response.data.button);
+                            
+                            // Bind click event using delegation
+                            $('#tombol-tambah-branch').off('click', '#add-branch-btn')
+                                .on('click', '#add-branch-btn', () => {
+                                    if (window.CreateBranchForm) {
+                                        window.CreateBranchForm.showModal(this.currentId);
+                                    }
+                                });
+                        }
+                    }
+                });
+
+                if (window.BranchDataTable) {
+                    window.BranchDataTable.init(this.currentId);
+                }
+            }
+        },
 
          closePanel() {
              this.components.container.removeClass('with-right-panel');

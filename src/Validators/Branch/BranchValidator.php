@@ -109,7 +109,7 @@ class BranchValidator {
         }
 
         // 2. System Admin Check with explicit capability
-        if (current_user_can('create_branch')) {
+        if (current_user_can('add_branch')) {
             return true;
         }
 
