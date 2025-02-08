@@ -85,6 +85,7 @@ class CustomerCacheManager {
     // Cache keys for employees
     private const KEY_EMPLOYEE = 'employee';
     private const KEY_EMPLOYEE_LIST = 'employee_list';
+    private const KEY_CUSTOMER_EMPLOYEE_LIST = 'customer_employee_list';
     private const KEY_EMPLOYEE_STATS = 'employee_stats';
     private const KEY_USER_EMPLOYEES = 'user_employees';
 
