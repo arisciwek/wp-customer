@@ -136,7 +136,7 @@ class PermissionModel {
             $default_capabiities = [
                 // Customer capabilities
                 'view_customer_list' => true,
-                'add_customer' => true,
+                'add_customer' => false,
                 'view_own_customer' => true,
                 'edit_own_customer' => true,
                 'view_own_customer' => true,

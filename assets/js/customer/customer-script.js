@@ -48,23 +48,45 @@
              }
          },
 
-         init() {
-             this.components = {
-                 container: $('.wp-customer-container'),
-                 rightPanel: $('.wp-customer-right-panel'),
-                 detailsPanel: $('#customer-details'),
-                 stats: {
-                     totalCustomers: $('#total-customers'),
-                     totalBranches: $('#total-branches')
-                 }
-             };
+        init() {
+            this.components = {
+                container: $('.wp-customer-container'),
+                rightPanel: $('.wp-customer-right-panel'),
+                detailsPanel: $('#customer-details'),
+                stats: {
+                    totalCustomers: $('#total-customers'),
+                    totalBranches: $('#total-branches')
+                }
+            };
 
-             this.bindEvents();
-             this.handleInitialState();
-             // Tambahkan load stats saat inisialisasi
-             this.loadStats();
+            // Tambahkan load tombol tambah customer
+            $.ajax({
+                url: wpCustomerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'create_customer_button',
+                    nonce: wpCustomerData.nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        $('#tombol-tambah-customer').html(response.data.button);
+                        
+                        // Bind click event using delegation
+                        $('#tombol-tambah-customer').off('click', '#add-customer-btn')
+                            .on('click', '#add-customer-btn', () => {
+                                if (window.CreateCustomerForm) {
+                                    window.CreateCustomerForm.showModal();
+                                }
+                            });
+                    }
+                }
+            });
 
-             // Update stats setelah operasi CRUD
+            this.bindEvents();
+            this.handleInitialState();
+            this.loadStats();
+            
+            // Update stats setelah operasi CRUD
             $(document)
                 .on('customer:created.Customer', () => this.loadStats())
                 .on('customer:deleted.Customer', () => this.loadStats())
@@ -72,8 +94,7 @@
                 .on('branch:deleted.Customer', () => this.loadStats())
                 .on('employee:created.Customer', () => this.loadStats())
                 .on('employee:deleted.Customer', () => this.loadStats());
-
-         },
+        },
 
          bindEvents() {
              // Unbind existing events first to prevent duplicates

@@ -8,12 +8,7 @@
     <div class="wi-panel-header">
         <h2>Daftar Customer</h2>
 
-        <?php if (current_user_can('add_customer')): ?>
-            <button type="button" class="button button-primary" id="add-customer-btn">
-                Tambah Customer
-            </button>
-        <?php endif; ?>
-
+        <div id="tombol-tambah-customer"></div>
 
     </div>
     
