@@ -160,6 +160,9 @@ class WPCustomer {
         // Inisialisasi Employee Controller
         new \WPCustomer\Controllers\Employee\CustomerEmployeeController();
 
+        // Initialize Membership Controller
+        new \WPCustomer\Controllers\Membership\CustomerMembershipController();
+        
         // Register AJAX hooks SEBELUM init
 
         // Tambahkan handler untuk stats

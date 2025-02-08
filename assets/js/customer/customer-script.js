@@ -353,7 +353,14 @@
             $('.tab-content').hide();
             $(`#${tabId}`).show();
             $(`#${tabId}`).addClass('active');
-
+            
+            // Initialize specific tab content if needed
+            if (tabId === 'membership-info' && this.currentId) {
+                // Initialize membership data
+                if (window.CustomerMembership) {
+                    window.CustomerMembership.init();
+                }
+            }
             // Initialize specific tab content if needed
             if (tabId === 'employee-list' && this.currentId) {
                 // Get tombol tambah karyawan

@@ -1,27 +1,18 @@
 <?php
 /**
- * File: class-deactivator.php
- * Path: /wp-customer/includes/class-deactivator.php
- * Description: Menangani proses deaktivasi plugin
- * 
+ * Plugin Deactivator Class
+ *
  * @package     WP_Customer
  * @subpackage  Includes
- * @version     1.0.1
+ * @version     1.1.0
  * @author      arisciwek
- * 
- * Description: Menangani proses deaktivasi plugin:
- *              - Menghapus seluruh tabel (fase development)
- *              - Membersihkan cache 
  *
- * Changelog:
- * 1.0.1 - 2024-01-07
- * - Added table cleanup during deactivation
- * - Added logging for development
- * 
- * 1.0.0 - 2024-11-23  
- * - Initial creation
- * - Added cache cleanup
+ * Description: Menangani proses deaktivasi plugin:
+ *              - Database cleanup (hanya dalam mode development)
+ *              - Cache cleanup 
+ *              - Settings cleanup
  */
+
 use WPCustomer\Cache\CustomerCacheManager;
 
 class WP_Customer_Deactivator {
@@ -32,16 +23,11 @@ class WP_Customer_Deactivator {
     }
 
     private static function should_clear_data() {
-        // Get development settings
         $dev_settings = get_option('wp_customer_development_settings');
-        
-        // Always check the clear_data_on_deactivate setting first
         if (isset($dev_settings['clear_data_on_deactivate']) && 
             $dev_settings['clear_data_on_deactivate']) {
             return true;
         }
-        
-        // Fallback to constant if settings don't explicitly enable cleanup
         return defined('WP_CUSTOMER_DEVELOPMENT') && WP_CUSTOMER_DEVELOPMENT;
     }
 
@@ -57,7 +43,7 @@ class WP_Customer_Deactivator {
         try {
             // Only proceed with data cleanup if in development mode
             if (!$should_clear_data) {
-                self::debug("Skipping data cleanup on plugin deactivation as in settings");
+                self::debug("Skipping data cleanup on plugin deactivation");
                 return;
             }
 
@@ -67,36 +53,36 @@ class WP_Customer_Deactivator {
             // Start transaction
             $wpdb->query('START TRANSACTION');
 
-            // Delete demo users (starting from ID 11)
-            self::delete_demo_users();
-
-            // Daftar tabel yang akan dihapus
+            // Delete tables in correct order (child tables first)
             $tables = [
-                'app_customer_employees',
-                'app_branches',
-                'app_customer_membership_levels',
-                'app_customers'
+                // First level - no dependencies
+                'app_customer_memberships',  // Drop this first as it references both customers and levels
+                'app_customer_employees',    // Drop this next as it references customers and branches
+                'app_branches',             // Drop this after employees as it only references customers
+                // Second level - referenced by others
+                'app_customer_membership_levels',  // Can now be dropped as memberships is gone
+                'app_customers'             // Drop this last as it's referenced by all
             ];
 
-            // Hapus tabel secara terurut (child tables first)
             foreach ($tables as $table) {
                 $table_name = $wpdb->prefix . $table;
+                self::debug("Attempting to drop table: {$table_name}");
                 $wpdb->query("DROP TABLE IF EXISTS {$table_name}");
-                self::debug("Dropping table: {$table_name}");
             }
+
+            // Delete demo users (after tables are gone)
+            self::delete_demo_users();
 
             // Hapus semua opsi terkait membership
             self::cleanupMembershipOptions();
 
-
             // Clear cache using CustomerCacheManager
             try {
-                $cache_manager = new WPCustomer\Cache\CustomerCacheManager();
-                $cache_manager->clearAllCaches();
-                self::debug("All caches cleared via CustomerCacheManager");
+                $cache_manager = new CustomerCacheManager();
+                $cleared = $cache_manager->clearAll();
+                self::debug("Cache clearing result: " . ($cleared ? 'success' : 'failed'));
             } catch (\Exception $e) {
                 self::debug("Error clearing cache: " . $e->getMessage());
-                // Don't throw the exception - continue with deactivation
             }
 
             // Commit transaction
@@ -110,14 +96,11 @@ class WP_Customer_Deactivator {
         }
     }
 
-    // Add this new private method
     private static function remove_capabilities() {
         try {
-            // Get the list of all capabilities from PermissionModel
             $permission_model = new \WPCustomer\Models\Settings\PermissionModel();
             $capabilities = array_keys($permission_model->getAllCapabilities());
 
-            // Remove capabilities from all roles
             foreach (get_editable_roles() as $role_name => $role_info) {
                 $role = get_role($role_name);
                 if (!$role) continue;
@@ -127,30 +110,24 @@ class WP_Customer_Deactivator {
                 }
             }
 
-            // Also remove the customer role entirely since we created it
             remove_role('customer');
-
             self::debug("Capabilities and customer role removed successfully");
         } catch (\Exception $e) {
             self::debug("Error removing capabilities: " . $e->getMessage());
-            throw $e;
         }
     }
-        
+
     private static function delete_demo_users() {
         global $wpdb;
         
         try {
-            // Start transaction
             $wpdb->query('START TRANSACTION');
             
-            // 1. Identifikasi user berdasarkan meta/role spesifik plugin
-            // DITAMBAHKAN "AND u.ID != 1" untuk lindungi admin
             $demo_users = $wpdb->get_col("
                 SELECT DISTINCT u.ID 
                 FROM {$wpdb->users} u
                 INNER JOIN {$wpdb->usermeta} um ON u.ID = um.user_id
-                WHERE u.ID != 1  /* Proteksi admin */
+                WHERE u.ID != 1
                 AND (
                     (um.meta_key = 'wp_customer_demo_user' AND um.meta_value = '1')
                     OR EXISTS (
@@ -166,65 +143,21 @@ class WP_Customer_Deactivator {
             if (!empty($demo_users)) {
                 $user_ids = implode(',', array_map('intval', $demo_users));
                 
-                // Double check untuk memastikan ID=1 tidak masuk
                 if (in_array(1, explode(',', $user_ids))) {
                     throw new \Exception("Attempted to delete admin user - operation aborted");
                 }
                 
-                // 2. Hapus entries di wp_usermeta
-                $wpdb->query("
-                    DELETE FROM {$wpdb->usermeta} 
-                    WHERE user_id IN ($user_ids)
-                    AND user_id != 1  /* Double protection */
-                ");
-                self::debug("Deleted usermeta entries for users: $user_ids");
+                $wpdb->query("DELETE FROM {$wpdb->usermeta} WHERE user_id IN ($user_ids) AND user_id != 1");
+                $wpdb->query("DELETE FROM {$wpdb->comments} WHERE user_id IN ($user_ids) AND user_id != 1");
+                $wpdb->query("DELETE FROM {$wpdb->posts} WHERE post_author IN ($user_ids) AND post_author != 1");
+                $wpdb->query("DELETE FROM {$wpdb->users} WHERE ID IN ($user_ids) AND ID != 1");
                 
-                // 3. Hapus relasi di tabel WordPress lain yang terkait user
-                // comments
-                $wpdb->query("
-                    DELETE FROM {$wpdb->comments} 
-                    WHERE user_id IN ($user_ids)
-                    AND user_id != 1
-                ");
+                self::debug("Successfully deleted " . count($demo_users) . " demo users");
                 
-                // posts
-                $wpdb->query("
-                    DELETE FROM {$wpdb->posts} 
-                    WHERE post_author IN ($user_ids)
-                    AND post_author != 1
-                ");
-                
-                // term relationships (jika ada)
-                $wpdb->query("
-                    DELETE tr FROM {$wpdb->term_relationships} tr
-                    INNER JOIN {$wpdb->posts} p ON tr.object_id = p.ID
-                    WHERE p.post_author IN ($user_ids)
-                    AND p.post_author != 1
-                ");
-                
-                // 4. Hapus custom table relations
-                $wpdb->query("
-                    DELETE FROM {$wpdb->prefix}app_customer_employees 
-                    WHERE user_id IN ($user_ids)
-                    AND user_id != 1
-                ");
-                
-                // 5. Terakhir, hapus user
-                $wpdb->query("
-                    DELETE FROM {$wpdb->users} 
-                    WHERE ID IN ($user_ids)
-                    AND ID != 1  /* Final protection */
-                ");
-                
-                self::debug("Successfully deleted " . count($demo_users) . " demo users and their related data");
-                
-                // 6. Reset auto increment ke 2 untuk development
                 if (defined('WP_CUSTOMER_DEVELOPMENT') && WP_CUSTOMER_DEVELOPMENT) {
                     $wpdb->query("ALTER TABLE {$wpdb->users} AUTO_INCREMENT = 2");
                     self::debug("Reset users table AUTO_INCREMENT to 2");
                 }
-            } else {
-                self::debug("No demo users found to delete");
             }
             
             $wpdb->query('COMMIT');
@@ -232,22 +165,16 @@ class WP_Customer_Deactivator {
         } catch (\Exception $e) {
             $wpdb->query('ROLLBACK');
             self::debug("Error managing users: " . $e->getMessage());
-            throw $e;
         }
     }
+
     private static function cleanupMembershipOptions() {
         try {
-            // Hapus opsi membership settings
             delete_option('wp_customer_membership_settings');
-            self::debug("Membership settings deleted");
-
-            // Hapus transients jika ada
             delete_transient('wp_customer_membership_cache');
-            self::debug("Membership transients cleared");
-
+            self::debug("Membership settings and transients cleared");
         } catch (\Exception $e) {
             self::debug("Error cleaning up membership options: " . $e->getMessage());
-            throw $e;
         }
     }
 }

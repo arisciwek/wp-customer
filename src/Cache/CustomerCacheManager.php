@@ -459,30 +459,88 @@ class CustomerCacheManager {
         return $this->clearAll();
     }
 
-    /**
-     * Clear all caches in group with enhanced error handling
-     * 
-     * @return bool True if cache was cleared successfully
-     */
-    public function clearAll(): bool {
-        try {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Attempting to clear all caches in group: ' . self::CACHE_GROUP);
-            }
+private function clearCache(): bool {
+    try {
+        global $wp_object_cache;
 
-            $result = wp_cache_delete_group(self::CACHE_GROUP);
-
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Cache clear result: ' . ($result ? 'success' : 'failed'));
+        // Check if using default WordPress object cache
+        if (isset($wp_object_cache->cache[self::CACHE_GROUP])) {
+            if (is_array($wp_object_cache->cache[self::CACHE_GROUP])) {
+                foreach (array_keys($wp_object_cache->cache[self::CACHE_GROUP]) as $key) {
+                    wp_cache_delete($key, self::CACHE_GROUP);
+                }
             }
-
-            return $result;
-        } catch (\Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Error clearing cache: ' . $e->getMessage());
-            }
-            return false;
+            unset($wp_object_cache->cache[self::CACHE_GROUP]);
+            return true;
         }
+
+        // Alternative approach for external cache plugins
+        if (function_exists('wp_cache_flush_group')) {
+            // Some caching plugins provide group-level flush
+            return wp_cache_flush_group(self::CACHE_GROUP);
+        }
+
+        // Fallback method - iteratively clear known cache keys
+        $known_types = [
+            'customer',
+            'customer_list',
+            'customer_total_count',
+            'customer_membership',
+            'membership',
+            'branch',
+            'branch_list',
+            'employee',
+            'employee_list',
+            'datatable'
+        ];
+
+        foreach ($known_types as $type) {
+            if ($cached_keys = wp_cache_get($type . '_keys', self::CACHE_GROUP)) {
+                if (is_array($cached_keys)) {
+                    foreach ($cached_keys as $key) {
+                        wp_cache_delete($key, self::CACHE_GROUP);
+                    }
+                }
+            }
+        }
+
+        // Also clear the master key list
+        wp_cache_delete('cache_keys', self::CACHE_GROUP);
+
+        return true;
+
+    } catch (\Exception $e) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Error clearing cache: ' . $e->getMessage());
+        }
+        return false;
     }
+}
+
+/**
+ * Clear all caches in group with enhanced error handling
+ * 
+ * @return bool True if cache was cleared successfully
+ */
+public function clearAll(): bool {
+    try {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Attempting to clear all caches in group: ' . self::CACHE_GROUP);
+        }
+
+        $result = $this->clearCache();
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Cache clear result: ' . ($result ? 'success' : 'failed'));
+        }
+
+        return $result;
+    } catch (\Exception $e) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log('Error in clearAll(): ' . $e->getMessage());
+        }
+        return false;
+    }
+}
 
 }

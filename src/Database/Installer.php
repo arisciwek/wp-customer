@@ -32,6 +32,7 @@
  * - Added foreign key management
  * - Added demo data installation
  */
+
 namespace WPCustomer\Database;
 
 defined('ABSPATH') || exit;
@@ -39,18 +40,31 @@ defined('ABSPATH') || exit;
 class Installer {
     private static $tables = [
         'app_customers',
+        'app_customer_membership_levels',
+        'app_customer_memberships',
         'app_branches',
-        'app_customer_employees',
-        'app_customer_membership_levels'
+        'app_customer_employees'
     ];
+
+    private static function debug($message) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("[Installer] " . $message);
+        }
+    }
 
     private static function verify_tables() {
         global $wpdb;
         foreach (self::$tables as $table) {
-            $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$wpdb->prefix}{$table}'");
+            $table_name = $wpdb->prefix . $table;
+            $table_exists = $wpdb->get_var($wpdb->prepare(
+                "SHOW TABLES LIKE %s",
+                $table_name
+            ));
             if (!$table_exists) {
-                throw new \Exception("Failed to create table: {$wpdb->prefix}{$table}");
+                self::debug("Table not found: {$table_name}");
+                throw new \Exception("Failed to create table: {$table_name}");
             }
+            self::debug("Verified table exists: {$table_name}");
         }
     }
     
@@ -60,113 +74,39 @@ class Installer {
         
         try {
             $wpdb->query('START TRANSACTION');
+            self::debug("Starting database installation...");
 
-            // Database Tables
-            require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomersDB.php';
-            require_once WP_CUSTOMER_PATH . 'src/Database/Tables/BranchesDB.php';
-            require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomerMembershipLevelsDB.php';
-            require_once WP_CUSTOMER_PATH . 'src/Database/Tables/CustomerEmployeesDB.php';
+            // Create base tables first
+            self::debug("Creating customers table...");
+            dbDelta(Tables\CustomersDB::get_schema());
 
+            self::debug("Creating membership levels table...");
+            dbDelta(Tables\CustomerMembershipLevelsDB::get_schema());
 
-            try {
-                error_log('Starting table creation');
-                dbDelta(Tables\CustomerMembershipLevelsDB::get_schema());
-                error_log('Created customer_membership_levels table');
-                dbDelta(Tables\CustomersDB::get_schema());
-                error_log('Created customers table');
-                dbDelta(Tables\BranchesDB::get_schema());
-                error_log('Created branches table');
-                dbDelta(Tables\CustomerEmployeesDB::get_schema());
-                error_log('Created customer_employees table');
-                // ...
-            } catch (\Exception $e) {
-                error_log('Table creation failed: ' . $e->getMessage());
-                // ...
-            }
+            self::debug("Creating memberships table...");
+            dbDelta(Tables\CustomerMembershipsDB::get_schema());
 
+            self::debug("Creating branches table...");
+            dbDelta(Tables\BranchesDB::get_schema());
 
-            // Verify tables were created
+            self::debug("Creating employees table...");
+            dbDelta(Tables\CustomerEmployeesDB::get_schema());
+
+            // Verify all tables were created
             self::verify_tables();
 
-            // Drop any existing foreign keys for clean slate
-            self::ensure_no_foreign_keys();
-            
-            // Add foreign key constraints
-            self::add_foreign_keys();
+            // Insert default data
+            self::debug("Inserting default membership levels...");
+            Tables\CustomerMembershipLevelsDB::insert_defaults();
 
-            // Di Installer.php
-            
+            self::debug("Database installation completed successfully.");
             $wpdb->query('COMMIT');
             return true;
 
         } catch (\Exception $e) {
             $wpdb->query('ROLLBACK');
-            error_log('Database installation failed: ' . $e->getMessage());
+            self::debug('Database installation failed: ' . $e->getMessage());
             return false;
-        }
-    }
-
-    private static function ensure_no_foreign_keys() {
-        global $wpdb;
-        
-        // Tables that might have foreign keys
-        $tables_with_fk = ['app_branches', 'app_customer_employees'];
-        
-        foreach ($tables_with_fk as $table) {
-            $foreign_keys = $wpdb->get_results("
-                SELECT CONSTRAINT_NAME 
-                FROM information_schema.TABLE_CONSTRAINTS 
-                WHERE TABLE_SCHEMA = DATABASE()
-                AND TABLE_NAME = '{$wpdb->prefix}{$table}' 
-                AND CONSTRAINT_TYPE = 'FOREIGN KEY'
-            ");
-
-            foreach ($foreign_keys as $key) {
-                $wpdb->query("
-                    ALTER TABLE {$wpdb->prefix}{$table} 
-                    DROP FOREIGN KEY {$key->CONSTRAINT_NAME}
-                ");
-            }
-        }
-    }
-
-    private static function add_foreign_keys() {
-        global $wpdb;
-
-        $constraints = [
-            // Branches constraints
-            [
-                'name' => 'fk_branch_customer',
-                'sql' => "ALTER TABLE {$wpdb->prefix}app_branches
-                         ADD CONSTRAINT fk_branch_customer
-                         FOREIGN KEY (customer_id)
-                         REFERENCES {$wpdb->prefix}app_customers(id)
-                         ON DELETE CASCADE"
-            ],
-            // Employee constraints
-            [
-                'name' => 'fk_employee_customer',
-                'sql' => "ALTER TABLE {$wpdb->prefix}app_customer_employees
-                         ADD CONSTRAINT fk_employee_customer
-                         FOREIGN KEY (customer_id)
-                         REFERENCES {$wpdb->prefix}app_customers(id)
-                         ON DELETE CASCADE"
-            ],
-            [
-                'name' => 'fk_employee_branch',
-                'sql' => "ALTER TABLE {$wpdb->prefix}app_customer_employees
-                         ADD CONSTRAINT fk_employee_branch
-                         FOREIGN KEY (branch_id)
-                         REFERENCES {$wpdb->prefix}app_branches(id)
-                         ON DELETE CASCADE"
-            ]
-        ];
-
-        foreach ($constraints as $constraint) {
-            $result = $wpdb->query($constraint['sql']);
-            if ($result === false) {
-                throw new \Exception("Failed to add foreign key {$constraint['name']}: " . $wpdb->last_error);
-            }
         }
     }
 }

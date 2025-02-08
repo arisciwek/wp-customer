@@ -199,7 +199,7 @@ class SettingsController {
             case 'employee':
                 return new \WPCustomer\Database\Demo\CustomerEmployeeDemoData();
             case 'membership':
-                return new \WPCustomer\Database\Demo\MembershipDemoData();
+                return new \WPCustomer\Database\Demo\MembershipLevelsDemoData();
             default:
                 throw new \Exception('Invalid demo data type: ' . $type);
         }

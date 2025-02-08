@@ -24,79 +24,180 @@ if (!defined('ABSPATH')) {
     die;
 }
 
-$options = get_option('wp_customer_membership_settings', array());
-
-// Define membership levels structure
-$membership_levels = array(
-    'regular' => array(
-        'title' => __('Level Regular', 'wp-customer'),
-        'default_staff' => 2,
-        'max_staff' => $options['regular_max_staff'] ?? 2,
-        'capabilities' => $options['regular_capabilities'] ?? array()
-    ),
-    'priority' => array(
-        'title' => __('Level Priority', 'wp-customer'),
-        'default_staff' => 5,
-        'max_staff' => $options['priority_max_staff'] ?? 5,
-        'capabilities' => $options['priority_capabilities'] ?? array()
-    ),
-    'utama' => array(
-        'title' => __('Level Utama', 'wp-customer'),
-        'default_staff' => -1,
-        'max_staff' => $options['utama_max_staff'] ?? -1,
-        'capabilities' => $options['utama_capabilities'] ?? array()
-    )
-);
-
-// Available capabilities
-$available_caps = array(
-    'can_add_staff' => __('Dapat menambah staff', 'wp-customer'),
-    'can_export' => __('Dapat export data', 'wp-customer'), 
-    'can_bulk_import' => __('Dapat bulk import', 'wp-customer')
-);
+// Get membership levels from database
+global $wpdb;
+$levels = $wpdb->get_results("
+    SELECT * FROM {$wpdb->prefix}app_customer_membership_levels 
+    WHERE status = 'active'
+    ORDER BY sort_order ASC
+");
 
 ?>
 
-
-<form method="post" action="options.php">
-    <?php settings_fields('wp_customer_membership_settings'); ?>
+<div class="wrap">
+    <div class="membership-header">
+        <h2><?php _e('Membership Levels Management', 'wp-customer'); ?></h2>
+        <button type="button" class="button button-primary" id="add-membership-level">
+            <?php _e('Add New Level', 'wp-customer'); ?>
+        </button>
+    </div>
 
     <div class="membership-grid">
-        <?php foreach ($membership_levels as $level_key => $level): ?>
-            <div class="membership-card">
-                <h3><?php echo esc_html($level['title']); ?></h3>
-                
-                <!-- Staff Limit Section -->
-                <div class="membership-section">
-                    <h4><?php _e('Batas Staff', 'wp-customer'); ?></h4>
-                    <div class="staff-limit">
-                        <input type="number" 
-                               name="wp_customer_membership_settings[<?php echo esc_attr($level_key); ?>_max_staff]" 
-                               value="<?php echo esc_attr($level['max_staff']); ?>"
-                               min="-1"
-                               class="small-text">
-                        <p class="description"><?php _e('-1 untuk unlimited', 'wp-customer'); ?></p>
+        <?php foreach ($levels as $level): 
+            $capabilities = json_decode($level->capabilities, true);
+            ?>
+            <div class="membership-card" data-level-id="<?php echo esc_attr($level->id); ?>">
+                <div class="card-header">
+                    <h3><?php echo esc_html($level->name); ?></h3>
+                    <div class="actions">
+                        <button type="button" class="button edit-level" data-id="<?php echo esc_attr($level->id); ?>">
+                            <span class="dashicons dashicons-edit"></span>
+                        </button>
                     </div>
                 </div>
 
-                <!-- Capabilities Section -->
-                <div class="membership-section">
-                    <h4><?php _e('Capabilities', 'wp-customer'); ?></h4>
-                    <div class="capabilities-list">
-                        <?php foreach ($available_caps as $cap_key => $cap_label): ?>
-                            <label>
-                                <input type="checkbox" 
-                                       name="wp_customer_membership_settings[<?php echo esc_attr($level_key); ?>_capabilities][<?php echo esc_attr($cap_key); ?>]" 
-                                       value="1"
-                                       <?php checked(isset($level['capabilities'][$cap_key]) ? $level['capabilities'][$cap_key] : false); ?>>
-                                <span><?php echo esc_html($cap_label); ?></span>
-                            </label>
-                        <?php endforeach; ?>
+                <div class="card-body">
+                    <!-- Basic Info -->
+                    <div class="info-section">
+                        <p class="description"><?php echo esc_html($level->description); ?></p>
+                        <div class="price">
+                            <?php echo number_format($level->price_per_month, 0, ',', '.'); ?> IDR/month
+                        </div>
+                    </div>
+
+                    <!-- Staff & Department Limits -->
+                    <div class="limits-section">
+                        <div class="limit-item">
+                            <label><?php _e('Max Staff:', 'wp-customer'); ?></label>
+                            <span><?php echo $level->max_staff == -1 ? 'Unlimited' : $level->max_staff; ?></span>
+                        </div>
+                        <div class="limit-item">
+                            <label><?php _e('Max Departments:', 'wp-customer'); ?></label>
+                            <span><?php echo $level->max_departments == -1 ? 'Unlimited' : $level->max_departments; ?></span>
+                        </div>
+                    </div>
+
+                    <!-- Features -->
+                    <div class="features-section">
+                        <h4><?php _e('Features', 'wp-customer'); ?></h4>
+                        <ul class="feature-list">
+                            <?php 
+                            if (isset($capabilities['features'])):
+                                foreach ($capabilities['features'] as $feature => $enabled):
+                                    if ($enabled):
+                                        ?>
+                                        <li class="feature-enabled">
+                                            <span class="dashicons dashicons-yes"></span>
+                                            <?php echo esc_html(ucwords(str_replace('_', ' ', $feature))); ?>
+                                        </li>
+                                        <?php
+                                    endif;
+                                endforeach;
+                            endif;
+                            ?>
+                        </ul>
+                    </div>
+
+                    <!-- Trial & Grace Period -->
+                    <div class="period-section">
+                        <?php if ($level->is_trial_available): ?>
+                            <div class="period-item">
+                                <label><?php _e('Trial Period:', 'wp-customer'); ?></label>
+                                <span><?php echo esc_html($level->trial_days); ?> days</span>
+                            </div>
+                        <?php endif; ?>
+                        <div class="period-item">
+                            <label><?php _e('Grace Period:', 'wp-customer'); ?></label>
+                            <span><?php echo esc_html($level->grace_period_days); ?> days</span>
+                        </div>
                     </div>
                 </div>
             </div>
         <?php endforeach; ?>
     </div>
+</div>
 
-    <?php submit_button(__('Simpan Perubahan', 'wp-customer')); ?>
-</form>
+<!-- Modal Template for Add/Edit -->
+<div id="membership-level-modal" class="wp-customer-modal" style="display:none;">
+    <div class="modal-content">
+        <h3 class="modal-title"></h3>
+        <form id="membership-level-form">
+            <input type="hidden" name="id" id="level-id">
+            
+            <!-- Basic Info -->
+            <div class="form-row">
+                <label for="level-name"><?php _e('Level Name', 'wp-customer'); ?></label>
+                <input type="text" id="level-name" name="name" required>
+            </div>
+
+            <div class="form-row">
+                <label for="level-description"><?php _e('Description', 'wp-customer'); ?></label>
+                <textarea id="level-description" name="description"></textarea>
+            </div>
+
+            <div class="form-row">
+                <label for="level-price"><?php _e('Price per Month (IDR)', 'wp-customer'); ?></label>
+                <input type="number" id="level-price" name="price_per_month" min="0" required>
+            </div>
+
+            <!-- Limits -->
+            <div class="form-row">
+                <label for="max-staff"><?php _e('Max Staff', 'wp-customer'); ?></label>
+                <input type="number" id="max-staff" name="max_staff" min="-1" required>
+                <p class="description"><?php _e('-1 for unlimited', 'wp-customer'); ?></p>
+            </div>
+
+            <div class="form-row">
+                <label for="max-departments"><?php _e('Max Departments', 'wp-customer'); ?></label>
+                <input type="number" id="max-departments" name="max_departments" min="-1" required>
+                <p class="description"><?php _e('-1 for unlimited', 'wp-customer'); ?></p>
+            </div>
+
+            <!-- Features -->
+            <div class="form-row">
+                <label><?php _e('Features', 'wp-customer'); ?></label>
+                <div class="feature-checkboxes">
+                    <label>
+                        <input type="checkbox" name="features[can_add_staff]" value="1">
+                        <?php _e('Can Add Staff', 'wp-customer'); ?>
+                    </label>
+                    <label>
+                        <input type="checkbox" name="features[can_export]" value="1">
+                        <?php _e('Can Export Data', 'wp-customer'); ?>
+                    </label>
+                    <label>
+                        <input type="checkbox" name="features[can_bulk_import]" value="1">
+                        <?php _e('Can Bulk Import', 'wp-customer'); ?>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Trial & Grace Period -->
+            <div class="form-row">
+                <label>
+                    <input type="checkbox" id="is-trial-available" name="is_trial_available" value="1">
+                    <?php _e('Enable Trial Period', 'wp-customer'); ?>
+                </label>
+            </div>
+
+            <div class="form-row trial-days-row" style="display:none;">
+                <label for="trial-days"><?php _e('Trial Days', 'wp-customer'); ?></label>
+                <input type="number" id="trial-days" name="trial_days" min="0">
+            </div>
+
+            <div class="form-row">
+                <label for="grace-period-days"><?php _e('Grace Period Days', 'wp-customer'); ?></label>
+                <input type="number" id="grace-period-days" name="grace_period_days" min="0" required>
+            </div>
+
+            <div class="modal-buttons">
+                <button type="submit" class="button button-primary">
+                    <?php _e('Save Level', 'wp-customer'); ?>
+                </button>
+                <button type="button" class="button modal-close">
+                    <?php _e('Cancel', 'wp-customer'); ?>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

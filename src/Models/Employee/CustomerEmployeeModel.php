@@ -87,6 +87,8 @@ class CustomerEmployeeModel {
             ]
         );
 
+        $this->cache->delete('customer_active_employee_count', $customer_id);
+
         return ($result === false) ? null : (int) $wpdb->insert_id;
     }
 
