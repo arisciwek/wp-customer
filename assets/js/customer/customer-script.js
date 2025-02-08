@@ -285,7 +285,11 @@
 
                 // Trigger success event
                 $(document).trigger('customer:displayed', [data]);
-                
+
+                // Tampilkan/sembunyikan tombol tambah karyawan berdasarkan izin
+                const bolehTambahKaryawan = data.customer.can_create_employee;
+                $('.tambah-karyawan').toggle(bolehTambahKaryawan);
+
             } catch (error) {
                 console.error('Error displaying customer data:', error);
                 CustomerToast.error('Error displaying customer data');
@@ -339,6 +343,31 @@
                     }
                 }
                 if (tabId === 'employee-list' && this.currentId) {
+                       
+                       // Get tombol tambah karyawan
+                       $.ajax({
+                           url: wpCustomerData.ajaxUrl,
+                           type: 'POST',
+                           data: {
+                               action: 'create_employee_button',
+                               customer_id: this.currentId,
+                               nonce: wpCustomerData.nonce
+                           },
+                           success: (response) => {
+                               if (response.success) {
+                                   $('#tombol-tambah-karyawan').html(response.data.button);
+                                    
+                                    // Bind click event using delegation
+                                    $('#tombol-tambah-karyawan').off('click', '#add-employee-btn')
+                                        .on('click', '#add-employee-btn', () => {
+                                            if (window.CreateEmployeeForm) {
+                                                window.CreateEmployeeForm.showModal(this.currentId);
+                                            }
+                                        });
+                               }
+                           }
+                       });
+
                     if (window.EmployeeDataTable) {
                         window.EmployeeDataTable.init(this.currentId);
                     }
@@ -457,7 +486,6 @@
 
      };
 
-        // Di customer.js
         $('.wp-mpdf-customer-detail-export-pdf').on('click', function() {
             const customerId = $('#current-customer-id').val();
             

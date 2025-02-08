@@ -22,6 +22,7 @@
  */
 
 defined('ABSPATH') || exit;
+
 ?>
 
 <div id="employee-list" class="tab-content">
@@ -30,16 +31,11 @@ defined('ABSPATH') || exit;
             <h3><?php _e('Daftar Karyawan', 'wp-customer'); ?></h3>
         </div>
         <div class="employee-header-actions">
-                <?php 
-                // Show Add Branch button based on permissions
-                if (current_user_can('add_employee')) : 
-                ?>
-                <button type="button" class="button button-primary" id="add-employee-btn">
-                    <span class="dashicons dashicons-plus-alt"></span>
-                    <?php _e('Tambah Karyawan', 'wp-customer'); ?>
-                </button>
-            <?php endif; ?>
+
+            <div id="tombol-tambah-karyawan"></div>
+
         </div>
+
     </div>
 
     <div class="wp-customer-employee-content">

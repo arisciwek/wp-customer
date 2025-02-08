@@ -61,7 +61,8 @@ class CustomerEmployeeController {
         add_action('wp_ajax_update_employee', [$this, 'update']);
         add_action('wp_ajax_delete_employee', [$this, 'delete']);
         add_action('wp_ajax_change_employee_status', [$this, 'changeStatus']);
-        
+
+        add_action('wp_ajax_create_employee_button', [$this, 'createEmployeeButton']);        
     }
 
     /**
@@ -254,6 +255,40 @@ class CustomerEmployeeController {
             esc_attr($status),
             esc_html($label)
         );
+    }
+
+    public function createEmployeeButton() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+            
+            $customer_id = isset($_POST['customer_id']) ? (int)$_POST['customer_id'] : 0;
+            $branch_id = isset($_POST['branch_id']) ? (int)$_POST['branch_id'] : 0;
+            
+            if (!$customer_id) {
+                throw new \Exception('ID Customer tidak valid');
+            }
+
+            $validator = new CustomerEmployeeValidator();
+            $canCreate = $validator->canCreateEmployee($customer_id, $branch_id);
+
+            if ($canCreate) {
+                $button = '<button type="button" class="button button-primary" id="add-employee-btn">';
+                $button .= '<span class="dashicons dashicons-plus-alt"></span>';
+                $button .= __('Tambah Karyawan', 'wp-customer');
+                $button .= '</button>';
+            } else {
+                $button = '';
+            }
+
+            wp_send_json_success([
+                'button' => $button
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
     }
 
     /**

@@ -129,9 +129,9 @@ class CustomerCacheManager {
             // Instead of returning empty key or default key, throw exception
             //throw new \InvalidArgumentException('Cache key cannot be generated from empty components');
 
-            error_log('Cache key cannot be generated from empty components : '. print_r($validComponents));
+            // error_log('Cache key cannot be generated from empty components : '. print_r($validComponents));
  
-            return 'default_' . md5(serialize($components)); // Fallback key yang valid
+            return 'default_' . md5(serialize($components));
         }
 
         // Join with underscore and ensure valid length
@@ -150,23 +150,23 @@ class CustomerCacheManager {
      */
     public function get(string $type, ...$keyComponents) {
         $key = $this->generateKey($type, ...$keyComponents);
-        error_log("Cache key generated: " . $key);
+        // error_log("Cache key generated: " . $key);
 
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Cache attempt - Key: {$key}, Type: {$type}");
+            //error_log("Cache attempt - Key: {$key}, Type: {$type}");
         }
         
         $result = wp_cache_get($key, self::CACHE_GROUP);
         
         if ($result === false) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Cache miss - Key: {$key}");
+                //error_log("Cache miss - Key: {$key}");
             }
             return null;
         }
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Cache hit - Key: {$key}");
+            //error_log("Cache hit - Key: {$key}");
         }
         
         return $result;
@@ -184,13 +184,13 @@ class CustomerCacheManager {
             }
 
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Setting cache - Key: {$key}, Type: {$type}, Expiry: {$expiry}s");
+                //error_log("Setting cache - Key: {$key}, Type: {$type}, Expiry: {$expiry}s");
             }
             
             return wp_cache_set($key, $value, self::CACHE_GROUP, $expiry);
         } catch (\InvalidArgumentException $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Cache set failed: " . $e->getMessage());
+                //error_log("Cache set failed: " . $e->getMessage());
             }
             return false;
         }
@@ -203,7 +203,7 @@ class CustomerCacheManager {
         $key = $this->generateKey($type, ...$keyComponents);
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Deleting cache - Key: {$key}, Type: {$type}");
+            //error_log("Deleting cache - Key: {$key}, Type: {$type}");
         }
         
         return wp_cache_delete($key, self::CACHE_GROUP);
