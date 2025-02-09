@@ -53,6 +53,7 @@
             };
 
             this.bindEvents();
+            this.initTabs();
             this.handleInitialState();
             this.loadStats();
         },
@@ -166,6 +167,21 @@
                 console.error('Error displaying company data:', error);
                 CustomerToast.error('Error displaying company data');
             }
+        },
+        
+        initTabs() {
+            // Allow plugins to register tab handlers
+            $(document).trigger('wp_company_init_tabs', [this]);
+            
+            // Default tab handler
+            $('.nav-tab').off('click').on('click', (e) => {
+                e.preventDefault();
+                const tabId = $(e.currentTarget).data('tab');
+                this.switchTab(tabId);
+                
+                // Allow plugins to react to tab switch
+                $(document).trigger('wp_company_tab_switched', [tabId, this]);
+            });
         },
 
         switchTab(tabId) {

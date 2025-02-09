@@ -150,6 +150,25 @@ wp-customer/
 - DataTables integration
 - Form validation
 - Toast notifications
+## 🔌 Plugin Integration
+
+This plugin is designed to be extensible, allowing other plugins to add new functionality through various hooks and filters. Currently supported integrations include:
+
+### Tab Extensions
+Other plugins can add new tabs to the company detail panel. This allows for seamless integration of additional functionality while maintaining clean separation of concerns. Features:
+
+- Add custom tabs with any content
+- Control tab priority and positioning
+- Handle data display and interactions
+- Maintain consistent styling
+
+For detailed implementation guide, see [Adding Custom Tabs Documentation](docs/integrasi-tab-company-dari-plugin-lain.md)
+
+Example integration points:
+- WordPress filters for registering tabs
+- Event system for tab interactions
+- Template override capabilities
+- Asset management hooks
 
 ### Development Guidelines
 
@@ -192,6 +211,14 @@ wp-customer/
 - Graceful fallbacks
 
 ## 📝 Changelog
+
+### Version 1.0.3
+- Added extensible tab system in company detail panel
+- Implemented WordPress filters for tab registration
+- Added events system for tab interactions
+- Created documentation for tab extensions
+- Added plugin integration guide for custom tabs
+- Fixed path inconsistencies in template loading
 
 ### Version 1.0.0
 - Initial release with core functionality
