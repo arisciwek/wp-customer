@@ -1,0 +1,124 @@
+/**
+ * Toast Notification Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Components
+ * @version     2.0.0
+ * @author      arisciwek
+ * 
+ * Path: /wp-branch/assets/css/components/toast.css
+ * 
+ * Description: Styling untuk komponen notifikasi toast.
+ *              Includes animasi, responsive design, dan integrasi
+ *              dengan WordPress admin bar.
+ * 
+ * Last modified: 2024-11-28 09:45:00
+ */
+
+ .branch-toast {
+     position: relative;
+     padding: 12px 35px 12px 15px;
+     margin-bottom: 10px;
+     border-radius: 4px;
+     color: #fff;
+     font-size: 14px;
+     line-height: 1.4;
+     min-width: 250px;
+     max-width: 400px;
+     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+     opacity: 0;
+     transform: translateX(100%);
+     transition: all 0.3s ease;
+ }
+
+ .branch-toast p {
+     margin: 5px 0;
+ }
+
+ /* Toast Types */
+ .branch-toast-success {
+     background-color: #00a32a;
+ }
+
+ .branch-toast-error {
+     background-color: #d63638;
+ }
+
+ .branch-toast-warning {
+     background-color: #dba617;
+ }
+
+ .branch-toast-info {
+     background-color: #72aee6;
+ }
+
+ /* Close Button */
+ .branch-toast button {
+     position: absolute;
+     right: 8px;
+     top: 8px;
+     background: none;
+     border: none;
+     color: inherit;
+     font-size: 18px;
+     cursor: pointer;
+     opacity: 0.7;
+     padding: 0;
+     width: 20px;
+     height: 20px;
+     display: flex;
+     align-items: center;
+     justify-content: center;
+     transition: opacity 0.2s;
+ }
+
+ .branch-toast button:hover {
+     opacity: 1;
+ }
+
+ /* Container */
+ #branch-toast-container {
+     position: fixed;
+     top: 32px;
+     right: 20px;
+     z-index: 160000;
+     display: flex;
+     flex-direction: column;
+     gap: 10px;
+ }
+
+ /* Animation States */
+ .branch-toast.show {
+     opacity: 1;
+     transform: translateX(0);
+ }
+
+ .branch-toast.hide {
+     opacity: 0;
+     transform: translateX(100%);
+ }
+
+ /* Responsive */
+ @media screen and (max-width: 782px) {
+     .branch-toast {
+         width: calc(100vw - 40px);
+         max-width: none;
+     }
+     
+     #branch-toast-container {
+         top: 46px;
+         right: 10px;
+         left: 10px;
+     }
+ }
+
+ /* WordPress Admin Bar Integration */
+ .admin-bar #branch-toast-container {
+     top: 32px;
+ }
+
+ @media screen and (max-width: 782px) {
+     .admin-bar #branch-toast-container {
+         top: 46px;
+     }
+ }

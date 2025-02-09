@@ -82,7 +82,7 @@ if (!current_user_can('manage_options')) {
                 <p><?php _e('Generate default membership levels configuration.', 'wp-customer'); ?></p>
                 <button type="button" 
                         class="button button-primary generate-demo-data" 
-                        data-type="membership"
+                        data-type="membership-level"
                         data-nonce="<?php echo wp_create_nonce('generate_demo_membership'); ?>">
                     <?php _e('Generate Membership Levels', 'wp-customer'); ?>
                 </button>
@@ -110,6 +110,20 @@ if (!current_user_can('manage_options')) {
                         data-nonce="<?php echo wp_create_nonce('generate_demo_branch'); ?>">
                     <?php _e('Generate Branches', 'wp-customer'); ?>
                 </button>
+            </div>
+
+            <!-- Memberships -->
+            <div class="demo-data-card">
+                <h4><?php _e('Memberships', 'wp-customer'); ?></h4>
+                <p><?php _e('Generate membership data for existing branches.', 'wp-customer'); ?></p>
+                    <button type="button" 
+                            class="button button-primary generate-demo-data" 
+                            data-type="memberships"
+                            data-requires="branch"
+                            data-check-nonce="<?php echo wp_create_nonce('check_demo_branch'); ?>"
+                            data-nonce="<?php echo wp_create_nonce('generate_demo_memberships'); ?>">
+                        <?php _e('Generate Memberships', 'wp-customer'); ?>
+                    </button>
             </div>
 
             <!-- Employees -->

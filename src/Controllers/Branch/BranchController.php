@@ -65,7 +65,50 @@ class BranchController {
         add_action('wp_ajax_update_branch', [$this, 'update']);
         add_action('wp_ajax_delete_branch', [$this, 'delete']);
         add_action('wp_ajax_validate_branch_type_change', [$this, 'validateBranchTypeChange']);
-        add_action('wp_ajax_create_branch_button', [$this, 'createBranchButton']);          
+        add_action('wp_ajax_create_branch_button', [$this, 'createBranchButton']);
+
+        add_action('wp_ajax_validate_branch_access', [$this, 'validateBranchAccess']);
+
+
+
+    }
+
+    /**
+     * Validate customer access - public endpoint untuk AJAX
+     * @since 1.0.0
+     */
+    public function validateBranchAccess() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+
+            $branch_id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+            if (!$branch_id) {
+                throw new \Exception('Invalid branch ID');
+            }
+
+            // Gunakan validator langsung
+            $access = $this->validator->validateAccess($branch_id);
+            
+            if (!$access['has_access']) {
+                wp_send_json_error([
+                    'message' => __('Anda tidak memiliki akses ke customer ini', 'wp-customer'),
+                    'code' => 'access_denied'
+                ]);
+                return;
+            }
+
+            wp_send_json_success([
+                'message' => 'Akses diberikan',
+                'customer_id' => $customer_id,
+                'access_type' => $access['access_type']
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage(),
+                'code' => 'error'
+            ]);
+        }
     }
 
     public function createBranchButton() {
@@ -644,6 +687,5 @@ class BranchController {
             ]);
         }
     }
-
 }
 

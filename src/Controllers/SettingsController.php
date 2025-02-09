@@ -33,7 +33,8 @@ class SettingsController {
     // Add this to your SettingsController or appropriate controller class
     public function register_ajax_handlers() {
         add_action('wp_ajax_reset_permissions', [$this, 'handle_reset_permissions']);
-        add_action('wp_ajax_generate_demo_data', [$this, 'handle_generate_demo_data']);      
+        add_action('wp_ajax_generate_demo_data', [$this, 'handle_generate_demo_data']);
+        add_action('wp_ajax_check_demo_data', [$this, 'handle_check_demo_data']);
     }
 
     public function handle_reset_permissions() {
@@ -198,8 +199,10 @@ class SettingsController {
                 return new \WPCustomer\Database\Demo\BranchDemoData();
             case 'employee':
                 return new \WPCustomer\Database\Demo\CustomerEmployeeDemoData();
-            case 'membership':
+            case 'membership-level':
                 return new \WPCustomer\Database\Demo\MembershipLevelsDemoData();
+            case 'memberships':  // Tambah case ini
+                return new \WPCustomer\Database\Demo\MembershipDemoData();
             default:
                 throw new \Exception('Invalid demo data type: ' . $type);
         }
@@ -245,7 +248,7 @@ class SettingsController {
             }
 
         } catch (\Exception $e) {
-            $this->debug('Demo data generation failed: ' . $e->getMessage());
+            error_log('Demo data generation failed: ' . $e->getMessage());
             wp_send_json_error([
                 'message' => 'Failed to generate demo data.',
                 'type' => 'error'
@@ -335,4 +338,45 @@ class SettingsController {
             <?php
         }
     }
+
+    public function handle_check_demo_data() {
+        try {
+            if (!current_user_can('manage_options')) {
+                throw new \Exception('Permission denied');
+            }
+
+            $type = sanitize_text_field($_POST['type']);
+            $nonce = sanitize_text_field($_POST['nonce']);
+
+            if (!wp_verify_nonce($nonce, "check_demo_{$type}")) {
+                throw new \Exception('Invalid security token');
+            }
+
+            global $wpdb;
+            $has_data = false;
+
+            switch($type) {
+                case 'branch':
+                    $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_branches");
+                    $has_data = ($count > 0);
+                    break;
+                case 'customer':
+                    $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customers");
+                    $has_data = ($count > 0);
+                    break;
+                // Add other types as needed
+            }
+
+            wp_send_json_success([
+                'has_data' => $has_data,
+                'count' => $count
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
 }

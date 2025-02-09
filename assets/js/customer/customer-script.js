@@ -6,7 +6,7 @@
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/assets/js/customer.js
+ * Path: /wp-customer/assets/js/customer-script.js
  *
  * Description: Main JavaScript handler untuk halaman customer.
  *              Mengatur interaksi antar komponen seperti DataTable,
@@ -345,6 +345,7 @@
             },
 
         switchTab(tabId) {
+            console.log('Tab switched to:', tabId); // Add this debug line
             $('.nav-tab').removeClass('nav-tab-active');
             $(`.nav-tab[data-tab="${tabId}"]`).addClass('nav-tab-active');
 
@@ -355,12 +356,42 @@
             $(`#${tabId}`).addClass('active');
             
             // Initialize specific tab content if needed
+            /*
             if (tabId === 'membership-info' && this.currentId) {
                 // Initialize membership data
                 if (window.CustomerMembership) {
                     window.CustomerMembership.init();
                 }
             }
+            */
+
+            if (tabId === 'membership-info' && this.currentId) {
+                console.log('Fetching membership data for customer:', this.currentId); // Add this debug line
+                // Get membership level data
+                $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'get_membership_level_data',
+                        customer_id: this.currentId,
+                        nonce: wpCustomerData.nonce
+                    },
+                    success: (response) => {
+                        if (response.success) {
+
+                            console.log('Membership info data:', response.data);
+
+                            if (window.CustomerMembership) {
+                                window.CustomerMembership.displayMembershipData(response.data);
+                            }
+                        }
+                    },
+                    error: (xhr, status, error) => {
+                        console.error('AJAX error:', error); // Add this debug line
+                    }
+                });
+            }
+
             // Initialize specific tab content if needed
             if (tabId === 'employee-list' && this.currentId) {
                 // Get tombol tambah karyawan

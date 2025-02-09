@@ -37,205 +37,234 @@
         
         init() {
             this.bindEvents();
-            this.loadInitialData();
-		    if (window.Customer && window.Customer.currentId) {
-		        this.currentId = window.Customer.currentId;
-		        this.loadMembershipStatus();
-		    }            
-        },
-
-        bindEvents() {
-            // Upgrade buttons
-            $('.upgrade-button').on('click', (e) => {
-                const levelId = $(e.currentTarget).data('plan');
-                this.handleUpgrade(levelId);
-            });
-
-            // Period selection
-            $('.period-option').on('change', (e) => {
-                this.updatePrice($(e.currentTarget).val());
-            });
-
-            // Custom event handlers
-            $(document)
-                .on('membership:upgraded', () => this.refreshStatus())
-                .on('membership:extended', () => this.refreshStatus());
-        },
-
-        loadInitialData() {
-            const customerId = $('#current-customer-id').val();
-            if (!customerId) return;
-
-            this.currentId = customerId;
-            this.loadMembershipStatus();
-        },
-
-        loadMembershipStatus() {
-            $.ajax({
-                url: wpCustomerData.ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'get_membership_status',
-                    customer_id: this.currentId,
-                    nonce: wpCustomerData.nonce
-                },
-                success: (response) => {
-                    if (response.success) {
-                        this.updateStatusDisplay(response.data);
-                    } else {
-                        CustomerToast.error(response.data.message);
-                    }
-                },
-                error: () => {
-                    CustomerToast.error('Failed to load membership status');
-                }
-            });
-        },
-
-        updateStatusDisplay(data) {
-            // Update status badge
-            $('#membership-status').text(this.getStatusLabel(data.status))
-                .removeClass()
-                .addClass(`status-badge status-${data.status}`);
-
-            // Update staff usage
-            const staffPercent = (data.level.max_staff === -1) 
-                ? 0 
-                : (data.current_staff / data.level.max_staff * 100);
-            
-            $('#staff-usage-bar').css('width', `${Math.min(staffPercent, 100)}%`);
-            $('#staff-usage-count').text(data.current_staff);
-            $('#staff-usage-limit').text(data.level.max_staff === -1 ? '∞' : data.level.max_staff);
-
-            // Update capabilities
-            const $capList = $('#active-capabilities').empty();
-            Object.entries(data.level.capabilities).forEach(([cap, enabled]) => {
-                if (enabled) {
-                    $capList.append(`<li>${this.getCapabilityLabel(cap)}</li>`);
-                }
-            });
-
-            // Update period info
-            if (data.period) {
-                $('#membership-start-date').text(this.formatDate(data.period.start_date));
-                $('#membership-end-date').text(this.formatDate(data.period.end_date));
+            if (window.Customer && window.Customer.currentId) {
+                this.currentId = window.Customer.currentId;
+                this.loadMembershipStatus();
             }
         },
 
-		// Dalam handleUpgrade method di CustomerMembership
-		handleUpgrade(levelId) {
-		    const level = this.available_levels.find(l => l.id === levelId);
-		    if (!level) return;
+        bindEvents() {
+            // Event handlers for upgrade buttons akan ditambahkan dinamis
+            $(document).on('click', '.upgrade-button', (e) => {
+                const levelId = $(e.currentTarget).data('level');
+                this.handleUpgrade(levelId);
+            });
+        },
 
-		    // Konfigurasi modal konfirmasi
-		    const modalConfig = {
-		        title: __('Konfirmasi Upgrade Membership', 'wp-customer'),
-		        message: sprintf(
-		            __('Anda akan mengupgrade membership ke level %s. Harga upgrade: Rp %s. Lanjutkan?', 'wp-customer'),
-		            level.name,
-		            this.formatPrice(level.upgrade_price)
-		        ),
-		        icon: 'dashicons-businessman',
-		        confirmText: __('Ya, Upgrade', 'wp-customer'),
-		        cancelText: __('Batal', 'wp-customer'),
-		        confirmButtonClass: 'button-primary',
-		        // Callback saat konfirmasi
-		        onConfirm: () => {
-		            this.processUpgrade(levelId);
-		        }
-		    };
-
-		    // Tampilkan modal konfirmasi
-		    WIModal.showConfirmation(modalConfig);
-		},
-
-		// Method untuk memproses upgrade setelah konfirmasi
-		processUpgrade(levelId) {
+		loadMembershipStatus() {
+		    console.log('Loading membership status for customer:', this.currentId);
+		    
 		    $.ajax({
 		        url: wpCustomerData.ajaxUrl,
 		        type: 'POST',
 		        data: {
-		            action: 'upgrade_membership',
+		            action: 'get_membership_status',
 		            customer_id: this.currentId,
-		            level_id: levelId,
 		            nonce: wpCustomerData.nonce
 		        },
-		        beforeSend: () => {
-		            WIModal.showLoading(__('Memproses upgrade...', 'wp-customer'));
-		        },
 		        success: (response) => {
+		            console.log('Received response:', response);
 		            if (response.success) {
-		                CustomerToast.success('Membership berhasil diupgrade');
-		                $(document).trigger('membership:upgraded');
-		                this.refreshStatus();
+		                this.updateStatusDisplay(response.data);
 		            } else {
-		                CustomerToast.error(response.data.message);
+		                console.error('Error response:', response);
+		                CustomerToast.error(response.data.message || 'Failed to load membership data');
 		            }
 		        },
-		        error: () => {
-		            CustomerToast.error(__('Gagal memproses upgrade', 'wp-customer'));
-		        },
-		        complete: () => {
-		            WIModal.hideLoading();
+		        error: (xhr, status, error) => {
+		            console.error('AJAX error:', {xhr, status, error});
+		            CustomerToast.error('Failed to load membership status');
 		        }
 		    });
 		},
 
-        extendPeriod(months) {
-            $.ajax({
-                url: wpCustomerData.ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'extend_membership',
-                    customer_id: this.currentId,
-                    months: months,
-                    nonce: wpCustomerData.nonce
-                },
-                success: (response) => {
-                    if (response.success) {
-                        CustomerToast.success('Membership period extended');
-                        $(document).trigger('membership:extended');
-                    } else {
-                        CustomerToast.error(response.data.message);
-                    }
-                },
-                error: () => {
-                    CustomerToast.error('Failed to extend membership');
-                }
-            });
-        },
+	    displayMembershipData(data) {
+	        // Update level names
+            console.log('Display Membership Data:', data);
 
-        refreshStatus() {
-            this.loadMembershipStatus();
-        },
+	        data.membershipLevel.forEach(level => {
+	            const slug = level.slug;
+	            
+	            // Update name
+	            $(`#${slug}-name`).text(level.name);
+	            
+	            // Update price
+	            const price = new Intl.NumberFormat('id-ID', {
+	                style: 'currency',
+	                currency: 'IDR',
+	                minimumFractionDigits: 0
+	            }).format(level.price_per_month);
 
-        // Helper Functions
-        getStatusLabel(status) {
-            const labels = {
-                'active': 'Active',
-                'pending_payment': 'Pending Payment',
-                'pending_upgrade': 'Upgrade in Progress',
-                'expired': 'Expired',
-                'in_grace_period': 'Grace Period'
+	            $(`#${slug}-price`).html(
+	                `<div class="upgrade-price">
+	                    <span class="price-amount">${price}</span>
+	                    <span class="price-period">/ bulan</span>
+	                </div>`
+	            );
+
+	            // Update staff limit
+	            const staffLimit = level.max_staff === '-1' ? 
+	                'Unlimited Staff' : 
+	                `Maksimal ${level.max_staff} Staff`;
+
+	            $(`#${slug}-staff-limit`).html(
+	                `<div class="staff-limit">
+	                    <i class="dashicons dashicons-groups"></i>
+	                    <span>${staffLimit}</span>
+	                </div>`
+	            );
+
+	            // Parse capabilities and update features
+	            if (level.capabilities) {
+	                const capabilities = JSON.parse(level.capabilities);
+	                const $featuresList = $(`#${slug}-features`).empty();
+
+	                Object.entries(capabilities.features).forEach(([key, feature]) => {
+	                    $featuresList.append(
+	                        `<li class="${feature.css_class}">
+	                            <i class="dashicons ${feature.icon}"></i>
+	                            <span class="feature-label">${feature.label}</span>
+	                            <span class="feature-status">
+	                                ${feature.value ? 
+	                                    '<i class="dashicons dashicons-yes-alt"></i>' : 
+	                                    '<i class="dashicons dashicons-no-alt"></i>'}
+	                            </span>
+	                        </li>`
+	                    );
+	                });
+	            }
+
+	            // Update trial badge
+	            if (level.is_trial_available === "1") {
+	                $(`#${slug}-trial`).text(`Free ${level.trial_days} day trial`).show();
+	            } else {
+	                $(`#${slug}-trial`).hide();
+	            }
+	        });
+	    },
+		updateStatusDisplay(response) {
+		    console.log('Updating display with data:', response);
+
+		    // Data membership level dari response
+		    const membershipLevels = response.membershipLevel;
+		    
+		    // Current membership data
+		    const currentMembership = response.membership;
+		    console.log('Current membership:', currentMembership);
+
+		    membershipLevels.forEach(level => {
+		        // Basic info
+		        const levelSlug = level.slug;
+		        const elementPrefix = `#${levelSlug}`;
+		        
+		        console.log(`Updating level: ${levelSlug}`, level);
+
+		        // Update level name
+		        $(`${elementPrefix}-name`).text(level.name);
+
+		        // Update price
+		        const price = new Intl.NumberFormat('id-ID', {
+		            style: 'currency',
+		            currency: 'IDR',
+		            minimumFractionDigits: 0
+		        }).format(level.price_per_month);
+
+		        $(`${elementPrefix}-price`).html(
+		            `<div class="upgrade-price">
+		                <span class="price-amount">${price}</span>
+		                <span class="price-period">/ bulan</span>
+		             </div>`
+		        );
+
+		        // Update staff limit
+		        const staffLimit = level.max_staff === "-1" ? 
+		            "Unlimited Staff" : 
+		            `Maksimal ${level.max_staff} Staff`;
+
+		        $(`${elementPrefix}-staff-limit`).html(
+		            `<div class="staff-limit">
+		                <i class="dashicons dashicons-groups"></i>
+		                <span>${staffLimit}</span>
+		             </div>`
+		        );
+
+		        // Update features list
+		        if (level.capabilities) {
+		            const capabilities = JSON.parse(level.capabilities);
+		            const $featuresList = $(`${elementPrefix}-features`).empty();
+
+		            Object.entries(capabilities.features).forEach(([key, feature]) => {
+		                const $feature = $('<li>').addClass(feature.css_class);
+		                
+		                $feature.append(
+		                    $('<i>').addClass(`dashicons ${feature.icon}`),
+		                    $('<span>').addClass('feature-label').text(feature.label),
+		                    $('<span>').addClass('feature-status').html(
+		                        feature.value ? 
+		                            '<i class="dashicons dashicons-yes-alt"></i>' : 
+		                            '<i class="dashicons dashicons-no-alt"></i>'
+		                    )
+		                );
+		                
+		                $featuresList.append($feature);
+		            });
+		        }
+
+		        // Update trial badge
+		        const $trialBadge = $(`${elementPrefix}-trial`);
+		        if (level.is_trial_available === "1") {
+		            $trialBadge
+		                .text(`Free ${level.trial_days} day trial`)
+		                .show();
+		        } else {
+		            $trialBadge.hide();
+		        }
+
+		        // Show upgrade button if applicable
+		        const canUpgrade = currentMembership.level !== level.slug && 
+		                          this.canUpgrade(currentMembership.level, level.slug);
+
+		        const $upgradeContainer = $(`#tombol-upgrade-${levelSlug}`);
+		        $upgradeContainer.empty();
+
+		        if (canUpgrade) {
+		            $upgradeContainer.html(
+		                `<button type="button" class="button button-primary upgrade-button" 
+		                    data-level="${level.id}">
+		                    <i class="dashicons dashicons-upload"></i>
+		                    Upgrade ke ${level.name}
+		                </button>`
+		            );
+		        }
+		    });
+
+		    // Add debug logs
+		    console.log('Display update complete');
+		},
+
+        canUpgrade(currentLevel, targetLevel) {
+            const levels = {
+                'regular': 1,
+                'prioritas': 2,
+                'utama': 3
             };
-            return labels[status] || status;
+            return levels[targetLevel] > levels[currentLevel];
         },
 
-        getCapabilityLabel(cap) {
-            const labels = {
-                'can_add_staff': 'Add Staff',
-                'can_export': 'Export Data',
-                'can_bulk_import': 'Bulk Import'
-            };
-            return labels[cap] || cap;
+        handleUpgrade(levelId) {
+            if (window.UpgradeForm) {
+                window.UpgradeForm.showModal(this.currentId, levelId);
+            }
         },
 
-        formatDate(dateString) {
-            return new Date(dateString).toLocaleDateString('id-ID', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
+        showLoading() {
+            $('.membership-status-card').addClass('loading');
+            $('.upgrade-cards-container').addClass('loading');
+        },
+
+        hideLoading() {
+            $('.membership-status-card').removeClass('loading');
+            $('.upgrade-cards-container').removeClass('loading');
         }
     };
 

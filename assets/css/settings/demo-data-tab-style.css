@@ -30,3 +30,13 @@
     margin-top: 10px;
     display: none;
 }
+
+.demo-data-card button[data-requires] {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.demo-data-card button[data-requires].ready {
+    opacity: 1;
+    cursor: pointer;
+}

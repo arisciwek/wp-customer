@@ -204,6 +204,19 @@ public function enqueue_frontend_assets() {
             wp_enqueue_style('wp-customer-employee', WP_CUSTOMER_URL . 'assets/css/employee/employee-style.css', [], $this->version);
             wp_enqueue_style('employee-toast', WP_CUSTOMER_URL . 'assets/css/employee/employee-toast.css', [], $this->version);
         }
+
+        // Style section di method enqueue_styles()
+        if ($screen->id === 'toplevel_page_perusahaan') {
+            // Core styles
+            wp_enqueue_style('wp-customer-toast', WP_CUSTOMER_URL . 'assets/css/customer/toast.css', [], $this->version);
+            
+            // DataTables
+            wp_enqueue_style('datatables', 'https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css', [], '1.13.7');
+
+            // Company styles
+            wp_enqueue_style('wp-company', WP_CUSTOMER_URL . 'assets/css/company/company-style.css', [], $this->version);
+        }
+
     }
 
     public function enqueue_scripts() {
@@ -380,10 +393,27 @@ public function enqueue_frontend_assets() {
                 'nonce' => $customer_nonce,
                 'debug' => true
             ]);
-
-
-
         }
+
+        // Script section di method enqueue_scripts()
+        if ($screen->id === 'toplevel_page_perusahaan') {
+            // Core dependencies
+            wp_enqueue_script('datatables', 'https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js', ['jquery'], '1.13.7', true);
+            
+            // Components
+            wp_enqueue_script('customer-toast', WP_CUSTOMER_URL . 'assets/js/customer/customer-toast.js', ['jquery'], $this->version, true);
+
+            // Company scripts
+            wp_enqueue_script('company-datatable', WP_CUSTOMER_URL . 'assets/js/company/company-datatable.js', ['jquery', 'datatables', 'customer-toast'], $this->version, true);
+            wp_enqueue_script('company-script', WP_CUSTOMER_URL . 'assets/js/company/company-script.js', ['jquery', 'company-datatable', 'customer-toast'], $this->version, true);
+
+            // Localize script
+            wp_localize_script('company-script', 'wpCustomerData', [
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('wp_customer_nonce'),
+                'debug' => true
+            ]);
+        }  
     }
 
     private function enqueue_wilayah_handler() {

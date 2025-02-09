@@ -68,6 +68,24 @@ class BranchValidator {
         $this->customer_model = new CustomerModel();
     }
 
+    public function validateAccess(int $branch_id): array {
+        $relation = $this->getUserRelation($branch_id);
+        
+        return [
+            'has_access' => $this->canViewBranch($relation),
+            'access_type' => $this->getAccessType($relation),
+            'relation' => $relation,
+            'customer_id' => $customer_id // Tambahkan ini
+        ];
+    }
+    
+    private function getAccessType(array $relation): string {
+        if ($relation['is_admin']) return 'admin';
+        if ($relation['is_owner']) return 'owner';
+        if ($relation['is_employee']) return 'employee';
+        return 'none';
+    }
+
     public function canViewBranch($branch, $customer): bool {
         $current_user_id = get_current_user_id();
 

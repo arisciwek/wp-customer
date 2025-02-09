@@ -38,63 +38,112 @@ class CustomerMembershipController {
         add_action('wp_ajax_upgrade_membership', [$this, 'upgradeMembership']);
         add_action('wp_ajax_extend_membership', [$this, 'extendMembership']); 
         add_action('wp_ajax_get_upgrade_options', [$this, 'getUpgradeOptions']);
+
+        add_action('wp_ajax_get_membership_level_data', [$this, 'getMembershipLevelData']);        
     }
 
-    /**
-     * Get current membership status
-     */
-    public function getMembershipStatus() {
-        try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
+	// Rename dari createUpgradeButton menjadi getMembershipLevelData
+	public function getMembershipLevelData() {
+	    try {
+	        check_ajax_referer('wp_customer_nonce', 'nonce');
+	        
+	        $customer_id = isset($_POST['customer_id']) ? (int)$_POST['customer_id'] : 0;
+	        if (!$customer_id) {
+	            throw new \Exception('Invalid customer ID');
+	        }
 
-            $customer_id = isset($_POST['customer_id']) ? (int)$_POST['customer_id'] : 0;
-            if (!$customer_id) {
-                throw new \Exception('Invalid customer ID');
-            }
+	        // Get current membership
+	        $current = $this->membership_model->findByCustomer($customer_id);
+	        
+	        error_log('$customer_id ' . $customer_id);
 
-            // Get membership data
-            $membership = $this->membership_model->findByCustomer($customer_id);
-            if (!$membership) {
-                throw new \Exception('No active membership found');
-            }
+	        // Get membership levels data
+	        $levels = $this->level_model->getAllLevels();
+	        
+	        // Format data untuk setiap level
+	        $formatted_levels = [];
+	        foreach ($levels as $level) {
+	            $data = [
+	                'name' => $level->name,
+	                'slug' => $level->slug,
+	                'description' => $level->description,
+	                'price_per_month' => $level->price_per_month,
+	                'max_staff' => $level->max_staff,
+	                'capabilities' => $level->capabilities,
+	                'is_trial_available' => $level->is_trial_available,
+	                'trial_days' => $level->trial_days
+	            ];
 
-            // Get level details
-            $level = $this->level_model->getLevel($membership->level_id);
-            if (!$level) {
-                throw new \Exception('Invalid membership level');
-            }
+	            // Add upgrade button if eligible
+	            if ($this->membership_model->canUpgrade($customer_id, $level->id)) {
+	                $data['upgrade_button'] = sprintf(
+	                    '<button type="button" class="button button-primary" id="upgrade-%s-btn">%s</button>',
+	                    esc_attr($level->slug),
+	                    sprintf(__('Upgrade ke %s', 'wp-customer'), $level->name)
+	                );
+	            }
 
-            // Format response data
-            $response = [
-                'status' => $membership->status,
-                'level' => [
-                    'id' => $level->id,
-                    'name' => $level->name,
-                    'max_staff' => $level->max_staff,
-                    'max_departments' => $level->max_departments,
-                    'capabilities' => json_decode($level->capabilities, true)
-                ],
-                'period' => [
-                    'start_date' => $membership->start_date,
-                    'end_date' => $membership->end_date,
-                    'trial_end_date' => $membership->trial_end_date,
-                    'grace_period_end_date' => $membership->grace_period_end_date
-                ],
-                'payment' => [
-                    'status' => $membership->payment_status,
-                    'method' => $membership->payment_method,
-                    'price_paid' => $membership->price_paid
-                ]
-            ];
+	            $formatted_levels[$level->slug] = $data;
+	        }
 
-            wp_send_json_success($response);
+	        wp_send_json_success([
+	            'current_level' => $current ? $current->level_id : null,
+	            'levels' => $formatted_levels
+	        ]);
 
-        } catch (\Exception $e) {
-            wp_send_json_error([
-                'message' => $e->getMessage()
-            ]);
-        }
-    }
+	    } catch (\Exception $e) {
+	        wp_send_json_error([
+	            'message' => $e->getMessage()
+	        ]);
+	    }
+	}
+
+	/**
+	 * Get current membership status
+	 */
+	public function getMembershipStatus() {
+	    try {
+	        check_ajax_referer('wp_customer_nonce', 'nonce');
+
+	        $customer_id = isset($_POST['customer_id']) ? (int)$_POST['customer_id'] : 0;
+	        if (!$customer_id) {
+	            throw new \Exception('Invalid customer ID');
+	        }
+
+	        // Get membership data
+	        $membership = $this->membership_model->findByCustomer($customer_id);
+	        if (!$membership) {
+	            throw new \Exception('No active membership found');
+	        }
+
+	        // Get level details
+	        $level = $this->level_model->getLevel($membership->level_id);
+	        if (!$level) {
+	            throw new \Exception('Invalid membership level');
+	        }
+
+	        // Format response data
+			$response = [
+			    'status' => $membership->status,
+			    'current_staff' => $employee_count,
+			    'period' => [
+			        'start_date' => $membership->start_date,
+			        'end_date' => $membership->end_date
+			    ],
+			    // Get data untuk semua level
+			    'regular' => $this->level_model->getFormattedLevelData('regular'),
+			    'priority' => $this->level_model->getFormattedLevelData('priority'),
+			    'utama' => $this->level_model->getFormattedLevelData('utama')
+			];
+
+	        wp_send_json_success($response);
+
+	    } catch (\Exception $e) {
+	        wp_send_json_error([
+	            'message' => $e->getMessage()
+	        ]);
+	    }
+	}
 
     /**
      * Process membership upgrade request
@@ -120,6 +169,8 @@ class CustomerMembershipController {
             if (!$current) {
                 throw new \Exception('No active membership found');
             }
+
+            $membershipLevel = $this->membershipLevelModel->getAllLevels();
 
             // Calculate upgrade price
             $price = $this->membership_model->calculateUpgradePrice(
@@ -201,6 +252,7 @@ class CustomerMembershipController {
 	 * @param int $customer_id Customer ID
 	 * @return void
 	 */
+	/*
 	public function renderMembershipTab($customer_id) {
 	    try {
 	        global $wpdb;
@@ -266,7 +318,8 @@ class CustomerMembershipController {
 	        echo '<div class="notice notice-error"><p>' . esc_html($e->getMessage()) . '</p></div>';
 	    }
 	}
-	
+	*/
+
 	/**
 	 * Get available upgrade options including price calculations
 	 * 

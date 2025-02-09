@@ -41,9 +41,9 @@ class Installer {
     private static $tables = [
         'app_customers',
         'app_customer_membership_levels',
-        'app_customer_memberships',
         'app_branches',
-        'app_customer_employees'
+        'app_customer_employees',
+        'app_customer_memberships'
     ];
 
     private static function debug($message) {

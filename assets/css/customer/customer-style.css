@@ -612,3 +612,116 @@ div#customers-table_length select {
     width: 16px;
     height: 16px;
 }
+
+/*
+ *
+ */
+
+/**
+ * Additional Membership Feature Styles
+ */
+
+/* Card Content Layout */
+.card-content {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 15px;
+}
+
+/* Price Styling */
+.upgrade-price {
+    text-align: center;
+    margin: 15px 0;
+}
+
+.price-amount {
+    font-size: 24px;
+    font-weight: 600;
+    color: #2271b1;
+}
+
+.price-period {
+    color: #666;
+    font-size: 14px;
+}
+
+/* Staff Limit Display */
+.staff-limit {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    font-size: 14px;
+}
+
+.staff-limit .dashicons {
+    color: #2271b1;
+}
+
+/* Feature Icons and Status */
+.feature-enabled {
+    color: #2271b1;
+}
+
+.feature-disabled {
+    color: #666;
+    opacity: 0.7;
+}
+
+.feature-enabled .dashicons,
+.feature-disabled .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+}
+
+/* Trial Badge */
+.trial-badge {
+    background: #ebf5ff;
+    color: #2271b1;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    display: inline-block;
+    margin-top: auto;
+    text-align: center;
+}
+
+/* Upgrade Button Container */
+.upgrade-button-container {
+    margin-top: 15px;
+}
+
+.upgrade-button {
+    width: 100%;
+    text-align: center;
+    padding: 8px 16px;
+    border: 1px solid #2271b1;
+    background: #f6f7f7;
+    color: #2271b1;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.upgrade-button:hover {
+    background: #f0f0f1;
+    border-color: #0a4b78;
+    color: #0a4b78;
+}
+
+/* Features List Enhancement */
+.features-container {
+    margin: 15px 0;
+    flex-grow: 1;
+}
+
+.plan-features li .feature-label {
+    flex-grow: 1;
+}
+
+.plan-features li .feature-status {
+    color: #2271b1;
+}

@@ -12,19 +12,21 @@
 namespace WPCustomer\Controllers;
 
 use WPCustomer\Controllers\SettingsController;
+use WPCustomer\Controllers\Company\CompanyController;
 
 class MenuManager {
     private $plugin_name;
     private $version;
     private $settings_controller;
     private $customer_controller;
+    private $company_controller;  // Tambah property untuk CompanyController
 
     public function __construct($plugin_name, $version) {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
         $this->settings_controller = new SettingsController();
         $this->customer_controller = new CustomerController();
-
+        $this->company_controller = new CompanyController();  // Inisialisasi CompanyController
     }
 
     public function init() {
@@ -33,17 +35,29 @@ class MenuManager {
     }
 
     public function registerMenus() {
+        // Menu WP Customer
         add_menu_page(
             __('WP Customer', 'wp-customer'),
             __('WP Customer', 'wp-customer'),
             'view_customer_list',
             'wp-customer',
-            //[$this, 'renderMainPage'],
             [$this->customer_controller, 'renderMainPage'],
             'dashicons-businessperson',
             30
         );
 
+        // Menu WP Perusahaan 
+        add_menu_page(
+            __('WP Perusahaan', 'wp-customer'),
+            __('WP Perusahaan', 'wp-customer'),
+            'view_branch_list',
+            'perusahaan',  // Unique menu slug untuk perusahaan
+            [$this->company_controller, 'renderMainPage'],
+            'dashicons-building',
+            31
+        );
+
+        // Submenu Settings
         add_submenu_page(
             'wp-customer',
             __('Pengaturan', 'wp-customer'),
@@ -53,6 +67,4 @@ class MenuManager {
             [$this->settings_controller, 'renderPage']
         );
     }
-
-
 }

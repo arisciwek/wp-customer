@@ -1,0 +1,5 @@
+<?PHP
+
+?>
+
+NO ACCESS

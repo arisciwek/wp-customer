@@ -1,0 +1,358 @@
+/**
+ * File: company-style.css
+ * Path: /wp-customer/assets/css/company/company-style.css
+ * Description: Styles for company management interface
+ * Last modified: 2024-02-09
+ */
+
+/* Dashboard Section */
+.wp-company-dashboard {
+    margin: 20px 0;
+}
+
+.wi-stats-container {
+    display: flex;
+    gap: 20px;
+    margin: 15px 0;
+}
+
+.wi-stat-box {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 15px 20px;
+    border-radius: 4px;
+    flex: 1;
+    text-align: center;
+}
+
+.wi-stat-number {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2271b1;
+    margin: 10px 0 0;
+}
+
+/* Main Content Layout */
+.wp-company-content-area {
+    margin-top: 20px;
+}
+
+.wp-company-container {
+    display: flex;
+    gap: 20px;
+    position: relative;
+}
+
+/* Left Panel Styles */
+.wp-company-left-panel {
+    width: 100%;
+    transition: width 0.3s ease;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+}
+
+.wp-company-container.with-right-panel .wp-company-left-panel {
+    width: 45%;
+}
+
+.wi-panel-header h2 {
+    margin: 0;
+    font-size: 1.3em;
+}
+
+.wi-panel-content {
+    padding: 20px;
+}
+
+/* Right Panel Styles */
+.wp-company-right-panel {
+    width: 55%;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    display: none;
+}
+
+.wp-company-right-panel.visible {
+    display: block;
+}
+
+.wi-panel-header,
+.wp-company-panel-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #ccd0d4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 50px;
+}
+
+.wp-company-close-panel {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.wp-company-close-panel:hover {
+    color: #d63638;
+}
+
+.wp-company-panel-content {
+    padding: 20px;
+}
+
+/* Tab Navigation */
+.nav-tab-wrapper {
+    border-bottom: 1px solid #c3c4c7;
+    margin: 0;
+    padding-top: 9px;
+    padding-bottom: 0;
+    line-height: inherit;
+}
+
+.nav-tab {
+    border: 1px solid #c3c4c7;
+    border-bottom: none;
+    margin-left: 0.5em;
+    padding: 5px 10px;
+    font-size: 14px;
+    line-height: 1.71428571;
+    font-weight: 600;
+    background: #dcdcde;
+    color: #50575e;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.nav-tab-active {
+    background: #f0f0f1;
+    color: #000;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+    padding: 20px 0;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* DataTables Customization */
+#companies-table {
+    width: 100% !important;
+    margin-top: 15px;
+}
+
+.companies-table-actions {
+    white-space: nowrap;
+}
+
+.companies-table-actions button {
+    padding: 4px 8px;
+    margin: 0 2px;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+    .wi-stats-container {
+        flex-direction: column;
+    }
+
+    .wp-company-container.with-right-panel {
+        flex-direction: column;
+    }
+
+    .wp-company-container.with-right-panel .wp-company-left-panel,
+    .wp-company-right-panel {
+        width: 100%;
+    }
+}
+
+/* Loading States */
+.wp-company-panel-content.loading {
+    position: relative;
+    min-height: 200px;
+}
+
+.wp-company-panel-content.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 1;
+}
+
+.wp-company-panel-content.loading .spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    visibility: visible;
+}
+
+/* Active Row Highlight */
+#companies-table tr.highlight {
+    background-color: #f0f6fc !important;
+    transition: background-color 0.5s ease;
+}
+
+/* Smooth Panel Transitions */
+.wp-company-left-panel,
+.wp-company-right-panel {
+    transition: width 0.3s ease, opacity 0.3s ease;
+}
+
+.wp-company-right-panel {
+    opacity: 0;
+}
+
+.wp-company-right-panel.visible {
+    opacity: 1;
+}
+
+/* DataTable Adjustments */
+div#companies-table_length select {
+    width: 70px;
+    margin-left: 5px;
+    margin-right: 5px;
+}
+
+/* Action Buttons */
+.button.view-company {
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    line-height: 28px;
+    text-align: center;
+    margin: 0 2px;
+}
+
+.button .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    line-height: 1.4;
+}
+
+/* Company Details Styles */
+.company-details-container {
+    margin: 20px;
+}
+
+.company-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.company-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+}
+
+.company-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+/* Postbox Styling */
+.postbox {
+    min-width: 255px;
+    border: 1px solid #ccd0d4;
+    background: #fff;
+    margin-bottom: 20px;
+}
+
+.postbox .hndle {
+    padding: 8px 12px;
+    margin: 0;
+    border-bottom: 1px solid #ccd0d4;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.postbox .inside {
+    padding: 0 12px 12px;
+    margin: 12px 0;
+}
+
+/* Form Table Styling */
+.form-table {
+    border-collapse: collapse;
+    margin-top: 0.5em;
+    width: 100%;
+}
+
+.form-table th {
+    vertical-align: top;
+    text-align: left;
+    padding: 15px 10px 15px 0;
+    width: 140px;
+    line-height: 1.3;
+    font-weight: 600;
+}
+
+.form-table td {
+    margin-bottom: 9px;
+    padding: 15px 10px;
+    line-height: 1.3;
+    vertical-align: middle;
+}
+
+/* Membership Status Styling */
+.status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.status-active {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-expired {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+/* Maps Link Style */
+.company-coordinates {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.google-maps-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #2271b1;
+}
+
+.google-maps-link .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}

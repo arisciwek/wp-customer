@@ -377,40 +377,109 @@ class CustomerMembershipLevelModel {
 	        $current_user_id = get_current_user_id();
 	        
 	        $defaults = [
-	            [
-	                'name' => 'Regular',
-	                'slug' => 'regular',
-	                'description' => 'Paket dasar dengan maksimal 2 staff',
-	                'max_staff' => 2,
-	                'max_departments' => 1,
-	                'available_periods' => json_encode([1, 3, 6, 12]),
-	                'default_period' => 1,
-	                'price_per_month' => 50000,
-	                'is_trial_available' => 1,
-	                'trial_days' => 7,
-	                'grace_period_days' => 3,
-	                'sort_order' => 1,
-	                'capabilities' => json_encode([
-	                    'features' => [
-	                        'can_add_staff' => true,
-	                        'can_export' => false,
-	                        'can_bulk_import' => false
-	                    ],
-	                    'limits' => [
-	                        'max_staff' => 2,
-	                        'max_departments' => 1,
-	                        'max_active_projects' => 5
-	                    ],
-	                    'notifications' => [
-	                        'email' => true,
-	                        'dashboard' => true,
-	                        'push' => false
-	                    ]
-	                ]),
-	                'created_by' => $current_user_id,
-	                'created_at' => current_time('mysql'),
-	                'status' => 'active'
-	            ],
+                [
+                    'name' => 'Free',
+                    'slug' => 'free',
+                    'description' => 'Paket gratis dengan maksimal 2 staff',
+                    'max_staff' => 2,
+                    'max_departments' => 1,
+                    'available_periods' => json_encode([1, 3, 6, 12]),
+                    'default_period' => 1,
+                    'price_per_month' => 50000,
+                    'is_trial_available' => 0,
+                    'grace_period_days' => -1,
+                    'sort_order' => 1,
+                    'capabilities' => json_encode([
+                        'features' => [
+                            'can_add_staff' => [
+                                'field' => 'can_add_staff',
+                                'label' => 'Menambah Staff',
+                                'value' => true,
+                                'icon' => 'dashicons-groups',
+                                'css_class' => 'feature-enabled'
+                            ],
+                            'can_export' => [
+                                'field' => 'can_export',
+                                'label' => 'Export Data',
+                                'value' => false,
+                                'icon' => 'dashicons-download',
+                                'css_class' => 'feature-disabled'
+                            ],
+                            'can_bulk_import' => [
+                                'field' => 'can_bulk_import',
+                                'label' => 'Import Massal',
+                                'value' => false,
+                                'icon' => 'dashicons-upload',
+                                'css_class' => 'feature-disabled'
+                            ]
+                        ],
+                        'limits' => [
+                            'max_staff' => 2,
+                            'max_departments' => 1,
+                            'max_active_projects' => 3
+                        ],
+                        'notifications' => [
+                            'email' => true,
+                            'dashboard' => false,
+                            'push' => false
+                        ]
+                    ]),
+                    'created_by' => $current_user_id,
+                    'created_at' => current_time('mysql'),
+                    'status' => 'active'
+                ],
+                [
+                    'name' => 'Regular',
+                    'slug' => 'regular',
+                    'description' => 'Paket dasar dengan maksimal 2 staff',
+                    'max_staff' => 2,
+                    'max_departments' => 1,
+                    'available_periods' => json_encode([1, 3, 6, 12]),
+                    'default_period' => 1,
+                    'price_per_month' => 50000,
+                    'is_trial_available' => 1,
+                    'trial_days' => 7,
+                    'grace_period_days' => 3,
+                    'sort_order' => 1,
+                    'capabilities' => json_encode([
+                        'features' => [
+                            'can_add_staff' => [
+                                'field' => 'can_add_staff',
+                                'label' => 'Menambah Staff',
+                                'value' => true,
+                                'icon' => 'dashicons-groups',
+                                'css_class' => 'feature-enabled'
+                            ],
+                            'can_export' => [
+                                'field' => 'can_export',
+                                'label' => 'Export Data',
+                                'value' => false,
+                                'icon' => 'dashicons-download',
+                                'css_class' => 'feature-disabled'
+                            ],
+                            'can_bulk_import' => [
+                                'field' => 'can_bulk_import',
+                                'label' => 'Import Massal',
+                                'value' => false,
+                                'icon' => 'dashicons-upload',
+                                'css_class' => 'feature-disabled'
+                            ]
+                        ],
+                        'limits' => [
+                            'max_staff' => 2,
+                            'max_departments' => 1,
+                            'max_active_projects' => 3
+                        ],
+                        'notifications' => [
+                            'email' => true,
+                            'dashboard' => true,
+                            'push' => false
+                        ]
+                    ]),
+                    'created_by' => $current_user_id,
+                    'created_at' => current_time('mysql'),
+                    'status' => 'active'
+                ],
 	            [
 	                'name' => 'Prioritas',
 	                'slug' => 'prioritas',
@@ -424,27 +493,45 @@ class CustomerMembershipLevelModel {
 	                'trial_days' => 7,
 	                'grace_period_days' => 5,
 	                'sort_order' => 2,
-	                'capabilities' => json_encode([
-	                    'features' => [
-	                        'can_add_staff' => true,
-	                        'can_export' => true,
-	                        'can_bulk_import' => false
-	                    ],
-	                    'limits' => [
-	                        'max_staff' => 5,
-	                        'max_departments' => 3,
-	                        'max_active_projects' => 10
-	                    ],
-	                    'notifications' => [
-	                        'email' => true,
-	                        'dashboard' => true,
-	                        'push' => true
-	                    ]
-	                ]),
-	                'created_by' => $current_user_id,
-	                'created_at' => current_time('mysql'),
-	                'status' => 'active'
-	            ],
+                    'capabilities' => json_encode([
+                        'features' => [
+                            'can_add_staff' => [
+                                'field' => 'can_add_staff',
+                                'label' => 'Menambah Staff',
+                                'value' => true,
+                                'icon' => 'dashicons-groups',
+                                'css_class' => 'feature-enabled'
+                            ],
+                            'can_export' => [
+                                'field' => 'can_export',
+                                'label' => 'Export Data',
+                                'value' => false,
+                                'icon' => 'dashicons-download',
+                                'css_class' => 'feature-disabled'
+                            ],
+                            'can_bulk_import' => [
+                                'field' => 'can_bulk_import',
+                                'label' => 'Import Massal',
+                                'value' => false,
+                                'icon' => 'dashicons-upload',
+                                'css_class' => 'feature-disabled'
+                            ]
+                        ],
+                        'limits' => [
+                            'max_staff' => 2,
+                            'max_departments' => 2,
+                            'max_active_projects' => 5
+                        ],
+                        'notifications' => [
+                            'email' => true,
+                            'dashboard' => true,
+                            'push' => false
+                        ]
+                    ]),
+    	                'created_by' => $current_user_id,
+    	                'created_at' => current_time('mysql'),
+    	                'status' => 'active'
+    	            ],
 	            [
 	                'name' => 'Utama',
 	                'slug' => 'utama',
@@ -459,11 +546,29 @@ class CustomerMembershipLevelModel {
 	                'grace_period_days' => 7,
 	                'sort_order' => 3,
 	                'capabilities' => json_encode([
-	                    'features' => [
-	                        'can_add_staff' => true,
-	                        'can_export' => true,
-	                        'can_bulk_import' => true
-	                    ],
+                        'features' => [
+                            'can_add_staff' => [
+                                'field' => 'can_add_staff',
+                                'label' => 'Menambah Staff',
+                                'value' => true,
+                                'icon' => 'dashicons-groups',
+                                'css_class' => 'feature-enabled'
+                            ],
+                            'can_export' => [
+                                'field' => 'can_export',
+                                'label' => 'Export Data',
+                                'value' => true,
+                                'icon' => 'dashicons-download',
+                                'css_class' => 'feature-enabled'
+                            ],
+                            'can_bulk_import' => [
+                                'field' => 'can_bulk_import',
+                                'label' => 'Import Massal',
+                                'value' => false,
+                                'icon' => 'dashicons-upload',
+                                'css_class' => 'feature-disabled'
+                            ]
+                        ],
 	                    'limits' => [
 	                        'max_staff' => -1,
 	                        'max_departments' => -1,
@@ -506,4 +611,27 @@ class CustomerMembershipLevelModel {
 	        return false;
 	    }
 	}
+
+    public function getFormattedLevelData($slug) {
+        global $wpdb;
+        $level = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$this->table} WHERE slug = %s AND status = 'active'",
+            $slug
+        ));
+
+        if (!$level) return null;
+
+        return [
+            'id' => $level->id,
+            'name' => $level->name,
+            'max_staff' => $level->max_staff,
+            'capabilities' => json_decode($level->capabilities, true),
+            'price_per_month' => $level->price_per_month,
+            'trial_info' => [
+                'has_trial' => (bool)$level->is_trial_available,
+                'trial_days' => $level->trial_days
+            ]
+        ];
+    }
+
 }
