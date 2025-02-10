@@ -32,6 +32,21 @@ $levels = $wpdb->get_results("
     ORDER BY sort_order ASC
 ");
 
+// Get all available features from database
+$features = $wpdb->get_results("
+    SELECT * FROM {$wpdb->prefix}app_customer_membership_features
+    WHERE status = 'active'
+    ORDER BY field_group, sort_order ASC
+");
+
+// Group features by their type
+$grouped_features = [];
+foreach ($features as $feature) {
+    if (!isset($grouped_features[$feature->field_group])) {
+        $grouped_features[$feature->field_group] = [];
+    }
+    $grouped_features[$feature->field_group][] = $feature;
+}
 ?>
 
 <div class="wrap">
@@ -83,12 +98,14 @@ $levels = $wpdb->get_results("
                         <ul class="feature-list">
                             <?php 
                             if (isset($capabilities['features'])):
-                                foreach ($capabilities['features'] as $feature => $enabled):
+                                foreach ($grouped_features['features'] as $feature):
+                                    $enabled = isset($capabilities['features'][$feature->field_name]) && 
+                                             $capabilities['features'][$feature->field_name];
                                     if ($enabled):
                                         ?>
                                         <li class="feature-enabled">
                                             <span class="dashicons dashicons-yes"></span>
-                                            <?php echo esc_html(ucwords(str_replace('_', ' ', $feature))); ?>
+                                            <?php echo esc_html($feature->field_label); ?>
                                         </li>
                                         <?php
                                     endif;
@@ -124,70 +141,74 @@ $levels = $wpdb->get_results("
         <form id="membership-level-form">
             <input type="hidden" name="id" id="level-id">
             
-            <!-- Basic Info -->
-            <div class="form-row">
-                <label for="level-name"><?php _e('Level Name', 'wp-customer'); ?></label>
-                <input type="text" id="level-name" name="name" required>
-            </div>
+            <div class="form-columns">
+                <div class="form-column">
+                    <!-- Basic Info Column -->
+                    <div class="form-row">
+                        <label for="level-name"><?php _e('Level Name', 'wp-customer'); ?></label>
+                        <input type="text" id="level-name" name="name" required>
+                    </div>
 
-            <div class="form-row">
-                <label for="level-description"><?php _e('Description', 'wp-customer'); ?></label>
-                <textarea id="level-description" name="description"></textarea>
-            </div>
+                    <div class="form-row">
+                        <label for="level-price"><?php _e('Price per Month (IDR)', 'wp-customer'); ?></label>
+                        <input type="number" id="level-price" name="price_per_month" min="0" required>
+                    </div>
 
-            <div class="form-row">
-                <label for="level-price"><?php _e('Price per Month (IDR)', 'wp-customer'); ?></label>
-                <input type="number" id="level-price" name="price_per_month" min="0" required>
-            </div>
+                    <div class="form-row">
+                        <label for="max-staff"><?php _e('Max Staff', 'wp-customer'); ?></label>
+                        <input type="number" id="max-staff" name="max_staff" min="-1" required>
+                        <p class="description"><?php _e('-1 for unlimited', 'wp-customer'); ?></p>
+                    </div>
 
-            <!-- Limits -->
-            <div class="form-row">
-                <label for="max-staff"><?php _e('Max Staff', 'wp-customer'); ?></label>
-                <input type="number" id="max-staff" name="max_staff" min="-1" required>
-                <p class="description"><?php _e('-1 for unlimited', 'wp-customer'); ?></p>
-            </div>
-
-            <div class="form-row">
-                <label for="max-departments"><?php _e('Max Departments', 'wp-customer'); ?></label>
-                <input type="number" id="max-departments" name="max_departments" min="-1" required>
-                <p class="description"><?php _e('-1 for unlimited', 'wp-customer'); ?></p>
-            </div>
-
-            <!-- Features -->
-            <div class="form-row">
-                <label><?php _e('Features', 'wp-customer'); ?></label>
-                <div class="feature-checkboxes">
-                    <label>
-                        <input type="checkbox" name="features[can_add_staff]" value="1">
-                        <?php _e('Can Add Staff', 'wp-customer'); ?>
-                    </label>
-                    <label>
-                        <input type="checkbox" name="features[can_export]" value="1">
-                        <?php _e('Can Export Data', 'wp-customer'); ?>
-                    </label>
-                    <label>
-                        <input type="checkbox" name="features[can_bulk_import]" value="1">
-                        <?php _e('Can Bulk Import', 'wp-customer'); ?>
-                    </label>
+                    <div class="form-row">
+                        <label for="max-departments"><?php _e('Max Departments', 'wp-customer'); ?></label>
+                        <input type="number" id="max-departments" name="max_departments" min="-1" required>
+                        <p class="description"><?php _e('-1 for unlimited', 'wp-customer'); ?></p>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Trial & Grace Period -->
-            <div class="form-row">
-                <label>
-                    <input type="checkbox" id="is-trial-available" name="is_trial_available" value="1">
-                    <?php _e('Enable Trial Period', 'wp-customer'); ?>
-                </label>
-            </div>
+                <div class="form-column">
+                    <!-- Features Column -->
+                    <div class="form-row">
+                        <label><?php _e('Features', 'wp-customer'); ?></label>
+                        <div class="feature-checkboxes">
+                            <?php foreach ($grouped_features['features'] as $feature): ?>
+                                <label>
+                                    <input type="checkbox" 
+                                           name="features[<?php echo esc_attr($feature->field_name); ?>]" 
+                                           value="1"
+                                           class="<?php echo esc_attr($feature->css_class); ?>"
+                                           id="<?php echo esc_attr($feature->css_id); ?>">
+                                    <?php echo esc_html($feature->field_label); ?>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
 
-            <div class="form-row trial-days-row" style="display:none;">
-                <label for="trial-days"><?php _e('Trial Days', 'wp-customer'); ?></label>
-                <input type="number" id="trial-days" name="trial_days" min="0">
-            </div>
+                    <!-- Trial Settings -->
+                    <div class="form-row">
+                        <label>
+                            <input type="checkbox" id="is-trial-available" name="is_trial_available" value="1">
+                            <?php _e('Enable Trial Period', 'wp-customer'); ?>
+                        </label>
+                    </div>
 
-            <div class="form-row">
-                <label for="grace-period-days"><?php _e('Grace Period Days', 'wp-customer'); ?></label>
-                <input type="number" id="grace-period-days" name="grace_period_days" min="0" required>
+                    <div class="form-row trial-days-row" style="display:none;">
+                        <label for="trial-days"><?php _e('Trial Days', 'wp-customer'); ?></label>
+                        <input type="number" id="trial-days" name="trial_days" min="0">
+                    </div>
+
+                    <div class="form-row">
+                        <label for="grace-period-days"><?php _e('Grace Period Days', 'wp-customer'); ?></label>
+                        <input type="number" id="grace-period-days" name="grace_period_days" min="0" required>
+                    </div>
+                </div>
+
+                <!-- Full Width Description -->
+                <div class="form-row form-full-width">
+                    <label for="level-description"><?php _e('Description', 'wp-customer'); ?></label>
+                    <textarea id="level-description" name="description"></textarea>
+                </div>
             </div>
 
             <div class="modal-buttons">

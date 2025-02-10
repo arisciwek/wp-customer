@@ -6,7 +6,7 @@
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/assets/js/customer/customer-membership-tab-script.js
+ * Path: /wp-customer/assets/js/settings/customer-membership-tab-script.js
  *
  * Description: Handler untuk form membership settings
  *              Menangani:
@@ -59,6 +59,50 @@
             $('#membership-level-form').on('submit', (e) => {
                 e.preventDefault();
                 this.handleSubmit(e);
+            });
+
+            // Add new level button
+            $('#add-membership-level').on('click', () => {
+                $('#membership-level-modal').fadeIn(200);
+                $('.modal-title').text(wpCustomerSettings.i18n.addLevel);
+                $('#membership-level-form')[0].reset();
+            });
+
+            // Edit level button
+            $('.edit-level').on('click', (e) => {
+                const levelId = $(e.currentTarget).data('id');
+                $('#membership-level-modal').fadeIn(200);
+                $('.modal-title').text(wpCustomerSettings.i18n.editLevel);
+                this.loadLevelData(levelId);
+            });
+
+            // Close modal
+            $('.modal-close, .wp-customer-modal').on('click', (e) => {
+                if (e.target === e.currentTarget) {
+                    $('#membership-level-modal').fadeOut(200);
+                }
+            });
+
+            // Add new level button
+            $('#add-membership-level').on('click', () => {
+                $('#membership-level-modal').fadeIn(200);
+                $('.modal-title').text(wpCustomerSettings.i18n.addLevel);
+                $('#membership-level-form')[0].reset();
+            });
+
+            // Edit level button
+            $('.edit-level').on('click', (e) => {
+                const levelId = $(e.currentTarget).data('id');
+                $('#membership-level-modal').fadeIn(200);
+                $('.modal-title').text(wpCustomerSettings.i18n.editLevel);
+                this.loadLevelData(levelId);
+            });
+
+            // Close modal
+            $('.modal-close, .wp-customer-modal').on('click', (e) => {
+                if (e.target === e.currentTarget) {
+                    $('#membership-level-modal').fadeOut(200);
+                }
             });
         },
 

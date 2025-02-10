@@ -64,17 +64,20 @@ if (!current_user_can('manage_options')) {
         </p>
 
         <div class="demo-data-grid">
-            <!-- User Wordpress -->
-			<div class="demo-data-card">
-			    <h4><?php _e('WordPress Users', 'wp-customer'); ?></h4>
-			    <p><?php _e('Generate WordPress user accounts with appropriate roles.', 'wp-customer'); ?></p>
-			    <button type="button" 
-			            class="button button-primary generate-demo-data" 
-			            data-type="users"
-			            data-nonce="<?php echo wp_create_nonce('generate_demo_users'); ?>">
-			        <?php _e('Generate WordPress Users', 'wp-customer'); ?>
-			    </button>
-			</div>
+
+        <div class="demo-data-grid">
+
+            <!-- Membership Features -->
+            <div class="demo-data-card">
+                <h4><?php _e('Membership Features', 'wp-customer'); ?></h4>
+                <p><?php _e('Generate membership feature definitions for capabilities and limits.', 'wp-customer'); ?></p>
+                <button type="button" 
+                        class="button button-primary generate-demo-data" 
+                        data-type="membership-features"
+                        data-nonce="<?php echo wp_create_nonce('generate_demo_membership-features'); ?>">
+                    <?php _e('Generate Membership Features', 'wp-customer'); ?>
+                </button>
+            </div>
 
             <!-- Membership Levels -->
             <div class="demo-data-card">
@@ -83,7 +86,7 @@ if (!current_user_can('manage_options')) {
                 <button type="button" 
                         class="button button-primary generate-demo-data" 
                         data-type="membership-level"
-                        data-nonce="<?php echo wp_create_nonce('generate_demo_membership'); ?>">
+                        data-nonce="<?php echo wp_create_nonce('generate_demo_membership-level'); ?>">
                     <?php _e('Generate Membership Levels', 'wp-customer'); ?>
                 </button>
             </div>

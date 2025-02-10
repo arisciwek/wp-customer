@@ -37,6 +37,7 @@ $tabs = array(
     'general' => __('Pengaturan Umum', 'wp-customer'),
     'permissions' => __('Hak Akses', 'wp-customer'),
     'membership' => __('Membership Levels', 'wp-customer'),
+    'membership-features' => __('Membership Features', 'wp-customer'),
     'demo-data' => __('Demo Data', 'wp-customer')
 );
 

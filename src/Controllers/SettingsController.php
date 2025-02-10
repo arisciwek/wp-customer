@@ -35,7 +35,11 @@ class SettingsController {
         add_action('wp_ajax_reset_permissions', [$this, 'handle_reset_permissions']);
         add_action('wp_ajax_generate_demo_data', [$this, 'handle_generate_demo_data']);
         add_action('wp_ajax_check_demo_data', [$this, 'handle_check_demo_data']);
-    }
+
+         // Tambahkan ini untuk membership
+        add_action('wp_ajax_save_membership_level', [$this, 'handle_save_membership_level']);
+        add_action('wp_ajax_delete_membership_level', [$this, 'handle_delete_membership_level']);
+        add_action('wp_ajax_get_membership_level', [$this, 'handle_get_membership_level']);
 
     public function handle_reset_permissions() {
         try {
@@ -86,35 +90,6 @@ class SettingsController {
             )
         );
 
-        // Membership Settings
-        register_setting(
-            'wp_customer_membership_settings',
-            'wp_customer_membership_settings',
-            array(
-                'sanitize_callback' => [$this, 'sanitize_membership_settings'],
-                'default' => array(
-                    'regular_max_staff' => 2,
-                    'priority_max_staff' => 5,
-                    'utama_max_staff' => -1,
-                    'regular_capabilities' => array(
-                        'can_add_staff' => true,
-                        'max_departments' => 1
-                    ),
-                    'priority_capabilities' => array(
-                        'can_add_staff' => true,
-                        'can_export' => true,
-                        'max_departments' => 3
-                    ),
-                    'utama_capabilities' => array(
-                        'can_add_staff' => true,
-                        'can_export' => true,
-                        'can_bulk_import' => true,
-                        'max_departments' => -1
-                    )
-                )
-            )
-        );
-
         // Development Settings
         register_setting(
             'wp_customer_development_settings',
@@ -154,33 +129,6 @@ class SettingsController {
         return $sanitized;
     }
 
-    public function sanitize_membership_settings($input) {
-        $sanitized = array();
-        
-        // Sanitize staff limits
-        $levels = ['regular', 'priority', 'utama'];
-        foreach ($levels as $level) {
-            $max_staff_key = "{$level}_max_staff";
-            $sanitized[$max_staff_key] = intval($input[$max_staff_key]);
-            
-            // Validate max staff value
-            if ($sanitized[$max_staff_key] != -1 && $sanitized[$max_staff_key] < 1) {
-                $sanitized[$max_staff_key] = 1;
-            }
-            
-            // Sanitize capabilities
-            $capabilities_key = "{$level}_capabilities";
-            $sanitized[$capabilities_key] = array();
-            
-            if (isset($input[$capabilities_key]) && is_array($input[$capabilities_key])) {
-                foreach ($input[$capabilities_key] as $cap => $value) {
-                    $sanitized[$capabilities_key][$cap] = (bool) $value;
-                }
-            }
-        }
-
-        return $sanitized;
-    }
 
     /**
      * Get the appropriate generator class based on data type
@@ -199,6 +147,8 @@ class SettingsController {
                 return new \WPCustomer\Database\Demo\BranchDemoData();
             case 'employee':
                 return new \WPCustomer\Database\Demo\CustomerEmployeeDemoData();
+            case 'membership-features':
+                return new \WPCustomer\Database\Demo\CustomerMembershipFeaturesDemoData();
             case 'membership-level':
                 return new \WPCustomer\Database\Demo\MembershipLevelsDemoData();
             case 'memberships':  // Tambah case ini
@@ -273,6 +223,7 @@ class SettingsController {
             'general' => 'tab-general.php',
             'permissions' => 'tab-permissions.php',
             'membership' => 'tab-membership.php',
+            'membership-features' => 'tab-membership-features.php',
             'demo-data' => 'tab-demo-data.php'
         ];
         
@@ -298,6 +249,7 @@ class SettingsController {
         echo '<p>' . __('Konfigurasi level keanggotaan dan batasan untuk setiap level.', 'wp-customer') . '</p>';
     }
 
+    /*
     public function render_max_staff_field($level) {
         $options = get_option('wp_customer_membership_settings');
         $field_name = "{$level}_max_staff";
@@ -313,7 +265,8 @@ class SettingsController {
         </p>
         <?php
     }
-
+    */
+    /*
     public function render_capabilities_field($level) {
         $options = get_option('wp_customer_membership_settings');
         $field_name = "{$level}_capabilities";
@@ -338,6 +291,7 @@ class SettingsController {
             <?php
         }
     }
+    */
 
     public function handle_check_demo_data() {
         try {

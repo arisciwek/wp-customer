@@ -1,0 +1,232 @@
+/**
+ * Membership Features Tab Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Settings
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/settings/membership-features-tab-style.css
+ *
+ * Description: Styling untuk halaman management membership features
+ *              Features:
+ *              - Table styling
+ *              - Action buttons
+ *              - Form modal
+ *              - Group indicators
+ *              - Responsive design
+ */
+#membership-feature-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(5px);
+    z-index: 159999;
+    display: none;
+}
+
+#membership-feature-modal .modal-content {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #ffffff;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+/* Modal Header */
+.modal-header {
+    background: #f8f9fa;
+    padding: 16px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-title {
+    color: #1a1a1a;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.modal-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Modal Body */
+.modal-body {
+    padding: 24px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px 24px;
+}
+
+/* Form Groups */
+.form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Labels */
+.form-row label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+}
+
+/* Form Fields */
+.form-row input[type="text"],
+.form-row input[type="number"],
+.form-row select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #1f2937;
+    background: #ffffff;
+    transition: all 0.2s ease;
+}
+
+.form-row input:focus,
+.form-row select:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+}
+
+/* Modal Footer */
+.modal-footer {
+    background: #f8f9fa;
+    padding: 16px 24px;
+    border-top: 1px solid #e5e7eb;
+    border-radius: 0 0 12px 12px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* Close Button */
+.modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: #f3f4f6;
+    color: #6b7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+    background: #e5e7eb;
+    color: #374151;
+}
+
+/* Help Text */
+.description {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+    line-height: 1.4;
+}
+
+/* Buttons */
+.button-primary {
+    background: #2563eb;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.button-primary:hover {
+    background: #1d4ed8;
+}
+
+.button-secondary {
+    background: #f3f4f6;
+    color: #374151;
+    padding: 8px 16px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.button-secondary:hover {
+    background: #e5e7eb;
+}
+
+/* Loading State */
+.loading {
+    position: relative;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(2px);
+    border-radius: 12px;
+}
+
+/* Responsive Design */
+@media screen and (max-width: 782px) {
+    .modal-body {
+        grid-template-columns: 1fr;
+        gap: 16px;
+    }
+
+    #membership-feature-modal .modal-content {
+        width: 95%;
+    }
+
+    .modal-footer {
+        flex-direction: column-reverse;
+    }
+
+    .modal-footer button {
+        width: 100%;
+    }
+
+    .modal-close {
+        top: 12px;
+        right: 12px;
+        width: 28px;
+        height: 28px;
+    }
+}

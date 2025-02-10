@@ -1,49 +1,27 @@
 <?php
-/**
- * Database Installer
- *
- * @package     WP_Customer
- * @subpackage  Database
- * @version     1.0.0
- * @author      arisciwek
- *
- * Path: /wp-customer/src/Database/Installer.php
- *
- * Description: Mengelola instalasi database plugin.
- *              Handles table creation dengan foreign keys.
- *              Menggunakan transaction untuk data consistency.
- *              Includes demo data installation.
- *
- * Tables Created:
- * - app_customers
- * - app_branches
- * - app_customer_employees
- * - app_customer_membership_levels
- *
- * Foreign Keys:
- * - fk_branch_customer
- * - fk_employee_customer
- * - fk_employee_branch
- *
- * Changelog:
- * 1.0.0 - 2024-01-07
- * - Initial version
- * - Added table creation
- * - Added foreign key management
- * - Added demo data installation
- */
-
 namespace WPCustomer\Database;
 
 defined('ABSPATH') || exit;
 
 class Installer {
+    // Complete list of tables to install, in dependency order
     private static $tables = [
         'app_customers',
         'app_customer_membership_levels',
+        'app_customer_membership_features', // Added features table
+        'app_customer_memberships',
         'app_branches',
-        'app_customer_employees',
-        'app_customer_memberships'
+        'app_customer_employees'
+    ];
+
+    // Table class mappings for easier maintenance
+    private static $table_classes = [
+        'app_customers' => Tables\CustomersDB::class,
+        'app_customer_membership_levels' => Tables\CustomerMembershipLevelsDB::class,
+        'app_customer_membership_features' => Tables\CustomerMembershipFeaturesDB::class,
+        'app_customer_memberships' => Tables\CustomerMembershipsDB::class,
+        'app_branches' => Tables\BranchesDB::class,
+        'app_customer_employees' => Tables\CustomerEmployeesDB::class
     ];
 
     private static function debug($message) {
@@ -67,7 +45,24 @@ class Installer {
             self::debug("Verified table exists: {$table_name}");
         }
     }
-    
+
+    private static function insert_default_data() {
+        self::debug("Starting default data insertion...");
+
+        // Insert membership features first
+        self::debug("Inserting default membership features...");
+        Tables\CustomerMembershipFeaturesDB::insert_defaults();
+
+        // Then insert membership levels
+        self::debug("Inserting default membership levels...");
+        Tables\CustomerMembershipLevelsDB::insert_defaults();
+
+        self::debug("Default data insertion completed.");
+    }
+
+    /**
+     * Installs or updates the database tables
+     */
     public static function run() {
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         global $wpdb;
@@ -76,28 +71,18 @@ class Installer {
             $wpdb->query('START TRANSACTION');
             self::debug("Starting database installation...");
 
-            // Create base tables first
-            self::debug("Creating customers table...");
-            dbDelta(Tables\CustomersDB::get_schema());
-
-            self::debug("Creating membership levels table...");
-            dbDelta(Tables\CustomerMembershipLevelsDB::get_schema());
-
-            self::debug("Creating memberships table...");
-            dbDelta(Tables\CustomerMembershipsDB::get_schema());
-
-            self::debug("Creating branches table...");
-            dbDelta(Tables\BranchesDB::get_schema());
-
-            self::debug("Creating employees table...");
-            dbDelta(Tables\CustomerEmployeesDB::get_schema());
+            // Create tables in proper order
+            foreach (self::$tables as $table) {
+                $class = self::$table_classes[$table];
+                self::debug("Creating {$table} table using {$class}...");
+                dbDelta($class::get_schema());
+            }
 
             // Verify all tables were created
             self::verify_tables();
 
-            // Insert default data
-            self::debug("Inserting default membership levels...");
-            Tables\CustomerMembershipLevelsDB::insert_defaults();
+            // Insert default data in proper order
+            self::insert_default_data();
 
             self::debug("Database installation completed successfully.");
             $wpdb->query('COMMIT');

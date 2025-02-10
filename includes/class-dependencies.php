@@ -164,11 +164,20 @@ public function enqueue_frontend_assets() {
                case 'membership':
                    wp_enqueue_style(
                        'wp-customer-membership-tab',
-                       WP_CUSTOMER_URL . 'assets/css/settings/membership-tab-style.css',
+                       WP_CUSTOMER_URL . 'assets/css/settings/customer-membership-tab-style.css',
                        ['wp-customer-settings'],
                        $this->version
                    );
                    break;
+
+                case 'membership-features':
+                    wp_enqueue_style(
+                        'wp-customer-membership-features-tab',
+                        WP_CUSTOMER_URL . 'assets/css/settings/membership-features-tab-style.css',
+                        ['wp-customer-settings'],
+                        $this->version
+                    );
+                    break;
 
                case 'demo-data':
                    wp_enqueue_style(
@@ -241,7 +250,7 @@ public function enqueue_frontend_assets() {
         // Settings page scripts
         if ($screen->id === 'wp-customer_page_wp-customer-settings') {
             // Common scripts for settings page
-            wp_enqueue_script('wp-customer-toast', WP_CUSTOMER_URL . 'assets/js/customer/toast.js', ['jquery'], $this->version, true);
+            wp_enqueue_script('wp-customer-toast', WP_CUSTOMER_URL . 'assets/js/customer/customer-toast.js', ['jquery'], $this->version, true);
             wp_enqueue_script('confirmation-modal', WP_CUSTOMER_URL . 'assets/js/customer/confirmation-modal.js', ['jquery'], $this->version, true);
             wp_enqueue_script('wp-customer-settings', WP_CUSTOMER_URL . 'assets/js/settings/settings-script.js', ['jquery', 'wp-customer-toast'], $this->version, true);
             
@@ -272,17 +281,35 @@ public function enqueue_frontend_assets() {
                         ]
                     ]);
                     break;
-
                 case 'general':
+                    break;
+                case 'membership-features':
                     wp_enqueue_script(
-                        'wp-customer-general-tab',
-                        WP_CUSTOMER_URL . 'assets/js/settings/general-tab-script.js',
+                        'wp-customer-membership-features-tab',
+                        WP_CUSTOMER_URL . 'assets/js/settings/customer-membership-features-tab-script.js',
                         ['jquery', 'wp-customer-settings'],
                         $this->version,
                         true
                     );
+                    wp_localize_script(
+                        'wp-customer-membership-features-tab',
+                        'wpCustomerSettings',
+                        [
+                            'ajaxUrl' => admin_url('admin-ajax.php'),
+                            'nonce' => wp_create_nonce('wp_customer_nonce'),
+                            'i18n' => [
+                                'addFeature' => __('Add New Feature', 'wp-customer'),
+                                'editFeature' => __('Edit Feature', 'wp-customer'),
+                                'deleteConfirm' => __('Are you sure you want to delete this feature?', 'wp-customer'),
+                                'loadError' => __('Failed to load feature data', 'wp-customer'),
+                                'saveError' => __('Failed to save feature', 'wp-customer'),
+                                'deleteError' => __('Failed to delete feature', 'wp-customer'),
+                                'saving' => __('Saving...', 'wp-customer'),
+                                'loading' => __('Loading...', 'wp-customer')
+                            ]
+                        ]
+                    );
                     break;
-
                 case 'membership':
                     wp_enqueue_script(
                         'wp-customer-membership-tab',
@@ -309,9 +336,7 @@ public function enqueue_frontend_assets() {
                             ]
                         ]
                     );
-
                     break;
-
                 case 'demo-data':
                     wp_enqueue_script(
                         'wp-customer-demo-data-tab',
@@ -327,7 +352,6 @@ public function enqueue_frontend_assets() {
                             'generating' => __('Generating...', 'wp-customer')
                         ]
                     ]);
-                    
                     break;
             }
         }
