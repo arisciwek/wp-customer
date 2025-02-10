@@ -40,6 +40,7 @@ class SettingsController {
         add_action('wp_ajax_save_membership_level', [$this, 'handle_save_membership_level']);
         add_action('wp_ajax_delete_membership_level', [$this, 'handle_delete_membership_level']);
         add_action('wp_ajax_get_membership_level', [$this, 'handle_get_membership_level']);
+    }
 
     public function handle_reset_permissions() {
         try {
