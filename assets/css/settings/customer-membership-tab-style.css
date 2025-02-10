@@ -22,12 +22,23 @@
  * - common-style.css
  */
 
+
+
+/**
+ * Membership Tab Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Settings
+ * @version     2.0.0
+ */
+
 /* Card Grid Layout */
 .membership-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 24px;
     margin: 20px 0;
+    padding: 15px;
     max-width: calc(100% - 20px);
 }
 
@@ -38,9 +49,14 @@
     border-radius: 12px;
     padding: 24px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
     position: relative;
     overflow: hidden;
+}
+
+.membership-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 /* Level-specific Card Styling */
@@ -57,257 +73,86 @@
 }
 
 /* Card Header */
-.membership-card h3 {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 0 0 24px;
-    padding-bottom: 16px;
-    border-bottom: 2px solid #f1f5f9;
-    font-size: 1.25rem;
+.card-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    padding: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.card-header h3 {
+    margin: 0 0 10px 0;
+    color: #2d3748;
+    font-size: 1.5em;
+}
+
+.price {
+    font-size: 1.8em;
     font-weight: 600;
-    color: #0f172a;
+    color: #4a5568;
 }
 
-/* Level Badge */
-.level-badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 12px;
-    border-radius: 9999px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    margin-left: auto;
+/* Features Section */
+.features-section {
+    padding: 20px;
 }
 
-.regular-badge {
-    background: #4f46e5;
-    color: #fff;
+.feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
-.priority-badge {
-    background: #eab308;
-    color: #fff;
-}
-
-.utama-badge {
-    background: #06b6d4;
-    color: #fff;
-}
-
-/* Section Components */
-.membership-section {
-    margin-bottom: 24px;
-}
-
-.membership-section:last-child {
-    margin-bottom: 0;
-}
-
-.membership-section h4 {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #475569;
-    margin: 0 0 12px;
-}
-
-/* Staff Limit Controls */
-.staff-limit {
+.feature-item {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 16px;
-    background: #f8fafc;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    padding: 8px 0;
+    color: #4a5568;
 }
 
-.staff-limit input[type="number"] {
-    width: 80px;
-    padding: 8px 12px;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    font-size: 0.875rem;
-    color: #334155;
-    transition: all 0.2s ease;
+.feature-enabled .dashicons {
+    color: #48bb78;
+    margin-right: 12px;
 }
 
-.staff-limit input[type="number"]:focus {
-    border-color: #2563eb;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    outline: none;
-}
-
-/* Usage Stats */
-.usage-stats {
-    margin-top: 16px;
-    padding: 16px;
-    background: #f8fafc;
+/* Limits Section */
+.limits-section {
+    padding: 15px 20px;
+    background: #f7fafc;
+    margin: 10px 0;
     border-radius: 8px;
 }
 
-.usage-bar {
-    height: 8px;
-    background: #e2e8f0;
-    border-radius: 4px;
-    overflow: hidden;
-    margin: 8px 0;
-}
-
-.usage-progress {
-    height: 100%;
-    background: #2563eb;
-    border-radius: 4px;
-    transition: width 0.3s ease;
-}
-
-/* Capabilities Configuration */
-.capabilities-list {
+.limit-item {
     display: flex;
-    flex-direction: column;
-    gap: 12px;
-    padding: 16px;
-    background: #f8fafc;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #edf2f7;
 }
 
-.capability-item {
+.limit-item:last-child {
+    border-bottom: none;
+}
+
+/* Trial & Grace Period */
+.period-info {
+    padding: 15px 20px;
+    background: #f7fafc;
+    margin-top: 10px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.trial-period,
+.grace-period {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px;
-    background: #fff;
-    border-radius: 6px;
-    border: 1px solid #e2e8f0;
-    transition: all 0.2s ease;
+    padding: 4px 0;
+    color: #4a5568;
 }
 
-.capability-item:hover {
-    background: #f1f5f9;
-    border-color: #cbd5e1;
-}
-
-.capability-item input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
-    border: 2px solid #cbd5e1;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-}
-
-.capability-item input[type="checkbox"]:checked {
-    background-color: #2563eb;
-    border-color: #2563eb;
-}
-
-.capability-label {
-    font-size: 0.875rem;
-    color: #475569;
-    flex: 1;
-}
-
-/* Upgrade Card */
-.upgrade-card {
-    margin-top: 24px;
-    padding: 16px;
-    background: #f0f9ff;
-    border: 1px solid #bae6fd;
-    border-radius: 8px;
-}
-
-.upgrade-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #0369a1;
-    margin-bottom: 8px;
-}
-
-.upgrade-features {
-    margin: 12px 0;
-    padding-left: 24px;
-}
-
-.upgrade-features li {
-    color: #0c4a6e;
-    margin-bottom: 8px;
-    font-size: 0.875rem;
-}
-
-.upgrade-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: #0ea5e9;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.upgrade-button:hover {
-    background: #0284c7;
-}
-
-/* Responsive Design */
-@media screen and (max-width: 1400px) {
-    .membership-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 20px;
-    }
-}
-
-@media screen and (max-width: 782px) {
-    .membership-grid {
-        grid-template-columns: 1fr;
-        gap: 24px;
-    }
-
-    .membership-card {
-        padding: 20px;
-    }
-
-    .staff-limit {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .staff-limit input[type="number"] {
-        width: 100%;
-    }
-
-    .capability-item {
-        padding: 10px;
-    }
-}
-
-/* Animation Effects */
-@keyframes levelHighlight {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.02); }
-    100% { transform: scale(1); }
-}
-
-.membership-card.highlight {
-    animation: levelHighlight 0.3s ease;
-}
-
-/* Print Styles */
-@media print {
-    .membership-card {
-        break-inside: avoid;
-        border: 1px solid #000;
-        box-shadow: none;
-    }
-
-    .upgrade-card,
-    .upgrade-button {
-        display: none;
-    }
+.period-info .dashicons {
+    color: #4299e1;
+    margin-right: 8px;
 }
 
 /* Modal Styles */
@@ -322,7 +167,7 @@
     z-index: 100000;
 }
 
-.wp-customer-modal .modal-content {
+.modal-content {
     position: relative;
     background: #fff;
     margin: 5vh auto;
@@ -333,80 +178,43 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.wp-customer-modal .modal-title {
-    margin: 0 0 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid #e2e8f0;
-    font-size: 1.25rem;
-    font-weight: 600;
-}
-
-.wp-customer-modal .form-row {
-    margin-bottom: 16px;
-}
-
-.wp-customer-modal .form-columns {
+.form-columns {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
 
-.wp-customer-modal .form-column {
-    display: flex;
-    flex-direction: column;
+.form-row {
+    margin-bottom: 16px;
 }
 
-.wp-customer-modal .form-full-width {
-    grid-column: 1 / -1;
+/* Responsive Design */
+@media screen and (max-width: 1400px) {
+    .membership-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
-.wp-customer-modal label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 500;
-}
-
-.wp-customer-modal input[type="text"],
-.wp-customer-modal input[type="number"],
-.wp-customer-modal textarea {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #e2e8f0;
-    border-radius: 4px;
-}
-
-.wp-customer-modal .feature-checkboxes {
-    padding: 8px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 4px;
-}
-
-.wp-customer-modal .feature-checkboxes label {
-    display: block;
-    margin: 8px 0;
-}
-
-.wp-customer-modal .modal-buttons {
-    margin-top: 24px;
-    padding-top: 16px;
-    border-top: 1px solid #e2e8f0;
-    text-align: right;
-}
-
-.wp-customer-modal .modal-buttons button {
-    margin-left: 8px;
-}
-
-.wp-customer-modal.loading::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.8) url(../images/spinner.gif) center no-repeat;
+@media screen and (max-width: 782px) {
+    .membership-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .form-columns {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Print Styles */
+@media print {
+    .membership-card {
+        break-inside: avoid;
+        border: 1px solid #000;
+        box-shadow: none;
+    }
 
+    .modal-content,
+    .wp-customer-modal {
+        display: none;
+    }
+}

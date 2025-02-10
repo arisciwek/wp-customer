@@ -7,7 +7,7 @@
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Models/Customer/CustomerMembershipLevelModel.php
+ * Path: /wp-customer/src/Models/Membership/CustomerMembershipLevelModel.php
  *
  * Description: Model untuk mengelola data customer membership level secara dinamis.
  *              Menggantikan sistem customer_membership yang sebelumnya hardcoded.
@@ -71,7 +71,7 @@
  * - Added backward compatibility layer
  */
 
-namespace WPCustomer\Models\Customer;
+namespace WPCustomer\Models\Membership;
 
 use WPCustomer\Cache\CustomerCacheManager;
 
@@ -185,6 +185,34 @@ class CustomerMembershipLevelModel {
 
         return $result !== false;
     }
+ 
+    public function save($data, $id = null) {
+        $capabilities = $this->buildCapabilitiesFromFeatures($data);
+        
+        $levelData = [
+            'name' => $data['name'],
+            'capabilities' => json_encode($capabilities),
+            'updated_at' => current_time('mysql')
+        ];
+
+        if ($id) {
+            return $this->update($id, $levelData);
+        }
+        return $this->create($levelData);
+    }
+
+    private function buildCapabilitiesFromFeatures($data) {
+        $features = (new MembershipFeatureModel())->get_all_features_by_group();
+        $capabilities = [];
+        
+        foreach ($features as $feature) {
+            $group = $feature->field_group;
+        $name = $feature->field_name;
+        $capabilities[$group][$name] = !empty($data[$name]);
+    }
+    
+    return $capabilities;
+}
 
     /**
      * Delete customer_membership level

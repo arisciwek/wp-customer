@@ -555,5 +555,5 @@ class CustomerMembershipModel {
 
         return $count;
     }
-    
+
 }

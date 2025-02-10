@@ -133,4 +133,12 @@ class MembershipFeatureModel {
         );
     }
 
+    public function get_all_features_by_group() {
+        return $this->wpdb->get_results("
+            SELECT * FROM {$this->table} 
+            WHERE status = 'active'
+            ORDER BY field_group, sort_order ASC"
+        );
+    }
+
 }

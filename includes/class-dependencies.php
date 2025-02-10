@@ -311,6 +311,7 @@ public function enqueue_frontend_assets() {
                     );
                     break;
                 case 'membership':
+                    /*
                     wp_enqueue_script(
                         'wp-customer-membership-tab',
                         WP_CUSTOMER_URL . 'assets/js/settings/customer-membership-tab-script.js',
@@ -336,6 +337,30 @@ public function enqueue_frontend_assets() {
                             ]
                         ]
                     );
+                    */
+                    wp_enqueue_script(
+                        'wp-customer-membership',
+                        WP_CUSTOMER_URL . 'assets/js/settings/customer-membership-tab-script.js',
+                        ['jquery'],
+                        WP_CUSTOMER_VERSION,
+                        true
+                    );
+
+                    wp_localize_script('wp-customer-membership', 'wpCustomerData', [
+                        'ajaxUrl' => admin_url('admin-ajax.php'),
+                        'nonce' => wp_create_nonce('wp_customer_nonce'),
+                        'i18n' => [
+                            'confirmDelete' => __('Are you sure you want to delete this membership level?', 'wp-customer'),
+                            'saveSuccess' => __('Membership level saved successfully.', 'wp-customer'),
+                            'saveError' => __('Failed to save membership level.', 'wp-customer'),
+                            'deleteSuccess' => __('Membership level deleted successfully.', 'wp-customer'),
+                            'deleteError' => __('Failed to delete membership level.', 'wp-customer'),
+                            'loadError' => __('Failed to load membership level data.', 'wp-customer'),
+                            'required' => __('This field is required.', 'wp-customer'),
+                            'invalidNumber' => __('Please enter a valid number.', 'wp-customer')
+                        ]
+                    ]);
+
                     break;
                 case 'demo-data':
                     wp_enqueue_script(

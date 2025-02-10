@@ -20,7 +20,7 @@
 namespace WPCustomer\Controllers\Membership;
 
 use WPCustomer\Models\Customer\CustomerMembershipModel;
-use WPCustomer\Models\Customer\CustomerMembershipLevelModel;
+use WPCustomer\Models\Membership\CustomerMembershipLevelModel;
 use WPCustomer\Cache\CustomerCacheManager;
 
 class CustomerMembershipController {
@@ -39,8 +39,92 @@ class CustomerMembershipController {
         add_action('wp_ajax_extend_membership', [$this, 'extendMembership']); 
         add_action('wp_ajax_get_upgrade_options', [$this, 'getUpgradeOptions']);
 
-        add_action('wp_ajax_get_membership_level_data', [$this, 'getMembershipLevelData']);        
+    	add_action('wp_ajax_get_membership_level', [$this, 'getMembershipLevel']);
+		add_action('wp_ajax_save_membership_level', [$this, 'saveMembershipLevel']);
+        add_action('wp_ajax_get_membership_level_data', [$this, 'getMembershipLevelData']);
+
     }
+
+	public function saveMembershipLevel() {
+	   try {
+	       check_ajax_referer('wp_customer_nonce', 'nonce');
+
+	       $levelModel = new CustomerMembershipLevelModel();
+	       $id = isset($_POST['id']) ? (int)$_POST['id'] : null;
+	       
+	       $result = $levelModel->save($_POST, $id);
+
+	       if (!$result) {
+	           throw new \Exception('Failed to save membership level');
+	       }
+
+	       wp_send_json_success(['message' => 'Level saved successfully']);
+
+	   } catch (\Exception $e) {
+	       wp_send_json_error(['message' => $e->getMessage()]);
+	   }
+	}
+
+	public function getMembershipFields() {
+	   try {
+	       check_ajax_referer('wp_customer_nonce', 'nonce');
+	       
+	       $featureModel = new MembershipFeatureModel();
+	       $fields = $featureModel->get_all_features_by_group();
+	       
+	       wp_send_json_success($fields);
+	       
+	   } catch (\Exception $e) {
+	       wp_send_json_error(['message' => $e->getMessage()]);
+	   }
+	}
+	/**
+	 * Handler untuk AJAX request get_membership_level
+	 */
+	public function getMembershipLevel() {
+	    try {
+	        check_ajax_referer('wp_customer_nonce', 'nonce');
+	        
+	        $level_id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+	        error_log('Getting level data for ID: ' . $level_id);
+
+	        if (!$level_id) {
+	            throw new \Exception('Invalid level ID');
+	        }
+
+	        // Get level data
+	        $level = $this->level_model->getLevel($level_id);
+	        error_log('Raw level data: ' . print_r($level, true));
+
+	        if (!$level) {
+	            throw new \Exception('Level not found');
+	        }
+
+	        // Format response data
+	        $response = [
+	            'id' => $level->id,
+	            'name' => $level->name,
+	            'description' => $level->description,
+	            'price_per_month' => $level->price_per_month,
+	            'max_staff' => $level->max_staff,
+	            'max_departments' => $level->max_departments,
+	            'is_trial_available' => $level->is_trial_available,
+	            'trial_days' => $level->trial_days,
+	            'grace_period_days' => $level->grace_period_days,
+	            'capabilities' => is_string($level->capabilities) ? $level->capabilities : json_encode($level->capabilities)
+	        ];
+	        
+	        error_log('Formatted response: ' . print_r($response, true));
+	        wp_send_json_success($response);
+
+	    } catch (\Exception $e) {
+	        error_log('Error in get_membership_level: ' . $e->getMessage());
+	        wp_send_json_error([
+	            'message' => $e->getMessage()
+	        ]);
+	    }
+
+	}
 
 	// Rename dari createUpgradeButton menjadi getMembershipLevelData
 	public function getMembershipLevelData() {

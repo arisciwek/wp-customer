@@ -6,18 +6,6 @@
  * @subpackage  Views/Settings
  * @version     1.0.0
  * @author      arisciwek
- *
- * Path: /wp-customer/src/Views/templates/settings/tab-membership.php
- *
- * Description: Template untuk mengelola membership levels
- *              Menampilkan dan mengelola level keanggotaan customer
- *              Includes form untuk edit dan tambah level baru
- *
- * Changelog:
- * 1.0.0 - 2024-01-10
- * - Initial version
- * - Added membership levels table
- * - Added management form
  */
 
 if (!defined('ABSPATH')) {
@@ -47,8 +35,13 @@ foreach ($features as $feature) {
     }
     $grouped_features[$feature->field_group][] = $feature;
 }
-?>
 
+// Prepare levels data with decoded capabilities
+foreach ($levels as &$level) {
+    $level->capabilities = json_decode($level->capabilities, true);
+    $level->available_periods = json_decode($level->available_periods, true);
+}
+?>
 <div class="wrap">
     <div class="membership-header">
         <h2><?php _e('Membership Levels Management', 'wp-customer'); ?></h2>
@@ -58,81 +51,100 @@ foreach ($features as $feature) {
     </div>
 
     <div class="membership-grid">
-        <?php foreach ($levels as $level): 
-            $capabilities = json_decode($level->capabilities, true);
-            ?>
+        <?php foreach ($levels as $level): ?>
             <div class="membership-card" data-level-id="<?php echo esc_attr($level->id); ?>">
+                <!-- Card Header -->
                 <div class="card-header">
                     <h3><?php echo esc_html($level->name); ?></h3>
-                    <div class="actions">
-                        <button type="button" class="button edit-level" data-id="<?php echo esc_attr($level->id); ?>">
-                            <span class="dashicons dashicons-edit"></span>
-                        </button>
+                    <div class="price">
+                        <?php echo number_format($level->price_per_month, 0, ',', '.'); ?> IDR/bulan
                     </div>
                 </div>
 
-                <div class="card-body">
-                    <!-- Basic Info -->
-                    <div class="info-section">
-                        <p class="description"><?php echo esc_html($level->description); ?></p>
-                        <div class="price">
-                            <?php echo number_format($level->price_per_month, 0, ',', '.'); ?> IDR/month
-                        </div>
+                <!-- Card Content -->
+                <div class="card-content">
+                    <!-- Description -->
+                    <div class="description">
+                        <?php echo esc_html($level->description); ?>
                     </div>
 
-                    <!-- Staff & Department Limits -->
-                    <div class="limits-section">
-                        <div class="limit-item">
-                            <label><?php _e('Max Staff:', 'wp-customer'); ?></label>
-                            <span><?php echo $level->max_staff == -1 ? 'Unlimited' : $level->max_staff; ?></span>
-                        </div>
-                        <div class="limit-item">
-                            <label><?php _e('Max Departments:', 'wp-customer'); ?></label>
-                            <span><?php echo $level->max_departments == -1 ? 'Unlimited' : $level->max_departments; ?></span>
-                        </div>
-                    </div>
-
-                    <!-- Features -->
+                    <!-- Features Section -->
                     <div class="features-section">
                         <h4><?php _e('Features', 'wp-customer'); ?></h4>
                         <ul class="feature-list">
-                            <?php 
-                            if (isset($capabilities['features'])):
-                                foreach ($grouped_features['features'] as $feature):
-                                    $enabled = isset($capabilities['features'][$feature->field_name]) && 
-                                             $capabilities['features'][$feature->field_name];
-                                    if ($enabled):
-                                        ?>
-                                        <li class="feature-enabled">
-                                            <span class="dashicons dashicons-yes"></span>
-                                            <?php echo esc_html($feature->field_label); ?>
-                                        </li>
-                                        <?php
-                                    endif;
-                                endforeach;
-                            endif;
+                            <?php foreach ($grouped_features['features'] as $feature): 
+                                $is_enabled = !empty($level->capabilities['features'][$feature->field_name]);
+                                if ($is_enabled):
                             ?>
+                                <li class="feature-item feature-enabled">
+                                    <span class="dashicons dashicons-yes-alt"></span>
+                                    <?php echo esc_html($feature->field_label); ?>
+                                </li>
+                            <?php endif; ?>
+                            <?php endforeach; // Close the inner foreach loop ?>
+                        </ul>
+                    </div>
+
+                    <!-- Limits Section -->
+                    <div class="limits-section">
+                        <?php foreach ($grouped_features['limits'] as $limit): 
+                            $value = $level->capabilities['limits'][$limit->field_name] ?? 0;
+                        ?>
+                            <div class="limit-item">
+                                <label><?php echo esc_html($limit->field_label); ?>:</label>
+                                <span><?php echo $value == -1 ? __('Unlimited', 'wp-customer') : $value; ?></span>
+                            </div>
+                        <?php endforeach; // Close the limits foreach loop ?>
+                    </div>
+
+                    <!-- Notifications Section -->
+                    <div class="notifications-section">
+                        <h4><?php _e('Notifications', 'wp-customer'); ?></h4>
+                        <ul class="notification-list">
+                            <?php foreach ($grouped_features['notifications'] as $notification): 
+                                $is_enabled = !empty($level->capabilities['notifications'][$notification->field_name]);
+                                if ($is_enabled):
+                            ?>
+                                <li class="notification-item">
+                                    <span class="dashicons dashicons-bell"></span>
+                                    <?php echo esc_html($notification->field_label); ?>
+                                </li>
+                            <?php endif; ?>
+                            <?php endforeach; // Close the notifications foreach loop ?>
                         </ul>
                     </div>
 
                     <!-- Trial & Grace Period -->
-                    <div class="period-section">
+                    <div class="period-info">
                         <?php if ($level->is_trial_available): ?>
-                            <div class="period-item">
-                                <label><?php _e('Trial Period:', 'wp-customer'); ?></label>
-                                <span><?php echo esc_html($level->trial_days); ?> days</span>
+                            <div class="trial-period">
+                                <span class="dashicons dashicons-clock"></span>
+                                <?php printf(__('Trial Period: %d days', 'wp-customer'), $level->trial_days); ?>
                             </div>
                         <?php endif; ?>
-                        <div class="period-item">
-                            <label><?php _e('Grace Period:', 'wp-customer'); ?></label>
-                            <span><?php echo esc_html($level->grace_period_days); ?> days</span>
+                        <div class="grace-period">
+                            <span class="dashicons dashicons-backup"></span>
+                            <?php printf(__('Grace Period: %d days', 'wp-customer'), $level->grace_period_days); ?>
                         </div>
                     </div>
                 </div>
+
+                <!-- Card Footer -->
+                <div class="card-footer">
+                    <button type="button" class="button edit-level" data-id="<?php echo esc_attr($level->id); ?>">
+                        <span class="dashicons dashicons-edit"></span>
+                        <?php _e('Edit', 'wp-customer'); ?>
+                    </button>
+                    <button type="button" class="button delete-level" data-id="<?php echo esc_attr($level->id); ?>">
+                        <span class="dashicons dashicons-trash"></span>
+                        <?php _e('Delete', 'wp-customer'); ?>
+                    </button>
+                </div>
             </div>
-        <?php endforeach; ?>
+        <?php endforeach; // Close the outer foreach loop ?>
     </div>
 </div>
+
 
 <!-- Modal Template for Add/Edit -->
 <div id="membership-level-modal" class="wp-customer-modal" style="display:none;">
@@ -200,7 +212,7 @@ foreach ($features as $feature) {
 
                     <div class="form-row">
                         <label for="grace-period-days"><?php _e('Grace Period Days', 'wp-customer'); ?></label>
-                        <input type="number" id="grace-period-days" name="grace_period_days" min="0" required>
+                        <input type="number" id="grace-period-days" name="grace_period_days" min="-1" required>
                     </div>
                 </div>
 
@@ -222,3 +234,4 @@ foreach ($features as $feature) {
         </form>
     </div>
 </div>
+
