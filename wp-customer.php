@@ -162,10 +162,7 @@ class WPCustomer {
 
         // Initialize Membership Controller
         new \WPCustomer\Controllers\Membership\CustomerMembershipController();
-
-        // Tambahkan ini
-        new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
-
+        
         // Register AJAX hooks SEBELUM init
 
         // Tambahkan handler untuk stats
@@ -174,6 +171,7 @@ class WPCustomer {
         add_action('wp_ajax_handle_customer_datatable', [$this->customer_controller, 'handleDataTableRequest']);
         add_action('wp_ajax_get_customer', [$this->customer_controller, 'show']);
     }
+
 
     public function run() {
         $this->loader->run();

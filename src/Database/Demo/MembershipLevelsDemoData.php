@@ -42,16 +42,17 @@
 
 namespace WPCustomer\Database\Demo;
 
-use WPCustomer\Models\Customer\CustomerMembershipLevelModel;
+use WPCustomer\Models\Membership\CustomerMembershipLevelModel;
+use WPCustomer\Database\Tables\CustomerMembershipLevelsDB;
 
 class MembershipLevelsDemoData extends AbstractDemoData {
     use CustomerDemoDataHelperTrait;
 
-    private $customerMembershipLevelModel;  // Fix: Properly declare the property
+    private $customerMembershipLevelModel;
     
     public function __construct() {
         parent::__construct();
-        $this->customerMembershipLevelModel = new CustomerMembershipLevelModel();  // Fix: Initialize in constructor
+        $this->customerMembershipLevelModel = new CustomerMembershipLevelModel();
     }
 
     protected function validate(): bool {
@@ -61,7 +62,6 @@ class MembershipLevelsDemoData extends AbstractDemoData {
                 return false;
             }
 
-            // Check if table exists
             $table_exists = $this->wpdb->get_var(
                 "SHOW TABLES LIKE '{$this->wpdb->prefix}app_customer_membership_levels'"
             );
@@ -79,23 +79,14 @@ class MembershipLevelsDemoData extends AbstractDemoData {
 
     protected function generate(): bool {
         try {
-            // Clear existing data only if allowed
             if ($this->shouldClearData()) {
                 $this->clearExistingData();
             } else {
                 $this->debug('Skipping data cleanup - not enabled in settings');
             }
             
-            // Setup membership defaults
-            if (!$this->customerMembershipLevelModel->setupMembershipDefaults()) {
-                throw new \Exception('Failed to setup membership defaults');
-            }
-            $this->debug('Membership defaults setup complete');
-
-            // Insert default levels
-            if (!$this->customerMembershipLevelModel->insertDefaultLevels()) {
-                throw new \Exception('Failed to insert default membership levels');
-            }
+            // Use CustomerMembershipLevelsDB to insert defaults
+            CustomerMembershipLevelsDB::insert_defaults();
             $this->debug('Default membership levels inserted');
 
             return true;
@@ -107,16 +98,12 @@ class MembershipLevelsDemoData extends AbstractDemoData {
 
     private function clearExistingData(): void {
         try {
-            // Fix: Handle foreign key constraints by deleting from referencing tables first
             $this->wpdb->query("START TRANSACTION");
             
             // Delete from child tables first
             $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_customer_memberships");
-            
-            // Then delete from the membership levels table
             $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_customer_membership_levels");
             
-            // Delete membership settings
             delete_option('wp_customer_membership_settings');
             
             $this->wpdb->query("COMMIT");
