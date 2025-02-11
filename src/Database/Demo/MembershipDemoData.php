@@ -19,7 +19,7 @@
  *              
  * Dependencies:
  * - CustomerMembershipModel     : Handle membership operations
- * - CustomerMembershipLevelModel: Get level data
+ * - MembershipLevelModel: Get level data
  * - BranchModel                 : Get branch data
  * - CustomerModel               : Validate customer data
  *
@@ -43,7 +43,7 @@
 namespace WPCustomer\Database\Demo;
 
 use WPCustomer\Models\Customer\CustomerMembershipModel;
-use WPCustomer\Models\Customer\CustomerMembershipLevelModel;
+use WPCustomer\Models\Membership\MembershipLevelModel;
 use WPCustomer\Models\Branch\BranchModel;
 use WPCustomer\Models\Customer\CustomerModel;
 
@@ -63,7 +63,7 @@ class MembershipDemoData extends AbstractDemoData {
     public function __construct() {
         parent::__construct();
         $this->membershipModel = new CustomerMembershipModel();
-        $this->levelModel = new CustomerMembershipLevelModel();
+        $this->levelModel = new MembershipLevelModel();
         $this->branchModel = new BranchModel();
         $this->customerModel = new CustomerModel();
     }
@@ -92,7 +92,7 @@ class MembershipDemoData extends AbstractDemoData {
             }
 
             // Get and validate membership levels
-            $this->levels_data = $this->levelModel->getAllLevels();
+            $this->levels_data = $this->levelModel->get_all_levels();
             if (empty($this->levels_data)) {
                 throw new \Exception('No membership levels found');
             }

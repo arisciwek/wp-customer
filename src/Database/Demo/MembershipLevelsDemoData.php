@@ -42,16 +42,16 @@
 
 namespace WPCustomer\Database\Demo;
 
-use WPCustomer\Models\Membership\CustomerMembershipLevelModel;
+use WPCustomer\Models\Membership\MembershipLevelModel;
 
 class MembershipLevelsDemoData extends AbstractDemoData {
     use CustomerDemoDataHelperTrait;
 
-    private $customerMembershipLevelModel;
+    private $membershipLevelModel;
     
     public function __construct() {
         parent::__construct();
-        $this->customerMembershipLevelModel = new CustomerMembershipLevelModel();
+        $this->membershipLevelModel = new MembershipLevelModel();
     }
 
     /**

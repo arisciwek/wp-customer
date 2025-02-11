@@ -7,10 +7,10 @@ class Installer {
     // Complete list of tables to install, in dependency order
     private static $tables = [
         'app_customers',
-        'app_customer_membership_levels',
-        'app_customer_membership_features', // Added features table
-        'app_customer_memberships',
         'app_branches',
+        'app_customer_membership_features', // Added features table
+        'app_customer_membership_levels',
+        'app_customer_memberships',
         'app_customer_employees'
     ];
 
@@ -46,20 +46,6 @@ class Installer {
         }
     }
 
-    private static function insert_default_data() {
-        self::debug("Starting default data insertion...");
-
-        // Insert membership features first
-        self::debug("Inserting default membership features...");
-        Tables\CustomerMembershipFeaturesDB::insert_defaults();
-
-        // Then insert membership levels
-        self::debug("Inserting default membership levels...");
-        Tables\CustomerMembershipLevelsDB::insert_defaults();
-
-        self::debug("Default data insertion completed.");
-    }
-
     /**
      * Installs or updates the database tables
      */
@@ -80,9 +66,6 @@ class Installer {
 
             // Verify all tables were created
             self::verify_tables();
-
-            // Insert default data in proper order
-            self::insert_default_data();
 
             self::debug("Database installation completed successfully.");
             $wpdb->query('COMMIT');
