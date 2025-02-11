@@ -20,7 +20,7 @@
 namespace WPCustomer\Controllers\Membership;
 
 use WPCustomer\Models\Customer\CustomerMembershipModel;
-use WPCustomer\Models\Membership\CustomerMembershipLevelModel;
+use WPCustomer\Models\Membership\MembershipLevelModel;
 use WPCustomer\Cache\CustomerCacheManager;
 
 class CustomerMembershipController {
@@ -29,22 +29,25 @@ class CustomerMembershipController {
     private CustomerCacheManager $cache;
 
     public function __construct() {
-        $this->membership_model = new CustomerMembershipModel();
-        $this->level_model = new CustomerMembershipLevelModel();
-        $this->cache = new CustomerCacheManager();
+        
+        //$this->membership_model = new CustomerMembershipModel();
+        //$this->level_model = new MembershipLevelModel();
+        //$this->cache = new CustomerCacheManager();
 
         // Register all AJAX endpoints
         add_action('wp_ajax_get_membership_status', [$this, 'getMembershipStatus']);
         add_action('wp_ajax_upgrade_membership', [$this, 'upgradeMembership']);
         add_action('wp_ajax_extend_membership', [$this, 'extendMembership']); 
         add_action('wp_ajax_get_upgrade_options', [$this, 'getUpgradeOptions']);
-
+/*
     	add_action('wp_ajax_get_membership_level', [$this, 'getMembershipLevel']);
 		add_action('wp_ajax_save_membership_level', [$this, 'saveMembershipLevel']);
         add_action('wp_ajax_get_membership_level_data', [$this, 'getMembershipLevelData']);
+*/
 
+        return;
     }
-
+/*
 	public function saveMembershipLevel() {
 	   try {
 	       check_ajax_referer('wp_customer_nonce', 'nonce');
@@ -78,9 +81,7 @@ class CustomerMembershipController {
 	       wp_send_json_error(['message' => $e->getMessage()]);
 	   }
 	}
-	/**
-	 * Handler untuk AJAX request get_membership_level
-	 */
+
 	public function getMembershipLevel() {
 	    try {
 	        check_ajax_referer('wp_customer_nonce', 'nonce');
@@ -181,6 +182,7 @@ class CustomerMembershipController {
 	        ]);
 	    }
 	}
+*/
 
 	/**
 	 * Get current membership status

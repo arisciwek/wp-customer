@@ -161,10 +161,10 @@ public function enqueue_frontend_assets() {
                    );
                    break;
 
-               case 'membership':
+               case 'membership-levels':
                    wp_enqueue_style(
-                       'wp-customer-membership-tab',
-                       WP_CUSTOMER_URL . 'assets/css/settings/customer-membership-tab-style.css',
+                       'wp-customer-membership-levels-tab',
+                       WP_CUSTOMER_URL . 'assets/css/settings/customer-membership-levels-tab-style.css',
                        ['wp-customer-settings'],
                        $this->version
                    );
@@ -203,7 +203,8 @@ public function enqueue_frontend_assets() {
 
             // Customer styles
             wp_enqueue_style('wp-customer-customer', WP_CUSTOMER_URL . 'assets/css/customer/customer-style.css', [], $this->version);
-            wp_enqueue_style('wp-customer-membership-tab', WP_CUSTOMER_URL . 'assets/css/customer/customer-membership-tab-style.css', [], $this->version);
+            wp_enqueue_style('wp-customer-membership-levels-tab', WP_CUSTOMER_URL . 'assets/css/customer/customer-membership-tab-style.css', [], $this->version);
+
             wp_enqueue_style('wp-customer-customer-form', WP_CUSTOMER_URL . 'assets/css/customer/customer-form.css', [], $this->version);
 
             // Branch styles
@@ -310,37 +311,10 @@ public function enqueue_frontend_assets() {
                         ]
                     );
                     break;
-                case 'membership':
-                    /*
-                    wp_enqueue_script(
-                        'wp-customer-membership-tab',
-                        WP_CUSTOMER_URL . 'assets/js/settings/customer-membership-tab-script.js',
-                        ['jquery', 'wp-customer-settings'],
-                        $this->version,
-                        true
-                    );
-
-                    // Localize script
-                    wp_localize_script(
-                        'wp-customer-membership-tab',
-                        'wpCustomerSettings',
-                        [
-                            'ajaxUrl' => admin_url('admin-ajax.php'),
-                            'nonce' => wp_create_nonce('wp_customer_nonce'),
-                            'i18n' => [
-                                'addLevel' => __('Add New Membership Level', 'wp-customer'),
-                                'editLevel' => __('Edit Membership Level', 'wp-customer'),
-                                'loadError' => __('Failed to load membership level data', 'wp-customer'),
-                                'saveError' => __('Failed to save membership level', 'wp-customer'),
-                                'saving' => __('Saving...', 'wp-customer'),
-                                'loading' => __('Loading...', 'wp-customer')
-                            ]
-                        ]
-                    );
-                    */
+                case 'membership-levels':
                     wp_enqueue_script(
                         'wp-customer-membership',
-                        WP_CUSTOMER_URL . 'assets/js/settings/customer-membership-tab-script.js',
+                        WP_CUSTOMER_URL . 'assets/js/settings/customer-membership-levels-tab-script.js',
                         ['jquery'],
                         WP_CUSTOMER_VERSION,
                         true
