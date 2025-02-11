@@ -12,6 +12,7 @@
 namespace WPCustomer\Controllers;
 
 use WPCustomer\Controllers\SettingsController;
+use WPCustomer\Controllers\CustomerController;
 use WPCustomer\Controllers\Company\CompanyController;
 
 class MenuManager {
@@ -39,7 +40,7 @@ class MenuManager {
         add_menu_page(
             __('WP Customer', 'wp-customer'),
             __('WP Customer', 'wp-customer'),
-            'manage_options',
+            'view_customer_list',
             'wp-customer',
             [$this->customer_controller, 'renderMainPage'],
             'dashicons-businessperson',
@@ -50,7 +51,7 @@ class MenuManager {
         add_menu_page(
             __('WP Perusahaan', 'wp-customer'),
             __('WP Perusahaan', 'wp-customer'),
-            'manage_options',
+            'view_customer_list',
             'perusahaan',  // Unique menu slug untuk perusahaan
             [$this->company_controller, 'renderMainPage'],
             'dashicons-building',

@@ -24,6 +24,9 @@
 
 namespace WPCustomer\Controllers;
 
+use WPCustomer\Models\Membership\MembershipLevelModel;
+use WPCustomer\Models\Membership\MembershipFeatureModel;
+
 class SettingsController {
     public function init() {
         add_action('admin_init', [$this, 'register_settings']);
@@ -37,9 +40,11 @@ class SettingsController {
         add_action('wp_ajax_check_demo_data', [$this, 'handle_check_demo_data']);
 
          // Tambahkan ini untuk membership
+        /*
         add_action('wp_ajax_save_membership_level', [$this, 'handle_save_membership_level']);
         add_action('wp_ajax_delete_membership_level', [$this, 'handle_delete_membership_level']);
         add_action('wp_ajax_get_membership_level', [$this, 'handle_get_membership_level']);
+        */
     }
 
     public function handle_reset_permissions() {
@@ -149,7 +154,7 @@ class SettingsController {
             case 'employee':
                 return new \WPCustomer\Database\Demo\CustomerEmployeeDemoData();
             case 'membership-features':
-                return new \WPCustomer\Database\Demo\CustomerMembershipFeaturesDemoData();
+                return new \WPCustomer\Database\Demo\MembershipFeaturesDemoData();
             case 'membership-level':
                 return new \WPCustomer\Database\Demo\MembershipLevelsDemoData();
             case 'memberships':  // Tambah case ini
@@ -223,7 +228,7 @@ class SettingsController {
         $allowed_tabs = [
             'general' => 'tab-general.php',
             'permissions' => 'tab-permissions.php',
-            'membership' => 'tab-membership.php',
+            'membership-levels' => 'tab-membership-levels.php',
             'membership-features' => 'tab-membership-features.php',
             'demo-data' => 'tab-demo-data.php'
         ];
@@ -232,10 +237,37 @@ class SettingsController {
         if (!isset($allowed_tabs[$tab])) {
             $tab = 'general';
         }
+
+        // Prepare data for membership-levels tab
+        if ($tab === 'membership-levels') {
+            $membership_level_model = new MembershipLevelModel();
+            $membership_feature_model = new MembershipFeatureModel();
+            
+            // Get data dari model
+            $levels = $membership_level_model->get_all_levels();
+            
+            // Decode capabilities untuk setiap level
+            foreach ($levels as &$level) {
+                if (!empty($level->capabilities)) {
+                    $level->capabilities_array = json_decode($level->capabilities, true);
+                } else {
+                    $level->capabilities_array = [];
+                }
+            }
+            
+            $view_data = [
+                'levels' => $levels,
+                'grouped_features' => $membership_feature_model->get_all_features_by_group()
+            ];
+        }
         
         $tab_file = WP_CUSTOMER_PATH . 'src/Views/templates/settings/' . $allowed_tabs[$tab];
         
         if (file_exists($tab_file)) {
+            // Pass view_data ke template jika ada
+            if (isset($view_data)) {
+                extract($view_data);
+            }
             require_once $tab_file;
         } else {
             echo sprintf(
@@ -249,50 +281,6 @@ class SettingsController {
     public function render_membership_section() {
         echo '<p>' . __('Konfigurasi level keanggotaan dan batasan untuk setiap level.', 'wp-customer') . '</p>';
     }
-
-    /*
-    public function render_max_staff_field($level) {
-        $options = get_option('wp_customer_membership_settings');
-        $field_name = "{$level}_max_staff";
-        $value = isset($options[$field_name]) ? $options[$field_name] : 2;
-        ?>
-        <input type="number" 
-               name="wp_customer_membership_settings[<?php echo esc_attr($field_name); ?>]"
-               value="<?php echo esc_attr($value); ?>"
-               min="-1"
-               class="small-text">
-        <p class="description">
-            <?php _e('-1 untuk unlimited', 'wp-customer'); ?>
-        </p>
-        <?php
-    }
-    */
-    /*
-    public function render_capabilities_field($level) {
-        $options = get_option('wp_customer_membership_settings');
-        $field_name = "{$level}_capabilities";
-        $capabilities = isset($options[$field_name]) ? $options[$field_name] : array();
-        
-        $available_caps = array(
-            'can_add_staff' => __('Dapat menambah staff', 'wp-customer'),
-            'can_export' => __('Dapat export data', 'wp-customer'),
-            'can_bulk_import' => __('Dapat bulk import', 'wp-customer')
-        );
-
-        foreach ($available_caps as $cap => $label) {
-            $checked = isset($capabilities[$cap]) ? $capabilities[$cap] : false;
-            ?>
-            <label>
-                <input type="checkbox" 
-                       name="wp_customer_membership_settings[<?php echo esc_attr($field_name); ?>][<?php echo esc_attr($cap); ?>]"
-                       value="1"
-                       <?php checked($checked, true); ?>>
-                <?php echo esc_html($label); ?>
-            </label><br>
-            <?php
-        }
-    }
-    */
 
     public function handle_check_demo_data() {
         try {
