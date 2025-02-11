@@ -75,7 +75,7 @@ namespace WPCustomer\Models\Membership;
 
 use WPCustomer\Cache\CustomerCacheManager;
 
-class CustomerMembershipLevelModel {
+class CustomerMembershipModel {
     private $table;
     private $cache;
     private $membership_settings_key = 'wp_customer_membership_settings';
@@ -398,6 +398,7 @@ class CustomerMembershipLevelModel {
 	 * Insert default membership levels
 	 * Matches schema from CustomerMembershipLevelsDB
 	 */
+    /*
 	public function insertDefaultLevels(): bool {
 	    global $wpdb;
 
@@ -661,5 +662,6 @@ class CustomerMembershipLevelModel {
             ]
         ];
     }
+    */
 
 }
