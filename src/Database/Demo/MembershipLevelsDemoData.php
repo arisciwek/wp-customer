@@ -67,7 +67,7 @@ class MembershipLevelsDemoData extends AbstractDemoData {
                 'name' => 'Gratis',
                 'slug' => 'gratis',
                 'description' => 'Paket gratis dengan maksimal 1 staff',
-                'available_periods' => array_rand(array_flip([1, 3, 6, 12])),
+                'available_periods' => '1',
                 'default_period' => 1,
                 'price_per_month' => 0,
                 'is_trial_available' => 1,
@@ -76,19 +76,59 @@ class MembershipLevelsDemoData extends AbstractDemoData {
                 'sort_order' => 1,
                 'capabilities' => json_encode([
                     'features' => [
-                        'can_add_staff' => true,
-                        'can_export' => false,
-                        'can_bulk_import' => false
+                        'can_add_staff' => [
+                            'field' => 'can_add_staff',
+                            'label' => 'Dapat Menambahkan Staff',
+                            'description' => 'Kemampuan untuk menambah staff baru',
+                            'group' => 'staff',
+                            'value' => true
+                        ],
+                        'can_export' => [
+                            'field' => 'can_export',
+                            'label' => 'Dapat Export Data',
+                            'description' => 'Kemampuan untuk mengekspor data',
+                            'group' => 'data',
+                            'value' => false
+                        ],
+                        'can_bulk_import' => [
+                            'field' => 'can_bulk_import',
+                            'label' => 'Dapat Bulk Import',
+                            'description' => 'Kemampuan untuk melakukan import massal',
+                            'group' => 'data',
+                            'value' => false
+                        ]
                     ],
                     'limits' => [
-                        'max_staff' => 1,
-                        'max_departments' => 1,
-                        'max_active_projects' => 5
+                        'max_staff' => [
+                            'field' => 'max_staff',
+                            'label' => 'Maksimal Staff',
+                            'description' => 'Jumlah maksimal staff yang dapat ditambahkan',
+                            'group' => 'resources',
+                            'value' => 1
+                        ],
+                        'max_departments' => [
+                            'field' => 'max_departments',
+                            'label' => 'Maksimal Departemen',
+                            'description' => 'Jumlah maksimal departemen yang dapat dibuat',
+                            'group' => 'resources',
+                            'value' => 1
+                        ]
                     ],
                     'notifications' => [
-                        'email' => true,
-                        'dashboard' => false,
-                        'push' => false
+                        'email' => [
+                            'field' => 'email_notifications',
+                            'label' => 'Notifikasi Email',
+                            'description' => 'Aktifkan notifikasi via email',
+                            'group' => 'communication',
+                            'value' => true
+                        ],
+                        'dashboard' => [
+                            'field' => 'dashboard_notifications',
+                            'label' => 'Notifikasi Dashboard',
+                            'description' => 'Aktifkan notifikasi di dashboard',
+                            'group' => 'communication',
+                            'value' => false
+                        ]
                     ]
                 ]),
                 'created_by' => $current_user_id,
@@ -98,28 +138,68 @@ class MembershipLevelsDemoData extends AbstractDemoData {
                 'name' => 'Reguler',
                 'slug' => 'reguler',
                 'description' => 'Paket dasar dengan maksimal 2 staff',
-                'available_periods' => array_rand(array_flip([1, 3, 6, 12])),
+                'available_periods' => '1',
                 'default_period' => 1,
                 'price_per_month' => 50000,
                 'is_trial_available' => 1,
                 'trial_days' => 7,
                 'grace_period_days' => 3,
-                'sort_order' => 1,
+                'sort_order' => 2,
                 'capabilities' => json_encode([
                     'features' => [
-                        'can_add_staff' => true,
-                        'can_export' => false,
-                        'can_bulk_import' => false
+                        'can_add_staff' => [
+                            'field' => 'can_add_staff',
+                            'label' => 'Dapat Menambahkan Staff',
+                            'description' => 'Kemampuan untuk menambah staff baru',
+                            'group' => 'staff',
+                            'value' => true
+                        ],
+                        'can_export' => [
+                            'field' => 'can_export',
+                            'label' => 'Dapat Export Data',
+                            'description' => 'Kemampuan untuk mengekspor data',
+                            'group' => 'data',
+                            'value' => true
+                        ],
+                        'can_bulk_import' => [
+                            'field' => 'can_bulk_import',
+                            'label' => 'Dapat Bulk Import',
+                            'description' => 'Kemampuan untuk melakukan import massal',
+                            'group' => 'data',
+                            'value' => false
+                        ]
                     ],
                     'limits' => [
-                        'max_staff' => 2,
-                        'max_departments' => 1,
-                        'max_active_projects' => 5
+                        'max_staff' => [
+                            'field' => 'max_staff',
+                            'label' => 'Maksimal Staff',
+                            'description' => 'Jumlah maksimal staff yang dapat ditambahkan',
+                            'group' => 'resources',
+                            'value' => 2
+                        ],
+                        'max_departments' => [
+                            'field' => 'max_departments',
+                            'label' => 'Maksimal Departemen',
+                            'description' => 'Jumlah maksimal departemen yang dapat dibuat',
+                            'group' => 'resources',
+                            'value' => 2
+                        ]
                     ],
                     'notifications' => [
-                        'email' => true,
-                        'dashboard' => true,
-                        'push' => false
+                        'email' => [
+                            'field' => 'email_notifications',
+                            'label' => 'Notifikasi Email',
+                            'description' => 'Aktifkan notifikasi via email',
+                            'group' => 'communication',
+                            'value' => true
+                        ],
+                        'dashboard' => [
+                            'field' => 'dashboard_notifications',
+                            'label' => 'Notifikasi Dashboard',
+                            'description' => 'Aktifkan notifikasi di dashboard',
+                            'group' => 'communication',
+                            'value' => true
+                        ]
                     ]
                 ]),
                 'created_by' => $current_user_id,
@@ -129,28 +209,68 @@ class MembershipLevelsDemoData extends AbstractDemoData {
                 'name' => 'Prioritas',
                 'slug' => 'prioritas',
                 'description' => 'Paket menengah dengan maksimal 5 staff',
-                'available_periods' => array_rand(array_flip([1, 3, 6, 12])),
+                'available_periods' => '1',
                 'default_period' => 1,
                 'price_per_month' => 100000,
                 'is_trial_available' => 1,
                 'trial_days' => 7,
                 'grace_period_days' => 5,
-                'sort_order' => 2,
+                'sort_order' => 3,
                 'capabilities' => json_encode([
                     'features' => [
-                        'can_add_staff' => true,
-                        'can_export' => true,
-                        'can_bulk_import' => false
+                        'can_add_staff' => [
+                            'field' => 'can_add_staff',
+                            'label' => 'Dapat Menambahkan Staff',
+                            'description' => 'Kemampuan untuk menambah staff baru',
+                            'group' => 'staff',
+                            'value' => true
+                        ],
+                        'can_export' => [
+                            'field' => 'can_export',
+                            'label' => 'Dapat Export Data',
+                            'description' => 'Kemampuan untuk mengekspor data',
+                            'group' => 'data',
+                            'value' => true
+                        ],
+                        'can_bulk_import' => [
+                            'field' => 'can_bulk_import',
+                            'label' => 'Dapat Bulk Import',
+                            'description' => 'Kemampuan untuk melakukan import massal',
+                            'group' => 'data',
+                            'value' => true
+                        ]
                     ],
                     'limits' => [
-                        'max_staff' => 5,
-                        'max_departments' => 3,
-                        'max_active_projects' => 10
+                        'max_staff' => [
+                            'field' => 'max_staff',
+                            'label' => 'Maksimal Staff',
+                            'description' => 'Jumlah maksimal staff yang dapat ditambahkan',
+                            'group' => 'resources',
+                            'value' => 5
+                        ],
+                        'max_departments' => [
+                            'field' => 'max_departments',
+                            'label' => 'Maksimal Departemen',
+                            'description' => 'Jumlah maksimal departemen yang dapat dibuat',
+                            'group' => 'resources',
+                            'value' => 3
+                        ]
                     ],
                     'notifications' => [
-                        'email' => true,
-                        'dashboard' => true,
-                        'push' => true
+                        'email' => [
+                            'field' => 'email_notifications',
+                            'label' => 'Notifikasi Email',
+                            'description' => 'Aktifkan notifikasi via email',
+                            'group' => 'communication',
+                            'value' => true
+                        ],
+                        'dashboard' => [
+                            'field' => 'dashboard_notifications',
+                            'label' => 'Notifikasi Dashboard',
+                            'description' => 'Aktifkan notifikasi di dashboard',
+                            'group' => 'communication',
+                            'value' => true
+                        ]
                     ]
                 ]),
                 'created_by' => $current_user_id,
@@ -160,28 +280,68 @@ class MembershipLevelsDemoData extends AbstractDemoData {
                 'name' => 'Utama',
                 'slug' => 'utama',
                 'description' => 'Paket premium tanpa batasan staff',
-                'available_periods' => array_rand(array_flip([1, 3, 6, 12])),
+                'available_periods' => '6',
                 'default_period' => 1,
                 'price_per_month' => 200000,
                 'is_trial_available' => 0,
                 'trial_days' => 0,
                 'grace_period_days' => 7,
-                'sort_order' => 3,
+                'sort_order' => 4,
                 'capabilities' => json_encode([
                     'features' => [
-                        'can_add_staff' => true,
-                        'can_export' => true,
-                        'can_bulk_import' => true
+                        'can_add_staff' => [
+                            'field' => 'can_add_staff',
+                            'label' => 'Dapat Menambahkan Staff',
+                            'description' => 'Kemampuan untuk menambah staff baru',
+                            'group' => 'staff',
+                            'value' => true
+                        ],
+                        'can_export' => [
+                            'field' => 'can_export',
+                            'label' => 'Dapat Export Data',
+                            'description' => 'Kemampuan untuk mengekspor data',
+                            'group' => 'data',
+                            'value' => true
+                        ],
+                        'can_bulk_import' => [
+                            'field' => 'can_bulk_import',
+                            'label' => 'Dapat Bulk Import',
+                            'description' => 'Kemampuan untuk melakukan import massal',
+                            'group' => 'data',
+                            'value' => true
+                        ]
                     ],
                     'limits' => [
-                        'max_staff' => -1,
-                        'max_departments' => -1,
-                        'max_active_projects' => -1
+                        'max_staff' => [
+                            'field' => 'max_staff',
+                            'label' => 'Maksimal Staff',
+                            'description' => 'Jumlah maksimal staff yang dapat ditambahkan',
+                            'group' => 'resources',
+                            'value' => -1
+                        ],
+                        'max_departments' => [
+                            'field' => 'max_departments',
+                            'label' => 'Maksimal Departemen',
+                            'description' => 'Jumlah maksimal departemen yang dapat dibuat',
+                            'group' => 'resources',
+                            'value' => -1
+                        ]
                     ],
                     'notifications' => [
-                        'email' => true,
-                        'dashboard' => true,
-                        'push' => true
+                        'email' => [
+                            'field' => 'email_notifications',
+                            'label' => 'Notifikasi Email',
+                            'description' => 'Aktifkan notifikasi via email',
+                            'group' => 'communication',
+                            'value' => true
+                        ],
+                        'dashboard' => [
+                            'field' => 'dashboard_notifications',
+                            'label' => 'Notifikasi Dashboard',
+                            'description' => 'Aktifkan notifikasi di dashboard',
+                            'group' => 'communication',
+                            'value' => true
+                        ]
                     ]
                 ]),
                 'created_by' => $current_user_id,
@@ -194,6 +354,7 @@ class MembershipLevelsDemoData extends AbstractDemoData {
         }
     }
 
+    // Method lain tidak berubah
     protected function validate(): bool {
         try {
             if (!$this->isDevelopmentMode()) {
@@ -220,38 +381,15 @@ class MembershipLevelsDemoData extends AbstractDemoData {
         try {
             if ($this->shouldClearData()) {
                 $this->clearExistingData();
-            } else {
-                $this->debug('Skipping data cleanup - not enabled in settings');
             }
             
             $this->insertDefaultLevels();
-
             $this->debug('Default membership levels inserted');
 
             return true;
         } catch (\Exception $e) {
             $this->debug('Generation failed: ' . $e->getMessage());
             return false;
-        }
-    }
-
-    private function clearExistingData(): void {
-        try {
-            $this->wpdb->query("START TRANSACTION");
-            
-            // Delete from child tables first
-            $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_customer_memberships");
-            $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_customer_membership_levels");
-            
-            delete_option('wp_customer_membership_settings');
-            
-            $this->wpdb->query("COMMIT");
-            
-            $this->debug('Existing membership data cleared');
-        } catch (\Exception $e) {
-            $this->wpdb->query("ROLLBACK");
-            $this->debug('Error clearing existing data: ' . $e->getMessage());
-            throw $e;
         }
     }
 }

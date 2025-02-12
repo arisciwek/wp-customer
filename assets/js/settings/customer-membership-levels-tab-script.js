@@ -25,31 +25,25 @@
  * - Added field dependencies
  */
 
-
 (function($) {
     'use strict';
 
     const MembershipLevel = {
         modal: null,
         form: null,
-        
+
         init() {
             // Cache DOM elements
             this.modal = $('#membership-level-modal');
             this.form = $('#membership-level-form');
-            
+
             // Bind events
             this.bindEvents();
-            
-            // Initialize any third party plugins
-            this.initializePlugins();
         },
 
         bindEvents() {
             // Add new level button
-            $('#add-membership-level').on('click', () => {
-                this.openModal();
-            });
+            $('#add-membership-level').on('click', () => this.openModal());
 
             // Edit level button
             $('.edit-level').on('click', (e) => {
@@ -64,13 +58,14 @@
             });
 
             // Modal close buttons
-            $('.modal-close').on('click', () => {
-                this.closeModal();
-            });
+            $('.modal-close').on('click', () => this.closeModal());
 
             // Trial period checkbox
             $('#is-trial-available').on('change', (e) => {
-                this.toggleTrialDays(e.target.checked);
+                $('.trial-days-row').toggle(e.target.checked);
+                if (!e.target.checked) {
+                    $('#trial-days').val('0');
+                }
             });
 
             // Form submission
@@ -104,197 +99,167 @@
             $('.trial-days-row').hide();
         },
 
-        toggleTrialDays(show) {
-            $('.trial-days-row')[show ? 'show' : 'hide']();
-            if (!show) {
-                $('#trial-days').val('0');
-            }
-        },
-
-        initializePlugins() {
-            // Initialize any third party plugins here
-            // Example: tooltips, select2, etc.
-        },
-
-        showMessage(message, type = 'success') {
-            // Implement your preferred notification method
-            if (type === 'error') {
-                console.error(message);
-            } else {
-                console.log(message);
-            }
-        },
-
-        // Tambahkan methods berikut ke dalam object MembershipLevel
-
-        loadLevelData(levelId) {
-            console.log('Loading level data for ID:', levelId);
-            $.ajax({
-                url: wpCustomerData.ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'get_membership_level',
-                    nonce: wpCustomerData.nonce,
-                    id: levelId
-                },
-                beforeSend: () => {
-                    console.log('Sending request...');
-                    this.form.addClass('loading');
-                },
-                success: (response) => {
-                    console.log('Raw response:', response);
-                    if (response.success) {
-                        console.log('Level data:', response.data);
-                        this.populateForm(response.data);
-                    } else {
-                        this.showMessage(response.data.message, 'error');
+        async loadLevelData(levelId) {
+            try {
+                const response = await $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'get_membership_level',
+                        nonce: wpCustomerData.nonce,
+                        id: levelId
                     }
-                },
-                error: (xhr, status, error) => {
-                    console.log('Ajax error:', {xhr, status, error});
-                    this.showMessage('Failed to load membership level data', 'error');
+                });
+
+                if (response.success) {
+                    this.populateForm(response.data);
+                } else {
+                    this.showMessage(response.data.message, 'error');
                 }
-            });
+            } catch (error) {
+                console.error('Failed to load level data:', error);
+                this.showMessage('Failed to load membership level data', 'error');
+            }
         },
 
         populateForm(data) {
-            console.log('Populating form with data:', data);
-            
             // Basic fields
             $('#level-id').val(data.id);
             $('#level-name').val(data.name);
             $('#level-description').val(data.description);
-            $('#level-price').val(data.price_per_month);
-            $('#max-staff').val(data.max_staff);
-            $('#max-departments').val(data.max_departments);
-            
+            $('#price-per-month').val(data.price_per_month);
+            $('#sort-order').val(data.sort_order);
+
             // Trial & Grace Period
-            $('#is-trial-available').prop('checked', data.is_trial_available == 1).trigger('change');
+            const isTrialAvailable = Boolean(parseInt(data.is_trial_available));
+            $('#is-trial-available').prop('checked', isTrialAvailable).trigger('change');
             $('#trial-days').val(data.trial_days);
             $('#grace-period-days').val(data.grace_period_days);
 
-            // Populate capabilities
-            if (data.capabilities) {
-                const caps = typeof data.capabilities === 'string' ? 
-                    JSON.parse(data.capabilities) : data.capabilities;
-                
-                // Features
-                if (caps.features) {
-                    Object.entries(caps.features).forEach(([key, feature]) => {
-                        // Di sini valuenya ada di dalam object feature
-                        $(`input[name="features[${key}]"]`).prop('checked', feature.value);
-                    });
-                }
-
-                // Limits sudah terhandle oleh field max_staff dan max_departments di atas
-
-                // Notifications
-                if (caps.notifications) {
-                    Object.entries(caps.notifications).forEach(([key, value]) => {
-                        $(`input[name="notifications[${key}]"]`).prop('checked', value);
-                    });
-                }
+            // Features
+            if (data.features) {
+                Object.entries(data.features).forEach(([key, feature]) => {
+                    $(`input[name="features[${key}]"]`).prop('checked', feature.value);
+                });
             }
 
-            console.log('Form population complete');
+            // Resource Limits
+            if (data.limits) {
+                Object.entries(data.limits).forEach(([key, limit]) => {
+                    $(`input[name="limits[${key}]"]`).val(limit.value);
+                });
+            }
         },
 
-        handleSubmit() {
-            const formData = this.form.serializeArray();
-            
-            // Transform form data to proper structure
-            const processedData = this.processFormData(formData);
-
-            $.ajax({
-                url: wpCustomerData.ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'save_membership_level',
-                    nonce: wpCustomerData.nonce,
-                    ...processedData
-                },
-                beforeSend: () => {
-                    this.form.addClass('loading');
-                    this.form.find('button[type="submit"]').prop('disabled', true);
-                },
-                success: (response) => {
-                    if (response.success) {
-                        this.showMessage(response.data.message);
-                        this.closeModal();
-                        // Reload page or update UI
-                        window.location.reload();
-                    } else {
-                        this.showMessage(response.data.message, 'error');
+        async handleSubmit() {
+            try {
+                const formData = this.processFormData();
+                
+                const response = await $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'save_membership_level',
+                        nonce: wpCustomerData.nonce,
+                        ...formData
                     }
-                },
-                error: (xhr, status, error) => {
-                    this.showMessage('Failed to save membership level', 'error');
-                    console.error(error);
-                },
-                complete: () => {
-                    this.form.removeClass('loading');
-                    this.form.find('button[type="submit"]').prop('disabled', false);
+                });
+
+                if (response.success) {
+                    this.showMessage(response.data.message);
+                    this.closeModal();
+                    window.location.reload();
+                } else {
+                    this.showMessage(response.data.message, 'error');
                 }
-            });
+            } catch (error) {
+                console.error('Failed to save level:', error);
+                this.showMessage('Failed to save membership level', 'error');
+            }
         },
 
-        processFormData(formData) {
+        processFormData() {
+            const formData = new FormData(this.form[0]);
             const processed = {
+                id: formData.get('id'),
+                name: formData.get('name'),
+                description: formData.get('description'),
+                price_per_month: parseFloat(formData.get('price_per_month')),
+                sort_order: parseInt(formData.get('sort_order')) || 0,
+                is_trial_available: formData.get('is_trial_available') ? 1 : 0,
+                trial_days: parseInt(formData.get('trial_days')) || 0,
+                grace_period_days: parseInt(formData.get('grace_period_days')) || 0,
                 capabilities: {
                     features: {},
                     limits: {},
-                    notifications: {}
+                    notifications: {
+                        email: { value: true },
+                        dashboard: { value: true }
+                    }
                 }
             };
 
-            formData.forEach(item => {
-                // Match capabilities fields with regex
-                const capsMatch = item.name.match(/capabilities\[(features|limits|notifications)\]\[([^\]]+)\]/);
-                
-                if (capsMatch) {
-                    const [, group, field] = capsMatch;
-                    if (group === 'limits') {
-                        processed.capabilities[group][field] = parseInt(item.value) || 0;
-                    } else {
-                        processed.capabilities[group][field] = !!item.value;
-                    }
-                } else {
-                    // Regular fields
-                    processed[item.name] = item.value;
+            // Process features
+            for (const [key, value] of formData.entries()) {
+                if (key.startsWith('features[')) {
+                    const featureKey = key.match(/features\[(.*?)\]/)[1];
+                    processed.capabilities.features[featureKey] = {
+                        field: featureKey,
+                        group: 'features',
+                        label: $(`label[for="feature-${featureKey}"]`).text().trim(),
+                        value: Boolean(value)
+                    };
                 }
-            });
+                else if (key.startsWith('limits[')) {
+                    const limitKey = key.match(/limits\[(.*?)\]/)[1];
+                    processed.capabilities.limits[limitKey] = {
+                        field: limitKey,
+                        group: 'resources',
+                        label: $(`label[for="${limitKey}"]`).text().trim(),
+                        value: parseInt(value) || 0
+                    };
+                }
+            }
 
             return processed;
         },
 
-        handleDelete(levelId) {
+        async handleDelete(levelId) {
             if (!confirm(wpCustomerData.i18n.confirmDelete)) {
                 return;
             }
 
-            $.ajax({
-                url: wpCustomerData.ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'delete_membership_level',
-                    nonce: wpCustomerData.nonce,
-                    id: levelId
-                },
-                success: (response) => {
-                    if (response.success) {
-                        this.showMessage(response.data.message);
-                        // Remove card or reload page
-                        window.location.reload();
-                    } else {
-                        this.showMessage(response.data.message, 'error');
+            try {
+                const response = await $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'delete_membership_level',
+                        nonce: wpCustomerData.nonce,
+                        id: levelId
                     }
-                },
-                error: (xhr, status, error) => {
-                    this.showMessage('Failed to delete membership level', 'error');
-                    console.error(error);
+                });
+
+                if (response.success) {
+                    this.showMessage(response.data.message);
+                    window.location.reload();
+                } else {
+                    this.showMessage(response.data.message, 'error');
                 }
-            });
-        }        
+            } catch (error) {
+                console.error('Failed to delete level:', error);
+                this.showMessage('Failed to delete membership level', 'error');
+            }
+        },
+
+        showMessage(message, type = 'success') {
+            // Implementasi sesuai dengan sistem notifikasi yang digunakan
+            if (window.wpCustomerToast) {
+                window.wpCustomerToast[type](message);
+            } else {
+                alert(message);
+            }
+        }
     };
 
     // Initialize on document ready

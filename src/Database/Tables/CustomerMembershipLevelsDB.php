@@ -48,7 +48,7 @@ class CustomerMembershipLevelsDB {
             name varchar(50) NOT NULL,
             slug varchar(50) NOT NULL,
             description text NULL,
-            available_periods ENUM('1','3','6','12') NOT NULL DEFAULT '1',
+            available_periods ENUM('0','1','3','6','12') NOT NULL DEFAULT '1',
             default_period int NOT NULL DEFAULT 1,
             price_per_month decimal(10,2) NOT NULL DEFAULT 0.00,
             is_trial_available tinyint(1) NOT NULL DEFAULT 0,

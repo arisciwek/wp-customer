@@ -26,15 +26,12 @@
  * - Added feature integration
  * - Added cache management
  */
-
 namespace WPCustomer\Controllers\Membership;
 
 use WPCustomer\Models\Membership\MembershipLevelModel;
 use WPCustomer\Models\Membership\MembershipFeatureModel;
 use WPCustomer\Cache\CustomerCacheManager;
 use WPCustomer\Validators\Membership\MembershipLevelValidator;
-
-defined('ABSPATH') || exit;
 
 class MembershipLevelController {
     private $model;
@@ -52,44 +49,26 @@ class MembershipLevelController {
     }
 
     public function register_hooks() {
-        // Register AJAX handlers
         add_action('wp_ajax_get_membership_level', [$this, 'handle_get_level']);
         add_action('wp_ajax_save_membership_level', [$this, 'handle_save_level']);
         add_action('wp_ajax_delete_membership_level', [$this, 'handle_delete_level']);
     }
 
-    /**
-     * Handle getting a single level with capabilities
-     */
     public function handle_get_level() {
         try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
-
-            if (!current_user_can('manage_options')) {
-                throw new \Exception(__('You do not have permission to perform this action.', 'wp-customer'));
-            }
+            $this->verify_request('get_membership_level');
 
             $level_id = intval($_POST['id']);
-            
-            // Try to get from cache first
-            $level = $this->cache_manager->get('membership_level', $level_id);
-
-            if ($level === null) {
-                // Not in cache, get from model
-                $level = $this->model->get_level($level_id);
-                
-                if ($level) {
-                    // Decode capabilities JSON
-                    $level->capabilities = json_decode($level->capabilities, true);
-                    
-                    // Store in cache for future requests
-                    $this->cache_manager->set('membership_level', $level, null, $level_id);
-                }
-            }
+            $level = $this->model->get_level($level_id);
 
             if (!$level) {
                 throw new \Exception(__('Level not found.', 'wp-customer'));
             }
+
+            // Hapus bagian ini karena sudah ditangani di model:
+            // if (!empty($level['capabilities'])) {
+            //     $level['capabilities'] = json_decode($level['capabilities'], true);
+            // }
 
             wp_send_json_success($level);
 
@@ -99,17 +78,9 @@ class MembershipLevelController {
             ]);
         }
     }
-
-    /**
-     * Handle saving/updating a level
-     */
     public function handle_save_level() {
         try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
-
-            if (!current_user_can('manage_options')) {
-                throw new \Exception(__('You do not have permission to perform this action.', 'wp-customer'));
-            }
+            $this->verify_request('save_membership_level');
 
             // Get and sanitize input data
             $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
@@ -121,9 +92,6 @@ class MembershipLevelController {
                 throw new \Exception(implode(' ', $validation_errors));
             }
 
-            // Process capabilities
-            $data['capabilities'] = $this->process_capabilities_data($_POST);
-
             // Save via model
             $result = $this->model->save_level($id, $data);
 
@@ -132,10 +100,7 @@ class MembershipLevelController {
             }
 
             // Clear cache
-            if ($id > 0) {
-                $this->cache_manager->delete('membership_level', $id);
-            }
-            $this->cache_manager->delete('membership_level_list');
+            $this->clear_level_cache($id ?: $result);
 
             wp_send_json_success([
                 'message' => $id ? 
@@ -151,16 +116,9 @@ class MembershipLevelController {
         }
     }
 
-    /**
-     * Handle deleting a level
-     */
     public function handle_delete_level() {
         try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
-
-            if (!current_user_can('manage_options')) {
-                throw new \Exception(__('You do not have permission to perform this action.', 'wp-customer'));
-            }
+            $this->verify_request('delete_membership_level');
 
             $level_id = intval($_POST['id']);
 
@@ -178,8 +136,7 @@ class MembershipLevelController {
             }
 
             // Clear cache
-            $this->cache_manager->delete('membership_level', $level_id);
-            $this->cache_manager->delete('membership_level_list');
+            $this->clear_level_cache($level_id);
 
             wp_send_json_success([
                 'message' => __('Level deleted successfully.', 'wp-customer')
@@ -192,48 +149,16 @@ class MembershipLevelController {
         }
     }
 
-    /**
-     * Process and structure capabilities data from form
-     */
-    private function process_capabilities_data($post_data) {
-        $capabilities = [
-            'features' => [],
-            'limits' => [],
-            'notifications' => []
-        ];
-
-        // Process features
-        if (!empty($post_data['features'])) {
-            foreach ($post_data['features'] as $key => $value) {
-                $capabilities['features'][sanitize_key($key)] = [
-                    'value' => rest_sanitize_boolean($value)
-                ];
-            }
+    private function verify_request($action) {
+        if (!current_user_can('manage_options')) {
+            throw new \Exception(__('You do not have permission to perform this action.', 'wp-customer'));
         }
 
-        // Process limits
-        if (!empty($post_data['limits'])) {
-            foreach ($post_data['limits'] as $key => $value) {
-                $capabilities['limits'][sanitize_key($key)] = intval($value);
-            }
-        }
-
-        // Process notifications
-        if (!empty($post_data['notifications'])) {
-            foreach ($post_data['notifications'] as $key => $value) {
-                $capabilities['notifications'][sanitize_key($key)] = 
-                    rest_sanitize_boolean($value);
-            }
-        }
-
-        return json_encode($capabilities);
+        check_ajax_referer('wp_customer_nonce', 'nonce');
     }
 
-    /**
-     * Sanitize level input data
-     */
     private function sanitize_level_data($post_data) {
-        return [
+        $data = [
             'name' => sanitize_text_field($post_data['name']),
             'slug' => sanitize_title($post_data['name']),
             'description' => sanitize_textarea_field($post_data['description']),
@@ -242,8 +167,29 @@ class MembershipLevelController {
             'trial_days' => intval($post_data['trial_days']),
             'grace_period_days' => intval($post_data['grace_period_days']),
             'sort_order' => intval($post_data['sort_order']),
-            'created_by' => get_current_user_id()
+            'capabilities' => $this->process_capabilities_data($post_data['capabilities'])
         ];
+
+        return $data;
+    }
+
+    private function process_capabilities_data($capabilities) {
+        if (empty($capabilities)) {
+            return json_encode([
+                'features' => [],
+                'limits' => [],
+                'notifications' => [
+                    'email' => ['value' => true],
+                    'dashboard' => ['value' => true]
+                ]
+            ]);
+        }
+
+        return json_encode($capabilities);
+    }
+
+    private function clear_level_cache($level_id) {
+        $this->cache_manager->delete('membership_level', $level_id);
+        $this->cache_manager->delete('membership_level_list');
     }
 }
-

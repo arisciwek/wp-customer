@@ -46,10 +46,34 @@ class MembershipLevelModel {
      * Get a single level by ID
      */
     public function get_level($id) {
-        return $this->wpdb->get_row($this->wpdb->prepare(
+        // Get the raw data first
+        $level = $this->wpdb->get_row($this->wpdb->prepare(
             "SELECT * FROM {$this->table} WHERE id = %d AND status = 'active'",
             $id
-        ));
+        ), ARRAY_A);  // Gunakan ARRAY_A agar konsisten dengan get_all_levels()
+
+        if (!$level) {
+            return null;
+        }
+
+        // Format numeric values
+        $level['price_per_month'] = floatval($level['price_per_month']);
+        $level['trial_days'] = intval($level['trial_days']);
+        $level['grace_period_days'] = intval($level['grace_period_days']);
+        $level['is_trial_available'] = intval($level['is_trial_available']);
+
+        // Process capabilities
+        if (!empty($level['capabilities'])) {
+            $capabilities = json_decode($level['capabilities'], true);
+            if ($capabilities) {
+                // Strukturkan capabilities ke dalam group yang sesuai
+                foreach ($capabilities as $group => $items) {
+                    $level[$group] = $items;
+                }
+            }
+        }
+
+        return $level;
     }
 
     /**
@@ -155,27 +179,41 @@ class MembershipLevelModel {
             $level_id
         ));
     }
+    
+public function get_all_levels() {
+    // Get complete level data from database with ARRAY_A
+    $levels = $this->wpdb->get_results(
+        "SELECT * FROM {$this->table} 
+         WHERE status = 'active' 
+         ORDER BY sort_order ASC, id ASC",
+        ARRAY_A  // Menggunakan array associative
+    );
 
-	public function get_all_levels() {
-	    // Try to get from cache first
-	    $levels = $this->cache_manager->get('membership_level_list');
-	    
-	    if ($levels === null) {
-	        $levels = $this->wpdb->get_results(
-	            "SELECT * FROM {$this->table} 
-	             WHERE status = 'active' 
-	             ORDER BY sort_order ASC, id ASC"
-	        );
+    // Validate and process each level
+    if (!empty($levels)) {
+        foreach ($levels as &$level) {
+            // Format numeric values
+            $level['price_per_month'] = floatval($level['price_per_month']);
+            $level['trial_days'] = intval($level['trial_days']);
+            $level['grace_period_days'] = intval($level['grace_period_days']);
+            $level['is_trial_available'] = intval($level['is_trial_available']);
 
-	        // Simpan di cache tanpa decode
-	        if ($levels) {
-	            $this->cache_manager->set('membership_level_list', $levels);
-	        }
-	    }
-	    
-	    return $levels;
-	}
-	
+            // Process capabilities
+            if (!empty($level['capabilities'])) {
+                $capabilities = json_decode($level['capabilities'], true);
+                if ($capabilities) {
+                    // Strukturkan capabilities ke dalam group yang sesuai
+                    foreach ($capabilities as $group => $items) {
+                        $level[$group] = $items;
+                    }
+                }
+            }
+        }
+    }
+
+    return $levels;
+}
+
 	public function get_all_features_by_group() {
 	    $features = $this->wpdb->get_results("
 	        SELECT * FROM {$this->table} 

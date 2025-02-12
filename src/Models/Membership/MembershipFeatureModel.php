@@ -134,11 +134,29 @@ class MembershipFeatureModel {
     }
 
     public function get_all_features_by_group() {
-        return $this->wpdb->get_results("
+        $features = $this->wpdb->get_results("
             SELECT * FROM {$this->table} 
             WHERE status = 'active'
-            ORDER BY field_group, sort_order ASC"
+            ORDER BY sort_order ASC"
         );
+
+        // Group berdasarkan metadata.group
+        $grouped_features = [];
+        foreach ($features as $feature) {
+            $metadata = json_decode($feature->metadata, true);
+            $group = $metadata['group'];
+            
+            if (!isset($grouped_features[$group])) {
+                $grouped_features[$group] = [];
+            }
+            
+            $grouped_features[$group][] = [
+                'field_name' => $feature->field_name,
+                'metadata' => $metadata
+            ];
+        }
+
+        return $grouped_features;
     }
 
 }

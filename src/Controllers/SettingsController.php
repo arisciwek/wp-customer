@@ -38,13 +38,6 @@ class SettingsController {
         add_action('wp_ajax_reset_permissions', [$this, 'handle_reset_permissions']);
         add_action('wp_ajax_generate_demo_data', [$this, 'handle_generate_demo_data']);
         add_action('wp_ajax_check_demo_data', [$this, 'handle_check_demo_data']);
-
-         // Tambahkan ini untuk membership
-        /*
-        add_action('wp_ajax_save_membership_level', [$this, 'handle_save_membership_level']);
-        add_action('wp_ajax_delete_membership_level', [$this, 'handle_delete_membership_level']);
-        add_action('wp_ajax_get_membership_level', [$this, 'handle_get_membership_level']);
-        */
     }
 
     public function handle_reset_permissions() {
@@ -135,7 +128,6 @@ class SettingsController {
         return $sanitized;
     }
 
-
     /**
      * Get the appropriate generator class based on data type
      *
@@ -224,7 +216,6 @@ class SettingsController {
     }
 
     private function loadTabView($tab) {
-        // Define allowed tabs and their templates
         $allowed_tabs = [
             'general' => 'tab-general.php',
             'permissions' => 'tab-permissions.php',
@@ -233,30 +224,14 @@ class SettingsController {
             'demo-data' => 'tab-demo-data.php'
         ];
         
-        // Validate tab exists
-        if (!isset($allowed_tabs[$tab])) {
-            $tab = 'general';
-        }
+        $tab = isset($allowed_tabs[$tab]) ? $tab : 'general';
 
-        // Prepare data for membership-levels tab
         if ($tab === 'membership-levels') {
             $membership_level_model = new MembershipLevelModel();
             $membership_feature_model = new MembershipFeatureModel();
             
-            // Get data dari model
-            $levels = $membership_level_model->get_all_levels();
-            
-            // Decode capabilities untuk setiap level
-            foreach ($levels as &$level) {
-                if (!empty($level->capabilities)) {
-                    $level->capabilities_array = json_decode($level->capabilities, true);
-                } else {
-                    $level->capabilities_array = [];
-                }
-            }
-            
             $view_data = [
-                'levels' => $levels,
+                'levels' => $membership_level_model->get_all_levels(),
                 'grouped_features' => $membership_feature_model->get_all_features_by_group()
             ];
         }
@@ -264,7 +239,6 @@ class SettingsController {
         $tab_file = WP_CUSTOMER_PATH . 'src/Views/templates/settings/' . $allowed_tabs[$tab];
         
         if (file_exists($tab_file)) {
-            // Pass view_data ke template jika ada
             if (isset($view_data)) {
                 extract($view_data);
             }

@@ -22,16 +22,6 @@
  * - common-style.css
  */
 
-
-
-/**
- * Membership Tab Styles
- *
- * @package     WP_Customer
- * @subpackage  Assets/CSS/Settings
- * @version     2.0.0
- */
-
 /* Card Grid Layout */
 .membership-grid {
     display: grid;
@@ -39,7 +29,6 @@
     gap: 24px;
     margin: 20px 0;
     padding: 15px;
-    max-width: calc(100% - 20px);
 }
 
 /* Membership Card Base */
@@ -60,40 +49,67 @@
 }
 
 /* Level-specific Card Styling */
-.membership-card[data-level="regular"] {
-    border-top: 4px solid #4f46e5;
-}
-
-.membership-card[data-level="priority"] {
-    border-top: 4px solid #eab308;
-}
-
-.membership-card[data-level="utama"] {
-    border-top: 4px solid #06b6d4;
-}
+.membership-card[data-level="gratis"] { border-top: 4px solid #4f46e5; }
+.membership-card[data-level="reguler"] { border-top: 4px solid #eab308; }
+.membership-card[data-level="prioritas"] { border-top: 4px solid #06b6d4; }
+.membership-card[data-level="utama"] { border-top: 4px solid #ec4899; }
 
 /* Card Header */
 .card-header {
-    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-    padding: 20px;
-    border-bottom: 1px solid #e2e8f0;
+    text-align: center;
+    margin-bottom: 24px;
 }
 
-.card-header h3 {
-    margin: 0 0 10px 0;
-    color: #2d3748;
-    font-size: 1.5em;
+.level-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-bottom: 12px;
+    background: #f1f5f9;
+    color: #334155;
 }
 
 .price {
-    font-size: 1.8em;
-    font-weight: 600;
-    color: #4a5568;
+    margin: 16px 0;
+    color: #1e293b;
+}
+
+.price .currency {
+    font-size: 1.25rem;
+    font-weight: 500;
+    vertical-align: top;
+    margin-right: 4px;
+}
+
+.price .amount {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.price .period {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin-left: 4px;
+}
+
+.description {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin-top: 8px;
 }
 
 /* Features Section */
 .features-section {
-    padding: 20px;
+    margin: 24px 0;
+}
+
+.features-section h4 {
+    font-size: 1rem;
+    color: #334155;
+    margin-bottom: 16px;
 }
 
 .feature-list {
@@ -107,19 +123,37 @@
     align-items: center;
     padding: 8px 0;
     color: #4a5568;
+    font-size: 0.875rem;
 }
 
-.feature-enabled .dashicons {
-    color: #48bb78;
-    margin-right: 12px;
+.feature-item .dashicons {
+    margin-right: 8px;
+}
+
+.feature-item.enabled .dashicons {
+    color: #22c55e;
+}
+
+.feature-item.disabled {
+    color: #94a3b8;
+}
+
+.feature-item.disabled .dashicons {
+    color: #cbd5e1;
 }
 
 /* Limits Section */
 .limits-section {
-    padding: 15px 20px;
-    background: #f7fafc;
-    margin: 10px 0;
+    margin: 24px 0;
+    padding: 16px;
+    background: #f8fafc;
     border-radius: 8px;
+}
+
+.limits-section h4 {
+    font-size: 1rem;
+    color: #334155;
+    margin-bottom: 12px;
 }
 
 .limit-item {
@@ -127,18 +161,22 @@
     justify-content: space-between;
     align-items: center;
     padding: 8px 0;
-    border-bottom: 1px solid #edf2f7;
+    font-size: 0.875rem;
 }
 
-.limit-item:last-child {
-    border-bottom: none;
+.limit-item:not(:last-child) {
+    border-bottom: 1px solid #e2e8f0;
 }
 
-/* Trial & Grace Period */
+.limit-value {
+    font-weight: 600;
+    color: #334155;
+}
+
+/* Period Info */
 .period-info {
-    padding: 15px 20px;
-    background: #f7fafc;
-    margin-top: 10px;
+    margin-top: 24px;
+    padding-top: 16px;
     border-top: 1px solid #e2e8f0;
 }
 
@@ -146,46 +184,24 @@
 .grace-period {
     display: flex;
     align-items: center;
-    padding: 4px 0;
+    font-size: 0.875rem;
     color: #4a5568;
+    margin: 8px 0;
 }
 
-.period-info .dashicons {
-    color: #4299e1;
+.trial-period .dashicons,
+.grace-period .dashicons {
+    color: #6366f1;
     margin-right: 8px;
+    font-size: 16px;
 }
 
-/* Modal Styles */
-.wp-customer-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 100000;
-}
-
-.modal-content {
-    position: relative;
-    background: #fff;
-    margin: 5vh auto;
-    padding: 24px;
-    width: 90%;
-    max-width: 600px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.form-columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
-}
-
-.form-row {
-    margin-bottom: 16px;
+/* Card Actions */
+.card-actions {
+    margin-top: 24px;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
 }
 
 /* Responsive Design */
@@ -199,22 +215,356 @@
     .membership-grid {
         grid-template-columns: 1fr;
     }
-    
-    .form-columns {
+}
+
+.level-name {
+    font-size: 1.5rem;
+    color: #1e293b;
+    margin: 0 0 16px 0;
+}
+
+.price {
+    font-size: 2rem;
+    color: #1e293b;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 4px;
+}
+
+.price .period {
+    font-size: 1rem;
+    color: #64748b;
+}
+
+/* Feature Sections */
+.features-section,
+.limits-section,
+.notifications-section {
+    margin: 16px 0;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+h4 {
+    font-size: 1rem;
+    color: #475569;
+    margin: 0 0 16px 0;
+}
+
+.feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.feature-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.feature-item:last-child {
+    border-bottom: none;
+}
+
+.feature-label {
+    color: #475569;
+}
+
+.feature-value {
+    font-weight: 500;
+}
+
+.feature-value .dashicons {
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+.feature-value .dashicons-yes-alt {
+    color: #22c55e;
+}
+
+.feature-value .dashicons-no-alt {
+    color: #ef4444;
+}
+
+/* Card Actions */
+.card-actions {
+    margin-top: auto;
+    padding-top: 24px;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+/* Responsive */
+@media screen and (max-width: 1400px) {
+    .membership-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media screen and (max-width: 782px) {
+    .membership-grid {
         grid-template-columns: 1fr;
     }
 }
 
-/* Print Styles */
-@media print {
-    .membership-card {
-        break-inside: avoid;
-        border: 1px solid #000;
-        box-shadow: none;
-    }
+/* Modal Base */
+.wp-customer-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 160000;
+    overflow-y: auto;
+    padding: 20px;
+}
 
-    .modal-content,
-    .wp-customer-modal {
-        display: none;
+.wp-customer-modal .modal-content {
+    position: relative;
+    background: #fff;
+    max-width: 1024px;
+    margin: 40px auto;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.wp-customer-form .form-fields-wrapper {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    max-width: 1200px;
+    margin-bottom: 24px;
+}
+
+.wp-customer-form .form-fields-wrapper .left-side,
+.wp-customer-form .form-fields-wrapper .right-side {
+    flex: 1;
+    min-width: 300px;
+}
+
+.modal-footer {
+    padding: 20px 24px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    margin-top: auto;
+    width: 100%;
+}
+
+@media screen and (max-width: 782px) {
+    .wp-customer-form .form-fields-wrapper .left-side,
+    .wp-customer-form .form-fields-wrapper .right-side {
+        flex: 100%;
     }
+}
+
+/* Modal Header */
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-title {
+    margin: 0;
+    font-size: 1.3em;
+    line-height: 1.4;
+    color: #1e293b;
+}
+
+.modal-close {
+    cursor: pointer;
+    padding: 0;
+    color: #64748b;
+    transition: color 0.2s;
+    border: none;
+    background: none;
+}
+
+.modal-close:hover {
+    color: #ef4444;
+}
+
+/* Form Sections */
+.wp-customer-form {
+    padding: 24px;
+}
+
+.form-section {
+    margin-bottom: 32px;
+    padding: 24px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.form-section h4 {
+    margin: 0 0 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #1e293b;
+    font-size: 1.1em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-section h4 .dashicons {
+    color: #6366f1;
+}
+
+/* Form Rows */
+.form-row {
+    margin-bottom: 20px;
+}
+
+.form-row:last-child {
+    margin-bottom: 0;
+}
+
+.form-row label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #334155;
+}
+
+.form-row .required {
+    color: #ef4444;
+}
+
+.form-row input[type="text"],
+.form-row input[type="number"],
+.form-row textarea {
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+}
+
+.form-row .description {
+    margin-top: 6px;
+    color: #64748b;
+}
+
+/* Features Grid */
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+}
+
+.feature-item {
+    padding: 12px;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+/* Limits Grid */
+.limits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+/* Modal Footer */
+.modal-footer {
+    padding: 20px 24px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    border-radius: 0 0 8px 8px;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+    .features-grid,
+    .limits-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .wp-customer-modal .modal-content {
+        margin: 20px;
+    }
+}
+
+/* Section Styles */
+.membership-card .card-content > div[class$="-section"] {
+    margin: 24px 0;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+}
+
+.membership-card .card-content h4 {
+    font-size: 1rem;
+    color: #334155;
+    margin-bottom: 16px;
+}
+
+/* List Styles */
+.membership-card [class$="-list"] {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.membership-card [class$="-item"] {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    color: #4a5568;
+    font-size: 0.875rem;
+}
+
+.membership-card [class$="-item"]:not(:last-child) {
+    border-bottom: 1px solid #e2e8f0;
+}
+
+/* Item Content */
+.membership-card .item-label {
+    flex: 1;
+    margin: 0 8px;
+}
+
+.membership-card .item-value {
+    font-weight: 600;
+    color: #334155;
+}
+
+/* Icons */
+.membership-card .dashicons-yes-alt {
+    color: #22c55e;
+}
+
+.membership-card .dashicons-no-alt {
+    color: #cbd5e1;
+}
+
+/* Value Display */
+.membership-card .item-value {
+    min-width: 2.5em;
+    text-align: right;
+    font-weight: 600;
 }

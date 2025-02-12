@@ -27,77 +27,111 @@
  * - Added deletion validation
  * - Added capability validation
  */
-
+<?php
 namespace WPCustomer\Validators\Membership;
 
-use WPCustomer\Models\Membership\MembershipLevelModel;
-use WPCustomer\Models\Membership\MembershipFeatureModel;
-
-defined('ABSPATH') || exit;
-
 class MembershipLevelValidator {
-    private $level_model;
-    private $feature_model;
+    private $model;
 
     public function __construct() {
-        $this->level_model = new MembershipLevelModel();
-        $this->feature_model = new MembershipFeatureModel();
+        $this->model = new \WPCustomer\Models\Membership\MembershipLevelModel();
     }
 
     /**
-     * Validate level data for save/update
+     * Validate level data before save
+     * 
+     * @param array $data Level data
+     * @param int|null $id Level ID if updating
+     * @return array Array of error messages
      */
     public function validate_level($data, $id = null) {
         $errors = [];
 
-        // Basic required fields
+        // Required fields
         if (empty($data['name'])) {
             $errors[] = __('Level name is required.', 'wp-customer');
-        } else {
-            // Check name length
-            if (mb_strlen($data['name']) > 50) {
-                $errors[] = __('Level name cannot exceed 50 characters.', 'wp-customer');
-            }
-            
-            // Check slug uniqueness
-            $slug = sanitize_title($data['name']);
-            if ($this->level_model->exists_by_slug($slug, $id)) {
-                $errors[] = __('A level with this name already exists.', 'wp-customer');
-            }
+        }
+
+        // Name length
+        if (strlen($data['name']) > 50) {
+            $errors[] = __('Level name cannot exceed 50 characters.', 'wp-customer');
+        }
+
+        // Check slug uniqueness (except for current level when editing)
+        if ($this->model->exists_by_slug($data['slug'], $id)) {
+            $errors[] = __('A level with this name already exists.', 'wp-customer');
         }
 
         // Price validation
-        if (!isset($data['price_per_month'])) {
-            $errors[] = __('Price per month is required.', 'wp-customer');
-        } else {
-            $price = floatval($data['price_per_month']);
-            if ($price < 0) {
-                $errors[] = __('Price cannot be negative.', 'wp-customer');
-            }
+        if (!isset($data['price_per_month']) || $data['price_per_month'] < 0) {
+            $errors[] = __('Price must be 0 or greater.', 'wp-customer');
         }
 
         // Trial period validation
         if (!empty($data['is_trial_available'])) {
-            if (empty($data['trial_days']) || intval($data['trial_days']) < 1) {
-                $errors[] = __('Trial days must be at least 1 when trial is available.', 'wp-customer');
+            if (empty($data['trial_days']) || $data['trial_days'] < 0) {
+                $errors[] = __('Trial days must be greater than 0 when trial is enabled.', 'wp-customer');
             }
         }
 
         // Grace period validation
-        if (!isset($data['grace_period_days'])) {
-            $errors[] = __('Grace period days is required.', 'wp-customer');
-        } else {
-            $grace_days = intval($data['grace_period_days']);
-            if ($grace_days < 0) {
-                $errors[] = __('Grace period days cannot be negative.', 'wp-customer');
+        if (!isset($data['grace_period_days']) || $data['grace_period_days'] < 0) {
+            $errors[] = __('Grace period days must be 0 or greater.', 'wp-customer');
+        }
+
+        // Validate capabilities structure
+        if (!empty($data['capabilities'])) {
+            $caps_errors = $this->validate_capabilities($data['capabilities']);
+            $errors = array_merge($errors, $caps_errors);
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Validate capabilities data structure
+     * 
+     * @param array $capabilities
+     * @return array Array of error messages
+     */
+    private function validate_capabilities($capabilities) {
+        $errors = [];
+
+        // Validate capabilities JSON structure
+        $required_sections = ['features', 'limits', 'notifications'];
+        
+        // Check if it's a string (JSON) and decode
+        if (is_string($capabilities)) {
+            $capabilities = json_decode($capabilities, true);
+        }
+
+        if (!is_array($capabilities)) {
+            $errors[] = __('Invalid capabilities format.', 'wp-customer');
+            return $errors;
+        }
+
+        // Check required sections
+        foreach ($required_sections as $section) {
+            if (!isset($capabilities[$section]) || !is_array($capabilities[$section])) {
+                $errors[] = sprintf(__('Missing or invalid %s section in capabilities.', 'wp-customer'), $section);
             }
         }
 
-        // Sort order validation
-        if (isset($data['sort_order'])) {
-            $sort_order = intval($data['sort_order']);
-            if ($sort_order < 0) {
-                $errors[] = __('Sort order cannot be negative.', 'wp-customer');
+        // Validate limits
+        if (isset($capabilities['limits'])) {
+            foreach ($capabilities['limits'] as $key => $limit) {
+                if (!isset($limit['value']) || !is_numeric($limit['value'])) {
+                    $errors[] = sprintf(__('Invalid value for limit: %s', 'wp-customer'), $key);
+                }
+            }
+        }
+
+        // Validate features
+        if (isset($capabilities['features'])) {
+            foreach ($capabilities['features'] as $key => $feature) {
+                if (!isset($feature['value']) || !is_bool($feature['value'])) {
+                    $errors[] = sprintf(__('Invalid value for feature: %s', 'wp-customer'), $key);
+                }
             }
         }
 
@@ -106,107 +140,23 @@ class MembershipLevelValidator {
 
     /**
      * Validate level deletion
+     * 
+     * @param int $level_id
+     * @return array Array of error messages
      */
     public function validate_delete($level_id) {
         $errors = [];
 
         // Check if level exists
-        $level = $this->level_model->get_level($level_id);
-        if (!$level) {
+        if (!$this->model->get_level($level_id)) {
             $errors[] = __('Level not found.', 'wp-customer');
-            return $errors;
         }
 
-        // Check if level is in use by active customers
-        $active_customers = $this->level_model->get_active_customers_count($level_id);
-        if ($active_customers > 0) {
-            $errors[] = sprintf(
-                __('Cannot delete level: %d active customers are using this level.', 'wp-customer'),
-                $active_customers
-            );
-        }
-
-        return $errors;
-    }
-
-    /**
-     * Validate capability structure
-     */
-    public function validate_capabilities($capabilities) {
-        $errors = [];
-
-        if (!is_array($capabilities)) {
-            $errors[] = __('Invalid capabilities structure.', 'wp-customer');
-            return $errors;
-        }
-
-        // Validate required sections
-        $required_sections = ['features', 'limits', 'notifications'];
-        foreach ($required_sections as $section) {
-            if (!isset($capabilities[$section])) {
-                $errors[] = sprintf(
-                    __('Missing required capabilities section: %s.', 'wp-customer'),
-                    $section
-                );
-            }
-        }
-
-        // Validate feature values against master features
-        if (isset($capabilities['features'])) {
-            $master_features = $this->feature_model->get_all_features();
-            foreach ($capabilities['features'] as $key => $feature) {
-                $found = false;
-                foreach ($master_features as $master) {
-                    if ($master->field_name === $key) {
-                        $found = true;
-                        break;
-                    }
-                }
-                if (!$found) {
-                    $errors[] = sprintf(
-                        __('Invalid feature found: %s.', 'wp-customer'),
-                        $key
-                    );
-                }
-            }
-        }
-
-        // Validate limits values
-        if (isset($capabilities['limits'])) {
-            foreach ($capabilities['limits'] as $key => $value) {
-                if (!is_numeric($value) || ($value < -1)) {
-                    $errors[] = sprintf(
-                        __('Invalid limit value for %s. Must be -1 or greater.', 'wp-customer'),
-                        $key
-                    );
-                }
-            }
-        }
-
-        return $errors;
-    }
-
-    /**
-     * Validate period values
-     */
-    private function validate_periods($trial_days, $grace_days) {
-        $errors = [];
-
-        // Trial days validation
-        if ($trial_days !== null) {
-            if (!is_numeric($trial_days) || $trial_days < 0) {
-                $errors[] = __('Trial days must be 0 or greater.', 'wp-customer');
-            }
-        }
-
-        // Grace period validation
-        if ($grace_days !== null) {
-            if (!is_numeric($grace_days) || $grace_days < 1) {
-                $errors[] = __('Grace period must be at least 1 day.', 'wp-customer');
-            }
+        // Check if level is in use
+        if ($this->model->is_level_in_use($level_id)) {
+            $errors[] = __('Cannot delete level because it is currently in use by one or more customers.', 'wp-customer');
         }
 
         return $errors;
     }
 }
-

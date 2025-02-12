@@ -186,7 +186,7 @@ class WPCustomerAutoloader {
      */
     private function log($message) {
         if ($this->debugMode) {
-            error_log("[WPCustomerAutoloader] $message");
+            // error_log("[WPCustomerAutoloader] $message");
         }
     }
     
