@@ -133,4 +133,49 @@ class MembershipFeatureModel {
             ['id' => $id]
         ) !== false;
     }
+    
+    /**
+     * Get all features grouped by their group type
+     *
+     * @return array Features grouped by group type
+     */
+    public function get_all_features_by_group() {
+        try {
+            // Get raw features data
+            $features = $this->get_active_features();
+            
+            if (!$features) {
+                return [];
+            }
+
+            // Initialize result array
+            $result = [];
+
+            // Group features by their group type from metadata
+            foreach ($features as $feature) {
+                $metadata = json_decode($feature->metadata, true);
+                $group = $metadata['group'] ?? 'ungrouped';
+
+                // Transform feature data into a more usable format
+                $feature_data = [
+                    'field_name' => $feature->field_name,
+                    'metadata' => $metadata
+                ];
+
+                // Add to appropriate group
+                if (!isset($result[$group])) {
+                    $result[$group] = [];
+                }
+                $result[$group][] = $feature_data;
+            }
+
+            return $result;
+
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Error in get_all_features_by_group: ' . $e->getMessage());
+            }
+            return [];
+        }
+    }    
 }

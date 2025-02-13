@@ -94,6 +94,7 @@ if (!defined('ABSPATH')) {
 
 <!-- Modal Form (sisanya tetap sama) -->
 <!-- Modal Form -->
+<!-- Modal Form -->
 <div id="membership-level-modal" class="wp-customer-modal">
     <div class="modal-content">
         <div class="modal-header clearfix">
@@ -136,50 +137,78 @@ if (!defined('ABSPATH')) {
                         </div>
                     </div>
 
-                    <!-- Features Section -->
-                    <div class="form-section">
-                        <h4><span class="dashicons dashicons-star-filled"></span> <?php _e('Features', 'wp-customer'); ?></h4>
-                        <div class="features-grid">
-                            <div class="feature-item">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" name="features[can_export]" id="feature-export">
-                                    <span><?php _e('Can Export Data', 'wp-customer'); ?></span>
-                                </label>
-                            </div>
-                            <div class="feature-item">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" name="features[can_add_staff]" id="feature-add-staff">
-                                    <span><?php _e('Can Add Staff', 'wp-customer'); ?></span>
-                                </label>
-                            </div>
-                            <div class="feature-item">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" name="features[can_bulk_import]" id="feature-bulk-import">
-                                    <span><?php _e('Can Bulk Import', 'wp-customer'); ?></span>
-                                </label>
+                    <!-- Features Sections - Dynamically Generated -->
+                    <?php
+                    $features = $grouped_features;
+                    foreach ($features as $group => $group_features):
+                        // Skip 'resources' group as it will be handled separately
+                        if ($group === 'resources') continue;
+                    ?>
+                        <div class="form-section">
+                            <h4>
+                                <span class="dashicons <?php echo esc_attr($group_features[0]['metadata']['ui_settings']['icon'] ?? 'dashicons-admin-generic'); ?>"></span>
+                                <?php echo esc_html($group_features[0]['metadata']['label'] ?? ucfirst($group)); ?>
+                            </h4>
+                            
+                            <div class="features-grid">
+                                <?php foreach ($group_features as $feature): 
+                                    $metadata = $feature['metadata'];
+                                    $field_name = $feature['field_name'];
+                                ?>
+                                    <div class="feature-item">
+                                        <label class="checkbox-label">
+                                            <input type="<?php echo esc_attr($metadata['type']); ?>" 
+                                                name="features[<?php echo esc_attr($field_name); ?>]"
+                                                id="feature-<?php echo esc_attr($field_name); ?>"
+                                                class="<?php echo esc_attr($metadata['ui_settings']['css_class'] ?? ''); ?>"
+                                                <?php if ($metadata['is_required']): ?>required<?php endif; ?>>
+                                            <span><?php echo esc_html($metadata['label']); ?></span>
+                                            <?php if (!empty($metadata['description'])): ?>
+                                                <p class="description"><?php echo esc_html($metadata['description']); ?></p>
+                                            <?php endif; ?>
+                                        </label>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
                         </div>
-                    </div>            
+                    <?php endforeach; ?>
                 </div>
                 
                 <!-- Right Side -->
                 <div class="right-side">
-                    <!-- Resource Limits Section -->
+                    <!-- Resource Limits Section - Dynamically Generated -->
+                    <?php if (isset($features['resources'])): ?>
                     <div class="form-section">
-                        <h4><span class="dashicons dashicons-chart-bar"></span> <?php _e('Resource Limits', 'wp-customer'); ?></h4>
+                        <h4>
+                            <span class="dashicons dashicons-chart-bar"></span>
+                            <?php _e('Resource Limits', 'wp-customer'); ?>
+                        </h4>
                         <div class="limits-grid">
-                            <div class="form-row">
-                                <label for="max-staff"><?php _e('Maximum Staff', 'wp-customer'); ?></label>
-                                <input type="number" id="max-staff" name="limits[max_staff]" min="-1" class="small-text" value="0">
-                                <p class="description"><?php _e('Enter -1 for unlimited', 'wp-customer'); ?></p>
-                            </div>
-                            <div class="form-row">
-                                <label for="max-departments"><?php _e('Maximum Departments', 'wp-customer'); ?></label>
-                                <input type="number" id="max-departments" name="limits[max_departments]" min="-1" class="small-text" value="0">
-                                <p class="description"><?php _e('Enter -1 for unlimited', 'wp-customer'); ?></p>
-                            </div>
+                            <?php foreach ($features['resources'] as $feature):
+                                $metadata = $feature['metadata'];
+                                $field_name = $feature['field_name'];
+                            ?>
+                                <div class="form-row">
+                                    <label for="<?php echo esc_attr($field_name); ?>">
+                                        <?php echo esc_html($metadata['label']); ?>
+                                    </label>
+                                    <input type="number" 
+                                        id="<?php echo esc_attr($field_name); ?>"
+                                        name="limits[<?php echo esc_attr($field_name); ?>]"
+                                        min="<?php echo esc_attr($metadata['ui_settings']['min'] ?? -1); ?>"
+                                        max="<?php echo esc_attr($metadata['ui_settings']['max'] ?? ''); ?>"
+                                        step="<?php echo esc_attr($metadata['ui_settings']['step'] ?? 1); ?>"
+                                        class="small-text <?php echo esc_attr($metadata['ui_settings']['css_class'] ?? ''); ?>"
+                                        value="<?php echo esc_attr($metadata['default_value'] ?? 0); ?>"
+                                        <?php if ($metadata['is_required']): ?>required<?php endif; ?>>
+                                    <?php if (!empty($metadata['description'])): ?>
+                                        <p class="description"><?php echo esc_html($metadata['description']); ?></p>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
                         </div>
                     </div>
+                    <?php endif; ?>
 
                     <!-- Trial & Grace Period Section -->
                     <div class="form-section">

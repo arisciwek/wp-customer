@@ -315,7 +315,7 @@ public function enqueue_frontend_assets() {
                     wp_enqueue_script(
                         'wp-customer-membership',
                         WP_CUSTOMER_URL . 'assets/js/settings/customer-membership-levels-tab-script.js',
-                        ['jquery'],
+                        ['jquery', 'wp-customer-settings'],
                         WP_CUSTOMER_VERSION,
                         true
                     );

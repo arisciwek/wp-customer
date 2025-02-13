@@ -65,7 +65,7 @@ class SettingsController {
         $membership_controller = new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
         $membership_controller->handle_delete_feature();
     }
-    
+
     public function handle_get_membership_level() {
         $membership_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
         $membership_controller->handle_get_level();
@@ -282,6 +282,8 @@ class SettingsController {
                 'levels' => $membership_level_model->get_all_levels(),
                 'grouped_features' => $membership_feature_model->get_all_features_by_group()
             ];
+
+                    error_log('grouped_features ' . print_r($view_data['grouped_features']));
         }
         
         $tab_file = WP_CUSTOMER_PATH . 'src/Views/templates/settings/' . $allowed_tabs[$tab];
