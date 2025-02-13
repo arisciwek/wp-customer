@@ -1,6 +1,6 @@
 <?php
 /**
- * Membership Feature Model
+ * Membership Feature Model Class
  *
  * @package     WP_Customer
  * @subpackage  Models/Membership
@@ -10,153 +10,127 @@
  * Path: /wp-customer/src/Models/Membership/MembershipFeatureModel.php
  *
  * Description: Model untuk mengelola data fitur membership.
- *              Handles database operations for membership features.
- *              Includes data validation and sanitization.
- *              
- * Dependencies:
- * - WordPress $wpdb
- * - CustomerCacheManager for caching
- *
- * Changelog:
- * 1.0.0 - 2024-02-10
- * - Initial version
- * - Added CRUD operations
- * - Added validation methods
+ *              Features:
+ *              - CRUD operations untuk fitur membership
+ *              - Validasi data fitur
+ *              - Pengaturan metadata
  */
 
 namespace WPCustomer\Models\Membership;
 
-use WPCustomer\Cache\CustomerCacheManager;
-
-defined('ABSPATH') || exit;
-
 class MembershipFeatureModel {
-    private $wpdb;
+    /**
+     * Table name
+     * @var string
+     */
     private $table;
-    private $cache_manager;
-
+    
+    /**
+     * Constructor
+     */
     public function __construct() {
         global $wpdb;
-        $this->wpdb = $wpdb;
         $this->table = $wpdb->prefix . 'app_customer_membership_features';
-        $this->cache_manager = new CustomerCacheManager();
-    }
-
-    /**
-     * Get a single feature by ID
-     */
-    public function get_feature($id) {
-        return $this->wpdb->get_row($this->wpdb->prepare(
-            "SELECT * FROM {$this->table} WHERE id = %d AND status = 'active'",
-            $id
-        ));
-    }
-
-    /**
-     * Save or update a feature
-     */
-    public function save_feature($id, $data) {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Validating feature data...');
-        }
-
-        // Pass ID to validation
-        if (!$this->validate_feature_data($data, $id)) {
-            error_log('Feature data validation failed');
-            return false;
-        }
-
-        try {
-            if ($id > 0) {
-                // Update
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Updating existing feature ID: ' . $id);
-                }
-                $result = $this->wpdb->update(
-                    $this->table,
-                    $data,
-                    ['id' => $id]
-                );
-                return $result !== false ? $id : false;
-            } else {
-                // Insert
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Inserting new feature');
-                }
-                $result = $this->wpdb->insert(
-                    $this->table,
-                    $data
-                );
-                return $result ? $this->wpdb->insert_id : false;
-            }
-        } catch (\Exception $e) {
-            error_log('Database operation failed: ' . $e->getMessage());
-            error_log('SQL Error: ' . $this->wpdb->last_error);
-            return false;
-        }
-    }
-
-    private function validate_feature_data($data) {
-        // Required fields
-        $required = ['field_group', 'field_name', 'field_label', 'field_type'];
-        foreach ($required as $field) {
-            if (empty($data[$field])) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("Validation failed: Missing required field '{$field}'");
-                }
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Soft delete a feature
-     */
-    public function delete_feature($id) {
-        return $this->wpdb->update(
-            $this->table,
-            ['status' => 'inactive'],
-            ['id' => $id]
-        );
     }
 
     /**
      * Get all active features
+     *
+     * @return array|null Array of feature objects or null on error
      */
-    public function get_all_features() {
-        return $this->wpdb->get_results(
-            "SELECT * FROM {$this->table} 
-             WHERE status = 'active' 
-             ORDER BY field_group, sort_order ASC"
-        );
+    public function get_active_features() {
+        global $wpdb;
+        
+        try {
+            return $wpdb->get_results("
+                SELECT * FROM {$this->table} 
+                WHERE status = 'active'
+                ORDER BY sort_order ASC
+            ");
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Error getting active features: ' . $e->getMessage());
+            }
+            return null;
+        }
     }
 
-    public function get_all_features_by_group() {
-        $features = $this->wpdb->get_results("
-            SELECT * FROM {$this->table} 
-            WHERE status = 'active'
-            ORDER BY sort_order ASC"
-        );
+    /**
+     * Get feature by ID
+     *
+     * @param int $id Feature ID
+     * @return object|null Feature object or null if not found
+     */
+    public function get_feature($id) {
+        global $wpdb;
+        
+        return $wpdb->get_row($wpdb->prepare("
+            SELECT * FROM {$this->table} WHERE id = %d
+        ", $id));
+    }
 
-        // Group berdasarkan metadata.group
-        $grouped_features = [];
-        foreach ($features as $feature) {
-            $metadata = json_decode($feature->metadata, true);
-            $group = $metadata['group'];
-            
-            if (!isset($grouped_features[$group])) {
-                $grouped_features[$group] = [];
-            }
-            
-            $grouped_features[$group][] = [
-                'field_name' => $feature->field_name,
-                'metadata' => $metadata
-            ];
+    /**
+     * Save feature (create or update)
+     *
+     * @param int $id Feature ID (0 for new feature)
+     * @param array $data Feature data
+     * @return bool|int Feature ID on success, false on failure
+     */
+    public function save_feature($id, $data) {
+        global $wpdb;
+        
+        // Prepare metadata
+        $metadata = [
+            'type' => $data['field_type'],
+            'group' => $data['field_group'],
+            'label' => $data['field_label'],
+            'description' => '',
+            'is_required' => !empty($data['is_required']),
+            'ui_settings' => [
+                'css_class' => $data['css_class'] ?? '',
+                'css_id' => $data['css_id'] ?? ''
+            ]
+        ];
+
+        if (!empty($data['field_subtype'])) {
+            $metadata['subtype'] = $data['field_subtype'];
         }
 
-        return $grouped_features;
+        $save_data = [
+            'field_name' => $data['field_name'],
+            'metadata' => wp_json_encode($metadata),
+            'sort_order' => $data['sort_order'],
+            'created_by' => $data['created_by']
+        ];
+
+        if ($id > 0) {
+            // Update
+            $result = $wpdb->update(
+                $this->table,
+                $save_data,
+                ['id' => $id]
+            );
+            return $result !== false ? $id : false;
+        } else {
+            // Insert
+            $result = $wpdb->insert($this->table, $save_data);
+            return $result ? $wpdb->insert_id : false;
+        }
     }
 
+    /**
+     * Delete feature (soft delete)
+     *
+     * @param int $id Feature ID
+     * @return bool Success status
+     */
+    public function delete_feature($id) {
+        global $wpdb;
+        
+        return $wpdb->update(
+            $this->table,
+            ['status' => 'inactive'],
+            ['id' => $id]
+        ) !== false;
+    }
 }

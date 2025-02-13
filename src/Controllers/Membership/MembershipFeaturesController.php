@@ -41,13 +41,6 @@ class MembershipFeaturesController {
     public function __construct() {
         $this->model = new MembershipFeatureModel();
         $this->cache_manager = new CustomerCacheManager();
-        $this->register_hooks();
-    }
-
-    public function register_hooks() {
-        add_action('wp_ajax_get_membership_feature', [$this, 'handle_get_feature']);
-        add_action('wp_ajax_save_membership_feature', [$this, 'handle_save_feature']);
-        add_action('wp_ajax_delete_membership_feature', [$this, 'handle_delete_feature']);
     }
 
     /**
@@ -63,8 +56,10 @@ class MembershipFeaturesController {
 
             $feature_id = intval($_POST['id']);
             
+            // Debug
+            error_log('Getting feature ID: ' . $feature_id);
+            
             // Try to get from cache first
-            $cache_key = "membership_feature_{$feature_id}";
             $feature = $this->cache_manager->get('feature', $feature_id);
 
             if ($feature === null) {
@@ -81,9 +76,13 @@ class MembershipFeaturesController {
                 throw new \Exception(__('Feature not found.', 'wp-customer'));
             }
 
+            // Debug
+            error_log('Feature data: ' . print_r($feature, true));
+
             wp_send_json_success($feature);
 
         } catch (\Exception $e) {
+            error_log('Error in handle_get_feature: ' . $e->getMessage());
             wp_send_json_error([
                 'message' => $e->getMessage()
             ]);
@@ -177,4 +176,66 @@ class MembershipFeaturesController {
             ]);
         }
     }
+
+    /**
+     * Get all active features
+     */
+    public function getAllFeatures() {
+        // Coba ambil dari cache dulu
+        $features = $this->cache_manager->get('membership_feature_list');
+        
+        if ($features === null) {
+            $features = $this->model->get_active_features();
+            
+            // Kelompokkan features berdasarkan group
+            $grouped_features = [];
+            if($features) {
+                foreach ($features as $feature) {
+                    $metadata = json_decode($feature->metadata);
+                    $group = $metadata->group;
+                    if (!isset($grouped_features[$group])) {
+                        $grouped_features[$group] = [];
+                    }
+                    $grouped_features[$group][] = $feature;
+                }
+            }
+
+            // Simpan ke cache
+            $this->cache_manager->set('membership_feature_list', $grouped_features);
+            
+            return $grouped_features;
+        }
+
+        return $features;
+    }
+
+
+    /**
+     * Get all unique groups from active features
+     */
+    public function getFeatureGroups() {
+        // Coba ambil dari cache dulu
+        $groups = $this->cache_manager->get('membership_feature_groups');
+        
+        if ($groups === null) {
+            global $wpdb;
+            // Ambil semua group unik dari metadata JSON
+            $results = $wpdb->get_results("
+                SELECT DISTINCT JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.group')) as group_name
+                FROM {$wpdb->prefix}app_customer_membership_features
+                WHERE status = 'active'
+                ORDER BY group_name ASC
+            ");
+            
+            $groups = array_map(function($row) {
+                return $row->group_name;
+            }, $results);
+
+            // Simpan ke cache
+            $this->cache_manager->set('membership_feature_groups', $groups);
+        }
+
+        return $groups;
+    }
+
 }

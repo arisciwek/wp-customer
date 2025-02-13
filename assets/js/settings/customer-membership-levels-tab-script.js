@@ -24,247 +24,217 @@
  * - Added form validation
  * - Added field dependencies
  */
-
+/**
+ * Membership Features Modal Handler
+ */
 (function($) {
     'use strict';
 
-    const MembershipLevel = {
-        modal: null,
-        form: null,
-
+    const MembershipFeaturesTab = {
         init() {
-            // Cache DOM elements
-            this.modal = $('#membership-level-modal');
-            this.form = $('#membership-level-form');
-
-            // Bind events
             this.bindEvents();
+            this.initializeForm();
         },
 
         bindEvents() {
-            // Add new level button
-            $('#add-membership-level').on('click', () => this.openModal());
-
-            // Edit level button
-            $('.edit-level').on('click', (e) => {
-                const levelId = $(e.currentTarget).data('id');
-                this.openModal(levelId);
+            // Tombol Add New Feature
+            $('#add-membership-feature').on('click', () => {
+                this.openModal();
             });
 
-            // Delete level button
-            $('.delete-level').on('click', (e) => {
-                const levelId = $(e.currentTarget).data('id');
-                this.handleDelete(levelId);
+            // Tombol Edit
+            $('.edit-feature').on('click', (e) => {
+                const featureId = $(e.currentTarget).data('id');
+                this.openModal(featureId);
             });
 
-            // Modal close buttons
-            $('.modal-close').on('click', () => this.closeModal());
+            // Tombol Delete
+            $('.delete-feature').on('click', (e) => {
+                const featureId = $(e.currentTarget).data('id');
+                this.handleDelete(featureId);
+            });
 
-            // Trial period checkbox
-            $('#is-trial-available').on('change', (e) => {
-                $('.trial-days-row').toggle(e.target.checked);
-                if (!e.target.checked) {
-                    $('#trial-days').val('0');
-                }
+            // Tombol Close modal
+            $('.modal-close').on('click', () => {
+                this.closeModal();
             });
 
             // Form submission
-            this.form.on('submit', (e) => {
+            $('#membership-feature-form').on('submit', (e) => {
                 e.preventDefault();
-                this.handleSubmit();
+                if (this.validateForm()) {
+                    this.handleSubmit(e);
+                }
+            });
+
+            // Field type change
+            $('#field-type').on('change', (e) => {
+                this.toggleSubtypeField(e.target.value);
             });
         },
 
-        openModal(levelId = null) {
-            this.resetForm();
-            
-            if (levelId) {
-                this.loadLevelData(levelId);
-                this.modal.find('.modal-title').text('Edit Membership Level');
-            } else {
-                this.modal.find('.modal-title').text('Add New Membership Level');
-            }
+        initializeForm() {
+            // Tambah atribut validasi
+            $('#field-name').attr({
+                'pattern': '^[a-z_]+$',
+                'title': 'Hanya huruf kecil dan underscore diperbolehkan'
+            });
 
-            this.modal.show();
+            $('#sort-order').attr({
+                'min': '0',
+                'required': 'required'
+            });
+
+            // Field yang wajib diisi
+            const requiredFields = ['field-group', 'field-name', 'field-label', 'field-type'];
+            requiredFields.forEach(field => {
+                $(`#${field}`).attr('required', 'required');
+            });
+        },
+
+        validateForm() {
+            const form = document.getElementById('membership-feature-form');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return false;
+            }
+            return true;
+        },
+
+        openModal(featureId = null) {
+            if (featureId) {
+                this.loadFeatureData(featureId);
+                $('.modal-title').text('Edit Fitur');
+            } else {
+                $('#membership-feature-form')[0].reset();
+                $('#feature-id').val('');
+                $('.modal-title').text('Tambah Fitur Baru');
+            }
+            $('#membership-feature-modal').show();
         },
 
         closeModal() {
-            this.modal.hide();
-            this.resetForm();
+            $('#membership-feature-modal').hide();
+            $('#membership-feature-form')[0].reset();
         },
 
-        resetForm() {
-            this.form[0].reset();
-            $('#level-id').val('');
-            $('.trial-days-row').hide();
+        toggleSubtypeField(fieldType) {
+            $('.field-subtype-row').toggle(fieldType === 'number');
         },
 
-        async loadLevelData(levelId) {
-            try {
-                const response = await $.ajax({
-                    url: wpCustomerData.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: 'get_membership_level',
-                        nonce: wpCustomerData.nonce,
-                        id: levelId
+        loadFeatureData(featureId) {
+            $.ajax({
+                url: wpCustomerSettings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'get_membership_feature',
+                    id: featureId,
+                    nonce: wpCustomerSettings.nonce
+                },
+                beforeSend: () => {
+                    this.showLoading();
+                },
+                success: (response) => {
+                    if (response.success) {
+                        this.populateForm(response.data);
+                    } else {
+                        // Gunakan library toast/notification yang sudah ada
+                        CustomerToast.error(response.data.message);
                     }
-                });
-
-                if (response.success) {
-                    this.populateForm(response.data);
-                } else {
-                    this.showMessage(response.data.message, 'error');
+                },
+                error: () => {
+                    CustomerToast.error(wpCustomerSettings.i18n.loadError);
+                },
+                complete: () => {
+                    this.hideLoading();
                 }
-            } catch (error) {
-                console.error('Failed to load level data:', error);
-                this.showMessage('Failed to load membership level data', 'error');
-            }
+            });
         },
 
         populateForm(data) {
-            // Basic fields
-            $('#level-id').val(data.id);
-            $('#level-name').val(data.name);
-            $('#level-description').val(data.description);
-            $('#price-per-month').val(data.price_per_month);
+            const metadata = JSON.parse(data.metadata);
+            $('#feature-id').val(data.id);
+            $('#field-group').val(metadata.group);
+            $('#field-name').val(data.field_name);
+            $('#field-label').val(metadata.label);
+            $('#field-type').val(metadata.type);
+            $('#field-subtype').val(metadata.subtype || '');
+            $('input[name="is_required"]').prop('checked', metadata.is_required);
+            $('#css-class').val(metadata.ui_settings?.css_class || '');
+            $('#css-id').val(metadata.ui_settings?.css_id || '');
             $('#sort-order').val(data.sort_order);
 
-            // Trial & Grace Period
-            const isTrialAvailable = Boolean(parseInt(data.is_trial_available));
-            $('#is-trial-available').prop('checked', isTrialAvailable).trigger('change');
-            $('#trial-days').val(data.trial_days);
-            $('#grace-period-days').val(data.grace_period_days);
-
-            // Features
-            if (data.features) {
-                Object.entries(data.features).forEach(([key, feature]) => {
-                    $(`input[name="features[${key}]"]`).prop('checked', feature.value);
-                });
-            }
-
-            // Resource Limits
-            if (data.limits) {
-                Object.entries(data.limits).forEach(([key, limit]) => {
-                    $(`input[name="limits[${key}]"]`).val(limit.value);
-                });
-            }
+            this.toggleSubtypeField(metadata.type);
         },
 
-        async handleSubmit() {
-            try {
-                const formData = this.processFormData();
-                
-                const response = await $.ajax({
-                    url: wpCustomerData.ajaxUrl,
+        handleSubmit(e) {
+            const formData = new FormData(e.target);
+            formData.append('action', 'save_membership_feature');
+            formData.append('nonce', wpCustomerSettings.nonce);
+
+            $.ajax({
+                url: wpCustomerSettings.ajaxUrl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                beforeSend: () => {
+                    this.showLoading();
+                },
+                success: (response) => {
+                    if (response.success) {
+                        CustomerToast.success(response.data.message);
+                        window.location.reload();
+                    } else {
+                        CustomerToast.error(response.data.message);
+                    }
+                },
+                error: () => {
+                    CustomerToast.error(wpCustomerSettings.i18n.saveError);
+                },
+                complete: () => {
+                    this.hideLoading();
+                }
+            });
+        },
+
+        handleDelete(featureId) {
+            if (confirm(wpCustomerSettings.i18n.deleteConfirm)) {
+                $.ajax({
+                    url: wpCustomerSettings.ajaxUrl,
                     type: 'POST',
                     data: {
-                        action: 'save_membership_level',
-                        nonce: wpCustomerData.nonce,
-                        ...formData
+                        action: 'delete_membership_feature',
+                        id: featureId,
+                        nonce: wpCustomerSettings.nonce
+                    },
+                    success: (response) => {
+                        if (response.success) {
+                            CustomerToast.success(response.data.message);
+                            window.location.reload();
+                        } else {
+                            CustomerToast.error(response.data.message);
+                        }
+                    },
+                    error: () => {
+                        CustomerToast.error(wpCustomerSettings.i18n.deleteError);
                     }
                 });
-
-                if (response.success) {
-                    this.showMessage(response.data.message);
-                    this.closeModal();
-                    window.location.reload();
-                } else {
-                    this.showMessage(response.data.message, 'error');
-                }
-            } catch (error) {
-                console.error('Failed to save level:', error);
-                this.showMessage('Failed to save membership level', 'error');
             }
         },
 
-        processFormData() {
-            const formData = new FormData(this.form[0]);
-            const processed = {
-                id: formData.get('id'),
-                name: formData.get('name'),
-                description: formData.get('description'),
-                price_per_month: parseFloat(formData.get('price_per_month')),
-                sort_order: parseInt(formData.get('sort_order')) || 0,
-                is_trial_available: formData.get('is_trial_available') ? 1 : 0,
-                trial_days: parseInt(formData.get('trial_days')) || 0,
-                grace_period_days: parseInt(formData.get('grace_period_days')) || 0,
-                capabilities: {
-                    features: {},
-                    limits: {},
-                    notifications: {
-                        email: { value: true },
-                        dashboard: { value: true }
-                    }
-                }
-            };
-
-            // Process features
-            for (const [key, value] of formData.entries()) {
-                if (key.startsWith('features[')) {
-                    const featureKey = key.match(/features\[(.*?)\]/)[1];
-                    processed.capabilities.features[featureKey] = {
-                        field: featureKey,
-                        group: 'features',
-                        label: $(`label[for="feature-${featureKey}"]`).text().trim(),
-                        value: Boolean(value)
-                    };
-                }
-                else if (key.startsWith('limits[')) {
-                    const limitKey = key.match(/limits\[(.*?)\]/)[1];
-                    processed.capabilities.limits[limitKey] = {
-                        field: limitKey,
-                        group: 'resources',
-                        label: $(`label[for="${limitKey}"]`).text().trim(),
-                        value: parseInt(value) || 0
-                    };
-                }
-            }
-
-            return processed;
+        showLoading() {
+            $('#membership-feature-modal').addClass('loading');
         },
 
-        async handleDelete(levelId) {
-            if (!confirm(wpCustomerData.i18n.confirmDelete)) {
-                return;
-            }
-
-            try {
-                const response = await $.ajax({
-                    url: wpCustomerData.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: 'delete_membership_level',
-                        nonce: wpCustomerData.nonce,
-                        id: levelId
-                    }
-                });
-
-                if (response.success) {
-                    this.showMessage(response.data.message);
-                    window.location.reload();
-                } else {
-                    this.showMessage(response.data.message, 'error');
-                }
-            } catch (error) {
-                console.error('Failed to delete level:', error);
-                this.showMessage('Failed to delete membership level', 'error');
-            }
-        },
-
-        showMessage(message, type = 'success') {
-            // Implementasi sesuai dengan sistem notifikasi yang digunakan
-            if (window.wpCustomerToast) {
-                window.wpCustomerToast[type](message);
-            } else {
-                alert(message);
-            }
+        hideLoading() {
+            $('#membership-feature-modal').removeClass('loading');
         }
     };
 
-    // Initialize on document ready
+    // Initialize when document is ready
     $(document).ready(() => {
-        MembershipLevel.init();
+        MembershipFeaturesTab.init();
     });
 
 })(jQuery);

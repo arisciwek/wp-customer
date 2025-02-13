@@ -5,7 +5,7 @@
  * @subpackage  Assets/JS/Settings
  * @version     1.0.0
  * @author      arisciwek
- *
+ * 
  * Path: /wp-customer/assets/js/settings/customer-membership-features-tab-script.js
  *
  * Description: Menangani interaksi dan fungsionalitas untuk tab Membership Features
@@ -160,18 +160,37 @@
         },
 
         populateForm(data) {
+            const metadata = JSON.parse(data.metadata);
+            
+            // Populate hidden ID
             $('#feature-id').val(data.id);
-            $('#field-group').val(data.field_group);
+            
+            // Populate basic fields
             $('#field-name').val(data.field_name);
-            $('#field-label').val(data.field_label);
-            $('#field-type').val(data.field_type);
-            $('#field-subtype').val(data.field_subtype);
-            $('input[name="is_required"]').prop('checked', data.is_required == 1);
-            $('#css-class').val(data.css_class);
-            $('#css-id').val(data.css_id);
+            $('#field-group').val(metadata.group);
+            $('#field-label').val(metadata.label);
+            $('#field-type').val(metadata.type);
+            
+            // Populate field subtype if exists
+            if (metadata.type === 'number') {
+                $('.field-subtype-row').show();
+                $('#field-subtype').val(metadata.subtype || '');
+            } else {
+                $('.field-subtype-row').hide();
+                $('#field-subtype').val('');
+            }
+            
+            // Populate required checkbox
+            $('input[name="is_required"]').prop('checked', metadata.is_required);
+            
+            // Populate UI settings
+            if (metadata.ui_settings) {
+                $('#css-class').val(metadata.ui_settings.css_class || '');
+                $('#css-id').val(metadata.ui_settings.css_id || '');
+            }
+            
+            // Populate sort order
             $('#sort-order').val(data.sort_order);
-
-            this.toggleSubtypeField(data.field_type);
         },
 
         handleSubmit(e) {

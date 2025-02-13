@@ -40,22 +40,18 @@ class MembershipLevelController {
     private $validator;
     
     public function __construct() {
+
+        error_log('MembershipLevelController initialized');
         $this->model = new MembershipLevelModel();
         $this->feature_model = new MembershipFeatureModel();
         $this->cache_manager = new CustomerCacheManager();
         $this->validator = new MembershipLevelValidator();
         
-        $this->register_hooks();
-    }
-
-    public function register_hooks() {
-        add_action('wp_ajax_get_membership_level', [$this, 'handle_get_level']);
-        add_action('wp_ajax_save_membership_level', [$this, 'handle_save_level']);
-        add_action('wp_ajax_delete_membership_level', [$this, 'handle_delete_level']);
     }
 
     public function handle_get_level() {
         try {
+
             $this->verify_request('get_membership_level');
 
             $level_id = intval($_POST['id']);
@@ -65,11 +61,6 @@ class MembershipLevelController {
                 throw new \Exception(__('Level not found.', 'wp-customer'));
             }
 
-            // Hapus bagian ini karena sudah ditangani di model:
-            // if (!empty($level['capabilities'])) {
-            //     $level['capabilities'] = json_decode($level['capabilities'], true);
-            // }
-
             wp_send_json_success($level);
 
         } catch (\Exception $e) {
@@ -78,9 +69,12 @@ class MembershipLevelController {
             ]);
         }
     }
+
     public function handle_save_level() {
         try {
             $this->verify_request('save_membership_level');
+    
+            error_log('SAVE LEVEL REQUEST: ' . print_r($_POST, true));
 
             // Get and sanitize input data
             $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
@@ -166,10 +160,41 @@ class MembershipLevelController {
             'is_trial_available' => isset($post_data['is_trial_available']) ? 1 : 0,
             'trial_days' => intval($post_data['trial_days']),
             'grace_period_days' => intval($post_data['grace_period_days']),
-            'sort_order' => intval($post_data['sort_order']),
-            'capabilities' => $this->process_capabilities_data($post_data['capabilities'])
+            'sort_order' => intval($post_data['sort_order'])
         ];
 
+        // Ambil daftar fitur yang tersedia dari model
+        $feature_model = new MembershipFeatureModel();
+        $available_features = $feature_model->get_all_features_by_group();
+
+        $capabilities = [];
+        
+        // Proses setiap grup capabilities
+        foreach ($available_features as $group => $features) {
+            if (!empty($post_data[$group])) {
+                $capabilities[$group] = [];
+                foreach ($post_data[$group] as $field => $value) {
+                    // Cari fitur yang sesuai
+                    $feature = array_filter($features, function($f) use ($field) {
+                        return $f['field_name'] === $field;
+                    });
+                    
+                    if (!empty($feature)) {
+                        $feature = reset($feature);
+                        $capabilities[$group][$field] = [
+                            'field' => $field,
+                            'group' => $group,
+                            'label' => $feature['metadata']['label'],
+                            'value' => $group === 'limits' ? 
+                                intval($value) : 
+                                (bool)$value
+                        ];
+                    }
+                }
+            }
+        }
+
+        $data['capabilities'] = json_encode($capabilities);
         return $data;
     }
 

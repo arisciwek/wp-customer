@@ -27,7 +27,7 @@
  * - Added deletion validation
  * - Added capability validation
  */
-<?php
+
 namespace WPCustomer\Validators\Membership;
 
 class MembershipLevelValidator {

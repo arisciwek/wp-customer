@@ -82,12 +82,17 @@ class MembershipLevelModel {
     public function save_level($id, $data) {
         try {
             if ($id > 0) {
+
+                error_log('DATA TO SAVED ; ' . print_r($data), 1);
+                return $id;
+
                 // Update
                 $result = $this->wpdb->update(
                     $this->table,
                     $data,
                     ['id' => $id]
                 );
+
                 return $result !== false ? $id : false;
             } else {
                 // Insert
@@ -180,63 +185,67 @@ class MembershipLevelModel {
         ));
     }
     
-public function get_all_levels() {
-    // Get complete level data from database with ARRAY_A
-    $levels = $this->wpdb->get_results(
-        "SELECT * FROM {$this->table} 
-         WHERE status = 'active' 
-         ORDER BY sort_order ASC, id ASC",
-        ARRAY_A  // Menggunakan array associative
-    );
+    public function get_all_levels() {
+        // Get complete level data from database with ARRAY_A
+        $levels = $this->wpdb->get_results(
+            "SELECT * FROM {$this->table} 
+             WHERE status = 'active' 
+             ORDER BY sort_order ASC, id ASC",
+            ARRAY_A  // Menggunakan array associative
+        );
 
-    // Validate and process each level
-    if (!empty($levels)) {
-        foreach ($levels as &$level) {
-            // Format numeric values
-            $level['price_per_month'] = floatval($level['price_per_month']);
-            $level['trial_days'] = intval($level['trial_days']);
-            $level['grace_period_days'] = intval($level['grace_period_days']);
-            $level['is_trial_available'] = intval($level['is_trial_available']);
+        // Validate and process each level
+        if (!empty($levels)) {
+            foreach ($levels as &$level) {
+                // Format numeric values
+                $level['price_per_month'] = floatval($level['price_per_month']);
+                $level['trial_days'] = intval($level['trial_days']);
+                $level['grace_period_days'] = intval($level['grace_period_days']);
+                $level['is_trial_available'] = intval($level['is_trial_available']);
 
-            // Process capabilities
-            if (!empty($level['capabilities'])) {
-                $capabilities = json_decode($level['capabilities'], true);
-                if ($capabilities) {
-                    // Strukturkan capabilities ke dalam group yang sesuai
-                    foreach ($capabilities as $group => $items) {
-                        $level[$group] = $items;
+                // Process capabilities
+                if (!empty($level['capabilities'])) {
+                    $capabilities = json_decode($level['capabilities'], true);
+                    if ($capabilities) {
+                        // Strukturkan capabilities ke dalam group yang sesuai
+                        foreach ($capabilities as $group => $items) {
+                            $level[$group] = $items;
+                        }
                     }
                 }
             }
         }
+
+        return $levels;
     }
 
-    return $levels;
-}
+    public function get_all_features_by_group() {
+        $features = $this->wpdb->get_results("
+            SELECT * FROM {$this->table} 
+            WHERE status = 'active'
+            ORDER BY sort_order ASC"
+        );
 
-	public function get_all_features_by_group() {
-	    $features = $this->wpdb->get_results("
-	        SELECT * FROM {$this->table} 
-	        WHERE status = 'active'
-	        ORDER BY sort_order ASC"
-	    );
+        // Dapatkan semua grup yang unik dari metadata
+        $groups = [];
+        foreach ($features as $feature) {
+            $metadata = json_decode($feature->metadata, true);
+            $groups[$metadata['group']] = true;
+        }
 
-	    // Group features berdasarkan metadata group
-	    $grouped_features = [];
-	    foreach ($features as $feature) {
-	        $metadata = json_decode($feature->metadata, true);
-	        $group = $metadata['group'];
-	        
-	        if (!isset($grouped_features[$group])) {
-	            $grouped_features[$group] = [];
-	        }
-	        
-	        $grouped_features[$group][] = [
-	            'field_name' => $feature->field_name,
-	            'metadata' => $metadata
-	        ];
-	    }
+        // Kelompokkan fitur berdasarkan grup
+        $grouped_features = array_fill_keys(array_keys($groups), []);
+        
+        foreach ($features as $feature) {
+            $metadata = json_decode($feature->metadata, true);
+            $group = $metadata['group'];
+            
+            $grouped_features[$group][] = [
+                'field_name' => $feature->field_name,
+                'metadata' => $metadata
+            ];
+        }
 
-	    return $grouped_features;
-	}
+        return $grouped_features;
+    }
 }

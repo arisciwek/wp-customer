@@ -16,6 +16,9 @@
  *              - Group indicators
  *              - Responsive design
  */
+/**
+ * Styling untuk modal Membership Features
+ */
 #membership-feature-modal {
     position: fixed;
     top: 0;
@@ -39,7 +42,6 @@
     max-width: 800px;
     max-height: 85vh;
     overflow-y: auto;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
 }
 
 /* Modal Header */
@@ -58,14 +60,6 @@
     display: flex;
     align-items: center;
     gap: 12px;
-}
-
-.modal-icon {
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
 }
 
 /* Modal Body */
@@ -111,6 +105,28 @@
     outline: none;
 }
 
+/* Field Description */
+.description {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+    line-height: 1.4;
+}
+
+/* Required Fields */
+.required-field::after {
+    content: "*";
+    color: #dc2626;
+    margin-left: 4px;
+}
+
+/* Error Messages */
+.field-error {
+    color: #dc2626;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
 /* Modal Footer */
 .modal-footer {
     background: #f8f9fa;
@@ -120,70 +136,6 @@
     display: flex;
     justify-content: flex-end;
     gap: 8px;
-}
-
-/* Close Button */
-.modal-close {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: none;
-    background: #f3f4f6;
-    color: #6b7280;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-}
-
-.modal-close:hover {
-    background: #e5e7eb;
-    color: #374151;
-}
-
-/* Help Text */
-.description {
-    font-size: 12px;
-    color: #6b7280;
-    margin-top: 2px;
-    line-height: 1.4;
-}
-
-/* Buttons */
-.button-primary {
-    background: #2563eb;
-    color: white;
-    padding: 8px 16px;
-    border-radius: 6px;
-    border: none;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.button-primary:hover {
-    background: #1d4ed8;
-}
-
-.button-secondary {
-    background: #f3f4f6;
-    color: #374151;
-    padding: 8px 16px;
-    border-radius: 6px;
-    border: 1px solid #e5e7eb;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.button-secondary:hover {
-    background: #e5e7eb;
 }
 
 /* Loading State */
@@ -221,12 +173,5 @@
 
     .modal-footer button {
         width: 100%;
-    }
-
-    .modal-close {
-        top: 12px;
-        right: 12px;
-        width: 28px;
-        height: 28px;
     }
 }

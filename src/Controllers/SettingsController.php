@@ -24,6 +24,7 @@
 
 namespace WPCustomer\Controllers;
 
+use WPCustomer\Controllers\Membership\MembershipFeaturesController;
 use WPCustomer\Models\Membership\MembershipLevelModel;
 use WPCustomer\Models\Membership\MembershipFeatureModel;
 
@@ -38,8 +39,47 @@ class SettingsController {
         add_action('wp_ajax_reset_permissions', [$this, 'handle_reset_permissions']);
         add_action('wp_ajax_generate_demo_data', [$this, 'handle_generate_demo_data']);
         add_action('wp_ajax_check_demo_data', [$this, 'handle_check_demo_data']);
+
+        add_action('wp_ajax_get_membership_level', [$this, 'handle_get_membership_level']);
+        add_action('wp_ajax_save_membership_level', [$this, 'handle_save_membership_level']);
+        add_action('wp_ajax_delete_membership_level', [$this, 'handle_delete_membership_level']);
+
+        // Tambahkan handler untuk membership features
+        add_action('wp_ajax_get_membership_feature', [$this, 'handle_get_membership_feature']);
+        add_action('wp_ajax_save_membership_feature', [$this, 'handle_save_membership_feature']);
+        add_action('wp_ajax_delete_membership_feature', [$this, 'handle_delete_membership_feature']);
     }
 
+    // Tambahkan method penghubung untuk membership features
+    public function handle_get_membership_feature() {
+        $membership_controller = new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
+        $membership_controller->handle_get_feature();
+    }
+
+    public function handle_save_membership_feature() {
+        $membership_controller = new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
+        $membership_controller->handle_save_feature();
+    }
+
+    public function handle_delete_membership_feature() {
+        $membership_controller = new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
+        $membership_controller->handle_delete_feature();
+    }
+    
+    public function handle_get_membership_level() {
+        $membership_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
+        $membership_controller->handle_get_level();
+    }
+
+    public function handle_save_membership_level() {
+        $membership_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
+        $membership_controller->handle_save_level();
+    }
+
+    public function handle_delete_membership_level() {
+        $membership_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
+        $membership_controller->handle_delete_level();
+    }
     public function handle_reset_permissions() {
         try {
             // Verify nonce
@@ -226,7 +266,15 @@ class SettingsController {
         
         $tab = isset($allowed_tabs[$tab]) ? $tab : 'general';
 
-        if ($tab === 'membership-levels') {
+        if ($tab === 'membership-features') {
+            $membership_controller = new MembershipFeaturesController();
+            $view_data = [
+                'grouped_features' => $membership_controller->getAllFeatures(),
+                'field_groups' => $membership_controller->getFeatureGroups(),
+                'field_types' => ['checkbox', 'number', 'text'], // ini juga bisa dipisah ke constant/config
+                'field_subtypes' => ['integer', 'float', 'text']
+            ];
+        } else if ($tab === 'membership-levels') {
             $membership_level_model = new MembershipLevelModel();
             $membership_feature_model = new MembershipFeatureModel();
             
