@@ -42,6 +42,38 @@ class MembershipLevelModel {
         $this->cache_manager = new CustomerCacheManager();
     }
 
+    // Dapatkan semua group yang aktif dari features
+    public function getActiveGroups() {
+        global $wpdb;
+        $table = $wpdb->prefix . 'app_customer_membership_features';
+        
+        // Mengambil group yang unik dari metadata
+        $groups = $wpdb->get_col("
+            SELECT DISTINCT JSON_UNQUOTE(JSON_EXTRACT(metadata, '$.group'))
+            FROM {$table}
+            WHERE status = 'active'
+            ORDER BY sort_order ASC
+        ");
+        
+        return $groups;
+    }
+
+    // Dapatkan mapping group ke capabilities
+    public function getGroupMapping() {
+        // Ini bisa jadi setting di database juga
+        $default_mapping = [
+            'staff' => 'features',
+            'data' => 'features',
+            'resources' => 'limits',
+            'communication' => 'notifications'
+        ];
+
+        // Ambil custom mapping dari database/options jika ada
+        $custom_mapping = get_option('wp_customer_group_mapping', []);
+        
+        return array_merge($default_mapping, $custom_mapping);
+    }
+    
     /**
      * Get a single level by ID
      */

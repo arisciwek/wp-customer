@@ -152,50 +152,86 @@ class MembershipLevelController {
     }
 
     private function sanitize_level_data($post_data) {
-        $data = [
-            'name' => sanitize_text_field($post_data['name']),
-            'slug' => sanitize_title($post_data['name']),
-            'description' => sanitize_textarea_field($post_data['description']),
-            'price_per_month' => floatval($post_data['price_per_month']),
-            'is_trial_available' => isset($post_data['is_trial_available']) ? 1 : 0,
-            'trial_days' => intval($post_data['trial_days']),
-            'grace_period_days' => intval($post_data['grace_period_days']),
-            'sort_order' => intval($post_data['sort_order'])
-        ];
+       // Sanitize regular fields
+       $data = [
+           'name' => sanitize_text_field($post_data['name']),
+           'slug' => sanitize_title($post_data['name']),
+           'description' => sanitize_textarea_field($post_data['description']),
+           'price_per_month' => floatval($post_data['price_per_month']),
+           'is_trial_available' => isset($post_data['is_trial_available']) ? 1 : 0,
+           'trial_days' => intval($post_data['trial_days']),
+           'grace_period_days' => intval($post_data['grace_period_days']),
+           'sort_order' => intval($post_data['sort_order'])
+       ];
 
-        // Ambil daftar fitur yang tersedia dari model
-        $feature_model = new MembershipFeatureModel();
-        $available_features = $feature_model->get_all_features_by_group();
+       // Get available features with metadata from model
+       $available_features = $this->feature_model->get_all_features_by_group();
+       $capabilities = [];
 
-        $capabilities = [];
-        
-        // Proses setiap grup capabilities
-        foreach ($available_features as $group => $features) {
-            if (!empty($post_data[$group])) {
-                $capabilities[$group] = [];
-                foreach ($post_data[$group] as $field => $value) {
-                    // Cari fitur yang sesuai
-                    $feature = array_filter($features, function($f) use ($field) {
-                        return $f['field_name'] === $field;
-                    });
-                    
-                    if (!empty($feature)) {
-                        $feature = reset($feature);
-                        $capabilities[$group][$field] = [
-                            'field' => $field,
-                            'group' => $group,
-                            'label' => $feature['metadata']['label'],
-                            'value' => $group === 'limits' ? 
-                                intval($value) : 
-                                (bool)$value
-                        ];
-                    }
-                }
-            }
-        }
+       // Process features (checkboxes)
+       if (!empty($post_data['features'])) {
+           $capabilities['features'] = [];
+           foreach ($post_data['features'] as $field => $value) {
+               // Find feature metadata
+               $group = 'features';
+               $feature = $this->find_feature($available_features[$group], $field);
+               if ($feature) {
+                   $capabilities['features'][$field] = [
+                       'field' => $field,
+                       'group' => $group,
+                       'label' => $feature['metadata']['label'],
+                       'value' => ($value === 'on') // Convert "on" to true
+                   ];
+               }
+           }
+       }
 
-        $data['capabilities'] = json_encode($capabilities);
-        return $data;
+       // Process limits (numbers)
+       if (!empty($post_data['limits'])) {
+           $capabilities['limits'] = [];
+           foreach ($post_data['limits'] as $field => $value) {
+               $group = 'resources';
+               $feature = $this->find_feature($available_features[$group], $field);
+               if ($feature) {
+                   $capabilities['limits'][$field] = [
+                       'field' => $field,
+                       'group' => $group,
+                       'label' => $feature['metadata']['label'],
+                       'value' => intval($value)
+                   ];
+               }
+           }
+       }
+
+       // Process notifications if any
+       if (!empty($post_data['notifications'])) {
+           $capabilities['notifications'] = [];
+           foreach ($post_data['notifications'] as $field => $value) {
+               $group = 'communication';
+               $feature = $this->find_feature($available_features[$group], $field);
+               if ($feature) {
+                   $capabilities['notifications'][$field] = [
+                       'field' => $field,
+                       'group' => $group,
+                       'label' => $feature['metadata']['label'],
+                       'value' => ($value === 'on')
+                   ];
+               }
+           }
+       }
+
+       $data['capabilities'] = json_encode($capabilities);
+       return $data;
+    }
+
+    // Helper to find feature from available features
+    private function find_feature($features, $field_name) {
+       foreach ($features as $feature) {
+           if ($feature['field_name'] === $field_name) {
+               return $feature;
+           }
+       }
+       return null;
     }
 
     private function process_capabilities_data($capabilities) {

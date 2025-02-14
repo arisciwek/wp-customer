@@ -1,33 +1,42 @@
 <?php
 /**
- * Membership Levels Table Schema
- *
- * @package     WP_Customer
- * @subpackage  Database/Tables
- * @version     2.0.0
- * @author      arisciwek
- *
- * Path: /wp-customer/src/Database/Tables/CustomerMembershipLevelsDB.php
- *
- * Description: Mendefinisikan struktur tabel membership levels yang ditingkatkan.
- *              Includes penambahan fields untuk:
- *              - Periode membership dan harga
- *              - Trial dan grace period settings
- *              - Enhanced capabilities dengan format JSON baru
- *              Table prefix yang digunakan adalah 'app_'.
- *
- * Changelog:
- * 2.0.0 - 2024-02-08
- * - Added period and pricing fields
- * - Added trial and grace period settings
- * - Enhanced capabilities JSON structure
- * - Added department limits
- * - Added sort order for display
- * 
- * 1.0.0 - 2024-01-07
- * - Initial version
- * - Basic membership fields
- */
+* Membership Levels Table Schema
+*
+* @package     WP_Customer
+* @subpackage  Database/Tables
+* @version     1.0.2
+* @author      arisciwek
+* 
+* Path: /wp-customer/src/Database/Tables/CustomerMembershipLevelsDB.php
+*
+* Description: Mendefinisikan struktur tabel membership levels.
+*              Includes:
+*              - Basic level information (name, description, pricing)
+*              - Trial and grace period settings
+*              - JSON capabilities berdasarkan feature groups
+*              - Pengaturan khusus per level
+*              
+* Dependencies:
+* - WordPress database ($wpdb)
+* - MySQL 5.7+ untuk JSON support
+* - CustomerMembershipFeaturesDB untuk referensi feature groups
+*
+* Changelog:
+* 1.0.2 - 2025-02-14
+* - Updated capabilities JSON structure to match feature groups
+* - Added settings column for level-specific configurations
+* - Enhanced documentation
+* 
+* 1.0.1 - 2025-02-11 
+* - Added period and pricing fields
+* - Added trial and grace period settings
+* - Enhanced capabilities JSON structure
+* - Added sort order for display
+* 
+* 1.0.0 - 2025-01-27
+* - Initial version
+* - Basic membership fields
+*/
 
 namespace WPCustomer\Database\Tables;
 
@@ -56,6 +65,7 @@ class CustomerMembershipLevelsDB {
             grace_period_days int NOT NULL DEFAULT 0,
             sort_order int NOT NULL DEFAULT 0,
             capabilities JSON NULL,
+            settings JSON NULL,           /* Tambahan untuk pengaturan level spesifik */
             created_by bigint(20) NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
@@ -63,7 +73,8 @@ class CustomerMembershipLevelsDB {
             PRIMARY KEY  (id),
             UNIQUE KEY slug (slug),
             KEY status (status),
-            KEY created_by_index (created_by)
+            KEY created_by_index (created_by),
+            KEY sort_order_index (sort_order)
         ) $charset_collate;";
     }
 }

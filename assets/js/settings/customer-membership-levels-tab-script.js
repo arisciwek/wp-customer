@@ -164,7 +164,49 @@
             $('#level-id').val(data.id);
             $('#level-name').val(data.name);
             $('#level-description').val(data.description);
-            $('#level-price').val(data.price_per_month);
+            $('#price-per-month').val(data.price_per_month);
+            
+            // Trial & Grace Period
+            $('#is-trial-available').prop('checked', data.is_trial_available == 1).trigger('change');
+            $('#trial-days').val(data.trial_days);
+            $('#grace-period-days').val(data.grace_period_days);
+            $('#sort-order').val(data.sort_order);
+
+            // Populate ALL capability groups dynamically
+            if (data.capabilities) {
+                const caps = typeof data.capabilities === 'string' ? 
+                    JSON.parse(data.capabilities) : data.capabilities;
+                
+                // Loop through ALL groups in capabilities
+                Object.entries(caps).forEach(([group, items]) => {
+                    Object.entries(items).forEach(([key, item]) => {
+                        const input = $(`input[name="${group}[${key}]"]`);
+                        if (input.length) {
+                            if (input.attr('type') === 'checkbox') {
+                                input.prop('checked', item.value);
+                            } else if (input.attr('type') === 'number') {
+                                input.val(item.value);
+                            } else {
+                                input.val(item.value);
+                            }
+                        }
+                    });
+                });
+            }
+
+            console.log('Form population complete');
+        },
+
+        /*
+        populateForm(data) {
+            console.log('Populating form with data:', data);
+            
+            // Basic fields
+            $('#level-id').val(data.id);
+            $('#level-name').val(data.name);
+            $('#level-description').val(data.description);
+            $('#price-per-month').val(data.price_per_month);
+
             $('#max-staff').val(data.max_staff);
             $('#max-departments').val(data.max_departments);
             
@@ -198,6 +240,8 @@
 
             console.log('Form population complete');
         },
+        */
+
 
         handleSubmit() {
             const formData = this.form.serializeArray();

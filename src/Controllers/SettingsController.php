@@ -283,7 +283,6 @@ class SettingsController {
                 'grouped_features' => $membership_feature_model->get_all_features_by_group()
             ];
 
-                    error_log('grouped_features ' . print_r($view_data['grouped_features']));
         }
         
         $tab_file = WP_CUSTOMER_PATH . 'src/Views/templates/settings/' . $allowed_tabs[$tab];

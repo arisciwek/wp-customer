@@ -4,26 +4,32 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Demo
- * @version     2.0.0
+ * @version     2.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Demo/MembershipFeaturesDemoData.php
- *
- * Description: Generate demo data for membership features with JSON metadata structure.
- *              Uses MembershipFeaturesDB default definitions.
- *              Must run before MembershipLevelsDemoData.
+ * 
+ * Description: Generate demo data untuk membership features dan groups.
+ *              Includes:
+ *              - Setup default feature groups
+ *              - Setup default features dengan metadata
+ *              - Relasi antara feature dan groups
  *              
  * Dependencies:
  * - AbstractDemoData base class
- * - DemoDataHelperTrait
- * - MembershipFeaturesDB for feature definitions
+ * - CustomerDemoDataHelperTrait
+ * - MembershipFeaturesDB untuk definisi tabel
  * 
  * Changelog:
+ * 2.1.0 - 2025-02-14
+ * - Added feature groups data
+ * - Updated feature structure with group_id
+ * - Updated JSON metadata format
+ * 
  * 2.0.0 - 2025-02-11
- * - Updated to use JSON metadata structure
+ * - Updated to use JSON metadata
  * - Enhanced feature grouping system
  * - Added more detailed feature attributes
- * - Improved error handling
  * 
  * 1.0.0 - 2025-01-27
  * - Initial version
@@ -82,17 +88,9 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
             if ($this->shouldClearData()) {
                 $this->clearExistingData();
             }
-
-            $this->insertDefaultFeatures();
             
-            // Get and store the generated feature IDs
-            $this->feature_ids = $this->wpdb->get_col(
-                "SELECT id FROM {$this->wpdb->prefix}app_customer_membership_features 
-                 WHERE status = 'active' 
-                 ORDER BY sort_order"
-            );
-
-            $this->debug("Generated " . count($this->feature_ids) . " membership features");
+            $group_ids = $this->insertDefaultGroups();
+            $this->insertDefaultFeatures($group_ids);
 
         } catch (\Exception $e) {
             $this->debug("Error in feature generation: " . $e->getMessage());
@@ -100,24 +98,57 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
         }
     }
 
-    /**
-     * Insert default features with JSON metadata
-     */
-    private function insertDefaultFeatures(): void {
+    private function insertDefaultGroups(): array {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'app_customer_membership_feature_groups';
+        $current_user_id = get_current_user_id();
+
+        $groups = [
+            [
+                'name' => 'Staff Management',
+                'slug' => 'staff',
+                'capability_group' => 'features',
+                'description' => 'Fitur terkait pengelolaan staff',
+                'sort_order' => 10,
+                'created_by' => $current_user_id
+            ],
+            [
+                'name' => 'Data Management',
+                'slug' => 'data',
+                'capability_group' => 'features',
+                'description' => 'Fitur terkait pengelolaan data',
+                'sort_order' => 20,
+                'created_by' => $current_user_id
+            ],
+            // ... tambahkan groups lainnya
+        ];
+
+        $group_ids = [];
+        foreach ($groups as $group) {
+            $wpdb->insert($table_name, $group);
+            $group_ids[$group['slug']] = $wpdb->insert_id;
+        }
+
+        return $group_ids;
+    }
+
+    private function insertDefaultFeatures(array $group_ids): void {
         global $wpdb;
         $table_name = $wpdb->prefix . 'app_customer_membership_features';
         $current_user_id = get_current_user_id();
 
-        $defaults = [
+        $features = [
             // Staff Management Features
             [
                 'field_name' => 'can_add_staff',
+                'group_id' => $group_ids['staff'],
                 'metadata' => json_encode([
-                    'group' => 'staff',
+                    'field' => 'can_add_staff',  // Mirror field_name
+                    'group' => 'staff',          // Mirror group dari group_ids
+                    'type' => 'checkbox',
                     'label' => 'Dapat Menambah Staff',
                     'description' => 'Kemampuan untuk menambah staff baru',
-                    'type' => 'checkbox',
-                    'is_required' => true,
+                    'is_required' => false,
                     'ui_settings' => [
                         'css_class' => 'feature-checkbox',
                         'icon' => 'dashicons-groups'
@@ -131,12 +162,14 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
             // Data Management Features
             [
                 'field_name' => 'can_export',
+                'group_id' => $group_ids['data'],
                 'metadata' => json_encode([
-                    'group' => 'data',
-                    'label' => 'Dapat Export Data',
-                    'description' => 'Kemampuan untuk mengexport data',
+                    'field' => 'can_export',     // Mirror field_name
+                    'group' => 'data',           // Mirror group dari group_ids
                     'type' => 'checkbox',
-                    'is_required' => true,
+                    'label' => 'Dapat Export Data',
+                    'description' => 'Kemampuan untuk mengekspor data',
+                    'is_required' => false,
                     'ui_settings' => [
                         'css_class' => 'feature-checkbox',
                         'icon' => 'dashicons-download'
@@ -148,12 +181,14 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
             ],
             [
                 'field_name' => 'can_bulk_import',
+                'group_id' => $group_ids['data'],
                 'metadata' => json_encode([
-                    'group' => 'data',
+                    'field' => 'can_bulk_import', // Mirror field_name
+                    'group' => 'data',            // Mirror group dari group_ids
+                    'type' => 'checkbox',
                     'label' => 'Dapat Bulk Import',
                     'description' => 'Kemampuan untuk melakukan import massal',
-                    'type' => 'checkbox',
-                    'is_required' => true,
+                    'is_required' => false,
                     'ui_settings' => [
                         'css_class' => 'feature-checkbox',
                         'icon' => 'dashicons-upload'
@@ -167,12 +202,14 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
             // Resource Limits
             [
                 'field_name' => 'max_staff',
+                'group_id' => $group_ids['resources'],
                 'metadata' => json_encode([
-                    'group' => 'resources',
+                    'field' => 'max_staff',      // Mirror field_name
+                    'group' => 'resources',       // Mirror group dari group_ids
+                    'type' => 'number',
                     'label' => 'Maksimal Staff',
                     'description' => 'Jumlah maksimal staff yang dapat ditambahkan',
-                    'type' => 'number',
-                    'is_required' => true,
+                    'is_required' => false,
                     'ui_settings' => [
                         'css_class' => 'limit-number',
                         'min' => -1,
@@ -186,12 +223,14 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
             ],
             [
                 'field_name' => 'max_departments',
+                'group_id' => $group_ids['resources'],
                 'metadata' => json_encode([
-                    'group' => 'resources',
+                    'field' => 'max_departments', // Mirror field_name
+                    'group' => 'resources',       // Mirror group dari group_ids
+                    'type' => 'number',
                     'label' => 'Maksimal Departemen',
                     'description' => 'Jumlah maksimal departemen yang dapat dibuat',
-                    'type' => 'number',
-                    'is_required' => true,
+                    'is_required' => false,
                     'ui_settings' => [
                         'css_class' => 'limit-number',
                         'min' => -1,
@@ -207,12 +246,14 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
             // Communication Features
             [
                 'field_name' => 'email_notifications',
+                'group_id' => $group_ids['communication'],
                 'metadata' => json_encode([
-                    'group' => 'communication',
+                    'field' => 'email_notifications', // Mirror field_name
+                    'group' => 'communication',       // Mirror group dari group_ids
+                    'type' => 'checkbox',
                     'label' => 'Notifikasi Email',
                     'description' => 'Aktifkan notifikasi via email',
-                    'type' => 'checkbox',
-                    'is_required' => true,
+                    'is_required' => false,
                     'ui_settings' => [
                         'css_class' => 'notification-checkbox',
                         'icon' => 'dashicons-email'
@@ -224,12 +265,14 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
             ],
             [
                 'field_name' => 'dashboard_notifications',
+                'group_id' => $group_ids['communication'],
                 'metadata' => json_encode([
-                    'group' => 'communication',
+                    'field' => 'dashboard_notifications', // Mirror field_name
+                    'group' => 'communication',           // Mirror group dari group_ids
+                    'type' => 'checkbox',
                     'label' => 'Notifikasi Dashboard',
                     'description' => 'Aktifkan notifikasi di dashboard',
-                    'type' => 'checkbox',
-                    'is_required' => true,
+                    'is_required' => false,
                     'ui_settings' => [
                         'css_class' => 'notification-checkbox',
                         'icon' => 'dashicons-bell'
@@ -241,11 +284,8 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
             ]
         ];
 
-        foreach ($defaults as $feature) {
-            $result = $wpdb->insert($table_name, $feature);
-            if ($result === false) {
-                throw new \Exception("Failed to insert feature: {$feature['field_name']}. Error: {$wpdb->last_error}");
-            }
+        foreach ($features as $feature) {
+            $wpdb->insert($table_name, $feature);
         }
     }
 
