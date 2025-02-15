@@ -156,7 +156,6 @@
                 }
             });
         },
-
         populateForm(data) {
             console.log('Populating form with data:', data);
             
@@ -172,77 +171,123 @@
             $('#grace-period-days').val(data.grace_period_days);
             $('#sort-order').val(data.sort_order);
 
-            // Populate ALL capability groups dynamically
+            // Populate capabilities sesuai struktur form
             if (data.capabilities) {
-                const caps = typeof data.capabilities === 'string' ? 
-                    JSON.parse(data.capabilities) : data.capabilities;
-                
-                // Loop through ALL groups in capabilities
-                Object.entries(caps).forEach(([group, items]) => {
-                    Object.entries(items).forEach(([key, item]) => {
-                        const input = $(`input[name="${group}[${key}]"]`);
-                        if (input.length) {
-                            if (input.attr('type') === 'checkbox') {
-                                input.prop('checked', item.value);
-                            } else if (input.attr('type') === 'number') {
-                                input.val(item.value);
-                            } else {
-                                input.val(item.value);
-                            }
-                        }
+                // Handle staff & data features
+                if (data.capabilities.staff || data.capabilities.data) {
+                    Object.entries(data.capabilities.staff || {}).forEach(([key, item]) => {
+                        $(`input[name="features[${key}]"]`).prop('checked', item.value);
                     });
-                });
+                    Object.entries(data.capabilities.data || {}).forEach(([key, item]) => {
+                        $(`input[name="features[${key}]"]`).prop('checked', item.value);
+                    });
+                }
+                
+                // Handle resource limits
+                if (data.capabilities.resources) {
+                    Object.entries(data.capabilities.resources).forEach(([key, item]) => {
+                        $(`input[name="limits[${key}]"]`).val(item.value);
+                    });
+                }
+
+                // Handle communication notifications
+                if (data.capabilities.communication) {
+                    Object.entries(data.capabilities.communication).forEach(([key, item]) => {
+                        $(`input[name="notifications[${key}]"]`).prop('checked', item.value);
+                    });
+                }
             }
 
             console.log('Form population complete');
         },
 
+        /********************/
+
+        handleSubmit() {
+            const formData = this.form.serializeArray();
+            
+            // Transform form data to proper structure
+            const processedData = {
+                ...this.processRegularFields(formData),
+                capabilities: this.processCapabilities(formData)
+            };
+
+            $.ajax({
+                url: wpCustomerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'save_membership_level',
+                    nonce: wpCustomerData.nonce,
+                    ...processedData
+                },
+                beforeSend: () => {
+                    this.form.addClass('loading');
+                    this.form.find('button[type="submit"]').prop('disabled', true);
+                },
+                success: (response) => {
+                    if (response.success) {
+                        this.showMessage(response.data.message);
+                        this.closeModal();
+                        window.location.reload();
+                    } else {
+                        this.showMessage(response.data.message, 'error');
+                    }
+                },
+                error: (xhr, status, error) => {
+                    this.showMessage('Failed to save membership level', 'error');
+                    console.error(error);
+                },
+                complete: () => {
+                    this.form.removeClass('loading');
+                    this.form.find('button[type="submit"]').prop('disabled', false);
+                }
+            });
+        },
+
+        processRegularFields(formData) {
+            const regularFields = {};
+            formData.forEach(item => {
+                if (!item.name.startsWith('capabilities[')) {
+                    regularFields[item.name] = item.value;
+                }
+            });
+            return regularFields;
+        },
+
+        processCapabilities(formData) {
+            const capabilities = {
+                staff: {},
+                data: {},
+                resources: {},
+                communication: {}
+            };
+
+            // Process checkboxes - set explicit false for unchecked
+            this.form.find('input[type="checkbox"][name^="capabilities"]').each(function() {
+                const name = $(this).attr('name');
+                const matches = name.match(/capabilities\[(.*?)\]\[(.*?)\]/);
+                if (matches) {
+                    const [, group, field] = matches;
+                    capabilities[group][field] = this.checked;
+                }
+            });
+
+            // Process number inputs - set 0 or actual value
+            this.form.find('input[type="number"][name^="capabilities"]').each(function() {
+                const name = $(this).attr('name');
+                const matches = name.match(/capabilities\[(.*?)\]\[(.*?)\]/);
+                if (matches) {
+                    const [, group, field] = matches;
+                    const value = $(this).val();
+                    capabilities[group][field] = value === '' ? 0 : parseInt(value);
+                }
+            });
+
+            return capabilities;
+        },
+
+        /********************/
         /*
-        populateForm(data) {
-            console.log('Populating form with data:', data);
-            
-            // Basic fields
-            $('#level-id').val(data.id);
-            $('#level-name').val(data.name);
-            $('#level-description').val(data.description);
-            $('#price-per-month').val(data.price_per_month);
-
-            $('#max-staff').val(data.max_staff);
-            $('#max-departments').val(data.max_departments);
-            
-            // Trial & Grace Period
-            $('#is-trial-available').prop('checked', data.is_trial_available == 1).trigger('change');
-            $('#trial-days').val(data.trial_days);
-            $('#grace-period-days').val(data.grace_period_days);
-
-            // Populate capabilities
-            if (data.capabilities) {
-                const caps = typeof data.capabilities === 'string' ? 
-                    JSON.parse(data.capabilities) : data.capabilities;
-                
-                // Features
-                if (caps.features) {
-                    Object.entries(caps.features).forEach(([key, feature]) => {
-                        // Di sini valuenya ada di dalam object feature
-                        $(`input[name="features[${key}]"]`).prop('checked', feature.value);
-                    });
-                }
-
-                // Limits sudah terhandle oleh field max_staff dan max_departments di atas
-
-                // Notifications
-                if (caps.notifications) {
-                    Object.entries(caps.notifications).forEach(([key, value]) => {
-                        $(`input[name="notifications[${key}]"]`).prop('checked', value);
-                    });
-                }
-            }
-
-            console.log('Form population complete');
-        },
-        */
-
-
         handleSubmit() {
             const formData = this.form.serializeArray();
             
@@ -281,6 +326,7 @@
                 }
             });
         },
+        */
 
         processFormData(formData) {
             const processed = {

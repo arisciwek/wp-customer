@@ -42,17 +42,6 @@ defined('ABSPATH') || exit;
 class MembershipFeaturesDemoData extends AbstractDemoData {
     use CustomerDemoDataHelperTrait;
 
-    // Track generated feature IDs for reference
-    private $feature_ids = [];
-
-    // Default feature groups
-    private const FEATURE_GROUPS = [
-        'staff',
-        'data',
-        'resources',
-        'communication'
-    ];
-
     protected function validate(): bool {
         try {
             if (!$this->isDevelopmentMode()) {
@@ -83,20 +72,52 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
         }
     }
 
+    private function getExistingGroupIds(): array {
+        global $wpdb;
+        
+        // Get group IDs by slug
+        $groups = $wpdb->get_results("
+            SELECT id, slug 
+            FROM {$wpdb->prefix}app_customer_membership_feature_groups 
+            WHERE status = 'active'
+        ", ARRAY_A);
+
+        if (empty($groups)) {
+            throw new \Exception('Feature groups belum dibuat. Harap generate feature groups terlebih dahulu.');
+        }
+
+        // Map slug ke id
+        $group_ids = [];
+        foreach ($groups as $group) {
+            $group_ids[$group['slug']] = $group['id'];
+        }
+
+        // Log untuk debugging
+        $this->debug('Found group IDs: ' . print_r($group_ids, true));
+
+        return $group_ids;
+    }
+
     protected function generate(): void {
         try {
             if ($this->shouldClearData()) {
                 $this->clearExistingData();
             }
             
-            $group_ids = $this->insertDefaultGroups();
+            // Ambil group IDs yang ada
+            $group_ids = $this->getExistingGroupIds();
+            
+            // Insert features dengan group_ids yang sesuai
             $this->insertDefaultFeatures($group_ids);
+            
+            $this->debug('Demo data generation completed successfully');
 
         } catch (\Exception $e) {
             $this->debug("Error in feature generation: " . $e->getMessage());
             throw $e;
         }
     }
+
 
     private function insertDefaultGroups(): array {
         global $wpdb;
@@ -120,13 +141,31 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
                 'sort_order' => 20,
                 'created_by' => $current_user_id
             ],
-            // ... tambahkan groups lainnya
+            [
+               'name' => 'Resource Management',
+               'slug' => 'resources',
+               'capability_group' => 'limits',
+               'description' => 'Fitur terkait batasan sumber daya',
+               'sort_order' => 30,
+               'created_by' => $current_user_id
+            ],
+            [
+               'name' => 'Communication',
+               'slug' => 'communication', 
+               'capability_group' => 'notifications',
+               'description' => 'Fitur terkait notifikasi dan komunikasi',
+               'sort_order' => 40,
+               'created_by' => $current_user_id
+            ]
         ];
 
         $group_ids = [];
         foreach ($groups as $group) {
             $wpdb->insert($table_name, $group);
             $group_ids[$group['slug']] = $wpdb->insert_id;
+            
+            // Log untuk debugging
+            $this->debug("Inserted group {$group['name']} with ID: {$wpdb->insert_id}");
         }
 
         return $group_ids;
@@ -137,15 +176,17 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
         $table_name = $wpdb->prefix . 'app_customer_membership_features';
         $current_user_id = get_current_user_id();
 
+        $this->debug('Starting feature insertion with group IDs: ' . print_r($group_ids, true));
+
         $features = [
             // Staff Management Features
             [
                 'field_name' => 'can_add_staff',
                 'group_id' => $group_ids['staff'],
                 'metadata' => json_encode([
-                    'field' => 'can_add_staff',  // Mirror field_name
-                    'group' => 'staff',          // Mirror group dari group_ids
                     'type' => 'checkbox',
+                    'field' => 'can_add_staff',
+                    'group' => 'staff',
                     'label' => 'Dapat Menambah Staff',
                     'description' => 'Kemampuan untuk menambah staff baru',
                     'is_required' => false,
@@ -164,9 +205,9 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
                 'field_name' => 'can_export',
                 'group_id' => $group_ids['data'],
                 'metadata' => json_encode([
-                    'field' => 'can_export',     // Mirror field_name
-                    'group' => 'data',           // Mirror group dari group_ids
                     'type' => 'checkbox',
+                    'field' => 'can_export',
+                    'group' => 'data',
                     'label' => 'Dapat Export Data',
                     'description' => 'Kemampuan untuk mengekspor data',
                     'is_required' => false,
@@ -183,9 +224,9 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
                 'field_name' => 'can_bulk_import',
                 'group_id' => $group_ids['data'],
                 'metadata' => json_encode([
-                    'field' => 'can_bulk_import', // Mirror field_name
-                    'group' => 'data',            // Mirror group dari group_ids
                     'type' => 'checkbox',
+                    'field' => 'can_bulk_import',
+                    'group' => 'data',
                     'label' => 'Dapat Bulk Import',
                     'description' => 'Kemampuan untuk melakukan import massal',
                     'is_required' => false,
@@ -204,9 +245,9 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
                 'field_name' => 'max_staff',
                 'group_id' => $group_ids['resources'],
                 'metadata' => json_encode([
-                    'field' => 'max_staff',      // Mirror field_name
-                    'group' => 'resources',       // Mirror group dari group_ids
                     'type' => 'number',
+                    'field' => 'max_staff',
+                    'group' => 'resources',
                     'label' => 'Maksimal Staff',
                     'description' => 'Jumlah maksimal staff yang dapat ditambahkan',
                     'is_required' => false,
@@ -225,9 +266,9 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
                 'field_name' => 'max_departments',
                 'group_id' => $group_ids['resources'],
                 'metadata' => json_encode([
-                    'field' => 'max_departments', // Mirror field_name
-                    'group' => 'resources',       // Mirror group dari group_ids
                     'type' => 'number',
+                    'field' => 'max_departments',
+                    'group' => 'resources',
                     'label' => 'Maksimal Departemen',
                     'description' => 'Jumlah maksimal departemen yang dapat dibuat',
                     'is_required' => false,
@@ -248,9 +289,9 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
                 'field_name' => 'email_notifications',
                 'group_id' => $group_ids['communication'],
                 'metadata' => json_encode([
-                    'field' => 'email_notifications', // Mirror field_name
-                    'group' => 'communication',       // Mirror group dari group_ids
                     'type' => 'checkbox',
+                    'field' => 'email_notifications',
+                    'group' => 'communication',
                     'label' => 'Notifikasi Email',
                     'description' => 'Aktifkan notifikasi via email',
                     'is_required' => false,
@@ -267,9 +308,9 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
                 'field_name' => 'dashboard_notifications',
                 'group_id' => $group_ids['communication'],
                 'metadata' => json_encode([
-                    'field' => 'dashboard_notifications', // Mirror field_name
-                    'group' => 'communication',           // Mirror group dari group_ids
                     'type' => 'checkbox',
+                    'field' => 'dashboard_notifications',
+                    'group' => 'communication',
                     'label' => 'Notifikasi Dashboard',
                     'description' => 'Aktifkan notifikasi di dashboard',
                     'is_required' => false,
@@ -285,13 +326,16 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
         ];
 
         foreach ($features as $feature) {
-            $wpdb->insert($table_name, $feature);
+            $result = $wpdb->insert($table_name, $feature);
+            if ($result === false) {
+                $this->debug("Failed to insert feature: " . print_r($feature, true));
+                $this->debug("Database error: " . $wpdb->last_error);
+            } else {
+                $this->debug("Successfully inserted feature: {$feature['field_name']} with ID: {$wpdb->insert_id}");
+            }
         }
     }
 
-    /**
-     * Clear existing membership features
-     */
     private function clearExistingData(): void {
         try {
             $this->wpdb->query("START TRANSACTION");
@@ -316,30 +360,5 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
             $this->debug("Error clearing data: " . $e->getMessage());
             throw $e;
         }
-    }
-
-    /**
-     * Get array of generated feature IDs
-     */
-    public function getFeatureIds(): array {
-        return $this->feature_ids;
-    }
-
-    /**
-     * Validate JSON metadata structure
-     */
-    private function validateMetadata(array $metadata): bool {
-        $required_fields = ['group', 'label', 'type', 'is_required'];
-        foreach ($required_fields as $field) {
-            if (!isset($metadata[$field])) {
-                return false;
-            }
-        }
-
-        if (!in_array($metadata['group'], self::FEATURE_GROUPS)) {
-            return false;
-        }
-
-        return true;
     }
 }

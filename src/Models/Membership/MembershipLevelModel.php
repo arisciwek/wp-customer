@@ -114,10 +114,6 @@ class MembershipLevelModel {
     public function save_level($id, $data) {
         try {
             if ($id > 0) {
-
-                error_log('DATA TO SAVED ; ' . print_r($data), 1);
-                return $id;
-
                 // Update
                 $result = $this->wpdb->update(
                     $this->table,

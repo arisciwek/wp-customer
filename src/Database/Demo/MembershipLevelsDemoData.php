@@ -367,6 +367,11 @@ class MembershipLevelsDemoData extends AbstractDemoData {
                 'enabled' => true,
                 'reminder_days' => [7, 3, 1],
                 'grace_period_action' => 'suspend'
+            ],
+            'customization' =>[
+                'can_customize_invoice' => true,
+                'can_use_custom_domain' => true,
+                'can_customize_email_template' =>true
             ]
         ];
 

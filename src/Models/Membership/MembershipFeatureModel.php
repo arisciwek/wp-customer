@@ -18,19 +18,41 @@
 
 namespace WPCustomer\Models\Membership;
 
+use WPCustomer\Cache\CustomerCacheManager;
+
 class MembershipFeatureModel {
     /**
      * Table name
      * @var string
      */
-    private $table;
+    private $wpdb;
+    private $cache_manager;
+    private $table;  // Tambahkan ini
+    private $table_groups;
+    private $table_features;
+    
     
     /**
      * Constructor
      */
     public function __construct() {
         global $wpdb;
-        $this->table = $wpdb->prefix . 'app_customer_membership_features';
+        $this->wpdb = $wpdb;
+        $this->cache_manager = new CustomerCacheManager();
+        $this->table = $wpdb->prefix . 'app_customer_membership_features';  // Inisialisasi table
+        $this->table_groups = $wpdb->prefix . 'app_customer_membership_feature_groups';
+        $this->table_features = $wpdb->prefix . 'app_customer_membership_features';
+    }
+
+    /**
+     * Get feature group by ID
+     */
+    public function get_feature_group($group_id) {
+        return $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT * FROM {$this->wpdb->prefix}app_customer_membership_feature_groups 
+             WHERE id = %d AND status = 'active'",
+            $group_id
+        ));
     }
 
     /**
@@ -39,10 +61,9 @@ class MembershipFeatureModel {
      * @return array|null Array of feature objects or null on error
      */
     public function get_active_features() {
-        global $wpdb;
-        
+        // Tidak perlu global $wpdb lagi karena sudah ada di property
         try {
-            return $wpdb->get_results("
+            return $this->wpdb->get_results("
                 SELECT * FROM {$this->table} 
                 WHERE status = 'active'
                 ORDER BY sort_order ASC
@@ -53,6 +74,105 @@ class MembershipFeatureModel {
             }
             return null;
         }
+    }
+
+    public function getActiveGroupsAndFeatures() {
+        // Coba ambil dari cache dulu
+        $cached_data = $this->cache_manager->get('membership_groups_features');
+        if ($cached_data !== null) {
+            error_log('Data diambil dari cache');
+            return $cached_data;
+        }
+        
+        error_log('Cache miss - mengambil dari database');
+        
+        // Jika tidak ada cache, ambil dari database
+        $data = [];
+        
+        // Ambil active groups
+        $active_groups = $this->wpdb->get_results("
+            SELECT * FROM {$this->table_groups} 
+            WHERE status = 'active' 
+            ORDER BY sort_order ASC
+        ", ARRAY_A);
+        
+        // Untuk setiap group, ambil features-nya
+        foreach ($active_groups as $group) {
+            $query = $this->wpdb->prepare("
+                SELECT * FROM {$this->table_features} 
+                WHERE group_id = %d AND status = 'active'
+                ORDER BY sort_order ASC
+            ", $group['id']);
+            
+            $group_features = $this->wpdb->get_results($query, ARRAY_A);
+            
+            $data[] = [
+                'group' => $group,
+                'features' => $group_features
+            ];
+        }
+        
+        // Simpan ke cache selama 1 jam
+        $this->cache_manager->set('membership_groups_features', $data, HOUR_IN_SECONDS);
+        
+        return $data;
+    }
+
+    /**
+     * Check if group exists by slug
+     */
+    public function group_exists_by_slug($slug, $exclude_id = null) {
+        $query = "SELECT COUNT(*) FROM {$this->wpdb->prefix}app_customer_membership_feature_groups 
+                  WHERE slug = %s AND status = 'active'";
+        $params = [$slug];
+
+        if ($exclude_id) {
+            $query .= " AND id != %d";
+            $params[] = $exclude_id;
+        }
+
+        return (bool) $this->wpdb->get_var($this->wpdb->prepare($query, $params));
+    }
+
+    /**
+     * Save or update feature group
+     */
+    public function save_feature_group($id, $data) {
+        if ($id > 0) {
+            return $this->wpdb->update(
+                $this->wpdb->prefix . 'app_customer_membership_feature_groups',
+                $data,
+                ['id' => $id]
+            ) !== false ? $id : false;
+        } else {
+            $result = $this->wpdb->insert(
+                $this->wpdb->prefix . 'app_customer_membership_feature_groups',
+                $data
+            );
+            return $result ? $this->wpdb->insert_id : false;
+        }
+    }
+
+    /**
+     * Check if group has any features
+     */
+    public function group_has_features($group_id) {
+        return (bool) $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT COUNT(*) FROM {$this->wpdb->prefix}app_customer_membership_features 
+             WHERE group_id = %d AND status = 'active'",
+            $group_id
+        ));
+    }
+
+    /**
+     * Delete feature group (soft delete)
+     */
+    public function delete_feature_group($group_id) {
+        return $this->wpdb->update(
+            $this->wpdb->prefix . 'app_customer_membership_feature_groups',
+            ['status' => 'inactive'],
+            ['id' => $group_id]
+        ) !== false;
     }
 
     /**
@@ -177,5 +297,35 @@ class MembershipFeatureModel {
             }
             return [];
         }
-    }    
+    }
+
+    /**
+     * Get mapping between groups and capability sections
+     */
+    public function get_group_capability_mapping() {
+        global $wpdb;
+        
+        // Coba ambil dari cache dulu
+        $mapping = wp_cache_get('membership_group_capability_mapping');
+        
+        if ($mapping === false) {
+            $results = $wpdb->get_results("
+                SELECT slug, capability_group 
+                FROM {$wpdb->prefix}app_customer_membership_feature_groups 
+                WHERE status = 'active'
+            ", ARRAY_A);
+
+            $mapping = [];
+            foreach ($results as $row) {
+                $mapping[$row['slug']] = $row['capability_group'];
+            }
+            
+            // Simpan ke cache
+            wp_cache_set('membership_group_capability_mapping', $mapping, '', HOUR_IN_SECONDS);
+        }
+        
+        return $mapping;
+    }
+
+    
 }

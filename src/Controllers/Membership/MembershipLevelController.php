@@ -74,8 +74,8 @@ class MembershipLevelController {
         try {
             $this->verify_request('save_membership_level');
     
-            error_log('SAVE LEVEL REQUEST: ' . print_r($_POST, true));
-
+            error_log('SAVE LEVEL REQUEST: ' . json_encode($_POST));
+            
             // Get and sanitize input data
             $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
             $data = $this->sanitize_level_data($_POST);
@@ -152,86 +152,107 @@ class MembershipLevelController {
     }
 
     private function sanitize_level_data($post_data) {
-       // Sanitize regular fields
-       $data = [
-           'name' => sanitize_text_field($post_data['name']),
-           'slug' => sanitize_title($post_data['name']),
-           'description' => sanitize_textarea_field($post_data['description']),
-           'price_per_month' => floatval($post_data['price_per_month']),
-           'is_trial_available' => isset($post_data['is_trial_available']) ? 1 : 0,
-           'trial_days' => intval($post_data['trial_days']),
-           'grace_period_days' => intval($post_data['grace_period_days']),
-           'sort_order' => intval($post_data['sort_order'])
-       ];
+        error_log('POST DATA: ' . json_encode($post_data));
 
-       // Get available features with metadata from model
-       $available_features = $this->feature_model->get_all_features_by_group();
-       $capabilities = [];
+        // Sanitize regular fields
+        $data = [
+            'name' => sanitize_text_field($post_data['name']),
+            'slug' => sanitize_title($post_data['name']),
+            'description' => sanitize_textarea_field($post_data['description']),
+            'price_per_month' => floatval($post_data['price_per_month']),
+            'is_trial_available' => isset($post_data['is_trial_available']) ? 1 : 0,
+            'trial_days' => isset($post_data['trial_days']) ? intval($post_data['trial_days']) : 0,
+            'grace_period_days' => isset($post_data['grace_period_days']) ? intval($post_data['grace_period_days']) : 0,
+            'sort_order' => intval($post_data['sort_order'])
+        ];
 
-       // Process features (checkboxes)
-       if (!empty($post_data['features'])) {
-           $capabilities['features'] = [];
-           foreach ($post_data['features'] as $field => $value) {
-               // Find feature metadata
-               $group = 'features';
-               $feature = $this->find_feature($available_features[$group], $field);
-               if ($feature) {
-                   $capabilities['features'][$field] = [
-                       'field' => $field,
-                       'group' => $group,
-                       'label' => $feature['metadata']['label'],
-                       'value' => ($value === 'on') // Convert "on" to true
-                   ];
-               }
-           }
-       }
+        // Get available features with metadata from model
+        $available_features = $this->feature_model->get_all_features_by_group();
+        $capability_mapping = $this->feature_model->get_group_capability_mapping();
+        
+        error_log('AVAILABLE FEATURES: ' . json_encode($available_features));
+        error_log('CAPABILITY MAPPING: ' . json_encode($capability_mapping));
 
-       // Process limits (numbers)
-       if (!empty($post_data['limits'])) {
-           $capabilities['limits'] = [];
-           foreach ($post_data['limits'] as $field => $value) {
-               $group = 'resources';
-               $feature = $this->find_feature($available_features[$group], $field);
-               if ($feature) {
-                   $capabilities['limits'][$field] = [
-                       'field' => $field,
-                       'group' => $group,
-                       'label' => $feature['metadata']['label'],
-                       'value' => intval($value)
-                   ];
-               }
-           }
-       }
+        // Initialize capabilities dengan section yang diperlukan
+        $capabilities = [
+            'features' => [],
+            'limits' => [],
+            'notifications' => []
+        ];
 
-       // Process notifications if any
-       if (!empty($post_data['notifications'])) {
-           $capabilities['notifications'] = [];
-           foreach ($post_data['notifications'] as $field => $value) {
-               $group = 'communication';
-               $feature = $this->find_feature($available_features[$group], $field);
-               if ($feature) {
-                   $capabilities['notifications'][$field] = [
-                       'field' => $field,
-                       'group' => $group,
-                       'label' => $feature['metadata']['label'],
-                       'value' => ($value === 'on')
-                   ];
-               }
-           }
-       }
+        // Process capabilities by group
+        if (!empty($post_data['capabilities'])) {
+            foreach ($post_data['capabilities'] as $group_slug => $features) {
+                // Pastikan group valid dan punya mapping
+                if (!isset($available_features[$group_slug]) || !isset($capability_mapping[$group_slug])) {
+                    error_log("Invalid group or missing mapping: {$group_slug}");
+                    continue;
+                }
 
-       $data['capabilities'] = json_encode($capabilities);
-       return $data;
+                // Dapatkan section untuk group ini
+                $section = $capability_mapping[$group_slug];
+                
+                // Process setiap feature dalam group
+                foreach ($available_features[$group_slug] as $feature) {
+                    $field_name = $feature['field_name'];
+                    $metadata = $feature['metadata'];
+                    
+                    // Get value from post data or use default
+                    $value = $features[$field_name] ?? null;
+                    
+                    if ($metadata['type'] === 'number') {
+                        // Handle number inputs
+                        $value = ($value === '' || $value === null) ? 
+                                $metadata['default_value'] : 
+                                intval($value);
+                    } else {
+                        // Handle checkboxes
+                        $value = isset($features[$field_name]) && 
+                                ($features[$field_name] === 'on' || $features[$field_name] === '1' || $features[$field_name] === true);
+                    }
+
+                    // Add to appropriate section
+                    $capabilities[$section][$field_name] = [
+                        'field' => $field_name,
+                        'value' => $value,
+                        'settings' => []
+                    ];
+
+                    error_log("Added to {$section}: " . json_encode($capabilities[$section][$field_name]));
+                }
+            }
+        }
+
+        error_log('FINAL CAPABILITIES: ' . json_encode($capabilities));
+        $data['capabilities'] = json_encode($capabilities);
+        
+        return $data;
     }
 
-    // Helper to find feature from available features
-    private function find_feature($features, $field_name) {
-       foreach ($features as $feature) {
-           if ($feature['field_name'] === $field_name) {
-               return $feature;
-           }
-       }
-       return null;
+    private function find_feature($group_features, $field_name) {
+        if (!is_array($group_features)) {
+            error_log('Invalid group_features: ' . json_encode($group_features));
+            return null;
+        }
+        
+        foreach ($group_features as $feature) {
+            if ($feature['field_name'] === $field_name) {
+                return $feature;
+            }
+        }
+        return null;
+    }
+
+    private function process_feature_value($value, $type, $group_slug) {
+        if ($type === 'number') {
+            return intval($value);
+        }
+        
+        if ($type === 'checkbox') {
+            return $value === 'on' || $value === '1' || $value === true;
+        }
+        
+        return $value;
     }
 
     private function process_capabilities_data($capabilities) {

@@ -27,6 +27,7 @@ namespace WPCustomer\Controllers;
 use WPCustomer\Controllers\Membership\MembershipFeaturesController;
 use WPCustomer\Models\Membership\MembershipLevelModel;
 use WPCustomer\Models\Membership\MembershipFeatureModel;
+use WPCustomer\Cache\CustomerCacheManager;
 
 class SettingsController {
     public function init() {
@@ -48,7 +49,28 @@ class SettingsController {
         add_action('wp_ajax_get_membership_feature', [$this, 'handle_get_membership_feature']);
         add_action('wp_ajax_save_membership_feature', [$this, 'handle_save_membership_feature']);
         add_action('wp_ajax_delete_membership_feature', [$this, 'handle_delete_membership_feature']);
+
+        add_action('wp_ajax_get_membership_feature_group', [$this, 'handle_get_feature_group']);
+        add_action('wp_ajax_save_membership_feature_group', [$this, 'handle_save_feature_group']);
+        add_action('wp_ajax_delete_membership_feature_group', [$this, 'handle_delete_feature_group']);
+
     }
+    // Tambahkan method penghubung untuk features group
+    public function handle_get_feature_group() {
+        $group_controller = new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
+        $group_controller->handle_get_feature();
+    }
+
+    public function handle_save_feature_group() {
+        $group_controller = new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
+        $group_controller->handle_save_feature();
+    }
+
+    public function handle_delete_feature_group() {
+        $group_controller = new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
+        $group_controller->handle_delete_feature();
+    }
+
 
     // Tambahkan method penghubung untuk membership features
     public function handle_get_membership_feature() {
@@ -80,6 +102,11 @@ class SettingsController {
         $membership_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
         $membership_controller->handle_delete_level();
     }
+
+
+
+
+
     public function handle_reset_permissions() {
         try {
             // Verify nonce
@@ -185,6 +212,8 @@ class SettingsController {
                 return new \WPCustomer\Database\Demo\BranchDemoData();
             case 'employee':
                 return new \WPCustomer\Database\Demo\CustomerEmployeeDemoData();
+            case 'membership-groups':
+                return new \WPCustomer\Database\Demo\MembershipGroupsDemoData();
             case 'membership-features':
                 return new \WPCustomer\Database\Demo\MembershipFeaturesDemoData();
             case 'membership-level':
@@ -255,6 +284,14 @@ class SettingsController {
         $this->loadTabView($current_tab);
     }
 
+    /**
+     * Mengambil feature groups dan features yang aktif dengan caching
+     */
+    private function getActiveGroupsAndFeatures() {
+        $featureModel = new MembershipFeatureModel();
+        return $featureModel->getActiveGroupsAndFeatures();
+    }
+    
     private function loadTabView($tab) {
         $allowed_tabs = [
             'general' => 'tab-general.php',
@@ -271,18 +308,25 @@ class SettingsController {
             $view_data = [
                 'grouped_features' => $membership_controller->getAllFeatures(),
                 'field_groups' => $membership_controller->getFeatureGroups(),
-                'field_types' => ['checkbox', 'number', 'text'], // ini juga bisa dipisah ke constant/config
+                'field_types' => ['checkbox', 'number', 'text'],
                 'field_subtypes' => ['integer', 'float', 'text']
             ];
         } else if ($tab === 'membership-levels') {
             $membership_level_model = new MembershipLevelModel();
             $membership_feature_model = new MembershipFeatureModel();
             
+            // Ambil data level dengan capabilities
+            $levels = $membership_level_model->get_all_levels();
+            $grouped_features = $membership_feature_model->get_all_features_by_group();
+            
+            // Ambil group dan feature data dari cache/database
+            $groups_and_features = $this->getActiveGroupsAndFeatures();
+            
             $view_data = [
-                'levels' => $membership_level_model->get_all_levels(),
-                'grouped_features' => $membership_feature_model->get_all_features_by_group()
+                'levels' => $levels,
+                'grouped_features' => $grouped_features,
+                'groups_and_features' => $groups_and_features
             ];
-
         }
         
         $tab_file = WP_CUSTOMER_PATH . 'src/Views/templates/settings/' . $allowed_tabs[$tab];
@@ -320,6 +364,7 @@ class SettingsController {
 
             global $wpdb;
             $has_data = false;
+            $count = 0;
 
             switch($type) {
                 case 'branch':
@@ -330,7 +375,16 @@ class SettingsController {
                     $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customers");
                     $has_data = ($count > 0);
                     break;
-                // Add other types as needed
+                case 'membership-groups':
+                    $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_membership_feature_groups");
+                    $has_data = ($count > 0);
+                    break;
+                case 'membership-features':
+                    $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_membership_features");
+                    $has_data = ($count > 0);
+                    break;
+                default:
+                    throw new \Exception('Invalid data type');
             }
 
             wp_send_json_success([

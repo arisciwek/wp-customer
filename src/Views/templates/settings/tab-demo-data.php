@@ -64,8 +64,17 @@ if (!current_user_can('manage_options')) {
         </p>
 
         <div class="demo-data-grid">
-
-        <div class="demo-data-grid">
+            <!-- Feature Groups -->
+            <div class="demo-data-card">
+                <h4><?php _e('Membership Feature Groups', 'wp-customer'); ?></h4>
+                <p><?php _e('Generate feature group definitions for membership capabilities.', 'wp-customer'); ?></p>
+                <button type="button" 
+                        class="button button-primary generate-demo-data" 
+                        data-type="membership-groups"
+                        data-nonce="<?php echo wp_create_nonce('generate_demo_membership-groups'); ?>">
+                    <?php _e('Generate Feature Groups', 'wp-customer'); ?>
+                </button>
+            </div>
 
             <!-- Membership Features -->
             <div class="demo-data-card">
@@ -74,11 +83,13 @@ if (!current_user_can('manage_options')) {
                 <button type="button" 
                         class="button button-primary generate-demo-data" 
                         data-type="membership-features"
+                        data-requires="membership-groups"
+                        data-check-nonce="<?php echo wp_create_nonce('check_demo_membership-groups'); ?>"
                         data-nonce="<?php echo wp_create_nonce('generate_demo_membership-features'); ?>">
                     <?php _e('Generate Membership Features', 'wp-customer'); ?>
                 </button>
             </div>
-
+            
             <!-- Membership Levels -->
             <div class="demo-data-card">
                 <h4><?php _e('Membership Levels', 'wp-customer'); ?></h4>
@@ -86,6 +97,8 @@ if (!current_user_can('manage_options')) {
                 <button type="button" 
                         class="button button-primary generate-demo-data" 
                         data-type="membership-level"
+                        data-requires="membership-features"
+                        data-check-nonce="<?php echo wp_create_nonce('check_demo_membership-features'); ?>"
                         data-nonce="<?php echo wp_create_nonce('generate_demo_membership-level'); ?>">
                     <?php _e('Generate Membership Levels', 'wp-customer'); ?>
                 </button>

@@ -135,33 +135,61 @@ if (!defined('ABSPATH')) {
                             <input type="number" id="sort-order" name="sort_order" min="0" class="small-text">
                             <p class="description"><?php _e('Order in which this level appears (lower numbers first)', 'wp-customer'); ?></p>
                         </div>
+
+                        <div class="form-row">
+                            <label>
+                                <input type="checkbox" name="is_trial_available" id="is-trial-available">
+                                <?php _e('Enable Trial Period', 'wp-customer'); ?>
+                            </label>
+                        </div>
+
+                        <div class="form-row trial-days-row" style="display: none;">
+                            <label for="trial-days"><?php _e('Trial Days', 'wp-customer'); ?></label>
+                            <input type="number" id="trial-days" name="trial_days" min="0" class="small-text">
+                            <p class="description"><?php _e('Number of days for trial period', 'wp-customer'); ?></p>
+                        </div>
+
+                        <div class="form-row">
+                            <label for="grace-period-days"><?php _e('Grace Period (Days)', 'wp-customer'); ?></label>
+                            <input type="number" id="grace-period-days" name="grace_period_days" min="0" class="small-text">
+                            <p class="description"><?php _e('Number of days after expiration before membership is suspended', 'wp-customer'); ?></p>
+                        </div>
+
+
                     </div>
 
-                    <!-- Features Sections - Dynamically Generated -->
+                <!-- Modal Form -->
+                <div class="form-fields-wrapper">
                     <?php
-                    $features = $grouped_features;
-                    foreach ($features as $group => $group_features):
-                        // Skip 'resources' group as it will be handled separately
-                        if ($group === 'resources') continue;
+                    // Gunakan data groups dan features dari controller
+                    foreach($groups_and_features as $group_data): 
+                        $group = $group_data['group'];
+                        $features = $group_data['features'];
                     ?>
                         <div class="form-section">
                             <h4>
-                                <span class="dashicons <?php echo esc_attr($group_features[0]['metadata']['ui_settings']['icon'] ?? 'dashicons-admin-generic'); ?>"></span>
-                                <?php echo esc_html($group_features[0]['metadata']['label'] ?? ucfirst($group)); ?>
+                                <span class="dashicons <?php echo esc_attr($group['icon'] ?? 'dashicons-admin-generic'); ?>"></span>
+                                <?php echo esc_html($group['name']); ?>
                             </h4>
                             
                             <div class="features-grid">
-                                <?php foreach ($group_features as $feature): 
-                                    $metadata = $feature['metadata'];
-                                    $field_name = $feature['field_name'];
+                                <?php foreach($features as $feature):
+                                    $metadata = json_decode($feature['metadata'], true);
                                 ?>
                                     <div class="feature-item">
-                                        <label class="checkbox-label">
-                                            <input type="<?php echo esc_attr($metadata['type']); ?>" 
-                                                name="features[<?php echo esc_attr($field_name); ?>]"
-                                                id="feature-<?php echo esc_attr($field_name); ?>"
+                                        <label class="input-label">
+                                            <input 
+                                                type="<?php echo esc_attr($metadata['type']); ?>"
+                                                name="capabilities[<?php echo esc_attr($group['slug']); ?>][<?php echo esc_attr($feature['field_name']); ?>]"
+                                                id="feature-<?php echo esc_attr($feature['field_name']); ?>"
                                                 class="<?php echo esc_attr($metadata['ui_settings']['css_class'] ?? ''); ?>"
-                                                <?php if ($metadata['is_required']): ?>required<?php endif; ?>>
+                                                <?php if($metadata['type'] === 'number'): ?>
+                                                    min="<?php echo esc_attr($metadata['ui_settings']['min'] ?? ''); ?>"
+                                                    max="<?php echo esc_attr($metadata['ui_settings']['max'] ?? ''); ?>"
+                                                    step="<?php echo esc_attr($metadata['ui_settings']['step'] ?? '1'); ?>"
+                                                <?php endif; ?>
+                                                <?php echo $metadata['is_required'] ? 'required' : ''; ?>
+                                            >
                                             <span><?php echo esc_html($metadata['label']); ?></span>
                                             <?php if (!empty($metadata['description'])): ?>
                                                 <p class="description"><?php echo esc_html($metadata['description']); ?></p>
@@ -173,67 +201,8 @@ if (!defined('ABSPATH')) {
                         </div>
                     <?php endforeach; ?>
                 </div>
-                
-                <!-- Right Side -->
-                <div class="right-side">
-                    <!-- Resource Limits Section - Dynamically Generated -->
-                    <?php if (isset($features['resources'])): ?>
-                    <div class="form-section">
-                        <h4>
-                            <span class="dashicons dashicons-chart-bar"></span>
-                            <?php _e('Resource Limits', 'wp-customer'); ?>
-                        </h4>
-                        <div class="limits-grid">
-                            <?php foreach ($features['resources'] as $feature):
-                                $metadata = $feature['metadata'];
-                                $field_name = $feature['field_name'];
-                            ?>
-                                <div class="form-row">
-                                    <label for="<?php echo esc_attr($field_name); ?>">
-                                        <?php echo esc_html($metadata['label']); ?>
-                                    </label>
-                                    <input type="number" 
-                                        id="<?php echo esc_attr($field_name); ?>"
-                                        name="limits[<?php echo esc_attr($field_name); ?>]"
-                                        min="<?php echo esc_attr($metadata['ui_settings']['min'] ?? -1); ?>"
-                                        max="<?php echo esc_attr($metadata['ui_settings']['max'] ?? ''); ?>"
-                                        step="<?php echo esc_attr($metadata['ui_settings']['step'] ?? 1); ?>"
-                                        class="small-text <?php echo esc_attr($metadata['ui_settings']['css_class'] ?? ''); ?>"
-                                        value="<?php echo esc_attr($metadata['default_value'] ?? 0); ?>"
-                                        <?php if ($metadata['is_required']): ?>required<?php endif; ?>>
-                                    <?php if (!empty($metadata['description'])): ?>
-                                        <p class="description"><?php echo esc_html($metadata['description']); ?></p>
-                                    <?php endif; ?>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-                    <?php endif; ?>
 
-                    <!-- Trial & Grace Period Section -->
-                    <div class="form-section">
-                        <h4><span class="dashicons dashicons-clock"></span> <?php _e('Trial & Grace Period', 'wp-customer'); ?></h4>
-                        
-                        <div class="form-row">
-                            <label class="checkbox-label">
-                                <input type="checkbox" id="is-trial-available" name="is_trial_available">
-                                <span><?php _e('Enable Trial Period', 'wp-customer'); ?></span>
-                            </label>
-                        </div>
-                        
-                        <div class="form-row trial-days-row" style="display:none;">
-                            <label for="trial-days"><?php _e('Trial Period (Days)', 'wp-customer'); ?></label>
-                            <input type="number" id="trial-days" name="trial_days" min="0" class="small-text" value="0">
-                            <p class="description"><?php _e('Number of days for trial period', 'wp-customer'); ?></p>
-                        </div>
 
-                        <div class="form-row">
-                            <label for="grace-period-days"><?php _e('Grace Period (Days)', 'wp-customer'); ?></label>
-                            <input type="number" id="grace-period-days" name="grace_period_days" min="0" class="small-text" value="0">
-                            <p class="description"><?php _e('Number of days before subscription is suspended', 'wp-customer'); ?></p>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             <div class="modal-footer clearfix">

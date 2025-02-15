@@ -14,7 +14,7 @@ jQuery(document).ready(function($) {
                 data: {
                     action: 'check_demo_data',
                     type: requiredType,
-                    nonce: button.data('check-nonce') // Gunakan check-nonce khusus
+                    nonce: button.data('check-nonce')
                 },
                 success: function(response) {
                     if (response.success) {

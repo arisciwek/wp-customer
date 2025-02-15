@@ -42,6 +42,138 @@ class MembershipFeaturesController {
         $this->model = new MembershipFeatureModel();
         $this->cache_manager = new CustomerCacheManager();
     }
+        /**
+         * Handle get feature group untuk modal edit
+         */
+        public function handle_get_group() {
+            try {
+                // Security checks
+                if (!current_user_can('manage_options')) {
+                    throw new \Exception(__('Permission denied', 'wp-customer'));
+                }
+                check_ajax_referer('wp_customer_membership_level', 'nonce');
+
+                $group_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+                
+                // Cek cache dulu
+                $cached_data = $this->cache_manager->get('membership_feature_group', $group_id);
+                if ($cached_data !== null) {
+                    wp_send_json_success($cached_data);
+                    return;
+                }
+
+                // Jika tidak ada cache, ambil dari database
+                $group_data = $this->model->get_feature_group($group_id);
+                if (!$group_data) {
+                    throw new \Exception(__('Group tidak ditemukan', 'wp-customer'));
+                }
+
+                // Simpan ke cache
+                $this->cache_manager->set('membership_feature_group', $group_data, 3600, $group_id);
+
+                wp_send_json_success($group_data);
+
+            } catch (\Exception $e) {
+                wp_send_json_error([
+                    'message' => $e->getMessage()
+                ]);
+            }
+        }
+
+        /**
+         * Handle save/update feature group dari modal
+         */
+        public function handle_save_group() {
+            try {
+                // Security checks
+                if (!current_user_can('manage_options')) {
+                    throw new \Exception(__('Permission denied', 'wp-customer'));
+                }
+                check_ajax_referer('wp_customer_membership_level', 'nonce');
+
+                // Get dan format data
+                $raw_data = $_POST;
+                $group_id = isset($raw_data['id']) ? intval($raw_data['id']) : 0;
+                
+                // Format data untuk database
+                $group_data = [
+                    'name' => sanitize_text_field($raw_data['name']),
+                    'slug' => sanitize_title($raw_data['name']),
+                    'capability_group' => sanitize_text_field($raw_data['capability_group']),
+                    'description' => sanitize_textarea_field($raw_data['description']),
+                    'sort_order' => intval($raw_data['sort_order']),
+                    'created_by' => get_current_user_id()
+                ];
+
+                // Validasi slug tidak duplikat
+                if ($this->model->group_exists_by_slug($group_data['slug'], $group_id)) {
+                    throw new \Exception(__('Group dengan slug tersebut sudah ada', 'wp-customer'));
+                }
+
+                // Save ke database
+                $result = $this->model->save_feature_group($group_id, $group_data);
+                if (!$result) {
+                    throw new \Exception(__('Gagal menyimpan data group', 'wp-customer'));
+                }
+
+                // Clear cache
+                if ($group_id) {
+                    $this->cache_manager->delete('membership_feature_group', $group_id);
+                }
+                $this->cache_manager->delete('membership_feature_group_list');
+
+                wp_send_json_success([
+                    'message' => $group_id ? 
+                        __('Group berhasil diupdate', 'wp-customer') : 
+                        __('Group baru berhasil ditambahkan', 'wp-customer'),
+                    'id' => $result
+                ]);
+
+            } catch (\Exception $e) {
+                wp_send_json_error([
+                    'message' => $e->getMessage()
+                ]);
+            }
+        }
+
+        /**
+         * Handle delete feature group
+         */
+        public function handle_delete_group() {
+            try {
+                // Security checks
+                if (!current_user_can('manage_options')) {
+                    throw new \Exception(__('Permission denied', 'wp-customer'));
+                }
+                check_ajax_referer('wp_customer_membership_level', 'nonce');
+
+                $group_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+
+                // Cek apakah group punya features
+                if ($this->model->group_has_features($group_id)) {
+                    throw new \Exception(__('Group tidak dapat dihapus karena masih memiliki features', 'wp-customer'));
+                }
+
+                // Hapus group
+                $result = $this->model->delete_feature_group($group_id);
+                if (!$result) {
+                    throw new \Exception(__('Gagal menghapus group', 'wp-customer'));
+                }
+
+                // Clear cache
+                $this->cache_manager->delete('membership_feature_group', $group_id);
+                $this->cache_manager->delete('membership_feature_group_list');
+
+                wp_send_json_success([
+                    'message' => __('Group berhasil dihapus', 'wp-customer')
+                ]);
+
+            } catch (\Exception $e) {
+                wp_send_json_error([
+                    'message' => $e->getMessage()
+                ]);
+            }
+        }
 
     /**
      * Handle getting a single feature
