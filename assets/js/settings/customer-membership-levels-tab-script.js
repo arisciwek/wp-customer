@@ -156,6 +156,7 @@
                 }
             });
         },
+
         populateForm(data) {
             console.log('Populating form with data:', data);
             
@@ -171,30 +172,45 @@
             $('#grace-period-days').val(data.grace_period_days);
             $('#sort-order').val(data.sort_order);
 
-            // Populate capabilities sesuai struktur form
-            if (data.capabilities) {
-                // Handle staff & data features
-                if (data.capabilities.staff || data.capabilities.data) {
-                    Object.entries(data.capabilities.staff || {}).forEach(([key, item]) => {
-                        $(`input[name="features[${key}]"]`).prop('checked', item.value);
-                    });
-                    Object.entries(data.capabilities.data || {}).forEach(([key, item]) => {
-                        $(`input[name="features[${key}]"]`).prop('checked', item.value);
-                    });
-                }
+            // Parse capabilities jika masih dalam bentuk string
+            const capabilities = typeof data.capabilities === 'string' ? 
+                JSON.parse(data.capabilities) : data.capabilities;
+
+            // Loop melalui setiap grup capabilities (data, staff, resources, communication)
+            Object.entries(capabilities).forEach(([group, features]) => {
+                Object.entries(features).forEach(([field, featureData]) => {
+                    // Format selector input sesuai struktur HTML
+                    const inputSelector = `input[name="capabilities[${group}][${field}]"]`;
+                    const input = $(inputSelector);
+                    
+                    if (input.length) {
+                        if (input.attr('type') === 'checkbox') {
+                            input.prop('checked', Boolean(featureData.value));
+                        } else if (input.attr('type') === 'number') {
+                            input.val(featureData.value);
+                        }
+                    } else {
+                        console.warn(`Input not found: ${inputSelector}`);
+                    }
+                });
+            });
+
+            // Parse settings jika masih dalam bentuk string
+            if (data.settings) {
+                const settings = typeof data.settings === 'string' ? 
+                    JSON.parse(data.settings) : data.settings;
                 
-                // Handle resource limits
-                if (data.capabilities.resources) {
-                    Object.entries(data.capabilities.resources).forEach(([key, item]) => {
-                        $(`input[name="limits[${key}]"]`).val(item.value);
-                    });
+                // Populate payment settings
+                if (settings.payment) {
+                    $('input[name="settings[payment][available_methods][]"]').val(settings.payment.available_methods);
+                    $('#max-payment-period').val(settings.payment.max_payment_period);
+                    $('#min-payment-period').val(settings.payment.min_payment_period);
                 }
 
-                // Handle communication notifications
-                if (data.capabilities.communication) {
-                    Object.entries(data.capabilities.communication).forEach(([key, item]) => {
-                        $(`input[name="notifications[${key}]"]`).prop('checked', item.value);
-                    });
+                // Populate customization settings
+                if (settings.customization) {
+                    $('#can-customize-invoice').prop('checked', settings.customization.can_customize_invoice);
+                    $('#can-customize-email').prop('checked', settings.customization.can_customize_email_template);
                 }
             }
 
@@ -203,6 +219,7 @@
 
         /********************/
 
+        /*
         handleSubmit() {
             const formData = this.form.serializeArray();
             
@@ -243,6 +260,18 @@
                 }
             });
         },
+        */
+
+        processRegularFields(formData) {
+            const regularFields = {};
+            formData.forEach(item => {
+                if (!item.name.startsWith('capabilities[')) {
+                    regularFields[item.name] = item.value;
+                }
+            });
+            return regularFields;
+        },
+
 
         processRegularFields(formData) {
             const regularFields = {};
@@ -255,44 +284,68 @@
         },
 
         processCapabilities(formData) {
-            const capabilities = {
-                staff: {},
-                data: {},
-                resources: {},
-                communication: {}
-            };
+            console.log('Start processCapabilities'); // Debug
+            const capabilities = {};
+            
+                // Process semua input dengan prefix capabilities
+                this.form.find('input[name^="capabilities"]').each(function() {
+                    const $input = $(this);
+                    const name = $input.attr('name');
+                    console.log('Processing input:', name); // Debug
+                    console.log('Input value:', $input.val()); // Debug
+                    console.log('Input checked:', $input.prop('checked')); // Debug
 
-            // Process checkboxes - set explicit false for unchecked
-            this.form.find('input[type="checkbox"][name^="capabilities"]').each(function() {
-                const name = $(this).attr('name');
-                const matches = name.match(/capabilities\[(.*?)\]\[(.*?)\]/);
-                if (matches) {
-                    const [, group, field] = matches;
-                    capabilities[group][field] = this.checked;
-                }
-            });
+                    const matches = name.match(/capabilities\[(.*?)\]\[(.*?)\]/);
+                    if (matches) {
+                        const [, group, field] = matches;
+                        console.log('Group:', group, 'Field:', field); // Debug
 
-            // Process number inputs - set 0 or actual value
-            this.form.find('input[type="number"][name^="capabilities"]').each(function() {
-                const name = $(this).attr('name');
-                const matches = name.match(/capabilities\[(.*?)\]\[(.*?)\]/);
-                if (matches) {
-                    const [, group, field] = matches;
-                    const value = $(this).val();
-                    capabilities[group][field] = value === '' ? 0 : parseInt(value);
-                }
-            });
+                        if (!capabilities[group]) {
+                            capabilities[group] = {};
+                        }
 
+                        const defaultValue = $input.data('default');
+                        console.log('Default value:', defaultValue); // Debug
+                        
+                        if ($input.attr('type') === 'checkbox') {
+                            capabilities[group][field] = {
+                                type: 'checkbox',
+                                field: field,
+                                group: group,
+                                value: this.checked,
+                                settings: [],
+                                default_value: defaultValue
+                            };
+                            console.log('Checkbox capability set:', capabilities[group][field]); // Debug
+                        } else if ($input.attr('type') === 'number') {
+                            capabilities[group][field] = {
+                                type: 'number',
+                                field: field,
+                                group: group,
+                                value: parseInt(this.value) || defaultValue,
+                                settings: [],
+                                default_value: defaultValue
+                            };
+                            console.log('Number capability set:', capabilities[group][field]); // Debug
+                        }
+                    }
+                });
+            
+            console.log('Final capabilities object:', capabilities); // Debug
             return capabilities;
         },
 
-        /********************/
-        /*
         handleSubmit() {
             const formData = this.form.serializeArray();
+            console.log('Raw form data:', formData);
             
             // Transform form data to proper structure
-            const processedData = this.processFormData(formData);
+            const processedData = {
+                ...this.processRegularFields(formData),
+                capabilities: this.processCapabilities(formData)
+            };
+            
+            console.log('Processed data before submit:', processedData);
 
             $.ajax({
                 url: wpCustomerData.ajaxUrl,
@@ -303,26 +356,96 @@
                     ...processedData
                 },
                 beforeSend: () => {
+                    console.log('Sending AJAX request with data:', processedData);
                     this.form.addClass('loading');
                     this.form.find('button[type="submit"]').prop('disabled', true);
                 },
                 success: (response) => {
+                    console.log('AJAX response:', response);
+                    if (response.success) {
+                        this.showMessage(response.data.message);
+                        // Komentar sementara penutupan modal dan reload
+                        // this.closeModal();
+                        // window.location.reload();
+                        
+                        console.log('=== Submit berhasil, modal tetap terbuka untuk debug ===');
+                        console.log('Data yang terkirim:', processedData);
+                        console.log('Response:', response);
+                        
+                        this.form.removeClass('loading');
+                        this.form.find('button[type="submit"]').prop('disabled', false);
+
+                        // Tambah tombol sementara untuk manual close
+                        if (!$('#debug-close-modal').length) {
+                            this.form.find('.modal-buttons').append(
+                                '<button type="button" id="debug-close-modal" class="button">'+
+                                'Debug Selesai - Tutup Modal & Reload</button>'
+                            );
+                            
+                            $('#debug-close-modal').on('click', () => {
+                                this.closeModal();
+                                window.location.reload();
+                            });
+                        }
+                    } else {
+                        this.showMessage(response.data.message, 'error');
+                        this.form.removeClass('loading');
+                        this.form.find('button[type="submit"]').prop('disabled', false);
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error('AJAX error:', {xhr, status, error});
+                    this.showMessage('Failed to save membership level', 'error');
+                    
+                    this.form.removeClass('loading');
+                    this.form.find('button[type="submit"]').prop('disabled', false);
+                }
+            });
+
+            // Cegah form submit default
+            // return false;
+        },
+
+
+        /*
+        handleSubmit() {
+            const formData = this.form.serializeArray();
+            console.log('Raw form data:', formData); // Debug
+            
+            // Transform form data to proper structure
+            const processedData = {
+                ...this.processRegularFields(formData),
+                capabilities: this.processCapabilities(formData)
+            };
+            
+            console.log('Processed data before submit:', processedData); // Debug
+
+            $.ajax({
+                url: wpCustomerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'save_membership_level',
+                    nonce: wpCustomerData.nonce,
+                    ...processedData
+                },
+                beforeSend: () => {
+                    console.log('Sending AJAX request with data:', processedData); // Debug
+                    this.form.addClass('loading');
+                    this.form.find('button[type="submit"]').prop('disabled', true);
+                },
+                success: (response) => {
+                    console.log('AJAX response:', response); // Debug
                     if (response.success) {
                         this.showMessage(response.data.message);
                         this.closeModal();
-                        // Reload page or update UI
                         window.location.reload();
                     } else {
                         this.showMessage(response.data.message, 'error');
                     }
                 },
                 error: (xhr, status, error) => {
+                    console.error('AJAX error:', {xhr, status, error}); // Debug
                     this.showMessage('Failed to save membership level', 'error');
-                    console.error(error);
-                },
-                complete: () => {
-                    this.form.removeClass('loading');
-                    this.form.find('button[type="submit"]').prop('disabled', false);
                 }
             });
         },
