@@ -41,7 +41,7 @@
  */
 
 namespace WPCustomer\Database\Demo;
-
+use WPCustomer\Controllers\Membership\CustomerMembershipController;
 use WPCustomer\Models\Customer\CustomerMembershipModel;
 use WPCustomer\Models\Membership\MembershipLevelModel;
 use WPCustomer\Models\Branch\BranchModel;
@@ -52,20 +52,20 @@ defined('ABSPATH') || exit;
 class MembershipDemoData extends AbstractDemoData {
     use CustomerDemoDataHelperTrait;
 
-    private $membershipModel;
     private $levelModel;
     protected $branchModel;
     protected $customerModel;
+    private $membershipController;
     
     private $membership_ids = [];
     private $levels_data = [];
 
     public function __construct() {
         parent::__construct();
-        $this->membershipModel = new CustomerMembershipModel();
         $this->levelModel = new MembershipLevelModel();
         $this->branchModel = new BranchModel();
         $this->customerModel = new CustomerModel();
+        $this->membershipController = new CustomerMembershipController();
     }
 
     /**
@@ -139,7 +139,7 @@ class MembershipDemoData extends AbstractDemoData {
                 $level = $this->getRandomLevel();
                 
                 // Determine if trial should be used
-                $use_trial = $level->is_trial_available && (bool)rand(0, 1);
+                $use_trial = $level['is_trial_available'] && (bool)rand(0, 1);
 
 				// Get random period_months (1, 3, 6, atau 12 bulan)
 				$period_months = [1, 3, 6, 12][array_rand([1, 3, 6, 12])];
@@ -159,7 +159,7 @@ class MembershipDemoData extends AbstractDemoData {
                 $trial_end_date = null;
                 if ($use_trial) {
                     $trial_end_date = date('Y-m-d H:i:s', 
-                        strtotime($start_date . ' +' . $level->trial_days . ' days')
+                        strtotime($start_date . ' +' . $level['trial_days'] . ' days')
                     );
                 }
 
@@ -167,20 +167,20 @@ class MembershipDemoData extends AbstractDemoData {
                 $is_paid = (bool)rand(0, 1);
                 $payment_status = $is_paid ? 'paid' : 'pending';
                 $payment_date = $is_paid ? $current_date : null;
-                $price_paid = $is_paid ? $level->price_per_month : 0;
+                $price_paid = $is_paid ? $level['price_per_month'] : 0;
 
 				// Prepare membership data
 				$membership_data = [
 				    'customer_id' => $branch->customer_id,
 				    'branch_id' => $branch->id,
-				    'level_id' => $level->id,
+				    'level_id' => $level['id'],
 				    'status' => $use_trial ? 'active' : ($is_paid ? 'active' : 'pending_payment'),
 				    'period_months' => $period_months,  // Random period
 				    'start_date' => $start_date,        // Random start date
 				    'end_date' => $end_date,           // Calculated end date
 				    'trial_end_date' => $trial_end_date,
 				    'grace_period_end_date' => null,
-				    'price_paid' => $is_paid ? ($level->price_per_month * $period_months) : 0, // Price adjusted for period
+				    'price_paid' => $is_paid ? ($level['price_per_month'] * $period_months) : 0, // Price adjusted for period
 				    'payment_method' => $is_paid ? 'bank_transfer' : null,
 				    'payment_status' => $payment_status,
 				    'payment_date' => $payment_date,
@@ -189,13 +189,13 @@ class MembershipDemoData extends AbstractDemoData {
 				];
 
                 // Create membership
-                $membership_id = $this->membershipModel->create($membership_data);
+                $membership_id = $this->membershipController->createMembership($membership_data);
                 if (!$membership_id) {
                     throw new \Exception("Failed to create membership for branch: {$branch->id}");
                 }
 
                 $this->membership_ids[] = $membership_id;
-                $this->debug("Created membership {$membership_id} for branch {$branch->id} with level {$level->name}");
+                $this->debug("Created membership {$membership_id} for branch {$branch->id} with level {$level['name']}");
             }
 
             $this->debug('Membership generation completed. Total: ' . count($this->membership_ids));
@@ -209,7 +209,7 @@ class MembershipDemoData extends AbstractDemoData {
     /**
      * Get random membership level
      */
-    private function getRandomLevel(): object {
+    private function getRandomLevel(): array {
         return $this->levels_data[array_rand($this->levels_data)];
     }
 

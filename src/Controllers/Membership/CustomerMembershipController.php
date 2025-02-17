@@ -44,7 +44,8 @@ class CustomerMembershipController {
 		add_action('wp_ajax_save_membership_level', [$this, 'saveMembershipLevel']);
         add_action('wp_ajax_get_membership_level_data', [$this, 'getMembershipLevelData']);
 */
-
+		$this->membership_model = new CustomerMembershipModel();
+		$this->cache = new CustomerCacheManager();
         return;
     }
 /*
@@ -183,6 +184,34 @@ class CustomerMembershipController {
 	    }
 	}
 */
+	public function createMembership(array $membership_data): int {
+	    try {
+	        // Validate data structure
+	        if (empty($membership_data['customer_id']) || empty($membership_data['level_id'])) {
+	            throw new \Exception('Invalid membership data');
+	        }
+
+	        // Create via model
+	        $membership_id = $this->membership_model->create($membership_data);
+	        
+	        if (!$membership_id) {
+	            throw new \Exception('Failed to create membership');
+	        }
+
+	        // Clear related caches
+	        $this->cache->delete('membership', $membership_id);
+	        $this->cache->delete('customer_membership', $membership_data['customer_id']);
+	        $this->cache->invalidateDataTableCache('membership_list', [
+	            'customer_id' => $membership_data['customer_id']
+	        ]);
+
+	        return $membership_id;
+
+	    } catch (\Exception $e) {
+	        $this->debug_log('Error creating membership: ' . $e->getMessage());
+	        throw $e;
+	    }
+	}
 
 	/**
 	 * Get current membership status

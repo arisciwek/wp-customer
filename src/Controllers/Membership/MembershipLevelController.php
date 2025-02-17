@@ -51,17 +51,38 @@ class MembershipLevelController {
 
     public function handle_get_level() {
         try {
-
-            $this->verify_request('get_membership_level');
-
-            $level_id = intval($_POST['id']);
+            $this->verify_request('get_membership_form');
+            
+            $level_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+            
+            // Ambil data level
             $level = $this->model->get_level($level_id);
-
             if (!$level) {
-                throw new \Exception(__('Level not found.', 'wp-customer'));
+                throw new \Exception(__('Level tidak ditemukan.', 'wp-customer'));
             }
 
-            wp_send_json_success($level);
+            // Ambil struktur features dari model
+            $feature_model = new MembershipFeatureModel();
+            $available_features = $feature_model->get_all_features_by_group();
+            
+            // Parse capabilities yang ada
+            $existing_capabilities = json_decode($level['capabilities'], true);
+
+            // Format data untuk form dengan capabilities yang sesuai struktur dari model
+            $form_data = [
+                'id' => $level['id'],
+                'name' => $level['name'],
+                'slug' => $level['slug'],
+                'description' => $level['description'],
+                'price_per_month' => floatval($level['price_per_month']),
+                'is_trial_available' => (bool)$level['is_trial_available'],
+                'trial_days' => intval($level['trial_days']),
+                'grace_period_days' => intval($level['grace_period_days']),
+                'sort_order' => intval($level['sort_order']),
+                'capabilities' => $existing_capabilities
+            ];
+
+            wp_send_json_success($form_data);
 
         } catch (\Exception $e) {
             wp_send_json_error([
@@ -73,21 +94,36 @@ class MembershipLevelController {
     public function handle_save_level() {
         try {
             $this->verify_request('save_membership_level');
-    
-            error_log('SAVE LEVEL REQUEST: ' . json_encode($_POST));
+        
+            error_log('=== START SAVE LEVEL ===');
+            error_log('Raw POST data: ' . print_r($_POST, true));
             
             // Get and sanitize input data
             $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
-            $data = $this->sanitize_level_data($_POST);
+            
+            // SISIPKAN DI SINI - Sebelum memanggil sanitize_level_data
+            try {
+                $data = $this->sanitize_level_data($_POST);
+            } catch (\Exception $e) {
+                error_log("Sanitization error: " . $e->getMessage());
+                error_log("Sanitization error trace: " . $e->getTraceAsString());
+                throw new \Exception(__('Failed to process membership data.', 'wp-customer'));
+            }
 
-            // Validate data
-            $validation_errors = $this->validator->validate_level($data, $id);
-            if (!empty($validation_errors)) {
-                throw new \Exception(implode(' ', $validation_errors));
+            error_log('Sanitized data: ' . print_r($data, true));
+
+            // Decode capabilities untuk validasi
+            $capabilities = json_decode($data['capabilities'], true);
+            error_log('Decoded capabilities: ' . print_r($capabilities, true));
+            
+            // Validate capabilities structure
+            if (!$this->validateCapabilitiesStructure($capabilities)) {
+                throw new \Exception(__('Invalid capabilities structure.', 'wp-customer'));
             }
 
             // Save via model
             $result = $this->model->save_level($id, $data);
+            error_log('Save result: ' . ($result ? 'success' : 'failed'));
 
             if (!$result) {
                 throw new \Exception(__('Failed to save membership level.', 'wp-customer'));
@@ -104,6 +140,8 @@ class MembershipLevelController {
             ]);
 
         } catch (\Exception $e) {
+            error_log('Error saving level: ' . $e->getMessage());
+            error_log('Error trace: ' . $e->getTraceAsString());
             wp_send_json_error([
                 'message' => $e->getMessage()
             ]);
@@ -151,10 +189,65 @@ class MembershipLevelController {
         check_ajax_referer('wp_customer_nonce', 'nonce');
     }
 
-    private function sanitize_level_data($post_data) {
-        error_log('POST DATA: ' . json_encode($post_data));
+    /**
+     * Helper function untuk mendapatkan default features berdasarkan grup
+     */
+    private function getDefaultFeaturesForGroup($group_slug) {
+        // Ambil semua features dari model
+        $all_features = $this->feature_model->get_all_features_by_group();
+        
+        // Return features untuk grup yang diminta
+        return $all_features[$group_slug] ?? [];
+    }
 
-        // Sanitize regular fields
+    public function handle_get_form_data() {
+        try {
+            $this->verify_request('get_membership_form');
+            
+            $level_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+            
+            // Ambil data level
+            $level = $this->model->get_level($level_id);
+            if (!$level) {
+                throw new \Exception(__('Level tidak ditemukan.', 'wp-customer'));
+            }
+
+            // Ambil struktur features dari model
+            $feature_model = new MembershipFeatureModel();
+            $available_features = $feature_model->get_all_features_by_group();
+            
+            // Parse capabilities yang ada
+            $existing_capabilities = json_decode($level['capabilities'], true);
+
+            // Format data untuk form dengan capabilities yang sesuai struktur dari model
+            $form_data = [
+                'id' => $level['id'],
+                'name' => $level['name'],
+                'slug' => $level['slug'],
+                'description' => $level['description'],
+                'price_per_month' => floatval($level['price_per_month']),
+                'is_trial_available' => (bool)$level['is_trial_available'],
+                'trial_days' => intval($level['trial_days']),
+                'grace_period_days' => intval($level['grace_period_days']),
+                'sort_order' => intval($level['sort_order']),
+                'capabilities' => $existing_capabilities
+            ];
+    
+            error_log('Form Data: ' . json_encode($form_data, true));
+
+            wp_send_json_success($form_data);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    // Modifikasi pada fungsi sanitize_level_data
+    private function sanitize_level_data($post_data) {
+        error_log('Data sebelum sanitize: ' . print_r($post_data, true));
+        // Basic level data
         $data = [
             'name' => sanitize_text_field($post_data['name']),
             'slug' => sanitize_title($post_data['name']),
@@ -166,78 +259,121 @@ class MembershipLevelController {
             'sort_order' => intval($post_data['sort_order'])
         ];
 
-        // Get available features with metadata from model
+        // Dapatkan semua features yang tersedia dari model
         $available_features = $this->feature_model->get_all_features_by_group();
-        $capability_mapping = $this->feature_model->get_group_capability_mapping();
         
-        error_log('AVAILABLE FEATURES: ' . json_encode($available_features));
-        error_log('CAPABILITY MAPPING: ' . json_encode($capability_mapping));
-
-        // Initialize capabilities dengan section yang diperlukan
-        $capabilities = [
-            'features' => [],
-            'limits' => [],
-            'notifications' => []
-        ];
-
-        // Process capabilities by group
-        if (!empty($post_data['capabilities'])) {
-            foreach ($post_data['capabilities'] as $group_slug => $features) {
-                // Pastikan group valid dan punya mapping
-                if (!isset($available_features[$group_slug]) || !isset($capability_mapping[$group_slug])) {
-                    error_log("Invalid group or missing mapping: {$group_slug}");
-                    continue;
-                }
-
-                // Dapatkan section untuk group ini
-                $section = $capability_mapping[$group_slug];
+        // Inisialisasi capabilities dengan struktur lengkap
+        $capabilities = [];
+        
+        // Iterasi per grup feature
+        foreach ($available_features as $group_slug => $features) {
+            $capabilities[$group_slug] = [];
+            
+            foreach ($features as $feature) {
+                $field_name = $feature['field_name'];
+                $metadata = $feature['metadata'];
                 
-                // Process setiap feature dalam group
-                foreach ($available_features[$group_slug] as $feature) {
-                    $field_name = $feature['field_name'];
-                    $metadata = $feature['metadata'];
-                    
-                    // Get value from post data or use default
-                    $value = $features[$field_name] ?? null;
-                    
-                    if ($metadata['type'] === 'number') {
-                        // Handle number inputs
-                        $value = ($value === '' || $value === null) ? 
-                                $metadata['default_value'] : 
-                                intval($value);
-                    } else {
-                        // Handle checkboxes
-                        $value = isset($features[$field_name]) && 
-                                ($features[$field_name] === 'on' || $features[$field_name] === '1' || $features[$field_name] === true);
-                    }
+                // Set nilai awal dari metadata
+                $feature_data = [
+                    'type' => $metadata['type'],
+                    'field' => $field_name,
+                    'group' => $group_slug,
+                    'label' => $metadata['label'],
+                    'description' => $metadata['description'],
+                    'is_required' => $metadata['is_required'] ?? false,
+                    'ui_settings' => $metadata['ui_settings'] ?? [],
+                    'default_value' => $metadata['default_value'],
 
-                    // Add to appropriate section
-                    $capabilities[$section][$field_name] = [
-                        'field' => $field_name,
-                        'value' => $value,
-                        'settings' => []
-                    ];
+                ];
 
-                    error_log("Added to {$section}: " . json_encode($capabilities[$section][$field_name]));
+                // Tentukan value berdasarkan tipe field
+                if ($metadata['type'] === 'checkbox') {
+                    // Untuk checkbox: false jika tidak dicentang
+                    $feature_data['value'] = isset($post_data['capabilities'][$group_slug][$field_name]['value']) &&
+                        ($post_data['capabilities'][$group_slug][$field_name]['value'] === 'on' ||
+                         $post_data['capabilities'][$group_slug][$field_name]['value'] === '1' ||
+                         $post_data['capabilities'][$group_slug][$field_name]['value'] === true ||
+                         $post_data['capabilities'][$group_slug][$field_name]['value'] === 'true');
                 }
+                else if ($metadata['type'] === 'number') {
+                    if (isset($post_data['capabilities'][$group_slug][$field_name]['value'])) {
+                        $feature_data['value'] = intval($post_data['capabilities'][$group_slug][$field_name]['value']);
+                    } else {
+                        $feature_data['value'] = $metadata['default_value'] ?? 0;
+                    }
+                    
+                    // Validasi min/max jika ada
+                    if (isset($metadata['ui_settings']['min']) && $feature_data['value'] < $metadata['ui_settings']['min']) {
+                        $feature_data['value'] = $metadata['ui_settings']['min'];
+                    }
+                    if (isset($metadata['ui_settings']['max']) && $feature_data['value'] > $metadata['ui_settings']['max']) {
+                        $feature_data['value'] = $metadata['ui_settings']['max'];
+                    }
+                }
+                else {
+                    // Untuk tipe lain: gunakan default value jika tidak diisi
+                    $feature_data['value'] = isset($post_data['capabilities'][$group_slug][$field_name]) ?
+                        $post_data['capabilities'][$group_slug][$field_name] :
+                        ($metadata['default_value'] ?? null);
+                }
+
+                // Pastikan settings selalu ada
+                $feature_data['settings'] = [];
+
+                // Simpan ke capabilities
+                $capabilities[$group_slug][$field_name] = $feature_data;
             }
         }
 
-        error_log('FINAL CAPABILITIES: ' . json_encode($capabilities));
+        // Encode capabilities ke JSON
         $data['capabilities'] = json_encode($capabilities);
+        error_log('Data setelah sanitize: ' . print_r($data, true));
         
         return $data;
     }
 
-    private function find_feature($group_features, $field_name) {
-        if (!is_array($group_features)) {
-            error_log('Invalid group_features: ' . json_encode($group_features));
-            return null;
-        }
+
+    private function validateCapabilitiesStructure($capabilities) {
+        // Dapatkan daftar grup valid dari model
+        $available_features = $this->feature_model->get_all_features_by_group();
+        $valid_groups = array_keys($available_features);
         
+        // Validasi struktur dasar
+        if (!is_array($capabilities)) {
+            throw new \Exception("Invalid capabilities format");
+        }
+
+        // Validasi setiap grup
+        foreach ($capabilities as $group => $features) {
+            if (!in_array($group, $valid_groups)) {
+                throw new \Exception("Invalid capability group: {$group}");
+            }
+
+            if (!is_array($features)) {
+                throw new \Exception("Invalid features structure for group: {$group}");
+            }
+
+            // Validasi setiap fitur dalam grup
+            foreach ($features as $field_name => $feature) {
+                if (!isset($feature['field']) || !isset($feature['value'])) {
+                    throw new \Exception("Invalid feature structure for {$field_name} in {$group}");
+                }
+
+                // Validasi tipe data sesuai metadata
+                $metadata = $this->findFeatureMetadata($available_features[$group], $field_name);
+                if ($metadata && $metadata['type'] === 'number' && !is_numeric($feature['value'])) {
+                    throw new \Exception("Value must be numeric for {$field_name}");
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private function findFeatureMetadata($group_features, $field_name) {
         foreach ($group_features as $feature) {
             if ($feature['field_name'] === $field_name) {
-                return $feature;
+                return $feature['metadata'];
             }
         }
         return null;

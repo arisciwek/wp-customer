@@ -11,127 +11,119 @@ if (!defined('ABSPATH')) {
             <?php _e('Add New Level', 'wp-customer'); ?>
         </button>
     </div>
-
-
-
         <div class="membership-grid">
             <?php foreach ($levels as $level): ?>
 
-
-        <!-- Basic info tetap sama -->
-        <div class="membership-card" data-level="<?php echo esc_attr($level['slug']); ?>">
-            <div class="card-header">
-                <div class="level-name"><?php echo esc_html($level['name']); ?></div>
-                <div class="price">
-                    Rp <?php echo number_format($level['price_per_month'], 0, ',', '.'); ?>/bulan
+            <!-- Basic info tetap sama -->
+            <div class="membership-card" data-level="<?php echo esc_attr($level['slug']); ?>">
+                <div class="card-header">
+                    <div class="level-name"><?php echo esc_html($level['name']); ?></div>
+                    <div class="price">
+                        Rp <?php echo number_format($level['price_per_month'], 0, ',', '.'); ?>/bulan
+                    </div>
+                    <div class="description"><?php echo esc_html($level['description']); ?></div>
                 </div>
-                <div class="description"><?php echo esc_html($level['description']); ?></div>
-            </div>
 
-            <!-- Capabilities Section - Menampilkan fitur & batasan -->
-            <?php 
-            $capabilities = json_decode($level['capabilities'], true);
-            if (!empty($capabilities)): ?>
-                <div class="features-section">
-                    <!-- Staff Features -->
-                    <?php if (!empty($capabilities['staff'])): ?>
-                        <div class="feature-group">
-                            <h4>Staff Features</h4>
-                            <ul class="feature-list">
-                                <?php foreach ($capabilities['staff'] as $feature): ?>
-                                    <li class="feature-item">
-                                        <span class="feature-icon">
-                                            <?php echo $feature['value'] ? '✓' : '✗'; ?>
-                                        </span>
-                                        <?php echo esc_html($feature['label']); ?>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
-                        </div>
-                    <?php endif; ?>
+                <!-- Capabilities Section - Menampilkan fitur & batasan -->
+                <?php 
+                $capabilities = json_decode($level['capabilities'], true);
+                if (!empty($capabilities)): ?>
+                    <div class="features-section">
+                        <!-- Staff Features -->
+                        <?php if (!empty($capabilities['staff'])): ?>
+                            <div class="feature-group">
+                                <h4>Staff Features</h4>
+                                <ul class="feature-list">
+                                    <?php foreach ($capabilities['staff'] as $feature): ?>
+                                        <li class="feature-item">
+                                            <span class="feature-icon <?php echo $feature['value'] ? 'enabled' : 'disabled'; ?>">
+                                                <?php echo $feature['value'] ? '✓' : '✗'; ?>
+                                            </span>
+                                            <?php echo esc_html($feature['label']); ?>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
 
-                    <!-- Data Management -->
-                    <?php if (!empty($capabilities['data'])): ?>
-                        <div class="feature-group">
-                            <h4>Data Features</h4>
-                            <ul class="feature-list">
-                                <?php foreach ($capabilities['data'] as $feature): ?>
-                                    <li class="feature-item">
-                                        <span class="feature-icon">
-                                            <?php echo $feature['value'] ? '✓' : '✗'; ?>
-                                        </span>
-                                        <?php echo esc_html($feature['label']); ?>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
-                        </div>
-                    <?php endif; ?>
+                        <!-- Data Management -->
+                        <?php if (!empty($capabilities['data'])): ?>
+                            <div class="feature-group">
+                                <h4>Data Features</h4>
+                                <ul class="feature-list">
+                                    <?php foreach ($capabilities['data'] as $feature): ?>
+                                        <li class="feature-item">
+                                            <span class="feature-icon <?php echo $feature['value'] ? 'enabled' : 'disabled'; ?>">
+                                                <?php echo $feature['value'] ? '✓' : '✗'; ?>
+                                            </span>
+                                            <?php echo esc_html($feature['label']); ?>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
 
-                    <!-- Resource Limits -->
-                    <?php if (!empty($capabilities['resources'])): ?>
-                        <div class="feature-group">
-                            <h4>Resource Limits</h4>
-                            <ul class="feature-list">
-                                <?php foreach ($capabilities['resources'] as $feature): ?>
-                                    <li class="feature-item">
-                                        <span class="limit-label"><?php echo esc_html($feature['label']); ?>:</span>
-                                        <span class="limit-value">
-                                            <?php echo $feature['value'] === -1 ? '∞' : esc_html($feature['value']); ?>
-                                        </span>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
-                        </div>
-                    <?php endif; ?>
+                        <!-- Resource Limits -->
+                        <?php if (!empty($capabilities['resources'])): ?>
+                            <div class="feature-group">
+                                <h4>Resource Limits</h4>
+                                <ul class="feature-list">
+                                    <?php foreach ($capabilities['resources'] as $feature): ?>
+                                        <li class="feature-item">
+                                            <span class="limit-label"><?php echo esc_html($feature['label']); ?>:</span>
+                                            <span class="limit-value">
+                                                <?php echo $feature['value'] === -1 ? '∞' : esc_html($feature['value']); ?>
+                                            </span>
+                                        </li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </div>
+                        <?php endif; ?>
 
-                    <!-- Communication Features -->
-                    <?php if (!empty($capabilities['communication'])): ?>
-                        <div class="feature-group">
-                            <h4>Notifications</h4>
-                            <ul class="feature-list">
-                                <?php foreach ($capabilities['communication'] as $feature): ?>
-                                    <li class="feature-item">
-                                        <span class="feature-icon">
-                                            <?php echo $feature['value'] ? '✓' : '✗'; ?>
-                                        </span>
-                                        <?php echo esc_html($feature['label']); ?>
-                                    </li>
-                                <?php endforeach; ?>
-                            </ul>
-                        </div>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
+                        <!-- Communication Features -->
+                        <?php if (!empty($capabilities['communication'])): ?>
+                           <div class="feature-group">
+                               <h4>Notifications</h4>
+                               <ul class="feature-list">
+                                   <?php foreach ($capabilities['communication'] as $feature): ?>
+                                       <li class="feature-item">
+                                           <span class="feature-icon <?php echo $feature['value'] ? 'enabled' : 'disabled'; ?>">
+                                               <?php echo $feature['value'] ? '✓' : '✗'; ?>
+                                           </span>
+                                           <?php echo esc_html($feature['label']); ?>
+                                       </li>
+                                   <?php endforeach; ?>
+                               </ul>
+                           </div>
+                        <?php endif; ?>
 
-            <!-- Trial & Grace Period seperti sebelumnya -->
-            <div class="period-info">
-                <?php if ($level['is_trial_available']): ?>
-                    <div class="trial-period">
-                        Trial: <?php echo esc_html($level['trial_days']); ?> hari
                     </div>
                 <?php endif; ?>
-                <div class="grace-period">
-                    Grace Period: <?php echo esc_html($level['grace_period_days']); ?> hari
+
+                <!-- Trial & Grace Period seperti sebelumnya -->
+                <div class="period-info">
+                    <?php if ($level['is_trial_available']): ?>
+                        <div class="trial-period">
+                            Trial: <?php echo esc_html($level['trial_days']); ?> hari
+                        </div>
+                    <?php endif; ?>
+                    <div class="grace-period">
+                        Grace Period: <?php echo esc_html($level['grace_period_days']); ?> hari
+                    </div>
                 </div>
+
+                <div class="card-footer card-actions">
+                    <button type="button" class="button edit-level" data-id="<?php echo esc_attr($level['id']); ?>">
+                        Edit
+                    </button>
+                    <button type="button" class="button delete-level" data-id="<?php echo esc_attr($level['id']); ?>">
+                        Delete
+                    </button>
+                </div>
+
             </div>
-
-            <!-- Action buttons -->
-            <div class="card-actions">
-                <button type="button" class="button edit-level" data-id="<?php echo esc_attr($level['id']); ?>">
-                    Edit
-                </button>
-                <button type="button" class="button delete-level" data-id="<?php echo esc_attr($level['id']); ?>">
-                    Delete
-                </button>
-            </div>
-        </div>
-
-
-                
             <?php endforeach; ?>
         </div>
-
-
 
 </div>
 

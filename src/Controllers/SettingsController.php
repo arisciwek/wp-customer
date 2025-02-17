@@ -55,6 +55,12 @@ class SettingsController {
         add_action('wp_ajax_delete_membership_feature_group', [$this, 'handle_delete_feature_group']);
 
     }
+
+    public function handle_get_membership_form_data() {
+        $membership_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
+        $membership_controller->handle_get_form_data();
+    }
+
     // Tambahkan method penghubung untuk features group
     public function handle_get_feature_group() {
         $group_controller = new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
@@ -322,13 +328,25 @@ class SettingsController {
             // Ambil group dan feature data dari cache/database
             $groups_and_features = $this->getActiveGroupsAndFeatures();
             
+            // Tambahkan group mapping
+            $group_mapping = $membership_feature_model->getGroupMapping();
+            
+            // Tambahkan default capabilities structure
+            $default_capabilities = [
+                'features' => [],
+                'limits' => [],
+                'notifications' => []
+            ];
+
             $view_data = [
                 'levels' => $levels,
                 'grouped_features' => $grouped_features,
-                'groups_and_features' => $groups_and_features
+                'groups_and_features' => $groups_and_features,
+                'group_mapping' => $group_mapping,              // Baru
+                'default_capabilities' => $default_capabilities // Baru
             ];
         }
-        
+            
         $tab_file = WP_CUSTOMER_PATH . 'src/Views/templates/settings/' . $allowed_tabs[$tab];
         
         if (file_exists($tab_file)) {

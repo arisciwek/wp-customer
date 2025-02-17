@@ -31,7 +31,17 @@ class MembershipFeatureModel {
     private $table_groups;
     private $table_features;
     
-    
+    private const GROUP_MAPPING = [
+        'staff' => 'features',
+        'data' => 'features',
+        'resources' => 'limits',
+        'communication' => 'notifications'
+    ];
+
+    public function getGroupMapping() {
+        return self::GROUP_MAPPING;
+    }
+
     /**
      * Constructor
      */

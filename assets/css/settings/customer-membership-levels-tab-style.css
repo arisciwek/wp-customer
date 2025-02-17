@@ -118,14 +118,6 @@
     margin: 0;
 }
 
-.feature-item {
-    display: flex;
-    align-items: center;
-    padding: 8px 0;
-    color: #4a5568;
-    font-size: 0.875rem;
-}
-
 .feature-item .dashicons {
     margin-right: 8px;
 }
@@ -196,26 +188,6 @@
     font-size: 16px;
 }
 
-/* Card Actions */
-.card-actions {
-    margin-top: 24px;
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-}
-
-/* Responsive Design */
-@media screen and (max-width: 1400px) {
-    .membership-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media screen and (max-width: 782px) {
-    .membership-grid {
-        grid-template-columns: 1fr;
-    }
-}
 
 .level-name {
     font-size: 1.5rem;
@@ -259,14 +231,6 @@ h4 {
     margin: 0;
 }
 
-.feature-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid #e2e8f0;
-}
-
 .feature-item:last-child {
     border-bottom: none;
 }
@@ -299,19 +263,6 @@ h4 {
     display: flex;
     gap: 8px;
     justify-content: flex-end;
-}
-
-/* Responsive */
-@media screen and (max-width: 1400px) {
-    .membership-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-@media screen and (max-width: 782px) {
-    .membership-grid {
-        grid-template-columns: 1fr;
-    }
 }
 
 /* Modal Base */
@@ -462,12 +413,6 @@ h4 {
     gap: 16px;
 }
 
-.feature-item {
-    padding: 12px;
-    background: white;
-    border-radius: 6px;
-    border: 1px solid #e2e8f0;
-}
 
 .checkbox-label {
     display: flex;
@@ -497,17 +442,6 @@ h4 {
     gap: 8px;
 }
 
-/* Responsive Adjustments */
-@media screen and (max-width: 782px) {
-    .features-grid,
-    .limits-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .wp-customer-modal .modal-content {
-        margin: 20px;
-    }
-}
 
 /* Section Styles */
 .membership-card .card-content > div[class$="-section"] {
@@ -531,11 +465,17 @@ h4 {
 }
 
 .membership-card [class$="-item"] {
-    display: flex;
-    align-items: center;
-    padding: 8px 0;
     color: #4a5568;
     font-size: 0.875rem;
+    gap: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 5px;
+    border-bottom: 1px solid #e2e8f0;
+    background: white;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
 }
 
 .membership-card [class$="-item"]:not(:last-child) {
@@ -568,3 +508,59 @@ h4 {
     text-align: right;
     font-weight: 600;
 }
+
+.feature-icon.enabled {
+    color: #059669; /* Warna hijau untuk true/1 */
+    font-weight: bold;
+}
+
+.feature-icon.disabled {
+    color: #dc2626; /* Warna merah untuk false/0 */
+    font-weight: bold;
+}
+
+.feature-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background-color: #f3f4f6;
+}
+
+.feature-icon.enabled {
+    background-color: #ecfdf5; /* Background hijau muda */
+}
+
+.feature-icon.disabled {
+    background-color: #fef2f2; /* Background merah muda */
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+    .membership-grid,
+    .features-grid,
+    .limits-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .wp-customer-modal .modal-content {
+        margin: 20px;
+    }
+}
+
+/* Responsive Design */
+@media screen and (max-width: 1400px) {
+    .membership-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+
+@media screen and (max-width: 782px) {
+    .membership-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
