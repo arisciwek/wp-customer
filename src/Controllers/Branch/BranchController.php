@@ -687,5 +687,42 @@ class BranchController {
             ]);
         }
     }
+    
+    /**
+     * Khusus untuk membuat demo data branch
+     */
+    public function createDemoBranch(array $data): ?int {
+        try {
+            // Debug log
+            $this->debug_log('Creating demo branch: ' . print_r($data, true));
+
+            // Buat branch via model
+            $branch_id = $this->model->create($data);
+            
+            if (!$branch_id) {
+                throw new \Exception('Gagal membuat demo branch');
+            }
+
+            // Clear semua cache yang terkait
+            $this->cache->delete('branch', $branch_id);
+            $this->cache->delete('branch_total_count', get_current_user_id());
+            $this->cache->delete('customer_branch', $data['customer_id']);
+            $this->cache->delete('customer_branch_list', $data['customer_id']);
+            
+            // Invalidate DataTable cache
+            $this->cache->invalidateDataTableCache('branch_list', [
+                'customer_id' => $data['customer_id']
+            ]);
+
+            // Cache terkait customer juga perlu diperbarui
+            $this->cache->invalidateCustomerCache($data['customer_id']);
+
+            return $branch_id;
+
+        } catch (\Exception $e) {
+            $this->debug_log('Error creating demo branch: ' . $e->getMessage());
+            throw $e;
+        }
+    } 
 }
 

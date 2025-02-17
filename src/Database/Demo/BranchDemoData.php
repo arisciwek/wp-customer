@@ -67,6 +67,7 @@
 namespace WPCustomer\Database\Demo;
 
 use WPCustomer\Database\Demo\Data\BranchUsersData;
+use WPCustomer\Controllers\Branch\BranchController;
 
 defined('ABSPATH') || exit;
 
@@ -92,6 +93,7 @@ class BranchDemoData extends AbstractDemoData {
         $this->customer_ids = [];
         $this->user_ids = [];
         $this->branch_users = BranchUsersData::$data;
+        $this->branchController = new BranchController();
     }
 
     /**
@@ -330,8 +332,9 @@ class BranchDemoData extends AbstractDemoData {
             'created_by' => $customer->user_id,            // Customer owner user
             'status' => 'active'
         ];
+    
+        $branch_id = $this->branchController->createDemoBranch($branch_data);
 
-        $branch_id = $this->branchModel->create($branch_data);
         if (!$branch_id) {
             throw new \Exception("Failed to create pusat branch for customer: {$customer->id}");
         }
@@ -405,7 +408,7 @@ class BranchDemoData extends AbstractDemoData {
                 'status' => 'active'
             ];
 
-            $branch_id = $this->branchModel->create($branch_data);
+            $branch_id = $this->branchController->createDemoBranch($branch_data);
             if (!$branch_id) {
                 throw new \Exception("Failed to create cabang branch for customer: {$customer->id}");
             }
