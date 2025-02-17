@@ -20,6 +20,7 @@ namespace WPCustomer\Database\Demo;
 
 use WPCustomer\Database\Demo\Data\CustomerUsersData;
 use WPCustomer\Database\Demo\Data\BranchUsersData;
+use WPCustomer\Controllers\customerController;
 
 defined('ABSPATH') || exit;
 
@@ -33,7 +34,7 @@ class CustomerDemoData extends AbstractDemoData {
     public $used_npwp = [];
     public $used_nib = [];
     protected $customer_users = [];
-
+    private $customerController;
 
     // Data statis customer
     private static $customers = [
@@ -55,6 +56,7 @@ class CustomerDemoData extends AbstractDemoData {
     public function __construct() {
         parent::__construct();
         $this->customer_users = CustomerUsersData::$data;
+        $this->customerController = new CustomerController();
     }
 
     /**
@@ -205,8 +207,8 @@ class CustomerDemoData extends AbstractDemoData {
                     'updated_at' => current_time('mysql')
                 ];
 
-                // Use createDemoData instead of create
-                if (!$this->customerModel->createDemoData($customer_data)) {
+                // Use createDemoCustomer instead of create
+                if (!$this->customerController->createDemoCustomer($customer_data)) {
                     throw new \Exception("Failed to create customer with fixed ID");
                 }
 
