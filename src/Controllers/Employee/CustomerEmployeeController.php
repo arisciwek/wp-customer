@@ -619,5 +619,50 @@ class CustomerEmployeeController {
            wp_send_json_error(['message' => $e->getMessage()]);
        }
     }
+    
+    /**
+     * Khusus untuk membuat demo data employee
+     */
+    public function createDemoEmployee(array $data): ?int {
+        try {
+            // Debug log
+            $this->debug_log('Creating demo employee: ' . print_r($data, true));
 
+            // Buat employee via model
+            $employee_id = $this->model->create($data);
+            
+            if (!$employee_id) {
+                throw new \Exception('Gagal membuat demo employee');
+            }
+
+            // Clear semua cache yang terkait
+            $this->cache->delete('employee', $employee_id);
+            $this->cache->delete('employee_total_count', get_current_user_id());
+            
+            // Cache untuk relasi dengan customer
+            $this->cache->delete('customer_employee', $data['customer_id']);
+            $this->cache->delete('customer_employee_list', $data['customer_id']);
+            
+            // Cache untuk relasi dengan branch
+            $this->cache->delete('branch_employee', $data['branch_id']);
+            $this->cache->delete('branch_employee_list', $data['branch_id']);
+            
+            // Invalidate DataTable cache
+            $this->cache->invalidateDataTableCache('customer_employee_list', [
+                'customer_id' => $data['customer_id']
+            ]);
+
+            // Invalidate cache customer dan branch
+            $this->cache->invalidateCustomerCache($data['customer_id']);
+            $this->cache->invalidateDataTableCache('branch_list', [
+                'customer_id' => $data['customer_id']
+            ]);
+
+            return $employee_id;
+
+        } catch (\Exception $e) {
+            $this->debug_log('Error creating demo employee: ' . $e->getMessage());
+            throw $e;
+        }
+    }
 }

@@ -13,22 +13,22 @@
 namespace WPCustomer\Database\Demo;
 
 use WPCustomer\Database\Demo\Data\CustomerEmployeeUsersData;
-use WPCustomer\Models\Employee\CustomerEmployeeModel;
+use WPCustomer\Controllers\Employee\CustomerEmployeeController;
 
 defined('ABSPATH') || exit;
 
 class CustomerEmployeeDemoData extends AbstractDemoData {
     use CustomerDemoDataHelperTrait;
 
-    private $employeeModel;
+    private $employeeController;
     private $wpUserGenerator;
     private static $employee_users;
 
     public function __construct() {
         parent::__construct();
-        $this->employeeModel = new CustomerEmployeeModel();
         $this->wpUserGenerator = new WPUserGenerator();
         self::$employee_users = CustomerEmployeeUsersData::$data;
+        $this->employeeController = new CustomerEmployeeController();
     }
 
     protected function validate(): bool {
@@ -216,12 +216,10 @@ private function createEmployeeRecord(
             'status' => 'active'
         ];
 
-            $result = $this->wpdb->insert(
-                $this->wpdb->prefix . 'app_customer_employees',
-                $employee_data
-            );
-
-            if ($result === false) {
+            // Ubah dari insert langsung ke model menjadi menggunakan controller
+            $employee_id = $this->employeeController->createDemoEmployee($employee_data);
+        
+            if ($employee_id === false) {
                 throw new \Exception($this->wpdb->last_error);
             }
 

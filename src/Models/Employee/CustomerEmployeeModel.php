@@ -24,10 +24,13 @@
 
 namespace WPCustomer\Models\Employee;
 
+use WPCustomer\Cache\CustomerCacheManager;
+
 class CustomerEmployeeModel {
     private $table;
     private $customer_table;
     private $branch_table;
+    private $cache; // Tambahkan properti cache
 
     // Add class constant for valid status values
     private const VALID_STATUSES = ['active', 'inactive'];
@@ -37,60 +40,61 @@ class CustomerEmployeeModel {
         $this->table = $wpdb->prefix . 'app_customer_employees';
         $this->customer_table = $wpdb->prefix . 'app_customers';
         $this->branch_table = $wpdb->prefix . 'app_branches';
+        $this->cache = new CustomerCacheManager();
     }
 
-    public function create(array $data): ?int {
-        global $wpdb;
+public function create(array $data): ?int {
+    global $wpdb;
 
-        // Ensure valid status or use default
-        $status = isset($data['status']) && in_array($data['status'], self::VALID_STATUSES) 
-            ? $data['status'] 
-            : 'active';
+    $result = $wpdb->insert(
+        $this->table,
+        [
+            'customer_id' => $data['customer_id'],  // Ambil customer_id dari data
+            'branch_id' => $data['branch_id'],
+            'user_id' => get_current_user_id(),
+            'name' => $data['name'],
+            'position' => $data['position'],
+            'finance' => $data['finance'],
+            'operation' => $data['operation'],
+            'legal' => $data['legal'],
+            'purchase' => $data['purchase'],
+            'keterangan' => $data['keterangan'],
+            'email' => $data['email'],
+            'phone' => $data['phone'],
+            'created_by' => get_current_user_id(),
+            'created_at' => current_time('mysql'),
+            'updated_at' => current_time('mysql'),
+            'status' => $data['status'] ?? 'active'
+        ],
+        [
+            '%d', // customer_id
+            '%d', // branch_id
+            '%d', // user_id
+            '%s', // name
+            '%s', // position
+            '%d', // finance
+            '%d', // operation
+            '%d', // legal
+            '%d', // purchase
+            '%s', // keterangan
+            '%s', // email
+            '%s', // phone
+            '%d', // created_by
+            '%s', // created_at
+            '%s', // updated_at
+            '%s'  // status
+        ]
+    );
 
-        $result = $wpdb->insert(
-            $this->table,
-            [
-                'customer_id' => $data['customer_id'],
-                'branch_id' => $data['branch_id'],
-                'user_id' => get_current_user_id(),
-                'name' => $data['name'],
-                'position' => $data['position'],
-                'finance' => $data['finance'],
-                'operation' => $data['operation'],
-                'legal' => $data['legal'],
-                'purchase' => $data['purchase'],
-                'keterangan' => $data['keterangan'],
-                'email' => $data['email'],
-                'phone' => $data['phone'],
-                'created_by' => get_current_user_id(),
-                'created_at' => current_time('mysql'),
-                'updated_at' => current_time('mysql'),
-                'status' => $status
-            ],
-            [
-                '%d', // customer_id
-                '%d', // branch_id
-                '%d', // user_id
-                '%s', // name
-                '%s', // position
-                '%d', // finance
-                '%d', // operation
-                '%d', // legal
-                '%d', // purchase
-                '%s', // keterangan
-                '%s', // email
-                '%s', // phone
-                '%d', // created_by
-                '%s', // created_at
-                '%s', // updated_at
-                '%s'  // status
-            ]
-        );
-
-        $this->cache->delete('customer_active_employee_count', $customer_id);
-
-        return ($result === false) ? null : (int) $wpdb->insert_id;
+    if ($result === false) {
+        return null;
     }
+
+    // Clear cache untuk customer yang bersangkutan
+    $this->cache->delete('customer_active_employee_count', (string)$data['customer_id']);
+
+    return (int) $wpdb->insert_id;
+}
 
     public function find(int $id): ?object {
         global $wpdb;
