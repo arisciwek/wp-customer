@@ -101,6 +101,8 @@ class CustomerController {
         add_action('wp_ajax_generate_wp_docgen_customer_detail_pdf', [$this, 'generate_wp_docgen_customer_detail_pdf']);
         add_action('wp_ajax_create_customer_button', [$this, 'createCustomerButton']);
 
+        add_action('wp_ajax_create_pdf_button', [$this, 'createPdfButton']);
+
         // Debug cache di folder uploads 
         /*
         $upload_dir = wp_upload_dir();
@@ -119,6 +121,41 @@ class CustomerController {
         */
 
     }
+
+public function createPdfButton() {
+    try {
+        check_ajax_referer('wp_customer_nonce', 'nonce');
+        
+        $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+        if (!$id) {
+            throw new \Exception('Invalid customer ID');
+        }
+
+        // Tambahkan logging untuk debug
+        $access = $this->validator->validateAccess($id);
+        error_log('PDF Button Access Check - User: ' . get_current_user_id());
+        error_log('Access Result: ' . print_r($access, true));
+
+        if (!$access['has_access']) {
+            wp_send_json_success(['button' => '']);
+            return;
+        }
+
+        $button = '<button type="button" class="button wp-mpdf-customer-detail-export-pdf">';
+        $button .= '<span class="dashicons dashicons-pdf"></span>';
+        $button .= __('Generate PDF', 'wp-customer');
+        $button .= '</button>';
+
+        wp_send_json_success([
+            'button' => $button
+        ]);
+
+    } catch (\Exception $e) {
+        wp_send_json_error([
+            'message' => $e->getMessage()
+        ]);
+    }
+}
 
     /**
      * Generate DOCX document

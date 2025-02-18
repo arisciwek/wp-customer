@@ -1,19 +1,14 @@
 <?php
-
-
-defined('ABSPATH') || exit;
-?>
-
-<?php
 defined('ABSPATH') || exit;
 ?>
 
 <div id="customer-details" class="tab-content">
+
+
     <div class="export-actions">
-        <button type="button" class="button wp-mpdf-customer-detail-export-pdf">
-            <span class="dashicons dashicons-pdf"></span>
-            <?php _e('Generate PDF', 'wp-customer'); ?>
-        </button>
+
+        <div id="generate-pdf-button"></div>
+        
         <button type="button" class="button wp-docgen-customer-detail-expot-document">
             <span class="dashicons dashicons-media-document"></span>
             <?php _e('Export DOCX', 'wp-customer'); ?>

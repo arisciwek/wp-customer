@@ -311,10 +311,29 @@
                 const bolehTambahKaryawan = data.customer.can_create_employee;
                 $('.tambah-karyawan').toggle(bolehTambahKaryawan);
 
+                // Generate PDF button via AJAX
+                $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'create_pdf_button',
+                        id: data.customer.id,
+                        nonce: wpCustomerData.nonce
+                    },
+                    success: (response) => {
+                        console.log("PDF Button response:", response);  // Debug log
+                        if (response.success) {
+                            $('#generate-pdf-button').html(response.data.button);
+                        }
+                    }
+                });
+
+
             } catch (error) {
                 console.error('Error displaying customer data:', error);
                 CustomerToast.error('Error displaying customer data');
             }
+
         }, 
 
     handleLoadError() {
