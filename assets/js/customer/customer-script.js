@@ -311,6 +311,7 @@
                 const bolehTambahKaryawan = data.customer.can_create_employee;
                 $('.tambah-karyawan').toggle(bolehTambahKaryawan);
 
+
                 // Generate PDF button via AJAX
                 $.ajax({
                     url: wpCustomerData.ajaxUrl,
@@ -321,9 +322,61 @@
                         nonce: wpCustomerData.nonce
                     },
                     success: (response) => {
-                        console.log("PDF Button response:", response);  // Debug log
                         if (response.success) {
                             $('#generate-pdf-button').html(response.data.button);
+                            
+                            // Bind click event using delegation
+                            $('#generate-pdf-button').off('click', '.wp-mpdf-customer-detail-export-pdf')
+                                .on('click', '.wp-mpdf-customer-detail-export-pdf', function() {
+                                    const $button = $(this);
+                                    const originalText = $button.html();
+                                    
+                                    // Tambahkan loading state
+                                    $button.prop('disabled', true)
+                                           .html('<span class="dashicons dashicons-update rotating"></span> Generating PDF...');
+                                    
+                                    $.ajax({
+                                        url: wpCustomerData.ajaxUrl,
+                                        type: 'POST',
+                                        data: {
+                                            action: 'generate_customer_pdf',
+                                            id: data.customer.id,
+                                            nonce: wpCustomerData.nonce
+                                        },
+                                        xhrFields: {
+                                            responseType: 'blob'
+                                        },
+                                        success: function(response) {
+                                            if (response.type === 'application/json') {
+                                                // Handle error response
+                                                const reader = new FileReader();
+                                                reader.onload = function() {
+                                                    const errorResponse = JSON.parse(this.result);
+                                                    CustomerToast.error(errorResponse.data.message || 'Failed to generate PDF');
+                                                };
+                                                reader.readAsText(response);
+                                            } else {
+                                                // Handle successful PDF generation
+                                                const blob = new Blob([response], { type: 'application/pdf' });
+                                                const url = window.URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url;
+                                                a.download = `customer-${data.customer.code}.pdf`;
+                                                document.body.appendChild(a);
+                                                a.click();
+                                                window.URL.revokeObjectURL(url);
+                                                CustomerToast.success('PDF berhasil di-generate');
+                                            }
+                                        },
+                                        error: function(xhr) {
+                                            CustomerToast.error('Gagal generate PDF. Silakan coba lagi.');
+                                        },
+                                        complete: function() {
+                                            // Kembalikan tombol ke keadaan semula
+                                            $button.prop('disabled', false).html(originalText);
+                                        }
+                                    });
+                                });
                         }
                     }
                 });
@@ -585,36 +638,6 @@
         }
 
      };
-
-        $('.wp-mpdf-customer-detail-export-pdf').on('click', function() {
-            const customerId = $('#current-customer-id').val();
-            
-            $.ajax({
-                url: wpCustomerData.ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'generate_customer_pdf',
-                    id: customerId,
-                    nonce: wpCustomerData.nonce
-                },
-                xhrFields: {
-                    responseType: 'blob'
-                },
-                success: function(response) {
-                    const blob = new Blob([response], { type: 'application/pdf' });
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `customer-${customerId}.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    window.URL.revokeObjectURL(url);
-                },
-                error: function() {
-                    CustomerToast.error('Failed to generate PDF');
-                }
-            });
-        });
 
         // Document generation handlers
         $('.wp-docgen-customer-detail-expot-document').on('click', function() {

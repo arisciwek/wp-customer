@@ -75,14 +75,6 @@ class WPCustomer {
         require_once WP_CUSTOMER_PATH . 'includes/class-dependencies.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-init-hooks.php';
 
-        // Initialize wp-mpdf if available
-        if (file_exists(WP_CUSTOMER_PATH . '../wp-mpdf/wp-mpdf.php')) {
-            require_once WP_CUSTOMER_PATH . '../wp-mpdf/wp-mpdf.php';
-            if (function_exists('wp_mpdf_init')) {
-                wp_mpdf_init();
-            }
-        }
-
         $this->loader = new WP_Customer_Loader();
 
         // Initialize Settings Controller

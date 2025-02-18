@@ -304,7 +304,6 @@ public function createPdfButton() {
         }
     }
 
-
     public function generate_customer_pdf() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
@@ -320,18 +319,27 @@ public function createPdfButton() {
                 throw new \Exception('You do not have permission to view this customer');
             }
 
+            // Load wp-mpdf jika ada
+            if (file_exists(WP_CUSTOMER_PATH . '../wp-mpdf/wp-mpdf.php')) {
+                require_once WP_CUSTOMER_PATH . '../wp-mpdf/wp-mpdf.php';
+                if (function_exists('wp_mpdf_init')) {
+                    wp_mpdf_init();
+                }
+            } else {
+                throw new \Exception('PDF generator plugin tidak ditemukan');
+            }
+
             // Ambil data customer
             $customer = $this->model->find($id);
             if (!$customer) {
                 throw new \Exception('Customer not found');
             }
 
-            // Dalam method generate_customer_pdf()
+            // Generate PDF menggunakan WP mPDF
             ob_start();
             include WP_CUSTOMER_PATH . 'src/Views/templates/customer/pdf/customer-detail-pdf.php';
             $html = ob_get_clean();
 
-            // Buat PDF menggunakan WP mPDF
             $mpdf = wp_mpdf()->generate_pdf($html, [
                 'format' => 'A4',
                 'margin_left' => 15,
@@ -344,10 +352,12 @@ public function createPdfButton() {
             $mpdf->Output('customer-' . $customer->code . '.pdf', \Mpdf\Output\Destination::DOWNLOAD);
 
         } catch (\Exception $e) {
-            wp_send_json_error(['message' => $e->getMessage()]);
+            wp_send_json_error([
+                'message' => $e->getMessage(),
+                'code' => 'pdf_generation_error'
+            ]);
         }
     }
-
     /**
      * Validate customer access - public endpoint untuk AJAX
      * @since 1.0.0
