@@ -8,12 +8,12 @@ defined('ABSPATH') || exit;
     <div class="export-actions">
 
         <div id="generate-pdf-button"></div>
-        
-        <button type="button" class="button wp-docgen-customer-detail-expot-document">
+
+        <button type="button" class="button wp-docgen-customer-detail-export-document">
             <span class="dashicons dashicons-media-document"></span>
             <?php _e('Export DOCX', 'wp-customer'); ?>
         </button>
-        <button type="button" class="button wp-docgen-customer-detail-expot-pdf">
+        <button type="button" class="button wp-docgen-customer-detail-export-pdf">
             <span class="dashicons dashicons-pdf"></span>
             <?php _e('Export PDF', 'wp-customer'); ?>
         </button>
