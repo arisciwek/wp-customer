@@ -339,7 +339,7 @@ public function enqueue_frontend_assets() {
                 case 'demo-data':
                     wp_enqueue_script(
                         'wp-customer-demo-data-tab',
-                        WP_CUSTOMER_URL . 'assets/js/settings/demo-data-tab-script.js',
+                        WP_CUSTOMER_URL . 'assets/js/settings/customer-demo-data-tab-script.js',
                         ['jquery', 'wp-customer-settings'],
                         $this->version,
                         true

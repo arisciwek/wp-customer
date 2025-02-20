@@ -20,7 +20,7 @@ namespace WPCustomer\Database\Demo;
 
 use WPCustomer\Database\Demo\Data\CustomerUsersData;
 use WPCustomer\Database\Demo\Data\BranchUsersData;
-use WPCustomer\Controllers\customerController;
+use WPCustomer\Controllers\CustomerController;
 
 defined('ABSPATH') || exit;
 

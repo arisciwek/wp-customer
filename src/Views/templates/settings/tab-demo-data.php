@@ -56,7 +56,6 @@ if (!current_user_can('manage_options')) {
 
 <div class="wrap">
     <div id="demo-data-messages"></div>
-
     <div class="demo-data-section">
         <h3><?php _e('Generate Demo Data', 'wp-customer'); ?></h3>
         <p class="description">
@@ -69,7 +68,7 @@ if (!current_user_can('manage_options')) {
                 <h4><?php _e('Membership Feature Groups', 'wp-customer'); ?></h4>
                 <p><?php _e('Generate feature group definitions for membership capabilities.', 'wp-customer'); ?></p>
                 <button type="button" 
-                        class="button button-primary generate-demo-data" 
+                        class="button button-primary customer-generate-demo-data" 
                         data-type="membership-groups"
                         data-nonce="<?php echo wp_create_nonce('generate_demo_membership-groups'); ?>">
                     <?php _e('Generate Feature Groups', 'wp-customer'); ?>
@@ -81,7 +80,7 @@ if (!current_user_can('manage_options')) {
                 <h4><?php _e('Membership Features', 'wp-customer'); ?></h4>
                 <p><?php _e('Generate membership feature definitions for capabilities and limits.', 'wp-customer'); ?></p>
                 <button type="button" 
-                        class="button button-primary generate-demo-data" 
+                        class="button button-primary customer-generate-demo-data" 
                         data-type="membership-features"
                         data-requires="membership-groups"
                         data-check-nonce="<?php echo wp_create_nonce('check_demo_membership-groups'); ?>"
@@ -95,7 +94,7 @@ if (!current_user_can('manage_options')) {
                 <h4><?php _e('Membership Levels', 'wp-customer'); ?></h4>
                 <p><?php _e('Generate default membership levels configuration.', 'wp-customer'); ?></p>
                 <button type="button" 
-                        class="button button-primary generate-demo-data" 
+                        class="button button-primary customer-generate-demo-data" 
                         data-type="membership-level"
                         data-requires="membership-features"
                         data-check-nonce="<?php echo wp_create_nonce('check_demo_membership-features'); ?>"
@@ -109,7 +108,7 @@ if (!current_user_can('manage_options')) {
                 <h4><?php _e('Customers', 'wp-customer'); ?></h4>
                 <p><?php _e('Generate sample customer data with WordPress users.', 'wp-customer'); ?></p>
                 <button type="button" 
-                        class="button button-primary generate-demo-data" 
+                        class="button button-primary customer-generate-demo-data" 
                         data-type="customer"
                         data-nonce="<?php echo wp_create_nonce('generate_demo_customer'); ?>">
                     <?php _e('Generate Customers', 'wp-customer'); ?>
@@ -121,25 +120,13 @@ if (!current_user_can('manage_options')) {
                 <h4><?php _e('Branches', 'wp-customer'); ?></h4>
                 <p><?php _e('Generate branch offices for existing customers.', 'wp-customer'); ?></p>
                 <button type="button" 
-                        class="button button-primary generate-demo-data" 
+                        class="button button-primary customer-generate-demo-data" 
                         data-type="branch"
+                        data-requires="customer"
+                        data-check-nonce="<?php echo wp_create_nonce('check_demo_customer'); ?>"
                         data-nonce="<?php echo wp_create_nonce('generate_demo_branch'); ?>">
                     <?php _e('Generate Branches', 'wp-customer'); ?>
                 </button>
-            </div>
-
-            <!-- Memberships -->
-            <div class="demo-data-card">
-                <h4><?php _e('Memberships', 'wp-customer'); ?></h4>
-                <p><?php _e('Generate membership data for existing branches.', 'wp-customer'); ?></p>
-                    <button type="button" 
-                            class="button button-primary generate-demo-data" 
-                            data-type="memberships"
-                            data-requires="branch"
-                            data-check-nonce="<?php echo wp_create_nonce('check_demo_branch'); ?>"
-                            data-nonce="<?php echo wp_create_nonce('generate_demo_memberships'); ?>">
-                        <?php _e('Generate Memberships', 'wp-customer'); ?>
-                    </button>
             </div>
 
             <!-- Employees -->
@@ -147,8 +134,10 @@ if (!current_user_can('manage_options')) {
                 <h4><?php _e('Employees', 'wp-customer'); ?></h4>
                 <p><?php _e('Generate employee data for branches.', 'wp-customer'); ?></p>
                 <button type="button" 
-                        class="button button-primary generate-demo-data" 
+                        class="button button-primary customer-generate-demo-data" 
                         data-type="employee"
+                        data-requires="branch"
+                        data-check-nonce="<?php echo wp_verify_nonce('check_demo_branch'); ?>"
                         data-nonce="<?php echo wp_create_nonce('generate_demo_employee'); ?>">
                     <?php _e('Generate Employees', 'wp-customer'); ?>
                 </button>
@@ -209,4 +198,3 @@ if (!current_user_can('manage_options')) {
     </div>
 
 </div>
-

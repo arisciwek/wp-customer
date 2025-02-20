@@ -38,9 +38,10 @@ class SettingsController {
     // Add this to your SettingsController or appropriate controller class
     public function register_ajax_handlers() {
         add_action('wp_ajax_reset_permissions', [$this, 'handle_reset_permissions']);
-        add_action('wp_ajax_generate_demo_data', [$this, 'handle_generate_demo_data']);
-        add_action('wp_ajax_check_demo_data', [$this, 'handle_check_demo_data']);
-
+        add_action('wp_ajax_customer_generate_demo_data', [$this, 'handle_generate_demo_data']);
+        add_action('wp_ajax_customer_check_demo_data', [$this, 'handle_check_demo_data']);
+    
+        /*
         add_action('wp_ajax_get_membership_level', [$this, 'handle_get_membership_level']);
         add_action('wp_ajax_save_membership_level', [$this, 'handle_save_membership_level']);
         add_action('wp_ajax_delete_membership_level', [$this, 'handle_delete_membership_level']);
@@ -53,6 +54,7 @@ class SettingsController {
         add_action('wp_ajax_get_membership_feature_group', [$this, 'handle_get_feature_group']);
         add_action('wp_ajax_save_membership_feature_group', [$this, 'handle_save_feature_group']);
         add_action('wp_ajax_delete_membership_feature_group', [$this, 'handle_delete_feature_group']);
+        */
 
     }
 
@@ -209,6 +211,14 @@ class SettingsController {
      * @throws \Exception If invalid type specified
      */
     private function getGeneratorClass($type) {
+
+        error_log('=== Start WP Customer getGeneratorClass ===');  // Log 1
+        error_log('Received type: ' . $type);          // Log 2
+        
+        error_log('getGeneratorClass received type: [' . $type . ']');
+        error_log('Type length: ' . strlen($type));
+        error_log('Type character codes: ' . json_encode(array_map('ord', str_split($type))));   
+
         switch ($type) {
             case 'users':
                 return new \WPCustomer\Database\Demo\WPUserGenerator();
@@ -233,6 +243,10 @@ class SettingsController {
 
     public function handle_generate_demo_data() {
         try {
+
+            error_log('Received type: ' . $type);
+            error_log('Nonce verification: ' . wp_verify_nonce($nonce, "generate_demo_{$type}"));
+
             // Validate nonce and permissions first
             if (!current_user_can('manage_options')) {
                 throw new \Exception('Permission denied');

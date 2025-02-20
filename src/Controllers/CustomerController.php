@@ -320,15 +320,18 @@ public function createPdfButton() {
             }
 
             // Load wp-mpdf jika ada
-            if (file_exists(WP_CUSTOMER_PATH . '../wp-mpdf/wp-mpdf.php')) {
-                require_once WP_CUSTOMER_PATH . '../wp-mpdf/wp-mpdf.php';
-                if (function_exists('wp_mpdf_init')) {
-                    wp_mpdf_init();
-                }
-            } else {
+            if (!function_exists('wp_mpdf_load')) {
                 throw new \Exception('PDF generator plugin tidak ditemukan');
             }
 
+            if (!wp_mpdf_load()) {
+                throw new \Exception('Gagal memuat PDF generator plugin');
+            }
+
+            if (!wp_mpdf_init()) {
+                throw new \Exception('Gagal menginisialisasi PDF generator');
+            }
+            
             // Ambil data customer
             $customer = $this->model->find($id);
             if (!$customer) {
