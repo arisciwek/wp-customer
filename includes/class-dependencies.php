@@ -283,6 +283,20 @@ public function enqueue_frontend_assets() {
                     ]);
                     break;
                 case 'general':
+                        // Modal components
+                        wp_enqueue_script(
+                            'confirmation-modal',
+                            WP_CUSTOMER_URL . 'assets/js/customer/confirmation-modal.js',
+                            ['jquery'],
+                            $this->version,
+                            true
+                        );
+
+                        // Localize script
+                        wp_localize_script('wp-customer-settings', 'wpCustomerData', [
+                            'ajaxUrl' => admin_url('admin-ajax.php'),
+                            'clearCacheNonce' => wp_create_nonce('wp_customer_clear_cache')
+                        ]);
                     break;
                 case 'membership-features':
                     wp_enqueue_script(
@@ -353,6 +367,7 @@ public function enqueue_frontend_assets() {
                     ]);
                     break;
             }
+
         }
 
         // Customer and Branch pages scripts
