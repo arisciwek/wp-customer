@@ -31,11 +31,6 @@
 
 defined('ABSPATH') || exit;
 
-// Tambahkan ini sementara di awal render form untuk debug
-error_log('Debug wilayah hooks:');
-error_log('Province select hook exists: ' . (has_action('wilayah_indonesia_province_select') ? 'yes' : 'no'));
-error_log('Regency select hook exists: ' . (has_action('wilayah_indonesia_regency_select') ? 'yes' : 'no'));
-
 ?>
 
 <div id="create-customer-modal" class="modal-overlay" style="display: none;">
