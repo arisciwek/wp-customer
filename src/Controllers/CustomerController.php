@@ -649,7 +649,7 @@ public function createPdfButton() {
         // View Button - selalu tampilkan jika punya akses view
         if ($this->validator->canView($relation)) {
             $actions .= sprintf(
-                '<button type="button" class="button view-customer" data-id="%d">' .
+                '<button type="button" class="button small-button view-customer" data-id="%d">' .
                 '<i class="dashicons dashicons-visibility"></i></button> ',
                 $customer->id
             );
@@ -658,7 +658,7 @@ public function createPdfButton() {
         // Edit Button - tampilkan jika punya akses edit
         if ($this->validator->canUpdate($relation)) {
             $actions .= sprintf(
-                '<button type="button" class="button edit-customer" data-id="%d">' .
+                '<button type="button" class="button small-button edit-customer" data-id="%d">' .
                 '<i class="dashicons dashicons-edit"></i></button> ',
                 $customer->id
             );
@@ -667,7 +667,7 @@ public function createPdfButton() {
         // Delete Button - hanya untuk admin
         if ($this->validator->canDelete($relation)) {
             $actions .= sprintf(
-                '<button type="button" class="button delete-customer" data-id="%d">' .
+                '<button type="button" class="button small-button delete-customer" data-id="%d">' .
                 '<i class="dashicons dashicons-trash"></i></button>',
                 $customer->id
             );
