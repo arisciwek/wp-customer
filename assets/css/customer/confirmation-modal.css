@@ -26,171 +26,146 @@
  * - Added animations
  * - Added responsive styles
  */
+
 /**
  * Modal Component Styles
- * [header documentation yang sudah ada...]
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Components
+ * @version     1.0.0
  */
 
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: none; 
+    justify-content: center;
+    align-items: center;
+    z-index: 999999;
+}
 
- .modal-overlay {
-     display: none;
-     position: fixed;
-     top: 0;
-     left: 0;
-     right: 0;
-     bottom: 0;
-     background: rgba(0, 0, 0, 0.7);
-     z-index: 160000;
-     /* Tambahkan properti flexbox untuk centering */
-     display: none; /* akan diubah jadi flex saat aktif */
-     align-items: center; /* vertical center */
-     justify-content: center; /* horizontal center */
-     padding: 1rem; /* Beri padding agar tidak terlalu dekat dengan edge di mobile */
- }
+.modal-overlay.active {
+    display: flex;
+}
 
- .modal {
-     position: relative;
-     width: 90%;
-     max-width: 500px;
-     margin: 0; /* Hapus margin karena sudah dihandle flexbox */
-     background: #fff;
-     border-radius: 4px;
-     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
-     transform: translateY(-20px) scale(0.95);
-     opacity: 0;
-     transition: all 0.3s ease;
- }
-
- /* Modal Active States */
- .modal-overlay.active {
-     display: flex; /* Ganti jadi flex saat aktif */
- }
-
- .modal-overlay.active .modal {
-     transform: translateY(0) scale(1); /* Tambahkan scale untuk efek pop */
-     opacity: 1;
- }
+/* Modal Container */
+.modal {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    max-width: 400px;
+    width: 90%;
+    position: relative;
+}
 
 /* Modal Header */
 .modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e5e7eb;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1rem;
-    border-bottom: 1px solid #ddd;
 }
 
 .modal-title {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 12px;
 }
 
-/* Modal Types */
-.modal-type-danger .modal-icon { color: #dc3232; }
-.modal-type-warning .modal-icon { color: #ffb900; }
-.modal-type-info .modal-icon { color: #00a0d2; }
-.modal-type-success .modal-icon { color: #46b450; }
+.modal-title h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.modal-icon {
+    font-size: 18px;
+}
+
+.modal-close {
+    padding: 0;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #6b7280;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: #374151;
+}
 
 /* Modal Body */
 .modal-body {
-    padding: 1rem;
+    padding: 20px;
     font-size: 14px;
     line-height: 1.5;
+    color: #374151;
+}
+
+.modal-body p {
+    margin: 0;
 }
 
 /* Modal Footer */
 .modal-footer {
-    padding: 1rem;
-    border-top: 1px solid #ddd;
+    padding: 16px 20px;
+    border-top: 1px solid #e5e7eb;
     display: flex;
     justify-content: flex-end;
-    gap: 0.5rem;
+    gap: 8px;
 }
 
-/* Danger Button Style */
-.button-danger {
-    background: #dc3232 !important;
-    border-color: #ba2020 !important;
+/* Button Styles */
+.modal .button {
+    min-width: 80px;
+    text-align: center;
+}
+
+/* Danger Button */
+.modal .button-danger {
+    background: #dc2626 !important;
+    border-color: #b91c1c !important;
     color: #fff !important;
 }
 
-.button-danger:hover {
-    background: #ba2020 !important;
-    border-color: #a01c1c !important;
+.modal .button-danger:hover {
+    background: #b91c1c !important;
+    border-color: #991b1b !important;
 }
 
-.button-danger:focus {
-    box-shadow: 0 0 0 1px #fff, 0 0 0 3px #dc3232 !important;
+.modal .button-danger:focus {
+    box-shadow: 0 0 0 1px #fff, 0 0 0 3px #dc2626 !important;
 }
 
-.button-danger:active {
-    background: #a01c1c !important;
-    border-color: #8a1818 !important;
+/* Modal Type Variations */
+.modal.type-danger .modal-icon {
+    color: #dc2626;
 }
 
-/* Disabled state */
-.button-danger:disabled,
-.button-danger.disabled {
-    background: #e57373 !important;
-    border-color: #dc3232 !important;
-    color: rgba(255, 255, 255, 0.8) !important;
-    cursor: not-allowed;
+.modal.type-warning .modal-icon {
+    color: #f59e0b;
 }
 
-/* Close Button Style */
-.modal-close {
-    position: absolute;
-    right: 10px;
-    top: 10px;
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    color: #999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    transition: all 0.2s ease;
-}
-
-.modal-close:hover {
-    background: #f0f0f0;
-    color: #666;
-}
-
-.modal-close:focus {
-    outline: none;
-    box-shadow: 0 0 0 1px #fff, 0 0 0 3px #2271b1;
-    color: #666;
-}
-
-/* Close icon */
-.modal-close span {
-    font-size: 20px;
-    line-height: 1;
-    display: block;
-}
-
-/* Animation Keyframes */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-
-/* Responsive adjustments jika diperlukan */
+/* Responsive Adjustments */
 @media screen and (max-width: 782px) {
-    .modal-overlay {
-        padding: 1rem;
-    }
-
     .modal {
-        width: 100%;
-        max-height: calc(100vh - 2rem); /* Pastikan tidak lebih tinggi dari viewport */
-        overflow-y: auto; /* Scroll jika konten terlalu panjang */
+        width: calc(100% - 32px);
+        margin: 16px;
+    }
+    
+    .modal-footer {
+        flex-direction: row-reverse; /* Ubah urutan button di mobile */
+    }
+    
+    .modal .button {
+        flex: 1; /* Button mengisi space yang tersedia */
     }
 }
