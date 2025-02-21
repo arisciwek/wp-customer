@@ -209,25 +209,6 @@ trait CustomerDemoDataHelperTrait {
     }
 
     /**
-     * Clear existing data
-     */
-    private function clearExistingData(): void {
-
-        // Check development mode before clearing
-        if (!$this->shouldClearData()) {
-            $this->debug('Skipping data cleanup - as in settings option');
-            return;
-        }
-
-        // Delete in correct order (child tables first)
-        $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_customer_employees");
-        $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_branches");
-        $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_customers");
-        
-        $this->debug('Existing demo data cleared');
-    }
-
-    /**
      * Get random province ID that has regencies
      */
     private function getRandomProvinceId(): int {
@@ -345,10 +326,72 @@ trait CustomerDemoDataHelperTrait {
         return (isset($dev_settings['enable_development']) && $dev_settings['enable_development']) 
                || (defined('WP_CUSTOMER_DEVELOPMENT') && WP_CUSTOMER_DEVELOPMENT);
     }
-
+    /*
     public function shouldClearData(): bool {
         $dev_settings = get_option('wp_customer_development_settings');
         return isset($dev_settings['clear_data_on_deactivate']) && 
                $dev_settings['clear_data_on_deactivate'];
     }
+    */
+
+    /**
+     * Check if data should be cleared based on type
+     */
+    public function shouldClearData(string $type = 'all'): bool {
+        $dev_settings = get_option('wp_customer_development_settings');
+        $should_clear = isset($dev_settings['clear_data_on_deactivate']) && 
+                        $dev_settings['clear_data_on_deactivate'];
+                        
+        if (!$should_clear) {
+            return false;
+        }
+        
+        // Only clear specific table data
+        switch($type) {
+            case 'membership_levels':
+            case 'membership_features':
+            case 'membership_groups':
+                return true;
+            case 'customer':
+            case 'branch':
+            case 'employee':
+                return false; // Don't delete core data
+            default:
+                return true;
+        }
+    }
+
+    /**
+     * Clear data selectively based on type
+     */
+    protected function clearExistingData(string $type): void {
+        try {
+            $this->wpdb->query("START TRANSACTION");
+
+            switch($type) {
+                case 'membership_levels':
+                    $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_customer_membership_levels WHERE id > 0");
+                    $this->wpdb->query("ALTER TABLE {$this->wpdb->prefix}app_customer_membership_levels AUTO_INCREMENT = 1");
+                    break;
+                    
+                case 'membership_features':
+                    $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_customer_membership_features WHERE id > 0");
+                    $this->wpdb->query("ALTER TABLE {$this->wpdb->prefix}app_customer_membership_features AUTO_INCREMENT = 1");
+                    break;
+                    
+                case 'membership_groups':
+                    $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_customer_membership_feature_groups WHERE id > 0");
+                    $this->wpdb->query("ALTER TABLE {$this->wpdb->prefix}app_customer_membership_feature_groups AUTO_INCREMENT = 1");
+                    break;
+            }
+
+            $this->wpdb->query("COMMIT");
+            $this->debug("Cleared existing {$type} data");
+
+        } catch (\Exception $e) {
+            $this->wpdb->query("ROLLBACK");
+            $this->debug("Error clearing {$type} data: " . $e->getMessage());
+            throw $e;
+        }
+    }    
 }

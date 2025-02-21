@@ -244,9 +244,6 @@ class SettingsController {
     public function handle_generate_demo_data() {
         try {
 
-            error_log('Received type: ' . $type);
-            error_log('Nonce verification: ' . wp_verify_nonce($nonce, "generate_demo_{$type}"));
-
             // Validate nonce and permissions first
             if (!current_user_can('manage_options')) {
                 throw new \Exception('Permission denied');

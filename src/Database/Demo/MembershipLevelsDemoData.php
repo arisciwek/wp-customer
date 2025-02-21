@@ -462,8 +462,8 @@ class MembershipLevelsDemoData extends AbstractDemoData {
 
     protected function generate(): bool {
         try {
-            if ($this->shouldClearData()) {
-                $this->clearExistingData();
+            if ($this->shouldClearData('membership_levels')) {
+                $this->clearExistingData('membership_levels');
             }
             
             $this->insertDefaultLevels();

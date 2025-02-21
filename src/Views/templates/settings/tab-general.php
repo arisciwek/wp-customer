@@ -72,6 +72,15 @@ $options = get_option('wp_customer_settings', array(
         </label>
     </p>
 
+    <p>
+        <button type="button" 
+                id="clear-all-cache" 
+                class="button button-secondary">
+            <?php _e('Clear All Cache', 'wp-customer'); ?>
+        </button>
+        <span id="cache-clear-status" class="cache-status"></span>
+    </p>
+
     <h3><?php _e('Mode Debug', 'wp-customer'); ?></h3>
     <p>
         <label>

@@ -137,7 +137,7 @@ if (!current_user_can('manage_options')) {
                         class="button button-primary customer-generate-demo-data" 
                         data-type="employee"
                         data-requires="branch"
-                        data-check-nonce="<?php echo wp_verify_nonce('check_demo_branch'); ?>"
+                        data-check-nonce="<?php echo wp_create_nonce('check_demo_branch'); ?>"
                         data-nonce="<?php echo wp_create_nonce('generate_demo_employee'); ?>">
                     <?php _e('Generate Employees', 'wp-customer'); ?>
                 </button>

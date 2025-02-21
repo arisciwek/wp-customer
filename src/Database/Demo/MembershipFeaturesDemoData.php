@@ -100,8 +100,8 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
 
     protected function generate(): void {
         try {
-            if ($this->shouldClearData()) {
-                $this->clearExistingData();
+            if ($this->shouldClearData('membership_features')) {
+                $this->clearExistingData('membership_features');
             }
             
             // Ambil group IDs yang ada
