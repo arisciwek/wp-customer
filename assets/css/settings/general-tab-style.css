@@ -186,3 +186,20 @@
         display: none;
     }
 }
+
+.cache-status {
+    margin-left: 10px;
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 3px;
+}
+
+.cache-status.updated {
+    background: #dff0d8;
+    color: #3c763d;
+}
+
+.cache-status.error {
+    background: #f2dede;
+    color: #a94442;
+}
