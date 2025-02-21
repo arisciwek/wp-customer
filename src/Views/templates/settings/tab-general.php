@@ -21,8 +21,6 @@
  * - Add cache settings 
  * - Add realtime update settings
  */
-
-
 if (!defined('ABSPATH')) {
     die;
 }
