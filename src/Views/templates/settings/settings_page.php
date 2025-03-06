@@ -59,3 +59,11 @@ $tabs = array(
     </nav>
 
 </div>
+
+<!-- Modal Confirmation Templates -->
+<?php
+    require_once WP_CUSTOMER_PATH . 'src/Views/components/confirmation-modal.php';
+    if (function_exists('wp_customer_render_confirmation_modal')) {
+        wp_customer_render_confirmation_modal();
+    }
+?>
