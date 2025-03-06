@@ -2,27 +2,19 @@
  * Customer Toast Component
  *
  * @package     WP_Customer
- * @subpackage  Assets/JS/Components
+ * @subpackage  Assets/JS/customer
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: assets/js/components/customer-toast.js
+ * Path: assets/js/customer/customer-toast.js
  *
  * Description: Komponen toast notification khusus untuk manajemen customer.
  *              Menangani feedback untuk operasi CRUD customer.
  *              Support queue system untuk multiple notifications.
  *              Includes custom styling dan animations.
  */
- /**
-  * Customer Toast Component
-  *
-  * @package     WP_Customer
-  * @subpackage  Assets/JS/Components
-  * @version     1.1.0
-  * @author      arisciwek
-  */
 
- const CustomerToast = {
+ const wpCustomerToast = {
      container: null,
      queue: [],
      isProcessing: false,
@@ -209,4 +201,5 @@
  };
 
  // Expose for global use
- window.CustomerToast = CustomerToast;
+ window.wpCustomerToast = wpCustomerToast;
+ window.CustomerToast = wpCustomerToast;
