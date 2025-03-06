@@ -77,8 +77,7 @@
         performReset() {
             const $button = $('#reset-permissions-btn');
             const originalText = $button.text();
-            
-            console.log('Nonce value:', wpCustomerData.nonce);
+            //console.log('Nonce value:', wpCustomerData.nonce);
             // Set loading state
             $button.addClass('loading')
                    .prop('disabled', true)
@@ -89,7 +88,7 @@
                 url: wpCustomerData.ajaxUrl,
                 type: 'POST',
                 data: {
-                    action: 'reset_customer_permissions',
+                    action: 'reset_permissions',
                     nonce: wpCustomerData.nonce
                 },
                 success: function(response) {
@@ -109,14 +108,7 @@
                                .html(`<i class="dashicons dashicons-image-rotate"></i> ${originalText}`);
                     }
                 },
-                error: function(xhr, status, error) {
-                    console.error('AJAX Error Details:');
-                    console.error('Status:', status);
-                    console.error('Error:', error);
-                    console.error('Response Text:', xhr.responseText);
-                    console.error('Status Code:', xhr.status);
-                    console.error('Status Text:', xhr.statusText);
-                    
+                error: function(xhr, status, error) {                    
                     wpCustomerToast.error('Server error while resetting permissions: ' + xhr.status + ' ' + xhr.statusText);
                     // Reset button state
                     $button.removeClass('loading')
