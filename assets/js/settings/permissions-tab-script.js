@@ -88,7 +88,7 @@
                 url: wpCustomerData.ajaxUrl,
                 type: 'POST',
                 data: {
-                    action: 'reset_permissions',
+                    action: 'reset_customer_permissions',
                     nonce: wpCustomerData.nonce
                 },
                 success: function(response) {

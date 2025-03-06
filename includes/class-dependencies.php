@@ -272,7 +272,7 @@ public function enqueue_frontend_assets() {
                     // Add localize script here
                     wp_localize_script('wp-customer-permissions-tab', 'wpCustomerData', [
                         'ajaxUrl' => admin_url('admin-ajax.php'),
-                        'nonce' => wp_create_nonce('wp_customer_reset_customer_permissions'),
+                        'nonce' => wp_create_nonce('wp_customer_reset_permissions'),
                         'i18n' => [
                             'resetConfirmTitle' => __('Reset Permissions?', 'wp-customer'),
                             'resetConfirmMessage' => __('This will restore all permissions to their default settings. This action cannot be undone.', 'wp-customer'),

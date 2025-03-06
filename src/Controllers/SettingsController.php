@@ -40,15 +40,16 @@ class SettingsController {
         add_action('wp_ajax_customer_generate_demo_data', [$this, 'handle_generate_demo_data']);
         add_action('wp_ajax_customer_check_demo_data', [$this, 'handle_check_demo_data']);
         add_action('wp_ajax_reset_customer_permissions', [$this, 'handle_reset_customer_permissions']);
+
     }
 
     public function handle_reset_customer_permissions() {
         error_log('Received nonce: ' . $_POST['nonce']);
-        error_log('Expected nonce for wp_customer_reset_permissions: ' . wp_create_nonce('wp_customer_reset_customer_permissions'));
+        error_log('Expected nonce for wp_customer_reset_permissions: ' . wp_create_nonce('wp_customer_reset_permissions'));
 
         try {
             // Verify nonce
-            check_ajax_referer('wp_customer_reset_customer_permissions', 'nonce');
+            check_ajax_referer('wp_customer_reset_permissions', 'nonce');
 
             // Check permissions
             if (!current_user_can('manage_options')) {
