@@ -37,88 +37,18 @@ class SettingsController {
 
     // Add this to your SettingsController or appropriate controller class
     public function register_ajax_handlers() {
-        add_action('wp_ajax_reset_permissions', [$this, 'handle_reset_permissions']);
         add_action('wp_ajax_customer_generate_demo_data', [$this, 'handle_generate_demo_data']);
         add_action('wp_ajax_customer_check_demo_data', [$this, 'handle_check_demo_data']);
-    
-        /*
-        add_action('wp_ajax_get_membership_level', [$this, 'handle_get_membership_level']);
-        add_action('wp_ajax_save_membership_level', [$this, 'handle_save_membership_level']);
-        add_action('wp_ajax_delete_membership_level', [$this, 'handle_delete_membership_level']);
-
-        // Tambahkan handler untuk membership features
-        add_action('wp_ajax_get_membership_feature', [$this, 'handle_get_membership_feature']);
-        add_action('wp_ajax_save_membership_feature', [$this, 'handle_save_membership_feature']);
-        add_action('wp_ajax_delete_membership_feature', [$this, 'handle_delete_membership_feature']);
-
-        add_action('wp_ajax_get_membership_feature_group', [$this, 'handle_get_feature_group']);
-        add_action('wp_ajax_save_membership_feature_group', [$this, 'handle_save_feature_group']);
-        add_action('wp_ajax_delete_membership_feature_group', [$this, 'handle_delete_feature_group']);
-        */
-
+        add_action('wp_ajax_reset_customer_permissions', [$this, 'handle_reset_customer_permissions']);
     }
 
-    public function handle_get_membership_form_data() {
-        $membership_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
-        $membership_controller->handle_get_form_data();
-    }
+    public function handle_reset_customer_permissions() {
+        error_log('Received nonce: ' . $_POST['nonce']);
+        error_log('Expected nonce for wp_customer_reset_permissions: ' . wp_create_nonce('wp_customer_reset_customer_permissions'));
 
-    // Tambahkan method penghubung untuk features group
-    public function handle_get_feature_group() {
-        $group_controller = new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
-        $group_controller->handle_get_feature();
-    }
-
-    public function handle_save_feature_group() {
-        $group_controller = new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
-        $group_controller->handle_save_feature();
-    }
-
-    public function handle_delete_feature_group() {
-        $group_controller = new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
-        $group_controller->handle_delete_feature();
-    }
-
-
-    // Tambahkan method penghubung untuk membership features
-    public function handle_get_membership_feature() {
-        $membership_controller = new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
-        $membership_controller->handle_get_feature();
-    }
-
-    public function handle_save_membership_feature() {
-        $membership_controller = new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
-        $membership_controller->handle_save_feature();
-    }
-
-    public function handle_delete_membership_feature() {
-        $membership_controller = new \WPCustomer\Controllers\Membership\MembershipFeaturesController();
-        $membership_controller->handle_delete_feature();
-    }
-
-    public function handle_get_membership_level() {
-        $membership_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
-        $membership_controller->handle_get_level();
-    }
-
-    public function handle_save_membership_level() {
-        $membership_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
-        $membership_controller->handle_save_level();
-    }
-
-    public function handle_delete_membership_level() {
-        $membership_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
-        $membership_controller->handle_delete_level();
-    }
-
-
-
-
-
-    public function handle_reset_permissions() {
         try {
             // Verify nonce
-            check_ajax_referer('wp_customer_reset_permissions', 'nonce');
+            check_ajax_referer('wp_customer_reset_customer_permissions', 'nonce');
 
             // Check permissions
             if (!current_user_can('manage_options')) {
