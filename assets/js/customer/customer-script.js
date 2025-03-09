@@ -317,7 +317,7 @@
                     url: wpCustomerData.ajaxUrl,
                     type: 'POST',
                     data: {
-                        action: 'create_pdf_button',
+                        action: 'create_customer_pdf_button',
                         id: data.customer.id,
                         nonce: wpCustomerData.nonce
                     },
