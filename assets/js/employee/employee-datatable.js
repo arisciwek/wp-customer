@@ -193,7 +193,7 @@
                         }
                         return {
                             ...d,
-                            action: 'handle_employee_datatable',
+                            action: 'handle_customer_employee_datatable',
                             customer_id: self.customerId,
                             nonce: wpCustomerData.nonce
                         };
