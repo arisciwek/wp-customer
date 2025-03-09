@@ -101,7 +101,7 @@ class CustomerController {
         add_action('wp_ajax_generate_wp_docgen_customer_detail_pdf', [$this, 'generate_wp_docgen_customer_detail_pdf']);
         add_action('wp_ajax_create_customer_button', [$this, 'createCustomerButton']);
 
-        add_action('wp_ajax_create_pdf_button', [$this, 'createPdfButton']);
+        add_action('wp_ajax_create_customer_pdf_button', [$this, 'createPdfButton']);
 
         // Debug cache di folder uploads 
         /*
