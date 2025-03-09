@@ -210,6 +210,18 @@ Example integration points:
 - Debug mode support
 - Graceful fallbacks
 
+### Custom Relations & Access Rules
+
+The plugin provides extension points for adding custom relation types and access rules through WordPress filters. This allows third-party plugins to add new user-customer relationships (like 'vendor', 'agency', etc.) without modifying core code.
+
+For detailed implementation guide, see [Plugin Extension Points Documentation](docs/plugin-extension-points.md)
+
+Example integration points:
+- WordPress filters for user relations
+- Custom access type definitions
+- Permission rule extensions
+- Capability management hooks
+
 ## 📝 Changelog
 
 ### Version 1.0.3

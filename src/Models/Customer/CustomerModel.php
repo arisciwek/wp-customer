@@ -766,4 +766,197 @@
         return $formats;
     }
 
+    /**
+     * Get user relation with customer
+     * 
+     * Determines the relationship between a user and a customer:
+     * - is_admin: User has admin privileges
+     * - is_owner: User is the owner of the customer
+     * - is_employee: User is an employee of the customer
+     * 
+     * @param int $customer_id Customer ID (0 for general check)
+     * @param int|null $user_id User ID (current user if null)
+     * @return array Relationship array with boolean flags
+     */
+    public function getUserRelation(int $customer_id, int $user_id = null): array {
+        try {
+            global $wpdb;
+            
+            // Validate input
+            $user_id = $user_id && is_numeric($user_id) ? (int)$user_id : get_current_user_id();
+            $customer_id = is_numeric($customer_id) ? (int)$customer_id : 0;
+            
+            // Generate appropriate cache key
+            if ($customer_id === 0) {
+                // Special case for general access check
+                $cache_key = "customer_relation_general_{$user_id}";
+            } else {
+                $cache_key = "customer_relation_{$user_id}_{$customer_id}";
+            }
+            
+            // Check cache first
+            $cached_relation = $this->cache->get('customer_relation', $cache_key);
+            if ($cached_relation !== null) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("CustomerModel::getUserRelation - Cache hit for user {$user_id} and customer {$customer_id}");
+                }
+                return $cached_relation;
+            }
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("CustomerModel::getUserRelation - Cache miss for user {$user_id} and customer {$customer_id}");
+            }
+            
+            // Default relation
+            $relation = [
+                'is_admin' => current_user_can('edit_all_customers'),
+                'is_owner' => false,
+                'is_employee' => false,
+                'owner_of_customer_id' => null,
+                'owner_of_customer_name' => null
+            ];
+            
+            // Check if user is owner
+            if ($customer_id > 0) {
+                // Specific customer check
+                $customer = $this->find($customer_id);
+                if ($customer) {
+                    $relation['is_owner'] = ((int)$customer->user_id === $user_id);
+                    if ($relation['is_owner']) {
+                        $relation['owner_of_customer_id'] = $customer_id;
+                        $relation['owner_of_customer_name'] = $customer->name;
+                    }
+                }
+            } else {
+                // General check - is user owner of any customer?
+                $customer = $wpdb->get_row($wpdb->prepare(
+                    "SELECT id, name FROM {$wpdb->prefix}app_customers 
+                    WHERE user_id = %d 
+                    LIMIT 1",
+                    $user_id
+                ));
+                
+                if ($customer) {
+                    $relation['is_owner'] = true;
+                    $relation['owner_of_customer_id'] = (int)$customer->id;
+                    $relation['owner_of_customer_name'] = $customer->name;
+                }
+            }
+            
+            // Check if user is employee
+            if ($customer_id > 0) {
+                // Specific customer check
+                $employee_query = $wpdb->prepare(
+                    "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees 
+                    WHERE customer_id = %d AND user_id = %d AND status = 'active'",
+                    $customer_id, $user_id
+                );
+            } else {
+                // General check - is user employee of any customer?
+                $employee_query = $wpdb->prepare(
+                    "SELECT customer_id FROM {$wpdb->prefix}app_customer_employees 
+                    WHERE user_id = %d AND status = 'active' 
+                    LIMIT 1",
+                    $user_id
+                );
+                
+                $employee_customer_id = $wpdb->get_var($employee_query);
+                if ($employee_customer_id) {
+                    $relation['is_employee'] = true;
+                    $relation['employee_of_customer_id'] = (int)$employee_customer_id;
+                    
+                    // Get customer name
+                    $customer_name = $wpdb->get_var($wpdb->prepare(
+                        "SELECT name FROM {$wpdb->prefix}app_customers WHERE id = %d",
+                        $employee_customer_id
+                    ));
+                    $relation['employee_of_customer_name'] = $customer_name;
+                } else {
+                    $relation['is_employee'] = false;
+                }
+            }
+            
+            if ($customer_id > 0 && !isset($relation['is_employee'])) {
+                // Check employee status for specific customer
+                $is_employee = (int)$wpdb->get_var($employee_query) > 0;
+                $relation['is_employee'] = $is_employee;
+                if ($is_employee) {
+                    $relation['employee_of_customer_id'] = $customer_id;
+                    
+                    // Get customer name if not already set
+                    if (!isset($relation['employee_of_customer_name'])) {
+                        $customer = $this->find($customer_id);
+                        $relation['employee_of_customer_name'] = $customer ? $customer->name : null;
+                    }
+                }
+            }
+            
+            // Apply filters to allow extensions
+            $relation = apply_filters('wp_customer_user_relation', $relation, $customer_id, $user_id);
+            
+            // Get cache duration (configurable or default 2 minutes)
+            $cache_duration = defined('WP_CUSTOMER_RELATION_CACHE_DURATION') ? 
+                             WP_CUSTOMER_RELATION_CACHE_DURATION : 120;
+            
+            // Cache result
+            $this->cache->set('customer_relation', $relation, $cache_duration, $cache_key);
+            
+            return $relation;
+            
+        } catch (\Exception $e) {
+            // Log error and return default relation on failure
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Error in CustomerModel::getUserRelation: " . $e->getMessage());
+                error_log($e->getTraceAsString());
+            }
+            
+            return [
+                'is_admin' => current_user_can('edit_all_customers'),
+                'is_owner' => false,
+                'is_employee' => false,
+                'error' => true
+            ];
+        }
+    }
+
+    /**
+     * Invalidate user relation cache
+     * 
+     * @param int|null $customer_id Customer ID (null for all customers)
+     * @param int|null $user_id User ID (null for all users)
+     * @return void
+     */
+    public function invalidateUserRelationCache(int $customer_id = null, int $user_id = null): void {
+        try {
+            if ($customer_id && $user_id) {
+                // Invalidate specific relation
+                $this->cache->delete('customer_relation', "customer_relation_{$user_id}_{$customer_id}");
+                $this->cache->delete('customer_relation', "customer_relation_general_{$user_id}");
+            } else if ($customer_id) {
+                // We need to invalidate all relations for this customer
+                // This is a bit tricky without key pattern matching
+                // For now, let's just clear all customer relation cache
+                $this->cache->clearCache('customer_relation');
+            } else if ($user_id) {
+                // Invalidate general relation for this user
+                $this->cache->delete('customer_relation', "customer_relation_general_{$user_id}");
+                
+                // Ideally we'd clear all relations for this user
+                // For now, just clear all customer relation cache
+                $this->cache->clearCache('customer_relation');
+            } else {
+                // Clear all relation cache
+                $this->cache->clearCache('customer_relation');
+            }
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Invalidated user relation cache: customer_id=$customer_id, user_id=$user_id");
+            }
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Error in invalidateUserRelationCache: " . $e->getMessage());
+            }
+        }
+    }
+
  }

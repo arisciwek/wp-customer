@@ -146,10 +146,26 @@ class CustomerValidator {
     /**
      * Get user relation with customer
      *
-     * @param int $customer_id
+     * @param int $customer_id Customer ID
      * @return array Array containing is_admin, is_owner, is_employee flags
      */
-    
+    public function getUserRelation(int $customer_id): array {
+        $current_user_id = get_current_user_id();
+
+        // Check class cache first (for single request performance)
+        if (isset($this->relationCache[$customer_id])) {
+            return $this->relationCache[$customer_id];
+        }
+        
+        // Get relation from model (with persistent cache)
+        $relation = $this->model->getUserRelation($customer_id, $current_user_id);
+        
+        // Store in class cache
+        $this->relationCache[$customer_id] = $relation;
+        
+        return $relation;
+    }
+    /*
     public function getUserRelation(int $customer_id): array {
         global $wpdb;
         $current_user_id = get_current_user_id();
@@ -219,6 +235,7 @@ class CustomerValidator {
 
         return $relation;
     }
+    */
 
     public function validateAccess(int $customer_id): array {
         $relation = $this->getUserRelation($customer_id);
@@ -232,10 +249,15 @@ class CustomerValidator {
     }
     
     private function getAccessType(array $relation): string {
-        if ($relation['is_admin']) return 'admin';
-        if ($relation['is_owner']) return 'owner';
-        if ($relation['is_employee']) return 'employee';
-        return 'none';
+        // Default access type logic
+        $access_type = 'none';
+        
+        if ($relation['is_admin']) $access_type = 'admin';
+        else if ($relation['is_owner']) $access_type = 'owner';
+        else if ($relation['is_employee']) $access_type = 'employee';
+        
+        // Beri kesempatan plugin lain memodifikasi tipe akses
+        return apply_filters('wp_customer_access_type', $access_type, $relation);
     }
 
 
@@ -246,7 +268,9 @@ class CustomerValidator {
         if ($relation['is_admin']) return true;
         if ($relation['is_owner'] && current_user_can('view_own_customer')) return true;
         if ($relation['is_employee'] && current_user_can('view_own_customer')) return true;
-        return false;
+        
+        // Beri kesempatan plugin lain menambahkan custom view rules
+        return apply_filters('wp_customer_can_view', false, $relation);
     }
 
     /**
@@ -255,7 +279,8 @@ class CustomerValidator {
     public function canUpdate(array $relation): bool {
         if ($relation['is_admin']) return true;
         if ($relation['is_owner'] && current_user_can('edit_own_customer')) return true;
-        return false;
+
+        return apply_filters('wp_customer_can_update', false, $relation);
     }
 
     /**
@@ -263,6 +288,7 @@ class CustomerValidator {
      */
     public function canDelete(array $relation): bool {
         return $relation['is_admin'] && current_user_can('delete_customer');
+        return apply_filters('wp_customer_can_delete', false, $relation);
     }
 
     /**
@@ -295,7 +321,6 @@ class CustomerValidator {
             $this->relationCache = [];
         }
     }
-
 
     public function validateDelete(int $id): array {
         $errors = [];
