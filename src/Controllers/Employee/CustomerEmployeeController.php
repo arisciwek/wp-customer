@@ -55,7 +55,7 @@ class CustomerEmployeeController {
         $this->initLogDirectory();
 
         // Register AJAX endpoints
-        add_action('wp_ajax_handle_employee_datatable', [$this, 'handleDataTableRequest']);
+        add_action('wp_ajax_handle_customer_employee_datatable', [$this, 'handleDataTableRequest']);
         add_action('wp_ajax_get_employee', [$this, 'show']);
         add_action('wp_ajax_create_employee', [$this, 'store']);
         add_action('wp_ajax_update_employee', [$this, 'update']);
