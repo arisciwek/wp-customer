@@ -27,17 +27,20 @@ namespace WPCustomer\Controllers\Company;
 
 use WPCustomer\Models\Company\CompanyModel;
 use WPCustomer\Cache\CustomerCacheManager;
+use WPCustomer\Validators\Branch\BranchValidator;
 
 class CompanyController {
     private $error_messages;
     private CompanyModel $model;
     private CustomerCacheManager $cache;
     private string $log_file;
+    private BranchValidator $branchValidator;
 
     private const DEFAULT_LOG_FILE = 'logs/company.log';
 
     public function __construct() {
         $this->model = new CompanyModel();
+        $this->branchValidator = new BranchValidator();
         $this->cache = new CustomerCacheManager();
 
         // Initialize error messages
@@ -116,10 +119,11 @@ class CompanyController {
                 : 'name';
             $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
 
+            $access = $this->branchValidator->validateAccess(0);
             // Check cache
             $cached_result = $this->cache->getDataTableCache(
                 'company_list',
-                get_current_user_id(),
+                $access['access_type'],
                 $start,
                 $length,
                 $search,
@@ -158,7 +162,7 @@ class CompanyController {
             // Set cache
             $this->cache->setDataTableCache(
                 'company_list',
-                get_current_user_id(),
+                $access['access_type'],
                 $start,
                 $length,
                 $search,

@@ -334,10 +334,12 @@ class BranchController {
                 $orderBy = 'name';
             }
 
+            $access = $this->validator->validateAccess(0);
+
             // Check cache first
             $cached_result = $this->cache->getDataTableCache(
                 'branch_list',
-                get_current_user_id(),
+                $access['access_type'],
                 $start, 
                 $length,
                 $search,
@@ -408,7 +410,7 @@ class BranchController {
             // Cache the result
             $this->cache->setDataTableCache(
                 'branch_list',
-                get_current_user_id(),
+                $access['access_type'], 
                 $start,
                 $length, 
                 $search,

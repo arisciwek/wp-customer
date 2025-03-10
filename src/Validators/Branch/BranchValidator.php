@@ -77,6 +77,21 @@ class BranchValidator {
             return $this->relationCache[$branch_id];
         }
         
+        // Handle special case for branch_id 0 (general validation)
+        if ($branch_id === 0) {
+            $relation = [
+                'is_admin' => current_user_can('edit_all_branches'),
+                'is_customer_owner' => false,
+                'is_branch_admin' => false, 
+                'is_customer_employee' => false,
+                'access_type' => current_user_can('edit_all_branches') ? 'admin' : 'none'
+            ];
+            
+            // Cache the result
+            $this->relationCache[$branch_id] = $relation;
+            return $relation;
+        }
+        
         // Get relation from model
         $relation = $this->branch_model->getUserRelation($branch_id, $current_user_id);
         
@@ -93,15 +108,54 @@ class BranchValidator {
      * @return array Access information [has_access, access_type, relation, branch_id]
      */
     public function validateAccess(int $branch_id): array {
+        // Tangani kasus khusus untuk branch_id = 0 (validasi umum)
+        if ($branch_id === 0) {
+            // Untuk validasi umum, kita tidak perlu data spesifik branch
+            $relation = [
+                'is_admin' => current_user_can('edit_all_branches'),
+                'is_customer_owner' => false,
+                'is_branch_admin' => false,
+                'is_customer_employee' => false,
+                'access_type' => current_user_can('edit_all_branches') ? 'admin' : 'none'
+            ];
+            
+            return [
+                'has_access' => current_user_can('view_branch_list'),
+                'access_type' => $relation['is_admin'] ? 'admin' : 'none',
+                'relation' => $relation,
+                'branch_id' => 0,
+                'customer_id' => 0
+            ];
+        }
+        
+        // Dapatkan relasi user dengan branch ini
         $relation = $this->getUserRelation($branch_id);
         
         // Get branch data untuk mendapatkan customer_id
         $branch = $this->branch_model->find($branch_id);
         $customer_id = $branch ? $branch->customer_id : null;
         
+        // Jika branch tidak ditemukan, kembalikan akses ditolak
+        if (!$branch) {
+            return [
+                'has_access' => false,
+                'access_type' => 'none',
+                'relation' => $relation,
+                'branch_id' => $branch_id,
+                'customer_id' => null,
+                'error' => 'Branch not found'
+            ];
+        }
+        
+        // Dapatkan customer jika customer_id valid
+        $customer = null;
+        if ($customer_id) {
+            $customer = $this->customer_model->find($customer_id);
+        }
+        
         return [
-            'has_access' => $this->canViewBranch($branch, $this->customer_model->find($customer_id)),
-            'access_type' => $relation['access_type'],
+            'has_access' => $this->canViewBranch($branch, $customer),
+            'access_type' => $relation['access_type'] ?? 'none',
             'relation' => $relation,
             'branch_id' => $branch_id,
             'customer_id' => $customer_id
