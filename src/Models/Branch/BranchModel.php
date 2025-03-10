@@ -404,5 +404,181 @@ class BranchModel {
         
         return $wpdb->get_results($query);
     }
+    
+    /**
+     * Get user relation with branch
+     * 
+     * Determines the relationship between a user and a branch:
+     * - is_admin: User has admin privileges for all branches
+     * - is_customer_owner: User is the owner of the parent customer
+     * - is_branch_admin: User is the admin of this specific branch
+     * - is_customer_employee: User is a staff member of this branch
+     * 
+     * @param int $branch_id Branch ID
+     * @param int|null $user_id User ID (current user if null)
+     * @return array Relationship array with boolean flags
+     */
+    public function getUserRelation(int $branch_id, int $user_id = null): array {
+        try {
+            global $wpdb;
+            
+            // Validate input
+            $user_id = $user_id && is_numeric($user_id) ? (int)$user_id : get_current_user_id();
+            $branch_id = is_numeric($branch_id) ? (int)$branch_id : 0;
+            
+            // Determine base relation first - needed for access_type
+            $base_relation = [
+                'is_admin' => current_user_can('edit_all_branches'),
+                'is_customer_owner' => false,
+                'is_branch_admin' => false,
+                'is_customer_employee' => false
+            ];
+            
+            // Determine access type from base relation
+            $access_type = 'none';
+            if ($base_relation['is_admin']) $access_type = 'admin';
+            
+            // Apply access_type filter
+            $access_type = apply_filters('wp_branch_access_type', $access_type, $base_relation);
+            
+            // Generate appropriate cache key based on access_type
+            if ($branch_id === 0) {
+                // Special case for general access check - group by access_type
+                $cache_key = "branch_relation_general_{$access_type}";
+            } else {
+                // Specific branch check - group by branch and access_type
+                $cache_key = "branch_relation_{$branch_id}_{$access_type}";
+            }
+            
+            // Check cache first
+            $cached_relation = $this->cache->get('branch_relation', $cache_key);
+            if ($cached_relation !== null) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log("BranchModel::getUserRelation - Cache hit for access_type {$access_type} and branch {$branch_id}");
+                }
+                return $cached_relation;
+            }
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("BranchModel::getUserRelation - Cache miss for access_type {$access_type} and branch {$branch_id}");
+            }
+            
+            // Get branch data
+            $branch = $this->find($branch_id);
+            if (!$branch) {
+                return [
+                    'is_admin' => $base_relation['is_admin'],
+                    'is_customer_owner' => false,
+                    'is_branch_admin' => false,
+                    'is_customer_employee' => false,
+                    'access_type' => $access_type
+                ];
+            }
+            
+            // Get customer info for this branch
+            $customer = null;
+            if ($branch->customer_id) {
+                $customer_table = $wpdb->prefix . 'app_customers';
+                $customer = $wpdb->get_row($wpdb->prepare(
+                    "SELECT * FROM {$customer_table} WHERE id = %d",
+                    $branch->customer_id
+                ));
+            }
+            
+            // Build relation
+            $relation = [
+                'is_admin' => $base_relation['is_admin'],
+                'is_customer_owner' => $customer && (int)$customer->user_id === $user_id,
+                'is_branch_admin' => (int)$branch->user_id === $user_id,
+                'is_customer_employee' => false,
+                'branch_id' => $branch_id,
+                'customer_id' => $branch->customer_id,
+                'customer_name' => $customer ? $customer->name : null
+            ];
+            
+            // Check if user is staff member of this branch
+            $employee_table = $wpdb->prefix . 'app_customer_employees';
+            $is_customer_employee = (int)$wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM {$employee_table} 
+                 WHERE user_id = %d AND branch_id = %d AND status = 'active'",
+                $user_id, $branch_id
+            )) > 0;
+            
+            $relation['is_customer_employee'] = $is_customer_employee;
+            
+            // Redetermine access type with complete relation info
+            if ($relation['is_admin']) $access_type = 'admin';
+            else if ($relation['is_customer_owner']) $access_type = 'customer_owner';
+            else if ($relation['is_branch_admin']) $access_type = 'branch_admin';
+            else if ($relation['is_customer_employee']) $access_type = 'staff';
+            else $access_type = 'none';
+            
+            // Apply access_type filter again with complete info
+            $access_type = apply_filters('wp_branch_access_type', $access_type, $relation);
+            $relation['access_type'] = $access_type;
+            
+            // Apply filters for extensions
+            $relation = apply_filters('wp_branch_user_relation', $relation, $branch_id, $user_id);
+            
+            // Get cache duration (configurable or default 2 minutes)
+            $cache_duration = defined('WP_BRANCH_RELATION_CACHE_DURATION') ? 
+                             WP_BRANCH_RELATION_CACHE_DURATION : 120;
+            
+            // Cache result
+            $this->cache->set('branch_relation', $relation, $cache_duration, $cache_key);
+            
+            return $relation;
+            
+        } catch (\Exception $e) {
+            // Log error and return default relation on failure
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Error in BranchModel::getUserRelation: " . $e->getMessage());
+                error_log($e->getTraceAsString());
+            }
+            
+            return [
+                'is_admin' => current_user_can('edit_all_branches'),
+                'is_customer_owner' => false,
+                'is_branch_admin' => false,
+                'is_customer_employee' => false,
+                'access_type' => 'none',
+                'error' => true
+            ];
+        }
+    }
 
+    /**
+     * Invalidate user relation cache
+     * 
+     * @param int|null $branch_id Branch ID (null for all branches)
+     * @param string|null $access_type Access type to invalidate (null for all types)
+     * @return void
+     */
+    public function invalidateUserRelationCache(int $branch_id = null, string $access_type = null): void {
+        try {
+            if ($branch_id && $access_type) {
+                // Invalidate specific relation by branch and access type
+                $this->cache->delete('branch_relation', "branch_relation_{$branch_id}_{$access_type}");
+            } else if ($branch_id) {
+                // Invalidate all access types for this branch
+                // Since we can't easily list all access types, just clear all branch relation cache
+                $this->cache->clearCache('branch_relation');
+            } else if ($access_type) {
+                // Invalidate specific access type for all branches
+                // We'd need a pattern match capability in cache manager
+                $this->cache->clearCache('branch_relation');
+            } else {
+                // Clear all relation cache
+                $this->cache->clearCache('branch_relation');
+            }
+            
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Invalidated branch relation cache: branch_id=$branch_id, access_type=$access_type");
+            }
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Error in invalidateUserRelationCache: " . $e->getMessage());
+            }
+        }
+    }
 }

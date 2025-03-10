@@ -69,8 +69,6 @@ class BranchController {
 
         add_action('wp_ajax_validate_branch_access', [$this, 'validateBranchAccess']);
 
-
-
     }
 
     /**
@@ -286,7 +284,7 @@ class BranchController {
         }
 
         // Edit button - gunakan canEditBranch
-        if ($this->validator->canEditBranch($branch, $customer)) {
+        if ($this->validator->canUpdateBranch($branch, $customer)) {
             $actions .= sprintf(
                 '<button type="button" class="button edit-branch" data-id="%d" title="%s">
                     <i class="dashicons dashicons-edit"></i>

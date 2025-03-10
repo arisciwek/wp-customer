@@ -62,128 +62,153 @@ use WPCustomer\Models\Customer\CustomerModel;
 class BranchValidator {
     private $branch_model;
     private $customer_model;
+    private $relationCache = [];
 
     public function __construct() {
         $this->branch_model = new BranchModel();
         $this->customer_model = new CustomerModel();
     }
 
+    public function getUserRelation(int $branch_id): array {
+        $current_user_id = get_current_user_id();
+
+        // Check class memory cache first (for single request performance)
+        if (isset($this->relationCache[$branch_id])) {
+            return $this->relationCache[$branch_id];
+        }
+        
+        // Get relation from model
+        $relation = $this->branch_model->getUserRelation($branch_id, $current_user_id);
+        
+        // Store in class memory cache for this request
+        $this->relationCache[$branch_id] = $relation;
+        
+        return $relation;
+    }
+
+    /**
+     * Validate access for given branch
+     * 
+     * @param int $branch_id Branch ID (0 for general access validation)
+     * @return array Access information [has_access, access_type, relation, branch_id]
+     */
     public function validateAccess(int $branch_id): array {
         $relation = $this->getUserRelation($branch_id);
         
+        // Get branch data untuk mendapatkan customer_id
+        $branch = $this->branch_model->find($branch_id);
+        $customer_id = $branch ? $branch->customer_id : null;
+        
         return [
-            'has_access' => $this->canViewBranch($relation),
-            'access_type' => $this->getAccessType($relation),
+            'has_access' => $this->canViewBranch($branch, $this->customer_model->find($customer_id)),
+            'access_type' => $relation['access_type'],
             'relation' => $relation,
-            'customer_id' => $customer_id // Tambahkan ini
+            'branch_id' => $branch_id,
+            'customer_id' => $customer_id
         ];
     }
     
+    /**
+     * Get access type from relation
+     * 
+     * @param array $relation User relation array
+     * @return string Access type (admin, customer_owner, branch_admin, staff, or none)
+     */
     private function getAccessType(array $relation): string {
-        if ($relation['is_admin']) return 'admin';
-        if ($relation['is_owner']) return 'owner';
-        if ($relation['is_employee']) return 'employee';
-        return 'none';
+        return $relation['access_type'] ?? 'none';
     }
 
     public function canViewBranch($branch, $customer): bool {
-        $current_user_id = get_current_user_id();
-
-        // 1. Customer Owner Check - highest priority
-        if ((int)$customer->user_id === (int)$current_user_id) {
-            return true;
-        }
-
-        // 2. Branch Admin Check
-        if ((int)$branch->user_id === (int)$current_user_id) {
-            return true;
-        }
-
-        // 3. Staff Check (dari CustomerEmployees)
-        if ($this->isStaffMember($current_user_id, $branch->id)) {
-            return true;
-        }
-
-        // 4. System Admin Check
-        if (current_user_can('view_branch_detail')) {
-            return true;
-        }
-
-        $can_view = apply_filters('wp_customer_can_view_branch', false, $branch, $customer, $current_user_id);
-        if ($can_view) {
-            return true;
-        }
-
-        return false;
+        // Dapatkan relasi user dengan branch ini
+        $relation = $this->getUserRelation($branch->id);
+        
+        if ($relation['is_admin']) return true;
+        if ($relation['is_customer_owner']) return true;
+        if ($relation['is_branch_admin']) return true;
+        if ($relation['is_customer_employee'] && current_user_can('view_own_branch')) return true;
+        
+        // Beri kesempatan plugin lain menambahkan custom view rules
+        return apply_filters('wp_customer_can_view_branch', false, $relation);
     }
 
-    public function canCreateBranch($customer_id): bool {
+    public function canCreateBranch(int $customer_id): bool {
         $current_user_id = get_current_user_id();
-
-        // 1. Customer Owner Check - per docs, this is exclusive to owner
-        $customer = $this->customer_model->find($customer_id);
-        if ($customer && (int)$customer->user_id === (int)$current_user_id) {
-            return true;
-        }
-
-        // 2. System Admin Check with explicit capability
-        if (current_user_can('add_branch')) {
-            return true;
-        }
-
+        
+        // Dapatkan relasi user dengan customer
+        $customer_relation = $this->customer_model->getUserRelation($customer_id);
+        
+        if ($customer_relation['is_admin']) return true;
+        if ($customer_relation['is_customer_owner']) return true;
+        if (current_user_can('add_branch')) return true;
+        
         return apply_filters('wp_customer_can_create_branch', false, $customer_id, $current_user_id);
     }
 
-    public function canEditBranch($branch, $customer) {
-        $current_user_id = get_current_user_id();
-
-        // 1. Customer Owner Check - highest priority
-        $is_customer_owner = ((int)$customer->user_id === (int)$current_user_id);
-        if ($is_customer_owner) {
-            return true;
-        }
-
-        // 2. Branch Admin Check
-        if ((int)$branch->user_id === (int)$current_user_id && current_user_can('edit_own_branch')) {
-            return true;
-        }
-
-        // 3. System Admin Check  
-        if (current_user_can('edit_all_branches')) {
-            return true;
-        }
+    public function canUpdateBranch($branch, $customer): bool {
+        // Dapatkan relasi user dengan branch ini
+        $relation = $this->getUserRelation($branch->id);
         
-        $can_edit = apply_filters('wp_customer_can_edit_branch', false, $branch, $customer, $current_user_id);
-        if ($can_edit) {
-            return true;
-        }
+        if ($relation['is_admin']) return true;
+        if ($relation['is_customer_owner']) return true;
+        if ($relation['is_branch_admin'] && current_user_can('edit_own_branch')) return true;
 
-        return false;
-
+        return apply_filters('wp_customer_can_update_branch', false, $relation);
     }
 
     public function canDeleteBranch($branch, $customer): bool {
-        $current_user_id = get_current_user_id();
+        // Dapatkan relasi user dengan branch
+        $relation = $this->getUserRelation($branch->id);
+        
+        if ($relation['is_admin'] && current_user_can('delete_branch')) return true;
+        if ($relation['is_customer_owner']) return true;
+        
+        return apply_filters('wp_customer_can_delete_branch', false, $relation);
+    }
 
-        // 1. Customer Owner Check - highest priority
-        if ((int)$customer->user_id === (int)$current_user_id) {
-            return true;
+    public function validateForm(array $data, ?int $id = null): array {
+        $errors = [];
+        
+        // Validasi name
+        $name = trim($data['name'] ?? '');
+        if (empty($name)) {
+            $errors['name'] = __('Nama cabang wajib diisi.', 'wp-customer');
+        } 
+        elseif (mb_strlen($name) > 100) {
+            $errors['name'] = __('Nama cabang maksimal 100 karakter.', 'wp-customer');
+        }
+        elseif (isset($data['customer_id']) && $this->branch_model->existsByNameInCustomer($name, $data['customer_id'], $id)) {
+            $errors['name'] = __('Nama cabang sudah ada dalam customer ini.', 'wp-customer');
         }
 
-        // 2. Branch Admin Check
-        // Harus admin branch DAN punya capability delete_branch
-        if ((int)$branch->user_id === (int)$current_user_id && 
-            current_user_can('edit_own_branch')) {
-            return true;
+        // Validasi customer_id
+        if (empty($data['customer_id'])) {
+            $errors['customer_id'] = __('Customer wajib dipilih.', 'wp-customer');
         }
-
-        // 3. Staff TIDAK bisa delete
-        // 4. System Admin dengan delete_branch bisa delete semua
-        if (current_user_can('delete_branch')) {
-            return true;
+        else {
+            $customer = $this->customer_model->find($data['customer_id']);
+            if (!$customer) {
+                $errors['customer_id'] = __('Customer tidak ditemukan.', 'wp-customer');
+            }
         }
-
-        return false;
+        
+        // Validasi type
+        if (empty($data['type'])) {
+            $errors['type'] = __('Tipe cabang wajib dipilih.', 'wp-customer');
+        }
+        elseif (!in_array($data['type'], ['pusat', 'cabang'])) {
+            $errors['type'] = __('Tipe cabang tidak valid.', 'wp-customer');
+        }
+        elseif ($data['type'] === 'pusat' && !$id) {
+            // Untuk cabang baru dengan tipe pusat, periksa apakah sudah ada pusat
+            $existing_pusat = $this->branch_model->findPusatByCustomer($data['customer_id']);
+            if ($existing_pusat) {
+                $errors['type'] = __('Customer ini sudah memiliki kantor pusat.', 'wp-customer');
+            }
+        }
+        
+        // Validasi lainnya sesuai kebutuhan
+        
+        return $errors;
     }
 
     public function validateView($branch, $customer): array {
@@ -226,24 +251,90 @@ class BranchValidator {
     public function validateDelete(int $id): array {
         $errors = [];
 
-        // Check if branch exists
+        // Validasi permission
+        $permission_errors = $this->validatePermission('delete', $id);
+        if (!empty($permission_errors)) {
+            return $permission_errors;
+        }
+
+        // Validasi branch type
+        $type_validation = $this->validateBranchTypeDelete($id);
+        if (!$type_validation['valid']) {
+            $errors['type'] = $type_validation['message'];
+        }
+
+        // Validasi dependensi lain (misalnya employee)
+        global $wpdb;
+        $employee_count = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees WHERE branch_id = %d",
+            $id
+        ));
+
+        if ($employee_count > 0) {
+            $errors['dependency'] = sprintf(
+                __('Cabang tidak dapat dihapus karena masih memiliki %d karyawan.', 'wp-customer'),
+                $employee_count
+            );
+        }
+
+        return $errors;
+    }
+    
+    public function validatePermission(string $action, ?int $id = null): array {
+        $errors = [];
+
+        if (!$id && $action === 'create') {
+            if (isset($_POST['customer_id'])) {
+                $customer_id = (int)$_POST['customer_id'];
+                if (!$this->canCreateBranch($customer_id)) {
+                    $errors['permission'] = __('Anda tidak memiliki izin untuk menambah cabang.', 'wp-customer');
+                }
+            } else {
+                $errors['customer_id'] = __('Customer ID wajib dipilih.', 'wp-customer');
+            }
+            return $errors;
+        }
+
+        // Untuk action selain create yang memerlukan ID
         $branch = $this->branch_model->find($id);
         if (!$branch) {
             $errors['id'] = __('Cabang tidak ditemukan.', 'wp-customer');
             return $errors;
         }
-
-        // Get customer for permission check
+        
         $customer = $this->customer_model->find($branch->customer_id);
         if (!$customer) {
             $errors['id'] = __('Customer tidak ditemukan.', 'wp-customer');
             return $errors;
         }
+        
+        // Validasi berdasarkan action
+        switch ($action) {
+            case 'view':
+                if (!$this->canViewBranch($branch, $customer)) {
+                    $errors['permission'] = __('Anda tidak memiliki akses untuk melihat cabang ini.', 'wp-customer');
+                }
+                break;
 
-        // Branch type deletion validation
-        $type_validation = $this->validateBranchTypeDelete($id);
-        if (!$type_validation['valid']) {
-            $errors['type'] = $type_validation['message'];
+            case 'update':
+                if (!$this->canUpdateBranch($branch, $customer)) {
+                    $errors['permission'] = __('Anda tidak memiliki akses untuk mengubah cabang ini.', 'wp-customer');
+                }
+                break;
+
+            case 'delete':
+                if (!$this->canDeleteBranch($branch, $customer)) {
+                    $errors['permission'] = __('Anda tidak memiliki akses untuk menghapus cabang ini.', 'wp-customer');
+                }
+                // Validasi tambahan untuk delete
+                $type_validation = $this->validateBranchTypeDelete($id);
+                if (!$type_validation['valid']) {
+                    $errors['type'] = $type_validation['message'];
+                }
+                break;
+                
+            default:
+                $errors['action'] = __('Aksi tidak valid.', 'wp-customer');
         }
 
         return $errors;
