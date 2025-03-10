@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Validators
- * @version     2.0.0
+ * @version     1.0.4
  * @author      arisciwek
  *
  * Path: src/Validators/CustomerValidator.php
@@ -19,7 +19,7 @@
  * - WordPress Capability API
  * 
  * Changelog:
- * 2.0.0 - 2024-01-20
+ * 1.0.3 - 2024-01-20
  * - Separated form and permission validation
  * - Added role-based permission system
  * - Added relation caching for better performance
@@ -144,59 +144,63 @@ class CustomerValidator {
     }
 
     /**
-     * Get user relation with customer
+     * Get user relation with customer (using model implementation with memory caching)
      *
      * @param int $customer_id Customer ID
-     * @return array Array containing is_admin, is_owner, is_employee flags
+     * @return array Array containing relation information (is_admin, is_customer_owner, is_customer_employee, access_type)
      */
     public function getUserRelation(int $customer_id): array {
         $current_user_id = get_current_user_id();
 
-        // Check class cache first (for single request performance)
+        // Check class memory cache first (for single request performance)
         if (isset($this->relationCache[$customer_id])) {
             return $this->relationCache[$customer_id];
         }
         
-        // Get relation from model (with persistent cache)
+        // Get relation from model (with persistent cache and access_type already included)
         $relation = $this->model->getUserRelation($customer_id, $current_user_id);
         
-        // Store in class cache
+        // Store in class memory cache for this request
         $this->relationCache[$customer_id] = $relation;
         
         return $relation;
     }
 
+    /**
+     * Validate access for given customer
+     * 
+     * @param int $customer_id Customer ID (0 for general access validation)
+     * @return array Access information [has_access, access_type, relation, customer_id]
+     */
     public function validateAccess(int $customer_id): array {
         $relation = $this->getUserRelation($customer_id);
         
         return [
             'has_access' => $this->canView($relation),
-            'access_type' => $this->getAccessType($relation),
+            'access_type' => $relation['access_type'],
             'relation' => $relation,
-            'customer_id' => $customer_id // Tambahkan ini
+            'customer_id' => $customer_id
         ];
     }
-    
-    private function getAccessType(array $relation): string {
-        // Default access type logic
-        $access_type = 'none';
-        
-        if ($relation['is_admin']) $access_type = 'admin';
-        else if ($relation['is_owner']) $access_type = 'owner';
-        else if ($relation['is_employee']) $access_type = 'employee';
-        
-        // Beri kesempatan plugin lain memodifikasi tipe akses
-        return apply_filters('wp_customer_access_type', $access_type, $relation);
-    }
 
+    /**
+     * Get access type from relation
+     * This method is kept for backward compatibility
+     * 
+     * @param array $relation User relation array
+     * @return string Access type (admin, owner, employee, or custom from plugins)
+     */
+    private function getAccessType(array $relation): string {
+        return $relation['access_type'] ?? 'none';
+    }
 
     /**
      * Check if user can view customer
      */
     public function canView(array $relation): bool {
         if ($relation['is_admin']) return true;
-        if ($relation['is_owner'] && current_user_can('view_own_customer')) return true;
-        if ($relation['is_employee'] && current_user_can('view_own_customer')) return true;
+        if ($relation['is_customer_owner'] && current_user_can('view_own_customer')) return true;
+        if ($relation['is_customer_employee'] && current_user_can('view_own_customer')) return true;
         
         // Beri kesempatan plugin lain menambahkan custom view rules
         return apply_filters('wp_customer_can_view', false, $relation);
@@ -207,7 +211,7 @@ class CustomerValidator {
      */
     public function canUpdate(array $relation): bool {
         if ($relation['is_admin']) return true;
-        if ($relation['is_owner'] && current_user_can('edit_own_customer')) return true;
+        if ($relation['is_customer_owner'] && current_user_can('edit_own_customer')) return true;
 
         return apply_filters('wp_customer_can_update', false, $relation);
     }

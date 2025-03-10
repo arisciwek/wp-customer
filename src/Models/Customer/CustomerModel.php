@@ -766,14 +766,13 @@
         return $formats;
     }
 
-
     /**
      * Get user relation with customer
      * 
      * Determines the relationship between a user and a customer:
      * - is_admin: User has admin privileges
-     * - is_owner: User is the owner of the customer
-     * - is_employee: User is an employee of the customer
+     * - is_customer_owner: User is the owner of the customer
+     * - is_customer_employee: User is an employee of the customer
      * 
      * @param int $customer_id Customer ID (0 for general check)
      * @param int|null $user_id User ID (current user if null)
@@ -787,32 +786,49 @@
             $user_id = $user_id && is_numeric($user_id) ? (int)$user_id : get_current_user_id();
             $customer_id = is_numeric($customer_id) ? (int)$customer_id : 0;
             
-            // Generate appropriate cache key
+            // Determine base relation first - needed for access_type
+            $base_relation = [
+                'is_admin' => current_user_can('edit_all_customers'),
+                'is_customer_owner' => false,
+                'is_customer_employee' => false
+            ];
+            
+            // Determine access type from base relation
+            $access_type = 'none';
+            if ($base_relation['is_admin']) $access_type = 'admin';
+            else if ($base_relation['is_customer_owner']) $access_type = 'customer_owner';
+            else if ($base_relation['is_customer_employee']) $access_type = 'customer_employee';
+            
+            // Apply access_type filter
+            $access_type = apply_filters('wp_customer_access_type', $access_type, $base_relation);
+            
+            // Generate appropriate cache key based on access_type
             if ($customer_id === 0) {
-                // Special case for general access check
-                $cache_key = "customer_relation_general_{$user_id}";
+                // Special case for general access check - group by access_type
+                $cache_key = "customer_relation_general_{$access_type}";
             } else {
-                $cache_key = "customer_relation_{$user_id}_{$customer_id}";
+                // Specific customer check - group by customer and access_type
+                $cache_key = "customer_relation_{$customer_id}_{$access_type}";
             }
             
             // Check cache first
             $cached_relation = $this->cache->get('customer_relation', $cache_key);
             if ($cached_relation !== null) {
                 if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log("CustomerModel::getUserRelation - Cache hit for user {$user_id} and customer {$customer_id}");
+                    error_log("CustomerModel::getUserRelation - Cache hit for access_type {$access_type} and customer {$customer_id}");
                 }
                 return $cached_relation;
             }
             
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("CustomerModel::getUserRelation - Cache miss for user {$user_id} and customer {$customer_id}");
+                error_log("CustomerModel::getUserRelation - Cache miss for access_type {$access_type} and customer {$customer_id}");
             }
             
             // Default relation
             $relation = [
-                'is_admin' => current_user_can('edit_all_customers'),
-                'is_owner' => false,
-                'is_employee' => false,
+                'is_admin' => $base_relation['is_admin'],
+                'is_customer_owner' => false,
+                'is_customer_employee' => false,
                 'owner_of_customer_id' => null,
                 'owner_of_customer_name' => null
             ];
@@ -822,8 +838,8 @@
                 // Specific customer check
                 $customer = $this->find($customer_id);
                 if ($customer) {
-                    $relation['is_owner'] = ((int)$customer->user_id === $user_id);
-                    if ($relation['is_owner']) {
+                    $relation['is_customer_owner'] = ((int)$customer->user_id === $user_id);
+                    if ($relation['is_customer_owner']) {
                         $relation['owner_of_customer_id'] = $customer_id;
                         $relation['owner_of_customer_name'] = $customer->name;
                     }
@@ -838,7 +854,7 @@
                 ));
                 
                 if ($customer) {
-                    $relation['is_owner'] = true;
+                    $relation['is_customer_owner'] = true;
                     $relation['owner_of_customer_id'] = (int)$customer->id;
                     $relation['owner_of_customer_name'] = $customer->name;
                 }
@@ -863,7 +879,7 @@
                 
                 $employee_customer_id = $wpdb->get_var($employee_query);
                 if ($employee_customer_id) {
-                    $relation['is_employee'] = true;
+                    $relation['is_customer_employee'] = true;
                     $relation['employee_of_customer_id'] = (int)$employee_customer_id;
                     
                     // Get customer name
@@ -873,15 +889,15 @@
                     ));
                     $relation['employee_of_customer_name'] = $customer_name;
                 } else {
-                    $relation['is_employee'] = false;
+                    $relation['is_customer_employee'] = false;
                 }
             }
             
-            if ($customer_id > 0 && !isset($relation['is_employee'])) {
+            if ($customer_id > 0 && !isset($relation['is_customer_employee'])) {
                 // Check employee status for specific customer
-                $is_employee = (int)$wpdb->get_var($employee_query) > 0;
-                $relation['is_employee'] = $is_employee;
-                if ($is_employee) {
+                $is_customer_employee = (int)$wpdb->get_var($employee_query) > 0;
+                $relation['is_customer_employee'] = $is_customer_employee;
+                if ($is_customer_employee) {
                     $relation['employee_of_customer_id'] = $customer_id;
                     
                     // Get customer name if not already set
@@ -894,6 +910,9 @@
             
             // Apply filters to allow extensions
             $relation = apply_filters('wp_customer_user_relation', $relation, $customer_id, $user_id);
+            
+            // Add access_type to relation
+            $relation['access_type'] = $access_type;
             
             // Get cache duration (configurable or default 2 minutes)
             $cache_duration = defined('WP_CUSTOMER_RELATION_CACHE_DURATION') ? 
@@ -913,12 +932,14 @@
             
             return [
                 'is_admin' => current_user_can('edit_all_customers'),
-                'is_owner' => false,
-                'is_employee' => false,
+                'is_customer_owner' => false,
+                'is_customer_employee' => false,
+                'access_type' => 'none',
                 'error' => true
             ];
         }
     }
+
 
     /**
      * Invalidate user relation cache
