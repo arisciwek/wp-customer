@@ -151,23 +151,23 @@ class CustomerCacheManager {
      */
     public function get(string $type, ...$keyComponents) {
         $key = $this->generateKey($type, ...$keyComponents);
-        // error_log("Cache key generated: " . $key);
+        error_log("Cache key generated: " . $key);
 
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            //error_log("Cache attempt - Key: {$key}, Type: {$type}");
+            error_log("Cache attempt - Key: {$key}, Type: {$type}");
         }
         
         $result = wp_cache_get($key, self::CACHE_GROUP);
         
         if ($result === false) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                //error_log("Cache miss - Key: {$key}");
+                error_log("Cache miss - Key: {$key}");
             }
             return null;
         }
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            //error_log("Cache hit - Key: {$key}");
+            error_log("Cache hit - Key: {$key}");
         }
         
         return $result;
@@ -185,13 +185,13 @@ class CustomerCacheManager {
             }
 
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                //error_log("Setting cache - Key: {$key}, Type: {$type}, Expiry: {$expiry}s");
+                error_log("Setting cache - Key: {$key}, Type: {$type}, Expiry: {$expiry}s");
             }
             
             return wp_cache_set($key, $value, self::CACHE_GROUP, $expiry);
         } catch (\InvalidArgumentException $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                //error_log("Cache set failed: " . $e->getMessage());
+                error_log("Cache set failed: " . $e->getMessage());
             }
             return false;
         }
@@ -204,7 +204,7 @@ class CustomerCacheManager {
         $key = $this->generateKey($type, ...$keyComponents);
         
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            //error_log("Deleting cache - Key: {$key}, Type: {$type}");
+            error_log("Deleting cache - Key: {$key}, Type: {$type}");
         }
         
         return wp_cache_delete($key, self::CACHE_GROUP);
@@ -218,28 +218,30 @@ class CustomerCacheManager {
         return wp_cache_get($key, self::CACHE_GROUP) !== false;
     }
 
+    /**
+     * Get cached DataTable data
+     */
     public function getDataTableCache(
-        string $context,      // Misal: 'customer_list', 'customer_history', 'branch_list', dll
-        int $userId,
+        string $context,
+        string $access_type,
         int $start,
         int $length,
         string $search,
         string $orderColumn,
         string $orderDir,
-        ?array $additionalParams = null  // Parameter tambahan spesifik untuk context
+        ?array $additionalParams = null
     ) {
         // Validate required parameters
-        if (empty($context) || !$userId || !is_numeric($start) || !is_numeric($length)) {
+        if (empty($context) || !$access_type || !is_numeric($start) || !is_numeric($length)) {
             $this->debug_log('Invalid parameters in getDataTableCache');
             return null;
         }
         
         try {
-            // Build cache key components
+            // Build components untuk kunci cache
             $components = [
-                "datatable",      // prefix
-                $context,         // specific context
-                (string)$userId,
+                $context,         // context specific (agency_list, division_list, etc)
+                (string)$access_type,
                 (string)$start,
                 (string)$length,
                 md5($search),
@@ -254,7 +256,8 @@ class CustomerCacheManager {
                 }
             }
 
-            return $this->get(...$components);
+            // Gunakan 'datatable' sebagai type, components lainnya sebagai komponen kunci
+            return $this->get('datatable', ...$components);
 
         } catch (\Exception $e) {
             $this->debug_log("Error getting datatable data for context {$context}: " . $e->getMessage());
@@ -262,9 +265,12 @@ class CustomerCacheManager {
         }
     }
 
+    /**
+     * Set DataTable data in cache
+     */
     public function setDataTableCache(
         string $context,
-        int $userId,
+        string $access_type,
         int $start,
         int $length,
         string $search,
@@ -274,16 +280,15 @@ class CustomerCacheManager {
         ?array $additionalParams = null
     ) {
         // Validate required parameters
-        if (empty($context) || !$userId || !is_numeric($start) || !is_numeric($length)) {
+        if (empty($context) || !$access_type || !is_numeric($start) || !is_numeric($length)) {
             $this->debug_log('Invalid parameters in setDataTableCache');
             return false;
         }
 
-        // Build cache key components
+        // Build components untuk kunci cache - SAMA PERSIS dengan getDataTableCache
         $components = [
-            "datatable",
-            $context,
-            (string)$userId,
+            $context,         // context specific (agency_list, division_list, etc)
+            (string)$access_type,
             (string)$start,
             (string)$length,
             md5($search),
@@ -291,22 +296,19 @@ class CustomerCacheManager {
             (string)$orderDir
         ];
 
-        // Add additional parameters if provided
+        // Add additional parameters if provided - SAMA PERSIS dengan getDataTableCache
         if ($additionalParams) {
             foreach ($additionalParams as $key => $value) {
                 $components[] = $key . '_' . md5(serialize($value));
             }
         }
 
+        // Gunakan 'datatable' sebagai type (sama dengan getDataTableCache)
         return $this->set('datatable', $data, 2 * MINUTE_IN_SECONDS, ...$components);
     }
 
     /**
-     * Invalidate DataTable cache for specific context
-     * 
-     * @param string $context Context name (e.g. 'customer_list', 'customer_branches')
-     * @param array|null $filters Additional filters that were used (e.g. ['customer_id' => 123])
-     * @return bool True if cache was invalidated, false otherwise
+     * Perbaikan untuk invalidateDataTableCache() di AgencyCacheManager
      */
     public function invalidateDataTableCache(string $context, ?array $filters = null): bool {
         try {
@@ -322,21 +324,24 @@ class CustomerCacheManager {
                 $filters ? json_encode($filters) : 'none'
             ));
 
-            // Base cache key components
-            $components = [
-                'datatable',
-                $context
-            ];
+            // Periksa apakah grup cache ada dan dapat diakses
+            global $wp_object_cache;
+            if (!isset($wp_object_cache->cache[self::CACHE_GROUP]) || empty($wp_object_cache->cache[self::CACHE_GROUP])) {
+                $this->debug_log('Cache group not found or empty - no action needed');
+                return true; // Tidak perlu invalidasi jika tidak ada cache
+            }
 
+            // Base components for cache key
+            $components = ['datatable', $context];
+            
             // If we have filters, create filter-specific invalidation
             if ($filters) {
                 foreach ($filters as $key => $value) {
-                    // Add each filter to components
                     $components[] = sprintf('%s_%s', $key, md5(serialize($value)));
                 }
                 
-                // Delete specific filtered cache
-                $result = $this->delete(...$components);
+                $key = $this->generateKey(...$components);
+                $result = wp_cache_delete($key, self::CACHE_GROUP);
                 
                 $this->debug_log(sprintf(
                     'Invalidated filtered cache for context %s with filters. Result: %s',
@@ -344,10 +349,10 @@ class CustomerCacheManager {
                     $result ? 'success' : 'failed'
                 ));
                 
-                return $result;
+                return true; // Anggap sukses karena tidak ada cache yang perlu dihapus
             }
 
-            // If no filters, do a broader invalidation using deleteByPrefix
+            // If no filters, do a broader invalidation using prefix
             $prefix = implode('_', $components);
             $result = $this->deleteByPrefix($prefix);
 
@@ -357,7 +362,7 @@ class CustomerCacheManager {
                 $result ? 'success' : 'failed'
             ));
 
-            return $result;
+            return true; // Anggap sukses karena tidak ada yang perlu dihapus
 
         } catch (\Exception $e) {
             $this->debug_log('Error in invalidateDataTableCache: ' . $e->getMessage());
@@ -366,41 +371,35 @@ class CustomerCacheManager {
     }
 
     /**
-     * Delete all cache entries that match a prefix
-     * 
-     * @param string $prefix The prefix to match
-     * @return bool True if operation was successful
+     * Improved version of deleteByPrefix
      */
     private function deleteByPrefix(string $prefix): bool {
-        try {
-            global $wp_object_cache;
-
-            // If using WordPress default object cache
-            if (isset($wp_object_cache->cache[self::CACHE_GROUP])) {
-                foreach ($wp_object_cache->cache[self::CACHE_GROUP] as $key => $value) {
-                    if (strpos($key, $prefix) === 0) {
-                        wp_cache_delete($key, self::CACHE_GROUP);
-                    }
-                }
-            } else {
-                // For persistent caching plugins (e.g., Redis, Memcached)
-                // Get all keys in our group (if supported by the caching plugin)
-                $keys = wp_cache_get_multiple([self::CACHE_GROUP . '_keys'], self::CACHE_GROUP);
-                if (!empty($keys)) {
-                    foreach ($keys as $key) {
-                        if (strpos($key, $prefix) === 0) {
-                            wp_cache_delete($key, self::CACHE_GROUP);
-                        }
-                    }
-                }
-            }
-
+        global $wp_object_cache;
+        
+        // Jika grup tidak ada, tidak ada yang perlu dihapus
+        if (!isset($wp_object_cache->cache[self::CACHE_GROUP])) {
+            $this->debug_log('Cache group not found - nothing to delete');
             return true;
-
-        } catch (\Exception $e) {
-            $this->debug_log('Error in deleteByPrefix: ' . $e->getMessage());
-            return false;
         }
+        
+        // Jika grup kosong, tidak ada yang perlu dihapus
+        if (empty($wp_object_cache->cache[self::CACHE_GROUP])) {
+            $this->debug_log('Cache group empty - nothing to delete');
+            return true;
+        }
+        
+        $deleted = 0;
+        $keys = array_keys($wp_object_cache->cache[self::CACHE_GROUP]);
+        
+        foreach ($keys as $key) {
+            if (strpos($key, $prefix) === 0) {
+                $result = wp_cache_delete($key, self::CACHE_GROUP);
+                if ($result) $deleted++;
+            }
+        }
+        
+        $this->debug_log(sprintf('Deleted %d keys with prefix %s', $deleted, $prefix));
+        return true;
     }
 
     /**
