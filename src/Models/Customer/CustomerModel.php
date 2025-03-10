@@ -766,6 +766,7 @@
         return $formats;
     }
 
+
     /**
      * Get user relation with customer
      * 
