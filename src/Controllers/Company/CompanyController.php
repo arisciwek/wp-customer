@@ -57,6 +57,7 @@ class CompanyController {
         add_action('wp_ajax_handle_company_datatable', [$this, 'handleDataTableRequest']);
         add_action('wp_ajax_get_company', [$this, 'show']);
         add_action('wp_ajax_validate_company_access', [$this, 'validateCompanyAccess']);
+        add_action('wp_ajax_get_company_stats', [$this, 'getStats']);
     }
 
     /**
@@ -238,4 +239,45 @@ class CompanyController {
         $log_message = "[{$timestamp}] {$message}\n";
         error_log($log_message, 3, $this->log_file);
     }
+    
+    /**
+     * Get company statistics
+     * Endpoint: wp_ajax_get_company_stats
+     * 
+     * @return void Response is sent as JSON
+     */
+    public function getStats() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+
+            // Validate user permissions
+            if (!current_user_can('view_branch_list')) {
+                throw new \Exception('Anda tidak memiliki izin untuk melihat data ini');
+            }
+
+            // Get statistics from model
+            $total_companies = $this->model->getTotalCount();
+            
+            // Build response data
+            $stats = [
+                'total_companies' => $total_companies
+            ];
+            
+            // Filter stats (allowing other modules to add stats)
+            $stats = apply_filters('wp_company_stats_data', $stats);
+
+            // Add to cache for faster access later
+            $this->cache->set('company_stats', $stats, 120);
+            
+            // Log and send response
+            $this->debug_log("Stats loaded: " . print_r($stats, true));
+            wp_send_json_success($stats);
+
+        } catch (\Exception $e) {
+            $this->debug_log("Error in getStats(): " . $e->getMessage());
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }    
 }
