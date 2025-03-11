@@ -108,42 +108,28 @@ class CompanyController {
                 throw new \Exception('Security check failed');
             }
 
-            // Get parameters
+            // Get parameters dengan validasi yang ketat
             $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
             $start = isset($_POST['start']) ? intval($_POST['start']) : 0;
             $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
             $search = isset($_POST['search']['value']) ? sanitize_text_field($_POST['search']['value']) : '';
             
             // Order parameters
-            $orderColumn = isset($_POST['order'][0]['column']) && isset($_POST['columns'][$_POST['order'][0]['column']]['data']) 
-                ? sanitize_text_field($_POST['columns'][$_POST['order'][0]['column']]['data'])
+            $orderColumnIndex = isset($_POST['order'][0]['column']) ? intval($_POST['order'][0]['column']) : 0;
+            $orderColumn = isset($_POST['columns'][$orderColumnIndex]['data']) 
+                ? sanitize_text_field($_POST['columns'][$orderColumnIndex]['data'])
                 : 'name';
             $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
 
-            $access = $this->branchValidator->validateAccess(0);
-            // Check cache
-            $cached_result = $this->cache->getDataTableCache(
-                'company_list',
-                $access['access_type'],
-                $start,
-                $length,
-                $search,
-                $orderColumn,
-                $orderDir
-            );
-
-            if ($cached_result) {
-                wp_send_json($cached_result);
-                return;
+            // Log request parameters untuk debugging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                $this->debug_log("DataTable request - Start: {$start}, Length: {$length}, Search: {$search}, Order: {$orderColumn} {$orderDir}");
             }
 
-            // Get fresh data
+            // Get data dari model (caching sudah ditangani oleh model)
             $result = $this->model->getDataTableData($start, $length, $search, $orderColumn, $orderDir);
-            if (!$result) {
-                throw new \Exception('Failed to fetch company data');
-            }
-
-            // Format response
+            
+            // Format response untuk DataTable
             $response = [
                 'draw' => $draw,
                 'recordsTotal' => $result['total'],
@@ -155,29 +141,22 @@ class CompanyController {
                         'name' => esc_html($company->name),
                         'type' => esc_html($company->type),
                         'level_name' => esc_html($company->level_name ?? '-'),
+                        'customer_name' => esc_html($company->customer_name ?? '-'),
                         'actions' => $this->generateActionButtons($company)
                     ];
                 }, $result['data'])
             ];
-
-            // Set cache
-            $this->cache->setDataTableCache(
-                'company_list',
-                $access['access_type'],
-                $start,
-                $length,
-                $search,
-                $orderColumn,
-                $orderDir,
-                $response
-            );
 
             wp_send_json($response);
 
         } catch (\Exception $e) {
             $this->debug_log('DataTable error: ' . $e->getMessage());
             wp_send_json_error([
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
+                'draw' => isset($_POST['draw']) ? intval($_POST['draw']) : 1,
+                'recordsTotal' => 0,
+                'recordsFiltered' => 0,
+                'data' => []
             ]);
         }
     }
@@ -239,7 +218,7 @@ class CompanyController {
         $log_message = "[{$timestamp}] {$message}\n";
         error_log($log_message, 3, $this->log_file);
     }
-    
+
     /**
      * Get company statistics
      * Endpoint: wp_ajax_get_company_stats

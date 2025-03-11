@@ -242,8 +242,8 @@ class CustomerCacheManager {
             $components = [
                 $context,         // context specific (agency_list, division_list, etc)
                 (string)$access_type,
-                (string)$start,
-                (string)$length,
+                'start_' . (string)$start,
+                'length_' . (string)$length,
                 md5($search),
                 (string)$orderColumn,
                 (string)$orderDir
@@ -289,8 +289,8 @@ class CustomerCacheManager {
         $components = [
             $context,         // context specific (agency_list, division_list, etc)
             (string)$access_type,
-            (string)$start,
-            (string)$length,
+            'start_' . (string)$start,
+            'length_' . (string)$length,
             md5($search),
             (string)$orderColumn,
             (string)$orderDir

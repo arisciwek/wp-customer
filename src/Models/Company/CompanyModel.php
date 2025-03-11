@@ -83,12 +83,40 @@ class CompanyModel {
         return $result;
     }
 
-    /**
-     * Get data for DataTables server-side processing
-     */
     public function getDataTableData(int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
-        global $wpdb;
+        // Dapatkan access_type dari validator
+        global $wp_branch_validator;
+        if (!$wp_branch_validator) {
+            $wp_branch_validator = new \WPCustomer\Validators\Branch\BranchValidator();
+        }
+        $access = $wp_branch_validator->validateAccess(0);
+        $access_type = $access['access_type'];
+        
+        // Check cache first
+        $cached_result = $this->cache->getDataTableCache(
+            'company_list',
+            $access_type,
+            $start, 
+            $length,
+            $search,
+            $orderColumn,
+            $orderDir
+        );
 
+        if ($cached_result) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Model cache hit for DataTable - Key: company_list_{$access_type}");
+            }
+            return $cached_result;
+        }
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("Model cache miss for DataTable - Key: company_list_{$access_type}");
+        }
+        
+        // Base query parts
+        global $wpdb;
+        
         // Base query parts
         $select = "SELECT SQL_CALC_FOUND_ROWS b.*, 
                          m.level_id,
@@ -124,7 +152,7 @@ class CompanyModel {
         }
 
         // Add order
-        $orderDir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
+        $orderDir = strtoupper($orderDir) === 'desc' ? 'desc' : 'asc';
         $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
 
         // Add limit
@@ -132,7 +160,7 @@ class CompanyModel {
 
         // Complete query
         $sql = $select . $from . $join . $where . $order . $limit;
-
+        
         // Get paginated results
         $results = $wpdb->get_results($sql);
         if ($results === null) {
@@ -145,11 +173,26 @@ class CompanyModel {
         // Get total count
         $total = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table}");
 
-        return [
+        // Prepare result
+        $result = [
             'data' => $results,
             'total' => (int) $total,
             'filtered' => (int) $filtered
         ];
+        
+        // Set cache
+        $this->cache->setDataTableCache(
+            'company_list',
+            $access_type,
+            $start,
+            $length,
+            $search,
+            $orderColumn,
+            $orderDir,
+            $result
+        );
+        
+        return $result;
     }
 
     /**
