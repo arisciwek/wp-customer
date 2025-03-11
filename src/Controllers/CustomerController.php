@@ -562,23 +562,6 @@ public function createPdfButton() {
                 $additionalParams['type'] = sanitize_text_field($_POST['type']);
             }
 
-            // Check cache first
-            $cached_result = $this->cache->getDataTableCache(
-                'customer_list',          // Specific context for main customer listing
-                get_current_user_id(),
-                $start,
-                $length,
-                $search,
-                $orderColumn,
-                $orderDir,
-                $additionalParams        // Additional filtering parameters if any
-            );
-
-            if ($cached_result) {
-                wp_send_json($cached_result);
-                return;
-            }
-
             // Get fresh data if no cache
             $result = $this->getCustomerTableData($start, $length, $search, $orderColumn, $orderDir);
             if (!$result) {
@@ -604,19 +587,6 @@ public function createPdfButton() {
                 'recordsFiltered' => $result['filtered'],
                 'data' => $data,
             ];
-
-            // Set cache
-            $this->cache->setDataTableCache(
-                'customer_list',         // Same context as get
-                get_current_user_id(),
-                $start,
-                $length,
-                $search,
-                $orderColumn,
-                $orderDir,
-                $response,
-                $additionalParams       // Same additional parameters
-            );
 
             wp_send_json($response);
 

@@ -54,7 +54,6 @@
                     <tr>
                         <th>Kode</th>
                         <th>Nama Perusahaan</th>
-                        <th>Customer</th>
                         <th>Tipe</th>
                         <th>Level</th>
                         <th>Aksi</th>
@@ -90,11 +89,6 @@
                     {
                         data: 'name',
                         title: 'Nama Perusahaan'
-                    },
-                    {
-                        data: 'customer_name',
-                        title: 'Customer',
-                        defaultContent: '-'
                     },
                     {
                         data: 'type',

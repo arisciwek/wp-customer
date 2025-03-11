@@ -26,9 +26,11 @@
 namespace WPCustomer\Models\Company;
 
 use WPCustomer\Cache\CustomerCacheManager;
+use WPCustomer\Models\Customer\CustomerModel;
 
 class CompanyModel {
     private $table;
+    private $customer_table;
     private $memberships_table;
     private $levels_table;
     private CustomerCacheManager $cache;
@@ -39,6 +41,7 @@ class CompanyModel {
         $this->memberships_table = $wpdb->prefix . 'app_customer_memberships';
         $this->levels_table = $wpdb->prefix . 'app_customer_membership_levels';
         $this->cache = new CustomerCacheManager();
+        $this->customer_table = new CustomerModel();
     }
 
     /**
@@ -100,7 +103,7 @@ class CompanyModel {
             $length,
             $search,
             $orderColumn,
-            $orderDir
+            strtolower($orderDir)
         );
 
         if ($cached_result) {
@@ -152,7 +155,7 @@ class CompanyModel {
         }
 
         // Add order
-        $orderDir = strtoupper($orderDir) === 'desc' ? 'desc' : 'asc';
+        $orderDir = strtoupper($orderDir) === 'desc' ? 'DESC' : 'ASC';
         $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
 
         // Add limit
@@ -188,7 +191,7 @@ class CompanyModel {
             $length,
             $search,
             $orderColumn,
-            $orderDir,
+            strtolower($orderDir),
             $result
         );
         

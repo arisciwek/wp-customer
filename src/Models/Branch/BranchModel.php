@@ -171,7 +171,7 @@ class BranchModel {
 
         // Simpan ke cache
         if ($result) {
-            $this->cache->set(self::KEY_BRANCH, $data, self::CACHE_EXPIRY, $id);
+            $this->cache->set(self::KEY_BRANCH, $result, self::CACHE_EXPIRY, $id);
         }
         
         return $result;
@@ -268,6 +268,40 @@ class BranchModel {
     }
 
     public function getDataTableData(int $customer_id, int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
+        // Dapatkan access_type dari validator
+        global $wp_branch_validator;
+        if (!$wp_branch_validator) {
+            $wp_branch_validator = new \WPCustomer\Validators\Branch\BranchValidator();
+        }
+        $access = $wp_branch_validator->validateAccess(0);
+        $access_type = $access['access_type'];
+        
+        // Pastikan orderDir lowercase untuk konsistensi cache key
+        $orderDir = strtolower($orderDir);
+        
+        // Check cache first
+        $cached_result = $this->cache->getDataTableCache(
+            'branch_list',
+            $access_type,
+            $start, 
+            $length,
+            $search,
+            $orderColumn,
+            $orderDir,
+            ['customer_id' => $customer_id]
+        );
+
+        if ($cached_result) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("BranchModel cache hit for DataTable - Key: branch_list_{$access_type}");
+            }
+            return $cached_result;
+        }
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("BranchModel cache miss for DataTable - Key: branch_list_{$access_type}");
+        }
+        
         global $wpdb;
 
         // Base query parts
@@ -289,17 +323,21 @@ class BranchModel {
             $orderColumn = 'code';
         }
 
-        // Validate order direction
-        $orderDir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
-
-        // Build order clause
-        $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
+        // Gunakan lowercase untuk SQL juga, lalu konversi ke uppercase untuk query
+        $sqlOrderDir = $orderDir === 'desc' ? 'DESC' : 'ASC';
+        $order = " ORDER BY " . esc_sql($orderColumn) . " " . $sqlOrderDir;
 
         // Add limit
         $limit = $wpdb->prepare(" LIMIT %d, %d", $start, $length);
 
         // Complete query
         $sql = $select . $from . $join . $where . $order . $limit;
+        
+        // Log query for debugging
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            $query_log = $wpdb->prepare($sql, $params);
+            error_log("Branch DataTable Query: " . $query_log);
+        }
 
         // Get paginated results
         $results = $wpdb->get_results($wpdb->prepare($sql, $params));
@@ -316,15 +354,28 @@ class BranchModel {
             "SELECT COUNT(*) FROM {$this->table} WHERE customer_id = %d",
             $customer_id
         ));
-        // Di function getDataTableData()
-        $datatable_query = (!empty($params)) ? $wpdb->prepare($sql, $params) : $sql;
-        error_log('DataTable Query: ' . $datatable_query);
 
-        return [
+        // Prepare result
+        $result = [
             'data' => $results,
             'total' => (int) $total,
             'filtered' => (int) $filtered
         ];
+        
+        // Set cache dengan durasi 2 menit - gunakan orderDir yang sama (lowercase)
+        $this->cache->setDataTableCache(
+            'branch_list',
+            $access_type,
+            $start,
+            $length,
+            $search,
+            $orderColumn,
+            $orderDir,
+            $result,
+            ['customer_id' => $customer_id]
+        );
+        
+        return $result;
     }
 
     /**

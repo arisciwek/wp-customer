@@ -333,26 +333,6 @@ class BranchController {
             if ($orderBy === 'actions') {
                 $orderBy = 'name';
             }
-
-            $access = $this->validator->validateAccess(0);
-
-            // Check cache first
-            $cached_result = $this->cache->getDataTableCache(
-                'branch_list',
-                $access['access_type'],
-                $start, 
-                $length,
-                $search,
-                $orderBy,
-                $orderDir,
-                ['customer_id' => $customer_id]
-            );
-
-            if ($cached_result) {
-                wp_send_json($cached_result);
-                return;
-            }
-
             // Get fresh data
             $result = $this->model->getDataTableData(
                 $customer_id,
@@ -406,19 +386,6 @@ class BranchController {
                 'recordsFiltered' => $result['filtered'],
                 'data' => $data,
             ];
-
-            // Cache the result
-            $this->cache->setDataTableCache(
-                'branch_list',
-                $access['access_type'], 
-                $start,
-                $length, 
-                $search,
-                $orderBy,
-                $orderDir,
-                $response,
-                ['customer_id' => $customer_id]
-            );
 
             wp_send_json($response);
 

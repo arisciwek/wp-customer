@@ -379,59 +379,62 @@
     }
 
     public function getDataTableData(int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
-        global $wpdb;
-
-        error_log("=== getDataTableData start ===");
-        error_log("Query params: start=$start, length=$length, search=$search");
-
+        // Pastikan orderDir lowercase untuk konsistensi cache key
+        $orderDir = strtolower($orderDir);
+        
+        // Dapatkan access_type untuk cache key
         $current_user_id = get_current_user_id();
+        $access_type = current_user_can('edit_all_customers') ? 'admin' : 'user';
+        
+        // Check cache first
+        $cached_result = $this->cache->getDataTableCache(
+            'customer_list',
+            $access_type,
+            $start, 
+            $length,
+            $search,
+            $orderColumn,
+            $orderDir,
+            []
+        );
 
-        // Debug capabilities
-        error_log('--- Debug User Capabilities ---');
-        error_log('User ID: ' . $current_user_id);
-        error_log('Can view_customer_list: ' . (current_user_can('view_customer_list') ? 'yes' : 'no'));
-        error_log('Can view_own_customer: ' . (current_user_can('view_own_customer') ? 'yes' : 'no'));
+        if ($cached_result) {
+            return $cached_result;
+        }
+        
+        global $wpdb;
 
         // Base query parts
         $select = "SELECT SQL_CALC_FOUND_ROWS p.*, COUNT(r.id) as branch_count, u.display_name as owner_name";
-
         $from = " FROM {$this->table} p";
         $join = " LEFT JOIN {$this->branch_table} r ON p.id = r.customer_id";
         $join .= " LEFT JOIN {$wpdb->users} u ON p.user_id = u.ID";
         $where = " WHERE 1=1";
-
-        error_log('Building WHERE clause:');
-        error_log('Initial WHERE: ' . $where);
 
         // Cek relasi user dengan customer
         $has_customer = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM {$this->table} WHERE user_id = %d",
             $current_user_id
         ));
-        error_log('User has customer: ' . ($has_customer > 0 ? 'yes' : 'no'));
 
         // Cek status employee
         $employee_customer = $wpdb->get_var($wpdb->prepare(
             "SELECT customer_id FROM {$this->employee_table} WHERE user_id = %d",
             $current_user_id
         ));
-        error_log('User is employee of customer: ' . ($employee_customer ? $employee_customer : 'no'));
 
         // Permission based filtering
         if (current_user_can('edit_all_customers')) {
-            error_log('User can edit all customers - no additional restrictions');
+            // No additional restrictions
         }
         else if ($has_customer > 0 && current_user_can('view_own_customer')) {
             $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
-            error_log('Added owner restriction: ' . $where);
         }
         else if ($employee_customer && current_user_can('view_own_customer')) {
             $where .= $wpdb->prepare(" AND p.id = %d", $employee_customer);
-            error_log('Added employee restriction: ' . $where);
         }
         else {
             $where .= " AND 1=0";
-            error_log('User has no access - restricting all results');
         }
 
         // Add search condition if present
@@ -441,16 +444,18 @@
                 '%' . $wpdb->esc_like($search) . '%',
                 '%' . $wpdb->esc_like($search) . '%'
             );
-            error_log('Added search condition: ' . $where);
         }
 
         // Complete query parts
         $group = " GROUP BY p.id";
-        $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
+        
+        // Gunakan lowercase untuk cache key dan uppercase untuk SQL query
+        $sqlOrderDir = $orderDir === 'desc' ? 'DESC' : 'ASC';
+        $order = " ORDER BY " . esc_sql($orderColumn) . " " . $sqlOrderDir;
+        
         $limit = $wpdb->prepare(" LIMIT %d, %d", $start, $length);
 
         $sql = $select . $from . $join . $where . $group . $order . $limit;
-        error_log('Final Query: ' . $sql);
 
         // Execute query
         $results = $wpdb->get_results($sql);
@@ -474,16 +479,27 @@
         }
         $total = (int) $wpdb->get_var($total_sql);
 
-        error_log("Found rows (filtered): " . $filtered);
-        error_log("Total count: " . $total);
-        error_log("Results count: " . count($results));
-        error_log("=== getDataTableData end ===");
-
-        return [
+        // Prepare result
+        $result = [
             'data' => $results,
             'total' => $total,
             'filtered' => (int) $filtered
         ];
+        
+        // Set cache dengan durasi 2 menit - gunakan orderDir yang sama (lowercase)
+        $this->cache->setDataTableCache(
+            'customer_list',
+            $access_type,
+            $start,
+            $length,
+            $search,
+            $orderColumn,
+            $orderDir,
+            $result,
+            []
+        );
+
+        return $result;
     }
 
     public function delete(int $id): bool {
