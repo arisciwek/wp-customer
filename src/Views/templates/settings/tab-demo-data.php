@@ -142,6 +142,20 @@ if (!current_user_can('manage_options')) {
                     <?php _e('Generate Employees', 'wp-customer'); ?>
                 </button>
             </div>
+
+            <!-- Customer Memberships -->
+            <div class="demo-data-card">
+                <h4><?php _e('Customer Memberships', 'wp-customer'); ?></h4>
+                <p><?php _e('Generate membership data for existing branches and customers.', 'wp-customer'); ?></p>
+                <button type="button" 
+                        class="button button-primary customer-generate-demo-data" 
+                        data-type="memberships"
+                        data-requires="branch"
+                        data-check-nonce="<?php echo wp_create_nonce('check_demo_branch'); ?>"
+                        data-nonce="<?php echo wp_create_nonce('generate_demo_memberships'); ?>">
+                    <?php _e('Generate Customer Memberships', 'wp-customer'); ?>
+                </button>
+            </div>            
         </div>
     </div>
 

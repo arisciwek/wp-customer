@@ -28,7 +28,6 @@ defined('ABSPATH') || exit;
                 <tr>
                     <th>Kode</th>
                     <th>Nama Perusahaan</th>
-                    <th>Customer</th>
                     <th>Tipe</th>
                     <th>Level</th>
                     <th>Aksi</th>
