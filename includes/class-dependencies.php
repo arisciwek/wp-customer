@@ -327,14 +327,14 @@ public function enqueue_frontend_assets() {
                     break;
                 case 'membership-levels':
                     wp_enqueue_script(
-                        'wp-customer-membership',
+                        'wp-membership-levels',
                         WP_CUSTOMER_URL . 'assets/js/settings/customer-membership-levels-tab-script.js',
                         ['jquery', 'wp-customer-settings'],
                         WP_CUSTOMER_VERSION,
                         true
                     );
 
-                    wp_localize_script('wp-customer-membership', 'wpCustomerData', [
+                    wp_localize_script('wp-membership-levels', 'wpCustomerData', [
                         'ajaxUrl' => admin_url('admin-ajax.php'),
                         'nonce' => wp_create_nonce('wp_customer_nonce'),
                         'i18n' => [

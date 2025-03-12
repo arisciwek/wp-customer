@@ -444,7 +444,7 @@
                     url: wpCustomerData.ajaxUrl,
                     type: 'POST',
                     data: {
-                        action: 'get_membership_level_data',
+                        action: 'get_customer_membership_level_data',
                         customer_id: this.currentId,
                         nonce: wpCustomerData.nonce
                     },

@@ -33,13 +33,13 @@ defined('ABSPATH') || exit;
 class MembershipLevelModel {
     private $wpdb;
     private $table;
-    private $cache_manager;
+    private $cache;
 
     public function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;
         $this->table = $wpdb->prefix . 'app_customer_membership_levels';
-        $this->cache_manager = new CustomerCacheManager();
+        $this->cache = new CustomerCacheManager();
     }
 
     // Dapatkan semua group yang aktif dari features
@@ -276,4 +276,31 @@ class MembershipLevelModel {
 
         return $grouped_features;
     }
+
+
+    /**
+     * Get single customer_membership level
+     */
+    public function getLevel(int $id): ?object {
+        // Check cache
+        $cached = $this->cache->get('customer_membership_level', $id);
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        global $wpdb;
+        $level = $wpdb->get_row($wpdb->prepare("
+            SELECT * FROM {$this->table}
+            WHERE id = %d
+        ", $id));
+
+        if ($level) {
+            // Cache for 5 minutes
+            $this->cache->set('customer_membership_level', $level, 300, $id);
+        }
+
+        return $level;
+    }
+    
+    
 }

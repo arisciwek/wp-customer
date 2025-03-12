@@ -46,52 +46,79 @@ class MembershipLevelController {
         $this->feature_model = new MembershipFeatureModel();
         $this->cache_manager = new CustomerCacheManager();
         $this->validator = new MembershipLevelValidator();
+
+        add_action('wp_ajax_save_customer_membership_level', [$this, 'handle_save_membership_level']);
         
     }
 
-    public function handle_get_level() {
+    public function getMembershipLevel() {
+        error_log('Received nonce: ' . $_POST['nonce']);
+        error_log('Expected nonce for wp_customer_nonce: ' . wp_create_nonce('wp_customer_nonce'));
+        
         try {
-            $this->verify_request('get_membership_form');
+            check_ajax_referer('wp_customer_nonce', 'nonce');
             
-            $level_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
-            
-            // Ambil data level
-            $level = $this->model->get_level($level_id);
-            if (!$level) {
-                throw new \Exception(__('Level tidak ditemukan.', 'wp-customer'));
+            $level_id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+            error_log('Getting level data for ID: ' . $level_id);
+
+            if (!$level_id) {
+                throw new \Exception('Invalid level ID');
             }
 
-            // Ambil struktur features dari model
-            $feature_model = new MembershipFeatureModel();
-            $available_features = $feature_model->get_all_features_by_group();
-            
-            // Parse capabilities yang ada
-            $existing_capabilities = json_decode($level['capabilities'], true);
+            // Get level data
+            $level = $this->model->getLevel($level_id);
+            error_log('Raw level data: ' . print_r($level, true));
 
-            // Format data untuk form dengan capabilities yang sesuai struktur dari model
-            $form_data = [
-                'id' => $level['id'],
-                'name' => $level['name'],
-                'slug' => $level['slug'],
-                'description' => $level['description'],
-                'price_per_month' => floatval($level['price_per_month']),
-                'is_trial_available' => (bool)$level['is_trial_available'],
-                'trial_days' => intval($level['trial_days']),
-                'grace_period_days' => intval($level['grace_period_days']),
-                'sort_order' => intval($level['sort_order']),
-                'capabilities' => $existing_capabilities
+            if (!$level) {
+                throw new \Exception('Level not found');
+            }
+
+            // Jika $level adalah objek, dan nilai max_staff dan max_departments 
+            // seharusnya diambil dari capabilities
+            $capabilities = is_string($level->capabilities) 
+                ? json_decode($level->capabilities, true) 
+                : $level->capabilities;
+
+            $max_staff = null;
+            $max_departments = null;
+
+            if (is_array($capabilities) && isset($capabilities['resources'])) {
+                if (isset($capabilities['resources']['max_staff'])) {
+                    $max_staff = $capabilities['resources']['max_staff']['value'] ?? null;
+                }
+                
+                if (isset($capabilities['resources']['max_departments'])) {
+                    $max_departments = $capabilities['resources']['max_departments']['value'] ?? null;
+                }
+            }
+
+            // Format response data
+            $response = [
+                'id' => $level->id,
+                'name' => $level->name,
+                'description' => $level->description,
+                'price_per_month' => $level->price_per_month,
+                'max_staff' => $level->max_staff,
+                'max_departments' => $level->max_departments,
+                'is_trial_available' => $level->is_trial_available,
+                'trial_days' => $level->trial_days,
+                'grace_period_days' => $level->grace_period_days,
+                'capabilities' => is_string($level->capabilities) ? $level->capabilities : json_encode($level->capabilities)
             ];
-
-            wp_send_json_success($form_data);
+            
+            error_log('Formatted response: ' . print_r($response, true));
+            wp_send_json_success($response);
 
         } catch (\Exception $e) {
+            error_log('Error in get_customer_membership_level: ' . $e->getMessage());
             wp_send_json_error([
                 'message' => $e->getMessage()
             ]);
         }
+
     }
 
-    public function handle_save_level() {
+    public function handle_save_membership_level() {
         try {
             $this->verify_request('save_membership_level');
         

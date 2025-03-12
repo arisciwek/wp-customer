@@ -144,7 +144,6 @@ class MembershipLevelsDemoData extends AbstractDemoData {
                'capabilities' => json_encode([
                    'staff' => [
                        'can_add_staff' => [
-                           'field' => 'can_add_staff',
                            'value' => true,
                            'settings' => []
                        ]
@@ -211,51 +210,58 @@ class MembershipLevelsDemoData extends AbstractDemoData {
                'trial_days' => 7,
                'grace_period_days' => 5,
                'sort_order' => 3,
-               'capabilities' => json_encode([
-                   'staff' => [
-                       'can_add_staff' => [
-                           'field' => 'can_add_staff',
-                           'value' => true,
-                           'settings' => []
-                       ]
-                   ],
-                   'data' => [
-                       'can_export' => [
-                           'field' => 'can_export',
-                           'value' => true,
-                           'settings' => []
-                       ],
-                       'can_bulk_import' => [
-                           'field' => 'can_bulk_import',
-                           'value' => true,
-                           'settings' => []
-                       ]
-                   ],
-                   'resources' => [
-                       'max_staff' => [
-                           'field' => 'max_staff',
-                           'value' => 5,
-                           'settings' => []
-                       ],
-                       'max_departments' => [
-                           'field' => 'max_departments',
-                           'value' => 3,
-                           'settings' => []
-                       ]
-                   ],
-                   'communication' => [
-                       'email_notifications' => [
-                           'field' => 'email_notifications',
-                           'value' => true,
-                           'settings' => []
-                       ],
-                       'dashboard_notifications' => [
-                           'field' => 'dashboard_notifications',
-                           'value' => true,
-                           'settings' => []
-                       ]
-                   ]
-               ]),
+                'capabilities' => json_encode([
+                    'staff' => [
+                        'can_add_staff' => [
+                            'field' => 'can_add_staff',
+                            'value' => true,
+                            'label' => 'Dapat Menambah Staff',
+                            'settings' => []
+                        ]
+                    ],
+                    'data' => [
+                        'can_export' => [
+                            'field' => 'can_export',
+                            'value' => true,
+                            'label' => 'Dapat Export Data',
+                            'settings' => []
+                        ],
+                        'can_bulk_import' => [
+                            'field' => 'can_bulk_import',
+                            'value' => true,
+                            'label' => 'Dapat Melakukan Bulk Import',
+                            'settings' => []
+                        ]
+                    ],
+                    'resources' => [
+                        'max_staff' => [
+                            'field' => 'max_staff',
+                            'value' => 5,
+                            'label' => 'Maksimal Staff',
+                            'settings' => []
+                        ],
+                        'max_departments' => [
+                            'field' => 'max_departments',
+                            'value' => 3,
+                            'label' => 'Maksimal Departemen',
+                            'settings' => []
+                        ]
+                    ],
+                    'communication' => [
+                        'email_notifications' => [
+                            'field' => 'email_notifications',
+                            'value' => true,
+                            'label' => 'Notifikasi Email',
+                            'settings' => []
+                        ],
+                        'dashboard_notifications' => [
+                            'field' => 'dashboard_notifications',
+                            'value' => true,
+                            'label' => 'Notifikasi Dashboard',
+                            'settings' => []
+                        ]
+                    ]
+                ]),
                'settings' => json_encode([
                    'payment' => [
                        'available_methods' => ['bank_transfer', 'credit_card'],
