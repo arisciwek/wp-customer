@@ -190,6 +190,9 @@
 
             $('.tab-content').removeClass('active').hide();
             $(`#${tabId}`).addClass('active').show();
+
+            $(document).trigger('wp_company_tab_switched', [tabId, this]);
+
         },
 
         closePanel() {

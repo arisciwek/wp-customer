@@ -416,7 +416,8 @@ class MembershipFeaturesController {
 
         return $groups;
     }
-    
+
+    /*
     public function handle_save_level() {
         try {
             $this->verify_request('save_membership_level');
@@ -456,6 +457,7 @@ class MembershipFeaturesController {
             ]);
         }
     }
+    */
 
 
 }

@@ -1,13 +1,13 @@
 <?php
 /**
- * Customer Membership Model Class
+ * Company Membership Model Class
  *
  * @package     WP_Customer
- * @subpackage  Models/Customer
+ * @subpackage  Models/Company
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Models/Customer/CustomerMembershipModel.php
+ * Path: /wp-customer/src/Models/Company/CompanyMembershipModel.php
  *
  * Description: Model untuk mengelola data active membership customer.
  *              Menangani operasi terkait status, periode, dan pembayaran.
@@ -33,11 +33,11 @@
  * - Added upgrade handling
  */
 
-namespace WPCustomer\Models\Customer;
+namespace WPCustomer\Models\Company;
 
 use WPCustomer\Cache\CustomerCacheManager;
 
-class CustomerMembershipModel {
+class CompanyMembershipModel {
     /**
      * Database table names
      * @var string
@@ -61,64 +61,36 @@ class CustomerMembershipModel {
         $this->cache = new CustomerCacheManager();
     }
 
-    /**
-     * Find membership by ID
-     *
-     * @param int $id Membership ID
-     * @return object|null Membership data or null if not found
-     */
-    public function find(int $id): ?object {
-        // Check cache first
-        $cached = $this->cache->get('membership', $id);
-        if ($cached !== null) {
-            return $cached;
-        }
-
+    public function findByCompany($company_id) {
         global $wpdb;
-        $membership = $wpdb->get_row($wpdb->prepare("
-            SELECT m.*, l.name as level_name, l.slug as level_slug,
-                   l.max_staff, l.max_departments, l.capabilities
-            FROM {$this->table} m
-            LEFT JOIN {$this->levels_table} l ON m.level_id = l.id
-            WHERE m.id = %d
-        ", $id));
-
-        if ($membership) {
-            $this->cache->set('membership', $membership, 300, $id);
+        
+        // Debug log
+        error_log("CompanyMembershipModel::findByCompany - Searching for branch_id: " . $company_id);
+        
+        $table = $wpdb->prefix . 'app_customer_memberships';
+        
+        // Pastikan query benar mencari berdasarkan branch_id
+        $query = $wpdb->prepare(
+            "SELECT * FROM {$table} 
+             WHERE branch_id = %d AND status = 'active'
+             ORDER BY created_at DESC 
+             LIMIT 1",
+            $company_id
+        );
+        
+        error_log("Query executed: " . $query);
+        
+        $result = $wpdb->get_row($query);
+        
+        if (!$result) {
+            error_log("No active membership found for branch_id: " . $company_id);
+        } else {
+            error_log("Found membership for branch_id: " . $company_id . ", ID: " . $result->id);
         }
-
-        return $membership;
+        
+        return $result;
     }
 
-    /**
-     * Find membership by customer ID
-     *
-     * @param int $customer_id Customer ID
-     * @return object|null Membership data or null if not found
-     */
-    public function findByCustomer(int $customer_id): ?object {
-        // Check cache first
-        $cached = $this->cache->get('customer_membership', $customer_id);
-        if ($cached !== null) {
-            return $cached;
-        }
-
-        global $wpdb;
-        $membership = $wpdb->get_row($wpdb->prepare("
-            SELECT m.*, l.name as level_name, l.slug as level_slug,
-                   l.max_staff, l.max_departments, l.capabilities
-            FROM {$this->table} m
-            LEFT JOIN {$this->levels_table} l ON m.level_id = l.id
-            WHERE m.customer_id = %d
-            ORDER BY m.id DESC LIMIT 1
-        ", $customer_id));
-
-        if ($membership) {
-            $this->cache->set('customer_membership', $membership, 300, $customer_id);
-        }
-
-        return $membership;
-    }
 
     /**
      * Create new membership
@@ -162,8 +134,8 @@ class CustomerMembershipModel {
 
         // Clear related caches
         $this->clearCache($new_id);
-        if (!empty($data['customer_id'])) {
-            $this->cache->delete('customer_membership', $data['customer_id']);
+        if (!empty($data['company_id'])) {
+            $this->cache->delete('company_membership', $data['company_id']);
         }
 
         return $new_id;
@@ -395,12 +367,12 @@ class CustomerMembershipModel {
     /**
      * Check if customer can upgrade to target level
      *
-     * @param int $customer_id Customer ID
+     * @param int $company_id Customer ID
      * @param int $target_level_id Target level ID
      * @return bool Whether upgrade is possible
      */
-    public function canUpgrade(int $customer_id, int $target_level_id): bool {
-        $current = $this->findByCustomer($customer_id);
+    public function canUpgrade(int $company_id, int $target_level_id): bool {
+        $current = $this->findByCustomer($company_id);
         if (!$current) {
             return false;
         }
@@ -421,11 +393,11 @@ class CustomerMembershipModel {
     /**
      * Check if membership is active
      *
-     * @param int $customer_id Customer ID
+     * @param int $company_id Customer ID
      * @return bool Active status
      */
-    public function isActive(int $customer_id): bool {
-        $membership = $this->findByCustomer($customer_id);
+    public function isActive(int $company_id): bool {
+        $membership = $this->findByCustomer($company_id);
         if (!$membership) {
             return false;
         }
@@ -436,11 +408,11 @@ class CustomerMembershipModel {
     /**
      * Check if membership has expired
      *
-     * @param int $customer_id Customer ID
+     * @param int $company_id Customer ID
      * @return bool Expired status
      */
-    public function hasExpired(int $customer_id): bool {
-        $membership = $this->findByCustomer($customer_id);
+    public function hasExpired(int $company_id): bool {
+        $membership = $this->findByCustomer($company_id);
         if (!$membership) {
             return true;
         }
@@ -451,11 +423,11 @@ class CustomerMembershipModel {
     /**
      * Check if membership is in grace period
      *
-     * @param int $customer_id Customer ID
+     * @param int $company_id Customer ID
      * @return bool Grace period status
      */
-    public function inGracePeriod(int $customer_id): bool {
-        $membership = $this->findByCustomer($customer_id);
+    public function inGracePeriod(int $company_id): bool {
+        $membership = $this->findByCustomer($company_id);
         if (!$membership) {
             return false;
         }
@@ -474,12 +446,12 @@ class CustomerMembershipModel {
         
         // Get customer ID to clear customer-specific cache
         global $wpdb;
-        $customer_id = $wpdb->get_var($wpdb->prepare("
-            SELECT customer_id FROM {$this->table} WHERE id = %d
+        $company_id = $wpdb->get_var($wpdb->prepare("
+            SELECT company_id FROM {$this->table} WHERE id = %d
         ", $id));
 
-        if ($customer_id) {
-            $this->cache->delete('customer_membership', $customer_id);
+        if ($company_id) {
+            $this->cache->delete('company_membership', $company_id);
         }
     }
 
@@ -532,12 +504,12 @@ class CustomerMembershipModel {
     /**
      * Get active employee count for a customer
      *
-     * @param int $customer_id Customer ID
+     * @param int $company_id Customer ID
      * @return int Number of active employees
      */
-    public function getActiveEmployeeCount(int $customer_id): int {
+    public function getActiveEmployeeCount(int $company_id): int {
         // Check cache first
-        $cached_count = $this->cache->get('customer_active_employee_count', $customer_id);
+        $cached_count = $this->cache->get('customer_active_employee_count', $company_id);
         if ($cached_count !== null) {
             return (int) $cached_count;
         }
@@ -546,12 +518,12 @@ class CustomerMembershipModel {
         $count = (int) $wpdb->get_var($wpdb->prepare("
             SELECT COUNT(*) 
             FROM {$wpdb->prefix}app_customer_employees
-            WHERE customer_id = %d 
+            WHERE company_id = %d 
             AND status = 'active'
-        ", $customer_id));
+        ", $company_id));
 
         // Cache for 5 minutes since employee count can change frequently
-        $this->cache->set('customer_active_employee_count', $count, 300, $customer_id);
+        $this->cache->set('customer_active_employee_count', $count, 300, $company_id);
 
         return $count;
     }

@@ -118,7 +118,7 @@ class MembershipLevelController {
 
     }
 
-    public function handle_save_membership_level() {
+    public function saveMembershipLevel() {
         try {
             $this->verify_request('save_membership_level');
         

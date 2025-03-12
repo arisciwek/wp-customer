@@ -1,0 +1,576 @@
+/**
+ * Customer Membership Tab Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Customer
+ * @version     2.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/company/company-membership-style.css
+ *
+ * Description: Styling untuk tab membership pada halaman customer
+ *              Mencakup:
+ *              - Status membership
+ *              - Card perbandingan level
+ *              - Progess bar usage
+ *              - Modal konfirmasi upgrade
+ *
+ * Dependencies:
+ * - WordPress Admin CSS
+ * - wp-customer styles
+ */
+
+/* Status Card */
+.membership-status-card {
+  margin-bottom: 24px;
+}
+
+.membership-status-card .inside {
+  padding: 16px;
+}
+
+.membership-status-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.level-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.level-badge {
+  display: inline-block;
+  background-color: #4f46e5;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-active {
+  background-color: #10b981;
+  color: white;
+}
+
+.status-inactive {
+  background-color: #ef4444;
+  color: white;
+}
+
+.status-grace {
+  background-color: #f59e0b;
+  color: white;
+}
+
+.status-pending {
+  background-color: #6366f1;
+  color: white;
+}
+
+/* Staff Usage Section */
+.staff-usage-section {
+  margin-bottom: 20px;
+}
+
+.staff-usage-section h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.staff-progress {
+  margin-top: 8px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background-color: #e5e7eb;
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #4f46e5;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-fill.low-usage {
+  background-color: #10b981;
+}
+
+.progress-fill.medium-usage {
+  background-color: #f59e0b;
+}
+
+.progress-fill.high-usage {
+  background-color: #ef4444;
+}
+
+.progress-fill.unlimited-usage {
+  background-color: #6366f1;
+  background-image: linear-gradient(45deg, rgba(255, 255, 255, 0.15) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, 0.15) 50%, rgba(255, 255, 255, 0.15) 75%, transparent 75%, transparent);
+  background-size: 20px 20px;
+  animation: progress-bar-stripes 1s linear infinite;
+}
+
+@keyframes progress-bar-stripes {
+  from {
+    background-position: 20px 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+
+.usage-text {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #6b7280;
+  text-align: right;
+}
+
+/* Capabilities Section */
+.capabilities-section {
+  margin-bottom: 20px;
+}
+
+.capabilities-section h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.capability-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.capability-item {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  background-color: #f9fafb;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.capability-item .dashicons {
+  color: #10b981;
+  margin-right: 8px;
+}
+
+.capability-item .value {
+  margin-left: 4px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.no-features {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #9ca3af;
+  padding: 12px;
+}
+
+/* Period Section */
+.period-section {
+  margin-bottom: 10px;
+}
+
+.period-section h4 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.period-section .form-table {
+  margin-top: 0;
+}
+
+.period-section .form-table th {
+  padding: 8px 10px 8px 0;
+  width: 120px;
+  font-weight: 500;
+}
+
+.period-section .form-table td {
+  padding: 8px 10px;
+}
+
+/* Membership Levels Card */
+.membership-levels-card {
+  margin-bottom: 24px;
+}
+
+.membership-levels-card .inside {
+  padding: 16px;
+}
+
+.period-selector-container {
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.period-selector {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  min-width: 120px;
+}
+
+/* Upgrade Cards Container */
+.upgrade-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  margin-top: 20px;
+}
+
+/* Upgrade Card */
+.upgrade-card {
+  background-color: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.upgrade-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.upgrade-card.recommended {
+  border-color: #4f46e5;
+  position: relative;
+}
+
+.upgrade-card.recommended::before {
+  content: 'Recommended';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background-color: #4f46e5;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  z-index: 1;
+}
+
+/* Card Header */
+.upgrade-card .card-header {
+  padding: 16px 20px;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+}
+
+.upgrade-card h4 {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+.upgrade-card .price {
+  font-size: 14px;
+  color: #4b5563;
+  margin-bottom: 5px;
+}
+
+.upgrade-card .price-amount {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.upgrade-card .period-details {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 8px;
+}
+
+.upgrade-card .total-price {
+  font-weight: 600;
+}
+
+/* Card Content */
+.upgrade-card .card-content {
+  padding: 20px;
+}
+
+.upgrade-card .staff-limit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.upgrade-card .staff-limit .dashicons {
+  color: #4f46e5;
+}
+
+.upgrade-card .staff-limit-text {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.upgrade-card .staff-limit-value {
+  font-weight: 600;
+  color: #111827;
+  margin-left: auto;
+}
+
+/* Features Container */
+.upgrade-card .features-container {
+  margin-bottom: 20px;
+}
+
+.upgrade-card .features-container h5 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #4b5563;
+}
+
+.upgrade-card .plan-features {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.upgrade-card .plan-features li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+.upgrade-card .plan-features .dashicons {
+  color: #10b981;
+}
+
+/* Trial Badge */
+.upgrade-card .trial-badge {
+  display: inline-block;
+  background-color: #f59e0b;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 8px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+}
+
+/* Upgrade Button Container */
+.upgrade-card .upgrade-button-container {
+  text-align: center;
+}
+
+.upgrade-card .upgrade-membership-btn {
+  width: 100%;
+}
+
+.upgrade-card .current-level-badge {
+  display: inline-block;
+  background-color: #10b981;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 4px;
+}
+
+/* Loading Placeholder */
+.loading-placeholder {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Membership Modal */
+.wp-customer-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.wp-customer-modal .modal-content {
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  max-width: 600px;
+  margin: 0 auto;
+  position: relative;
+  top: 50px;
+  overflow: hidden;
+}
+
+.wp-customer-modal .modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wp-customer-modal .modal-title {
+  margin: 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+.wp-customer-modal .modal-close {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 18px;
+}
+
+.wp-customer-modal .modal-close:hover {
+  color: #ef4444;
+}
+
+.wp-customer-modal .modal-body {
+  padding: 20px;
+}
+
+.wp-customer-modal .modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Upgrade Details */
+.upgrade-details {
+  margin: 20px 0;
+  padding: 16px;
+  background-color: #f9fafb;
+  border-radius: 6px;
+}
+
+.upgrade-details .form-row {
+  margin-bottom: 15px;
+}
+
+.upgrade-details label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #4b5563;
+}
+
+.upgrade-details select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+}
+
+.confirmation-notice {
+  margin-top: 15px;
+  padding: 12px;
+  background-color: #f3f4f6;
+  border-left: 3px solid #6366f1;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+/* Loading Animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.rotating {
+  animation: spin 1.5s linear infinite;
+}
+
+/* Responsive Adjustments */
+@media screen and (max-width: 782px) {
+  .upgrade-cards-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .capability-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Extra styles for WordPress admin compatibility */
+.loading {
+  position: relative;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.6);
+  z-index: 100;
+  cursor: wait;
+}
+
+.loading::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  margin-top: -15px;
+  margin-left: -15px;
+  width: 30px;
+  height: 30px;
+  border: 3px solid #f3f4f6;
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  z-index: 101;
+  animation: spin 1s linear infinite;
+}
+

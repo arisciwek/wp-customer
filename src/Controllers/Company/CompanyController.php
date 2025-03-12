@@ -26,6 +26,7 @@
 namespace WPCustomer\Controllers\Company;
 
 use WPCustomer\Models\Company\CompanyModel;
+use WPCustomer\Controllers\Company\CompanyMembershipController;
 use WPCustomer\Cache\CustomerCacheManager;
 use WPCustomer\Validators\Branch\BranchValidator;
 
@@ -35,6 +36,7 @@ class CompanyController {
     private CustomerCacheManager $cache;
     private string $log_file;
     private BranchValidator $branchValidator;
+    private CompanyMembershipController $membershipController;
 
     private const DEFAULT_LOG_FILE = 'logs/company.log';
 
@@ -42,6 +44,7 @@ class CompanyController {
         $this->model = new CompanyModel();
         $this->branchValidator = new BranchValidator();
         $this->cache = new CustomerCacheManager();
+        $this->membershipController = new CompanyMembershipController();
 
         // Initialize error messages
         $this->error_messages = [
@@ -58,7 +61,47 @@ class CompanyController {
         add_action('wp_ajax_get_company', [$this, 'show']);
         add_action('wp_ajax_validate_company_access', [$this, 'validateCompanyAccess']);
         add_action('wp_ajax_get_company_stats', [$this, 'getStats']);
+
+        // Register membership AJAX handlers - forwarding to membership controller
+        add_action('wp_ajax_get_company_membership_status', [$this, 'get_company_membership_status']);    
+        add_action('wp_ajax_get_company_upgrade_options', [$this, 'get_company_upgrade_options']);
+        add_action('wp_ajax_request_upgrade_company_membership', [$this, 'request_upgrade_company_membership']);
+        add_action('wp_ajax_check_upgrade_eligibility_company_membership', [$this, 'check_upgrade_eligibility_company_membership']);    
     }
+
+    /**
+     * Forward membership status request to membership controller
+     */
+    public function get_company_membership_status() {
+        $this->debug_log("Forwarding get_company_membership_status to membership controller");
+        $this->membershipController->getMembershipStatus();
+    }
+
+    /**
+     * Forward upgrade options request to membership controller
+     */
+    public function get_company_upgrade_options() {
+        $this->debug_log("Forwarding get_company_upgrade_options to membership controller");
+        $this->membershipController->getUpgradeOptions();
+    }
+
+    /**
+     * Forward upgrade request to membership controller
+     */
+    public function request_upgrade_company_membership() {
+        $this->debug_log("Forwarding request_upgrade_company_membership to membership controller");
+        $this->membershipController->requestUpgradeMembership();
+    }
+
+    /**
+     * Forward eligibility check to membership controller
+     */
+    public function check_upgrade_eligibility_company_membership() {
+        $this->debug_log("Forwarding check_upgrade_eligibility_company_membership to membership controller");
+        $this->membershipController->checkUpgradeEligibility();
+    }
+
+    // Rest of your CompanyController methods...
 
     /**
      * Handle company view request

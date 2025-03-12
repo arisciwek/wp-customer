@@ -41,17 +41,30 @@ class SettingsController {
         add_action('wp_ajax_customer_check_demo_data', [$this, 'handle_check_demo_data']);
         add_action('wp_ajax_reset_customer_permissions', [$this, 'handle_reset_customer_permissions']);
 
-        add_action('wp_ajax_get_customer_membership_level', [$this, 'handle_customer_membership_level']);
+        add_action('wp_ajax_get_customer_membership_level', [$this, 'handle_get_customer_membership_level']);
+
+        add_action('wp_ajax_save_customer_membership_level', [$this, 'handle_save_customer_membership_level']);
+
+
         return;
     }
 
-    public function handle_customer_membership_level() {
+    public function handle_get_customer_membership_level() {
         // Verify nonce first
         check_ajax_referer('wp_customer_nonce', 'nonce');
         
         // Then forward to MembershipLevelController
         $membership_level_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
         $membership_level_controller->getMembershipLevel();
+    }
+
+    public function handle_save_customer_membership_level() {
+        // Verify nonce first
+        check_ajax_referer('wp_customer_nonce', 'nonce');
+        
+        // Then forward to MembershipLevelController
+        $membership_level_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
+        $membership_level_controller->saveMembershipLevel();
     }
 
     public function handle_reset_customer_permissions() {

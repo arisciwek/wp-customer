@@ -122,8 +122,6 @@ class WPCustomer {
         // Branch Controller
         new \WPCustomer\Controllers\Branch\BranchController();
 
-        // Membership Controller
-        new \WPCustomer\Controllers\Membership\CustomerMembershipController();
 
         // Register AJAX handlers
         add_action('wp_ajax_get_customer_stats', [$this->customer_controller, 'getStats']);

@@ -133,7 +133,7 @@
                 url: wpCustomerData.ajaxUrl,
                 type: 'POST',
                 data: {
-                    action: 'get_membership_level',
+                    action: 'get_customer_membership_level',
                     nonce: wpCustomerData.nonce,
                     id: levelId
                 },
@@ -216,51 +216,6 @@
 
             console.log('Form population complete');
         },
-
-        /********************/
-
-        /*
-        handleSubmit() {
-            const formData = this.form.serializeArray();
-            
-            // Transform form data to proper structure
-            const processedData = {
-                ...this.processRegularFields(formData),
-                capabilities: this.processCapabilities(formData)
-            };
-
-            $.ajax({
-                url: wpCustomerData.ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'save_membership_level',
-                    nonce: wpCustomerData.nonce,
-                    ...processedData
-                },
-                beforeSend: () => {
-                    this.form.addClass('loading');
-                    this.form.find('button[type="submit"]').prop('disabled', true);
-                },
-                success: (response) => {
-                    if (response.success) {
-                        this.showMessage(response.data.message);
-                        this.closeModal();
-                        window.location.reload();
-                    } else {
-                        this.showMessage(response.data.message, 'error');
-                    }
-                },
-                error: (xhr, status, error) => {
-                    this.showMessage('Failed to save membership level', 'error');
-                    console.error(error);
-                },
-                complete: () => {
-                    this.form.removeClass('loading');
-                    this.form.find('button[type="submit"]').prop('disabled', false);
-                }
-            });
-        },
-        */
 
         processRegularFields(formData) {
             const regularFields = {};
@@ -351,7 +306,7 @@
                 url: wpCustomerData.ajaxUrl,
                 type: 'POST',
                 data: {
-                    action: 'save_membership_level',
+                    action: 'save_customer_membership_level',
                     nonce: wpCustomerData.nonce,
                     ...processedData
                 },
@@ -402,54 +357,9 @@
                 }
             });
 
-            // Cegah form submit default
-            // return false;
+            //Cegah form submit default
+            //return false;
         },
-
-
-        /*
-        handleSubmit() {
-            const formData = this.form.serializeArray();
-            console.log('Raw form data:', formData); // Debug
-            
-            // Transform form data to proper structure
-            const processedData = {
-                ...this.processRegularFields(formData),
-                capabilities: this.processCapabilities(formData)
-            };
-            
-            console.log('Processed data before submit:', processedData); // Debug
-
-            $.ajax({
-                url: wpCustomerData.ajaxUrl,
-                type: 'POST',
-                data: {
-                    action: 'save_membership_level',
-                    nonce: wpCustomerData.nonce,
-                    ...processedData
-                },
-                beforeSend: () => {
-                    console.log('Sending AJAX request with data:', processedData); // Debug
-                    this.form.addClass('loading');
-                    this.form.find('button[type="submit"]').prop('disabled', true);
-                },
-                success: (response) => {
-                    console.log('AJAX response:', response); // Debug
-                    if (response.success) {
-                        this.showMessage(response.data.message);
-                        this.closeModal();
-                        window.location.reload();
-                    } else {
-                        this.showMessage(response.data.message, 'error');
-                    }
-                },
-                error: (xhr, status, error) => {
-                    console.error('AJAX error:', {xhr, status, error}); // Debug
-                    this.showMessage('Failed to save membership level', 'error');
-                }
-            });
-        },
-        */
 
         processFormData(formData) {
             const processed = {

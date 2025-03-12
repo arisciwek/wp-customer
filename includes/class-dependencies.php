@@ -225,6 +225,10 @@ public function enqueue_frontend_assets() {
 
             // Company styles
             wp_enqueue_style('wp-company', WP_CUSTOMER_URL . 'assets/css/company/company-style.css', [], $this->version);
+
+           // Membership styles
+            wp_enqueue_style('wp-company-membership', WP_CUSTOMER_URL . 'assets/css/company/company-membership-style.css', [], $this->version);
+
         }
 
     }
@@ -444,6 +448,8 @@ public function enqueue_frontend_assets() {
             // Company scripts
             wp_enqueue_script('company-datatable', WP_CUSTOMER_URL . 'assets/js/company/company-datatable.js', ['jquery', 'datatables', 'customer-toast'], $this->version, true);
             wp_enqueue_script('company-script', WP_CUSTOMER_URL . 'assets/js/company/company-script.js', ['jquery', 'company-datatable', 'customer-toast'], $this->version, true);
+
+            wp_enqueue_script('company-membership', WP_CUSTOMER_URL . 'assets/js/company/company-membership.js', ['jquery'], $this->version, true);
 
             // Localize script
             wp_localize_script('company-script', 'wpCustomerData', [

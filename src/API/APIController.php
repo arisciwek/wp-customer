@@ -118,7 +118,7 @@ class APIController {
         register_rest_route(self::API_NAMESPACE, '/membership-levels', [
             [
                 'methods' => \WP_REST_Server::READABLE,
-                'callback' => [$this, 'get_membership_levels'],
+                'callback' => [$this, 'get_customer_membership_levels'],
                 'permission_callback' => [$this, 'check_membership_permission']
             ]
         ]);
@@ -317,7 +317,7 @@ class APIController {
         }
     }
 
-    public function get_membership_levels() {
+    public function get_customer_membership_levels() {
         try {
             $model = new \WPCustomer\Models\Membership\MembershipLevelModel();
             $levels = $model->get_all_levels();
