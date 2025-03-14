@@ -59,157 +59,212 @@ class MembershipLevelsDemoData extends AbstractDemoData {
        $table_name = $wpdb->prefix . 'app_customer_membership_levels';
        $current_user_id = get_current_user_id();
 
-       $defaults = [
-           [
-               'name' => 'Gratis',
-               'slug' => 'gratis', 
-               'description' => 'Paket gratis dengan maksimal 1 staff',
-               'available_periods' => '1',
-               'default_period' => 1,
-               'price_per_month' => 0,
-               'is_trial_available' => 1,
-               'trial_days' => 7,
-               'grace_period_days' => 3,
-               'sort_order' => 1,
-               'capabilities' => json_encode([
-                   'staff' => [
-                       'can_add_staff' => [
-                           'field' => 'can_add_staff',
-                           'value' => true,
-                           'settings' => []
-                       ]
-                   ],
-                   'data' => [
-                       'can_export' => [
-                           'field' => 'can_export',
-                           'value' => false,
-                           'settings' => []
-                       ],
-                       'can_bulk_import' => [
-                           'field' => 'can_bulk_import',
-                           'value' => false,
-                           'settings' => []
-                       ]
-                   ],
-                   'resources' => [
-                       'max_staff' => [
-                           'field' => 'max_staff',
-                           'value' => 1,
-                           'settings' => []
-                       ],
-                       'max_departments' => [
-                           'field' => 'max_departments',
-                           'value' => 1,
-                           'settings' => []
-                       ]
-                   ],
-                   'communication' => [
-                       'email_notifications' => [
-                           'field' => 'email_notifications',
-                           'value' => true,
-                           'settings' => []
-                       ],
-                       'dashboard_notifications' => [
-                           'field' => 'dashboard_notifications',
-                           'value' => false,
-                           'settings' => []
-                       ]
-                   ]
-               ]),
-               'settings' => json_encode([
-                   'payment' => [
-                       'available_methods' => [],
-                       'min_payment_period' => 0,
-                       'max_payment_period' => 0
-                   ],
-                   'customization' => [
-                       'can_customize_email_template' => false,
-                       'can_customize_invoice' => false
-                   ]
-               ]),
-               'created_by' => $current_user_id,
-               'status' => 'active'
-           ],
-           [
-               'name' => 'Reguler',
-               'slug' => 'reguler',
-               'description' => 'Paket dasar dengan maksimal 2 staff',
-               'available_periods' => '1',
-               'default_period' => 1,
-               'price_per_month' => 50000,
-               'is_trial_available' => 1,
-               'trial_days' => 7,
-               'grace_period_days' => 3,
-               'sort_order' => 2,
-               'capabilities' => json_encode([
-                   'staff' => [
-                       'can_add_staff' => [
-                           'value' => true,
-                           'settings' => []
-                       ]
-                   ],
-                   'data' => [
-                       'can_export' => [
-                           'field' => 'can_export',
-                           'value' => true,
-                           'settings' => []
-                       ],
-                       'can_bulk_import' => [
-                           'field' => 'can_bulk_import',
-                           'value' => false,
-                           'settings' => []
-                       ]
-                   ],
-                   'resources' => [
-                       'max_staff' => [
-                           'field' => 'max_staff',
-                           'value' => 2,
-                           'settings' => []
-                       ],
-                       'max_departments' => [
-                           'field' => 'max_departments',
-                           'value' => 2,
-                           'settings' => []
-                       ]
-                   ],
-                   'communication' => [
-                       'email_notifications' => [
-                           'field' => 'email_notifications',
-                           'value' => true,
-                           'settings' => []
-                       ],
-                       'dashboard_notifications' => [
-                           'field' => 'dashboard_notifications',
-                           'value' => true,
-                           'settings' => []
-                       ]
-                   ]
-               ]),
-               'settings' => json_encode([
-                   'payment' => [
-                       'available_methods' => ['bank_transfer'],
-                       'min_payment_period' => 1,
-                       'max_payment_period' => 3
-                   ],
-                   'customization' => [
-                       'can_customize_email_template' => false,
-                       'can_customize_invoice' => true
-                   ]
-               ]),
-               'created_by' => $current_user_id,
-               'status' => 'active'
-           ],
-           [
-               'name' => 'Prioritas',
-               'slug' => 'prioritas',
-               'description' => 'Paket menengah dengan maksimal 5 staff',
-               'available_periods' => '1',
-               'default_period' => 1,
-               'price_per_month' => 100000,
-               'is_trial_available' => 1,
-               'trial_days' => 7,
-               'grace_period_days' => 5,
-               'sort_order' => 3,
+        $defaults = [
+            [
+                'name' => 'Gratis',
+                'slug' => 'gratis', 
+                'description' => 'Paket gratis dengan maksimal 1 staff',
+                'available_periods' => '1',
+                'default_period' => 1,
+                'price_per_month' => 0,
+                'is_trial_available' => 1,
+                'trial_days' => 7,
+                'grace_period_days' => 3,
+                'sort_order' => 1,
+                'capabilities' => json_encode([
+                    'staff' => [
+                        'can_add_staff' => [
+                            'field' => 'can_add_staff',
+                            'value' => true,
+                            'settings' => [],
+                            'label' => 'Dapat Menambah Staff'
+                        ]
+                    ],
+                    'data' => [
+                        'can_export' => [
+                            'field' => 'can_export',
+                            'value' => false,
+                            'settings' => [],
+                            'label' => 'Dapat Export Data'
+                        ],
+                        'can_bulk_import' => [
+                            'field' => 'can_bulk_import',
+                            'value' => false,
+                            'settings' => [],
+                            'label' => 'Dapat Melakukan Bulk Import'
+                        ]
+                    ],
+                    'resources' => [
+                        'max_staff' => [
+                            'field' => 'max_staff',
+                            'value' => 1,
+                            'settings' => [],
+                            'label' => 'Maksimal Staff'
+                        ],
+                        'max_departments' => [
+                            'field' => 'max_departments',
+                            'value' => 1,
+                            'settings' => [],
+                            'label' => 'Maksimal Departemen'
+                        ]
+                    ],
+                    'communication' => [
+                        'email_notifications' => [
+                            'field' => 'email_notifications',
+                            'value' => true,
+                            'settings' => [],
+                            'label' => 'Notifikasi Email'
+                        ],
+                        'dashboard_notifications' => [
+                            'field' => 'dashboard_notifications',
+                            'value' => false,
+                            'settings' => [],
+                            'label' => 'Notifikasi Dashboard'
+                        ]
+                    ]
+                ]),
+                'settings' => json_encode([
+                    'payment' => [
+                        'available_methods' => [
+                            'field' => 'available_methods',
+                            'value' => [],
+                            'label' => 'Metode Pembayaran yang Tersedia',
+                            'settings' => []
+                        ],
+                        'min_payment_period' => [
+                            'field' => 'min_payment_period',
+                            'value' => 0,
+                            'label' => 'Periode Pembayaran Minimum',
+                            'settings' => []
+                        ],
+                        'max_payment_period' => [
+                            'field' => 'max_payment_period',
+                            'value' => 0,
+                            'label' => 'Periode Pembayaran Maksimum',
+                            'settings' => []
+                        ]
+                    ],
+                    'customization' => [
+                        'can_customize_email_template' => [
+                            'field' => 'can_customize_email_template',
+                            'value' => false,
+                            'label' => 'Dapat Mengkustomisasi Template Email',
+                            'settings' => []
+                        ],
+                        'can_customize_invoice' => [
+                            'field' => 'can_customize_invoice',
+                            'value' => false,
+                            'label' => 'Dapat Mengkustomisasi Invoice',
+                            'settings' => []
+                        ]
+                    ]
+                ]),
+                'created_by' => $current_user_id,
+                'status' => 'active'
+            ],
+            [
+                'name' => 'Reguler',
+                'slug' => 'reguler',
+                'description' => 'Paket dasar dengan maksimal 2 staff',
+                'available_periods' => '1',
+                'default_period' => 1,
+                'price_per_month' => 50000,
+                'is_trial_available' => 1,
+                'trial_days' => 7,
+                'grace_period_days' => 3,
+                'sort_order' => 2,
+                'capabilities' => json_encode([
+                    'staff' => [
+                        'can_add_staff' => [
+                            'field' => 'can_add_staff',
+                            'value' => true,
+                            'settings' => [],
+                            'label' => 'Dapat Menambah Staff'
+                        ]
+                    ],
+                    'data' => [
+                        'can_export' => [
+                            'field' => 'can_export',
+                            'value' => true,
+                            'settings' => [],
+                            'label' => 'Dapat Export Data'
+                        ],
+                        'can_bulk_import' => [
+                            'field' => 'can_bulk_import',
+                            'value' => false,
+                            'settings' => [],
+                            'label' => 'Dapat Melakukan Bulk Import'
+                        ]
+                    ],
+                    'resources' => [
+                        'max_staff' => [
+                            'field' => 'max_staff',
+                            'value' => 2,
+                            'settings' => [],
+                            'label' => 'Maksimal Staff'
+                        ],
+                        'max_departments' => [
+                            'field' => 'max_departments',
+                            'value' => 2,
+                            'settings' => [],
+                            'label' => 'Maksimal Departemen'
+                        ]
+                    ],
+                    'communication' => [
+                        'email_notifications' => [
+                            'field' => 'email_notifications',
+                            'value' => true,
+                            'settings' => [],
+                            'label' => 'Notifikasi Email'
+                        ],
+                        'dashboard_notifications' => [
+                            'field' => 'dashboard_notifications',
+                            'value' => true,
+                            'settings' => [],
+                            'label' => 'Notifikasi Dashboard'
+                        ]
+                    ]
+                ]),
+                'settings' => json_encode([
+                        'payment' => [
+                            'available_methods' => [
+                                'field' => 'available_methods',
+                                'value' => ['bank_transfer'],
+                                'label' => 'Metode Pembayaran yang Tersedia',
+                                'settings' => []
+                            ],
+                            'min_payment_period' => [
+                                'field' => 'min_payment_period',
+                                'value' => 1,
+                                'label' => 'Periode Pembayaran Minimum',
+                                'settings' => []
+                            ],
+                            // ...dan seterusnya
+                        ],
+                        'customization' => [
+                            'can_customize_email_template' => [
+                                'field' => 'can_customize_email_template',
+                                'value' => false,
+                                'label' => 'Dapat Mengkustomisasi Template Email',
+                                'settings' => []
+                            ],
+                            // ...dan seterusnya
+                        ]
+                    ]),
+                'created_by' => $current_user_id,
+                'status' => 'active'
+            ],
+            [
+                'name' => 'Prioritas',
+                'slug' => 'prioritas',
+                'description' => 'Paket menengah dengan maksimal 5 staff',
+                'available_periods' => '1',
+                'default_period' => 1,
+                'price_per_month' => 100000,
+                'is_trial_available' => 1,
+                'trial_days' => 7,
+                'grace_period_days' => 5,
+                'sort_order' => 3,
                 'capabilities' => json_encode([
                     'staff' => [
                         'can_add_staff' => [
@@ -262,95 +317,166 @@ class MembershipLevelsDemoData extends AbstractDemoData {
                         ]
                     ]
                 ]),
-               'settings' => json_encode([
-                   'payment' => [
-                       'available_methods' => ['bank_transfer', 'credit_card'],
-                       'min_payment_period' => 1,
-                       'max_payment_period' => 6,
-                       'allow_installment' => false
-                   ],
-                   'customization' => [
-                       'can_customize_email_template' => true,
-                       'can_customize_invoice' => true,
-                       'can_use_custom_domain' => false
-                   ]
-               ]),
-               'created_by' => $current_user_id,
-               'status' => 'active'
-           ],
-           [
-               'name' => 'Utama',
-               'slug' => 'utama',
-               'description' => 'Paket premium tanpa batasan staff',
-               'available_periods' => '6',
-               'default_period' => 1,
-               'price_per_month' => 200000,
-               'is_trial_available' => 0,
-               'trial_days' => 0,
-               'grace_period_days' => 7,
-               'sort_order' => 4,
-               'capabilities' => json_encode([
-                   'staff' => [
-                       'can_add_staff' => [
-                           'field' => 'can_add_staff',
-                           'value' => true,
-                           'settings' => []
-                       ]
-                   ],
-                   'data' => [
-                       'can_export' => [
-                           'field' => 'can_export',
-                           'value' => true,
-                           'settings' => []
-                       ],
-                       'can_bulk_import' => [
-                           'field' => 'can_bulk_import',
-                           'value' => true,
-                           'settings' => []
-                       ]
-                   ],
-                   'resources' => [
-                       'max_staff' => [
-                           'field' => 'max_staff',
-                           'value' => -1,
-                           'settings' => []
-                       ],
-                       'max_departments' => [
-                           'field' => 'max_departments',
-                           'value' => -1,
-                           'settings' => []
-                       ]
-                   ],
-                   'communication' => [
-                       'email_notifications' => [
-                           'field' => 'email_notifications',
-                           'value' => true,
-                           'settings' => []
-                       ],
-                       'dashboard_notifications' => [
-                           'field' => 'dashboard_notifications',
-                           'value' => true,
-                           'settings' => []
-                       ]
-                   ]
-               ]),
-               'settings' => json_encode([
-                   'payment' => [
-                       'available_methods' => ['bank_transfer', 'credit_card'],
-                       'min_payment_period' => 1,
-                       'max_payment_period' => 12,
-                       'allow_installment' => true
-                   ],
-                   'customization' => [
-                       'can_customize_email_template' => true,
-                       'can_customize_invoice' => true,
-                       'can_use_custom_domain' => true
-                   ]
-               ]),
-               'created_by' => $current_user_id,
-               'status' => 'active'
-           ]
-       ];
+                'settings' => json_encode([
+                    'payment' => [
+                        'available_methods' => [
+                            'field' => 'available_methods',
+                            'value' => ['bank_transfer', 'credit_card'],
+                            'label' => 'Metode Pembayaran yang Tersedia',
+                            'settings' => []
+                        ],
+                        'min_payment_period' => [
+                            'field' => 'min_payment_period',
+                            'value' => 1,
+                            'label' => 'Periode Pembayaran Minimum',
+                            'settings' => []
+                        ],
+                        'max_payment_period' => [
+                            'field' => 'max_payment_period',
+                            'value' => 6,
+                            'label' => 'Periode Pembayaran Maksimum',
+                            'settings' => []
+                        ],
+                        'allow_installment' => [
+                            'field' => 'allow_installment',
+                            'value' => false,
+                            'label' => 'Izinkan Pembayaran Cicilan',
+                            'settings' => []
+                        ]
+                    ],
+                    'customization' => [
+                        'can_customize_email_template' => [
+                            'field' => 'can_customize_email_template',
+                            'value' => true,
+                            'label' => 'Dapat Mengkustomisasi Template Email',
+                            'settings' => []
+                        ],
+                        'can_customize_invoice' => [
+                            'field' => 'can_customize_invoice',
+                            'value' => true,
+                            'label' => 'Dapat Mengkustomisasi Invoice',
+                            'settings' => []
+                        ],
+                        'can_use_custom_domain' => [
+                            'field' => 'can_use_custom_domain',
+                            'value' => false,
+                            'label' => 'Dapat Menggunakan Domain Kustom',
+                            'settings' => []
+                        ]
+                    ]
+                ]),
+                'created_by' => $current_user_id,
+                'status' => 'active'
+            ],
+            [
+                'name' => 'Utama',
+                'slug' => 'utama',
+                'description' => 'Paket premium tanpa batasan staff',
+                'available_periods' => '6',
+                'default_period' => 1,
+                'price_per_month' => 200000,
+                'is_trial_available' => 0,
+                'trial_days' => 0,
+                'grace_period_days' => 7,
+                'sort_order' => 4,
+                'capabilities' => json_encode([
+                    'staff' => [
+                        'can_add_staff' => [
+                            'field' => 'can_add_staff',
+                            'value' => true,
+                            'settings' => [],
+                            'label' => 'Dapat Menambah Staff'
+                        ]
+                    ],
+                    'data' => [
+                        'can_export' => [
+                            'field' => 'can_export',
+                            'value' => true,
+                            'settings' => [],
+                            'label' => 'Dapat Export Data'
+                        ],
+                        'can_bulk_import' => [
+                            'field' => 'can_bulk_import',
+                            'value' => true,
+                            'settings' => [],
+                            'label' => 'Dapat Melakukan Bulk Import'
+                        ]
+                    ],
+                    'resources' => [
+                        'max_staff' => [
+                            'field' => 'max_staff',
+                            'value' => -1,
+                            'settings' => [],
+                            'label' => 'Maksimal Staff'
+                        ],
+                        'max_departments' => [
+                            'field' => 'max_departments',
+                            'value' => -1,
+                            'settings' => [],
+                            'label' => 'Maksimal Departemen'
+                        ]
+                    ],
+                    'communication' => [
+                        'email_notifications' => [
+                            'field' => 'email_notifications',
+                            'value' => true,
+                            'settings' => [],
+                            'label' => 'Notifikasi Email'
+                        ],
+                        'dashboard_notifications' => [
+                            'field' => 'dashboard_notifications',
+                            'value' => true,
+                            'settings' => [],
+                            'label' => 'Notifikasi Dashboard'
+                        ]
+                    ]
+                ]),
+                'settings' => json_encode([
+                    'payment' => [
+                        'available_methods' => [
+                            'field' => 'available_methods',
+                            'value' => ['bank_transfer', 'credit_card'],
+                            'label' => 'Metode Pembayaran yang Tersedia',
+                            'settings' => []
+                        ],
+                        'min_payment_period' => [
+                            'field' => 'min_payment_period',
+                            'value' => 1,
+                            'label' => 'Periode Pembayaran Minimum',
+                            'settings' => []
+                        ],
+                        'max_payment_period' => [
+                            'field' => 'max_payment_period',
+                            'value' => 6,
+                            'label' => 'Periode Pembayaran Maksimum',
+                            'settings' => []
+                        ]
+                    ],
+                    'customization' => [
+                        'can_customize_email_template' => [
+                            'field' => 'can_customize_email_template',
+                            'value' => true,
+                            'label' => 'Dapat Mengkustomisasi Template Email',
+                            'settings' => []
+                        ],
+                        'can_customize_invoice' => [
+                            'field' => 'can_customize_invoice',
+                            'value' => true,
+                            'label' => 'Dapat Mengkustomisasi Invoice',
+                            'settings' => []
+                        ],
+                        'can_use_custom_domain' => [
+                            'field' => 'can_use_custom_domain',
+                            'value' => false,
+                            'label' => 'Dapat Menggunakan Domain Kustom',
+                            'settings' => []
+                        ]
+                    ]
+                ]),
+                'created_by' => $current_user_id,
+                'status' => 'active'
+            ]
+        ];
 
        foreach ($defaults as $level) {
            $wpdb->insert($table_name, $level);

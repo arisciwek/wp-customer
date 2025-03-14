@@ -66,9 +66,19 @@ class CompanyController {
         add_action('wp_ajax_get_company_membership_status', [$this, 'get_company_membership_status']);    
         add_action('wp_ajax_get_company_upgrade_options', [$this, 'get_company_upgrade_options']);
         add_action('wp_ajax_request_upgrade_company_membership', [$this, 'request_upgrade_company_membership']);
-        add_action('wp_ajax_check_upgrade_eligibility_company_membership', [$this, 'check_upgrade_eligibility_company_membership']);    
+        add_action('wp_ajax_check_upgrade_eligibility_company_membership', [$this, 'check_upgrade_eligibility_company_membership']);
+        add_action('wp_ajax_get_all_membership_levels', [$this, 'get_all_membership_levels']);
+        
     }
 
+    /**
+     * Forward request untuk mendapatkan semua level membership ke controller membership
+     */
+    public function get_all_membership_levels() {
+        $this->debug_log("Forwarding get_all_membership_levels to membership controller");
+        $this->membershipController->getAllMembershipLevels();
+    }
+    
     /**
      * Forward membership status request to membership controller
      */
