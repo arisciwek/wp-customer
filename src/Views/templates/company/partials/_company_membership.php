@@ -11,22 +11,30 @@
  */
 
 defined('ABSPATH') || exit;
+
 ?>
 
-<?php
-// Get current customer ID
-$customer_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-?>
+
+<!-- Current membership status section -->
 <div id="membership-info" class="tab-content">
-    <input type="hidden" id="current-customer-id" value="<?php echo esc_attr($customer_id); ?>">
-    
-    <!-- Current membership status section -->
     <div class="postbox membership-status-card">
         <h3 class="hndle">
             <span class="dashicons dashicons-buddicons-groups"></span>
             <?php _e('Status Membership', 'wp-customer'); ?>
         </h3>
         <div class="inside">
+            <!-- Membership Information -->
+            <table class="form-table">
+                <tr>
+                    <th><?php _e('Level', 'wp-customer'); ?></th>
+                    <td><span id="company-level-name"></span></td>
+                </tr>
+                <tr>
+                    <th><?php _e('Status', 'wp-customer'); ?></th>
+                    <td><span id="company-membership-status"></span></td>
+                </tr>
+            </table>
+
             <!-- Status Badge -->
             <div class="membership-status-header">
                 <div class="level-info">
@@ -77,7 +85,7 @@ $customer_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
     <!-- Level Membership section -->
     <div class="postbox membership-levels-card">
-        <h3 class="hndle">
+        <h3 class="handle">
             <span class="dashicons dashicons-star-filled"></span>
             <?php _e('Level Membership', 'wp-customer'); ?>
         </h3>
@@ -116,9 +124,38 @@ $customer_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
                         <!-- Features List -->
                         <div class="features-container">
                             <h5><?php _e('Fitur Utama', 'wp-customer'); ?></h5>
-                            <ul class="plan-features" id="regular-features">
-                                <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
-                            </ul>
+                            
+                            <!-- Staff Features -->
+                            <div class="feature-group">
+                                <h6>Staff Features</h6>
+                                <ul class="feature-list" id="regular-staff-features">
+                                    <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Data Features -->
+                            <div class="feature-group">
+                                <h6>Data Features</h6>
+                                <ul class="feature-list" id="regular-data-features">
+                                    <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Resource Limits -->
+                            <div class="feature-group">
+                                <h6>Resource Limits</h6>
+                                <ul class="feature-list" id="regular-resource-limits">
+                                    <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Notifications -->
+                            <div class="feature-group">
+                                <h6>Notifications</h6>
+                                <ul class="feature-list" id="regular-notifications">
+                                    <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
+                                </ul>
+                            </div>
                         </div>
 
                         <!-- Trial Badge -->
@@ -151,9 +188,38 @@ $customer_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
                         <!-- Features List -->
                         <div class="features-container">
                             <h5><?php _e('Fitur Utama', 'wp-customer'); ?></h5>
-                            <ul class="plan-features" id="priority-features">
-                                <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
-                            </ul>
+                            
+                            <!-- Staff Features -->
+                            <div class="feature-group">
+                                <h6>Staff Features</h6>
+                                <ul class="feature-list" id="priority-staff-features">
+                                    <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Data Features -->
+                            <div class="feature-group">
+                                <h6>Data Features</h6>
+                                <ul class="feature-list" id="priority-data-features">
+                                    <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Resource Limits -->
+                            <div class="feature-group">
+                                <h6>Resource Limits</h6>
+                                <ul class="feature-list" id="priority-resource-limits">
+                                    <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Notifications -->
+                            <div class="feature-group">
+                                <h6>Notifications</h6>
+                                <ul class="feature-list" id="priority-notifications">
+                                    <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
+                                </ul>
+                            </div>
                         </div>
 
                         <!-- Trial Badge -->
@@ -186,9 +252,38 @@ $customer_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
                         <!-- Features List -->
                         <div class="features-container">
                             <h5><?php _e('Fitur Utama', 'wp-customer'); ?></h5>
-                            <ul class="plan-features" id="utama-features">
-                                <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
-                            </ul>
+                            
+                            <!-- Staff Features -->
+                            <div class="feature-group">
+                                <h6>Staff Features</h6>
+                                <ul class="feature-list" id="utama-staff-features">
+                                    <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Data Features -->
+                            <div class="feature-group">
+                                <h6>Data Features</h6>
+                                <ul class="feature-list" id="utama-data-features">
+                                    <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Resource Limits -->
+                            <div class="feature-group">
+                                <h6>Resource Limits</h6>
+                                <ul class="feature-list" id="utama-resource-limits">
+                                    <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Notifications -->
+                            <div class="feature-group">
+                                <h6>Notifications</h6>
+                                <ul class="feature-list" id="utama-notifications">
+                                    <li class="loading-placeholder"><?php _e('Memuat data...', 'wp-customer'); ?></li>
+                                </ul>
+                            </div>
                         </div>
 
                         <!-- Trial Badge -->
@@ -202,4 +297,3 @@ $customer_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
         </div>
     </div>
 </div>
-
