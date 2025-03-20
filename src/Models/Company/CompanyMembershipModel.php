@@ -518,7 +518,7 @@ class CompanyMembershipModel {
         $count = (int) $wpdb->get_var($wpdb->prepare("
             SELECT COUNT(*) 
             FROM {$wpdb->prefix}app_customer_employees
-            WHERE company_id = %d 
+            WHERE branch_id = %d 
             AND status = 'active'
         ", $company_id));
 
