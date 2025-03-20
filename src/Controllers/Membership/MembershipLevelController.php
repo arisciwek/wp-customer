@@ -354,8 +354,70 @@ class MembershipLevelController {
 
         // Encode capabilities ke JSON
         $data['capabilities'] = json_encode($capabilities);
-        error_log('Data setelah sanitize: ' . print_r($data, true));
-        
+
+        // Proses settings dengan mempertahankan struktur label
+        if (isset($post_data['settings'])) {
+            // Jika settings sudah dalam format JSON, decode dulu
+            $settings = is_string($post_data['settings']) ? 
+                json_decode($post_data['settings'], true) : $post_data['settings'];
+            
+            // Jika settings masih null, inisialisasi sebagai array kosong
+            if (empty($settings)) {
+                $settings = [];
+            }
+            
+            // Kategori settings yang perlu diproses
+            $setting_categories = ['payment', 'customization'];
+            
+            // Definisi label default - ini bisa dipindahkan ke konfigurasi atau database
+            $setting_labels = [
+                'payment' => [
+                    'available_methods' => 'Metode Pembayaran yang Tersedia',
+                    'min_payment_period' => 'Periode Pembayaran Minimum',
+                    'max_payment_period' => 'Periode Pembayaran Maksimum',
+                    'allow_installment' => 'Izinkan Pembayaran Cicilan'
+                ],
+                'customization' => [
+                    'can_customize_email_template' => 'Dapat Mengkustomisasi Template Email',
+                    'can_customize_invoice' => 'Dapat Mengkustomisasi Invoice',
+                    'can_use_custom_domain' => 'Dapat Menggunakan Domain Kustom'
+                ]
+            ];
+            
+            // Proses setiap kategori settings
+            foreach ($setting_categories as $category) {
+                if (isset($settings[$category])) {
+                    $category_settings = $settings[$category];
+                    $new_category_settings = [];
+                    
+                    // Jika format sudah terstruktur dengan label, gunakan langsung
+                    if (isset($category_settings) && is_array($category_settings)) {
+                        foreach ($category_settings as $key => $value) {
+                            // Periksa apakah sudah dalam format terstruktur
+                            if (is_array($value) && isset($value['field'])) {
+                                $new_category_settings[$key] = $value;
+                            } 
+                            // Jika belum, konversi ke format terstruktur
+                            else {
+                                $label = isset($setting_labels[$category][$key]) ? 
+                                    $setting_labels[$category][$key] : ucfirst(str_replace('_', ' ', $key));
+                                
+                                $new_category_settings[$key] = [
+                                    'field' => $key,
+                                    'value' => $value,
+                                    'label' => $label,
+                                    'settings' => []
+                                ];
+                            }
+                        }
+                        
+                        $settings[$category] = $new_category_settings;
+                    }
+                }
+            }
+            
+            $data['settings'] = json_encode($settings);
+        }
         return $data;
     }
 
