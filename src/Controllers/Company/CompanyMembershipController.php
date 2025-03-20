@@ -110,12 +110,10 @@ class CompanyMembershipController {
     }
 
     /**
-     * Get current membership status
-     * 
-     * @return void JSON response
+     * Get membership status dengan informasi fitur yang lebih lengkap
      */
     public function getMembershipStatus() {
-            try {
+        try {
             // Check if nonce is valid
             if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
                 wp_send_json_error([
@@ -160,13 +158,49 @@ class CompanyMembershipController {
             if (!$membership) {
                 error_log("getMembershipStatus - No membership found for company_id: " . $company_id);
 
-                wp_send_json_error([
-                    'message' => __('Tidak ditemukan data membership aktif', 'wp-customer'),
-                    'code' => 'no_membership'
-                ]);
+                // Cari level default
+                $default_level = $this->level_model->get_level(1); // Ambil level dengan ID 1 (biasanya Regular)
+                if (!$default_level) {
+                    wp_send_json_error([
+                        'message' => __('Tidak ditemukan data membership aktif dan level default', 'wp-customer'),
+                        'code' => 'no_membership'
+                    ]);
+                    return;
+                }
+
+                // Buat response dengan level default
+                $default_response = [
+                    'id' => 0,
+                    'company_id' => $company_id,
+                    'level_id' => $default_level['id'],
+                    'level_name' => $default_level['name'],
+                    'level_slug' => $default_level['slug'],
+                    'status' => 'inactive',
+                    'is_active' => false,
+                    'in_grace_period' => false,
+                    'resource_usage' => [
+                        'employees' => [
+                            'current' => 0,
+                            'limit' => isset($default_level['max_staff']) ? $default_level['max_staff'] : 2,
+                            'percentage' => 0
+                        ]
+                    ],
+                    'period' => [
+                        'start_date' => date_i18n(get_option('date_format')),
+                        'end_date' => date_i18n(get_option('date_format'), strtotime('+1 month')),
+                        'remaining_days' => 30
+                    ],
+                    'active_features' => $this->getDefaultActiveFeatures($default_level),
+                    'price_per_month' => $default_level['price_per_month']
+                ];
+
+                // Cache the response
+                $this->cache->set('company_membership', $default_response, 3600, $cache_key);
+                wp_send_json_success($default_response);
                 return;
             }
 
+            // Jika membership ditemukan, lanjutkan seperti normal
             // Get level details
             $level = $this->level_model->getLevel($membership->level_id);
             if (!$level) {
@@ -233,6 +267,18 @@ class CompanyMembershipController {
             ]);
         }
     }
+
+    /**
+     * Get default active features for level
+     * 
+     * @param array $level Level data
+     * @return array Default active features
+     */
+    private function getDefaultActiveFeatures($level) {
+        $capabilities = json_decode($level['capabilities'], true);
+        return $this->getFormattedCapabilities($capabilities);
+    }
+
 
     /**
      * Format capabilities for frontend display
@@ -309,9 +355,7 @@ class CompanyMembershipController {
     }
 
     /**
-     * Get available upgrade options
-     * 
-     * @return void JSON response
+     * Get upgrade options dengan informasi lengkap untuk SEMUA LEVEL
      */
     public function getUpgradeOptions() {
         try {
@@ -338,37 +382,64 @@ class CompanyMembershipController {
 
             // Get current membership
             $current = $this->membership_model->findByCompany($company_id);
-            if (!$current) {
-                throw new \Exception(__('Tidak ditemukan data membership aktif', 'wp-customer'));
-            }
-
-            // Get all available levels
-            $levels = $this->level_model->get_all_levels();
-            if (empty($levels)) {
-                throw new \Exception(__('Tidak ada level membership yang tersedia', 'wp-customer'));
-            }
-
-            // Get current level details
-            $current_level = null;
-            foreach ($levels as $level) {
-                if ($level['id'] == $current->level_id) {
-                    $current_level = $level;
-                    break;
-                }
-            }
             
+            // Get current level ID (default to 1 if no membership)
+            $current_level_id = $current ? $current->level_id : 1;
+            
+            // Get current level details
+            $current_level = $this->level_model->get_level($current_level_id);
             if (!$current_level) {
                 throw new \Exception(__('Level membership saat ini tidak ditemukan', 'wp-customer'));
             }
 
-            // Filter and format upgrade options
-            $options = [];
-            foreach ($levels as $level) {
-                // Skip current level and lower tiers
-                if ($level['id'] == $current->level_id || $level['sort_order'] <= $current_level['sort_order']) {
-                    continue;
+            // Get all available levels
+            $all_levels = $this->level_model->get_all_levels();
+            if (empty($all_levels)) {
+                throw new \Exception(__('Tidak ada level membership yang tersedia', 'wp-customer'));
+            }
+            
+            // Debug: Log struktur lengkap dari all_levels
+            error_log('ALL LEVELS STRUCTURE: ' . print_r($all_levels, true));
+            
+            // Transform ALL levels to match expected format
+            $formatted_levels = [];
+            $upgrade_options = [];
+            
+            foreach ($all_levels as $level) {            
+                // Format capabilities for frontend
+                $capabilities = json_decode($level['capabilities'], true);
+                
+                // Debug: Log struktur capabilities per level
+                error_log('LEVEL ' . $level['name'] . ' CAPABILITIES: ' . print_r($capabilities, true));
+                
+                // Siapkan data resource limits
+                $resource_limits = [];
+                if (isset($capabilities['resources'])) {
+                    foreach ($capabilities['resources'] as $key => $resource) {
+                        $resource_limits[] = [
+                            'key' => $key,
+                            'label' => $resource['label'] ?? $this->getLimitLabel($key),
+                            'value' => $resource['value']
+                        ];
+                    }
                 }
-
+                
+                // Siapkan data key features
+                $key_features = [];
+                
+                // Staff features
+                if (isset($capabilities['features'])) {
+                    foreach ($capabilities['features'] as $key => $feature) {
+                        if ($feature['value']) {
+                            $key_features[] = [
+                                'key' => $key,
+                                'label' => $feature['label'] ?? $this->getCapabilityLabel($key),
+                                'type' => 'feature'
+                            ];
+                        }
+                    }
+                }
+                
                 // Price calculation
                 $base_price = floatval($level['price_per_month']) * $period_months;
                 $upgrade_price = $this->calculateUpgradePrice($current, $level, $period_months);
@@ -381,12 +452,7 @@ class CompanyMembershipController {
                     $discount_percentage = ($monthly_total - $upgrade_price) / $monthly_total * 100;
                 }
                 
-                // Format capabilities
-                $capabilities = json_decode($level['capabilities'], true);
-                $key_features = $this->getKeyFeatures($capabilities);
-                $resource_limits = $this->getResourceLimits($capabilities);
-                
-                $options[] = [
+                $formatted_level = [
                     'id' => $level['id'],
                     'name' => $level['name'],
                     'slug' => $level['slug'],
@@ -401,17 +467,42 @@ class CompanyMembershipController {
                     ],
                     'key_features' => $key_features,
                     'resource_limits' => $resource_limits,
+                    'capabilities' => $capabilities, // Full capabilities data for frontend
+                    'is_current' => ($level['id'] == $current_level_id),
                     'is_recommended' => $level['sort_order'] == $current_level['sort_order'] + 1,
-                    'upgrade_url' => $this->getUpgradeUrl($company_id, $level['id'], $period_months)
+                    'upgrade_url' => $this->getUpgradeUrl($company_id, $level['id'], $period_months),
+                    'is_trial_available' => !empty($level['is_trial_available']),
+                    'trial_days' => intval($level['trial_days'])
                 ];
+                
+                // Add to appropriate array
+                $formatted_levels[] = $formatted_level;
+                
+                // Add to upgrade options if it's higher than current level
+                if ($level['id'] != $current_level_id && $level['sort_order'] > $current_level['sort_order']) {
+                    $upgrade_options[] = $formatted_level;
+                }
             }
 
             // Sort options by sort_order
-            usort($options, function($a, $b) use ($levels) {
+            usort($formatted_levels, function($a, $b) use ($all_levels) {
                 $a_order = 0;
                 $b_order = 0;
                 
-                foreach ($levels as $level) {
+                foreach ($all_levels as $level) {
+                    if ($level['id'] == $a['id']) $a_order = $level['sort_order'];
+                    if ($level['id'] == $b['id']) $b_order = $level['sort_order'];
+                }
+                
+                return $a_order - $b_order;
+            });
+            
+            // Sort upgrade options too
+            usort($upgrade_options, function($a, $b) use ($all_levels) {
+                $a_order = 0;
+                $b_order = 0;
+                
+                foreach ($all_levels as $level) {
                     if ($level['id'] == $a['id']) $a_order = $level['sort_order'];
                     if ($level['id'] == $b['id']) $b_order = $level['sort_order'];
                 }
@@ -426,7 +517,8 @@ class CompanyMembershipController {
                     'slug' => $current_level['slug'],
                     'price_per_month' => floatval($current_level['price_per_month'])
                 ],
-                'upgrade_options' => $options,
+                'all_levels' => $formatted_levels,  // NEW: All levels with complete data
+                'upgrade_options' => $upgrade_options,
                 'available_periods' => [1, 3, 6, 12],
                 'selected_period' => $period_months
             ];
@@ -437,6 +529,9 @@ class CompanyMembershipController {
             wp_send_json_success($response);
 
         } catch (\Exception $e) {
+            error_log("getUpgradeOptions Exception: " . $e->getMessage());
+            error_log($e->getTraceAsString());
+            
             wp_send_json_error([
                 'message' => $e->getMessage()
             ]);
@@ -1104,4 +1199,50 @@ Silakan verifikasi pembayaran di dashboard admin.', 'wp-customer'),
             ]);
         }
     }
+
+    /**
+     * Menambahkan fungsi baru untuk mendapatkan semua level membership
+     * Endpoint ini mirip dengan yang digunakan di SettingsController
+     */
+    public function getAllMembershipLevels() {
+        try {
+            // Verifikasi nonce dan permissions
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+            
+            // Get all membership levels
+            $levels = $this->level_model->get_all_levels();
+            
+            // Debug: Log struktur data
+            error_log('Get All Membership Levels: ' . print_r($levels, true));
+            
+            if (empty($levels)) {
+                throw new \Exception(__('Tidak ada level membership yang tersedia', 'wp-customer'));
+            }
+            
+            // Format response to match SettingsController structure
+            $response = [
+                'levels' => $levels,
+                'grouped_features' => $this->getFeaturesGroupedByCategory()
+            ];
+            
+            wp_send_json_success($response);
+            
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Helper function untuk mendapatkan fitur yang dikelompokkan berdasarkan kategori
+     */
+    private function getFeaturesGroupedByCategory() {
+        // Implement this if you need it, similar to how it's done in SettingsController
+        // You might need to use MembershipFeatureModel->get_all_features_by_group()
+        
+        $feature_model = new \WPCustomer\Models\Membership\MembershipFeatureModel();
+        return $feature_model->get_all_features_by_group();
+    }
+
 }
