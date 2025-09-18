@@ -44,6 +44,9 @@ class WP_Customer_Activator {
 
     public static function activate() {
         try {
+            // Load textdomain first
+            load_textdomain('wp-customer', WP_CUSTOMER_PATH . 'languages/wp-customer-id_ID.mo');
+
             // 1. Run database installation first
             $installer = new Installer();
             if (!$installer->run()) {

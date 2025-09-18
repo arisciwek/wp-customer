@@ -29,7 +29,7 @@ class WP_Customer_Init_Hooks {
 
         // Templates
         add_action('template_redirect', [$this, 'handle_template_redirect']);
-        
+
         // Shortcodes
         add_action('init', [$this, 'register_shortcodes']);
 
@@ -37,6 +37,23 @@ class WP_Customer_Init_Hooks {
         add_action('wp_ajax_nopriv_wp_customer_register', [$this, 'handle_registration']);
     }
 
+    /**
+     * Load plugin textdomain untuk i18n/l10n.
+     * Sesuaikan $rel_path jika folder languages Anda berbeda lokasi.
+     */
+    public function load_textdomain() {
+        // Asumsi struktur: wp-customer/languages/wp-customer-id_ID.mo
+        // Karena file ini berada di includes/, kita naik 1 level ke root plugin:
+        // plugin-basename(__FILE__) => "wp-customer/includes/class-init-hooks.php"
+        // dirname(..., 2) => "wp-customer"
+        $rel_path = dirname(plugin_basename(__FILE__), 2) . '/languages/';
+        load_plugin_textdomain(
+            'wp-customer',
+            false,
+            $rel_path
+        );
+    }
+    
     public function register_shortcodes() {
         add_shortcode('customer_register_form', array($this, 'render_register_form'));
     }

@@ -62,7 +62,11 @@ class WPCustomer {
         $autoloader = new WPCustomerAutoloader('WPCustomer\\', WP_CUSTOMER_PATH);
         $autoloader->register();
 
+        // Load textdomain immediately before including dependencies
+        load_textdomain('wp-customer', WP_CUSTOMER_PATH . 'languages/wp-customer-id_ID.mo');
+
         $this->includeDependencies();
+
         $this->initHooks();
     }
 
