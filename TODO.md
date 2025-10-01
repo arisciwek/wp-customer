@@ -50,4 +50,30 @@ After reviewing the code:
 
 ## Tasks
 - [x] Modify company-membership.js to check if membership tab is active before initializing on page load
-- [ ] Test that logs only appear when membership tab is active or clicked
+- [x] Test that logs only appear when membership tab is active or clicked
+
+# TODO-2149: Fix Duplicate Entry Error in Membership Feature Groups Demo Data
+
+/wp-customer/docs/TODO-2149-membership-feature-groups-error-duplicate-entry.md
+
+## Issue
+- Duplicate entry 'communication' for key 'wp_app_customer_membership_feature_groups.slug' error during demo data generation
+- Error occurs when running demo data multiple times
+- Location: /wp-customer/src/Database/Demo/MembershipGroupsDemoData.php
+
+## Root Cause Analysis
+After reviewing the code:
+1. The insertDefaultGroups method uses $wpdb->insert() which fails on duplicate unique keys
+2. The shouldClearData method is not working due to missing CustomerDemoDataHelperTrait
+3. When demo data is run multiple times without clearing, it attempts to insert existing slugs
+
+## Solution Plan
+1. Modify insertDefaultGroups to use INSERT ... ON DUPLICATE KEY UPDATE to handle existing records
+2. Create the missing CustomerDemoDataHelperTrait based on AgencyDemoDataHelperTrait
+3. Ensure demo data can be run multiple times safely
+
+## Tasks
+- [x] Create CustomerDemoDataHelperTrait.php with shouldClearData and clearExistingData methods
+- [x] Modify MembershipGroupsDemoData.php insertDefaultGroups to use ON DUPLICATE KEY UPDATE
+- [x] Fix foreign key constraint error in clearExistingData by deleting child records first
+- [x] Test demo data generation runs without duplicate errors

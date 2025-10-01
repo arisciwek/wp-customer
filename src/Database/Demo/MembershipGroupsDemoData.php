@@ -122,11 +122,23 @@ class MembershipGroupsDemoData extends AbstractDemoData {
 
         $group_ids = [];
         foreach ($groups as $id => $group) {
+            // Check if group with this slug already exists
+            $existing = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$table_name} WHERE slug = %s",
+                $group['slug']
+            ));
+
+            if ($existing) {
+                $this->debug("Group with slug '{$group['slug']}' already exists, skipping insert");
+                $group_ids[$group['slug']] = $existing;
+                continue;
+            }
+
             // Log untuk debugging
             $this->debug("Inserting group: " . print_r($group, true));
-            
+
             $result = $wpdb->insert($table_name, $group);
-            
+
             if ($result === false) {
                 $this->debug("Failed to insert group: " . $wpdb->last_error);
             } else {
@@ -142,20 +154,26 @@ class MembershipGroupsDemoData extends AbstractDemoData {
         try {
             $this->wpdb->query("START TRANSACTION");
 
+            // Hapus existing features first (due to foreign key constraint)
+            $this->wpdb->query(
+                "DELETE FROM {$this->wpdb->prefix}app_customer_membership_features
+                 WHERE id > 0"
+            );
+
             // Hapus existing groups
             $this->wpdb->query(
-                "DELETE FROM {$this->wpdb->prefix}app_customer_membership_feature_groups 
+                "DELETE FROM {$this->wpdb->prefix}app_customer_membership_feature_groups
                  WHERE id > 0"
             );
 
             // Reset auto increment untuk ID yang konsisten
             $this->wpdb->query(
-                "ALTER TABLE {$this->wpdb->prefix}app_customer_membership_feature_groups 
+                "ALTER TABLE {$this->wpdb->prefix}app_customer_membership_feature_groups
                  AUTO_INCREMENT = 1"
             );
 
             $this->wpdb->query("COMMIT");
-            $this->debug('Cleared existing membership feature groups');
+            $this->debug('Cleared existing membership feature groups and features');
 
         } catch (\Exception $e) {
             $this->wpdb->query("ROLLBACK");
