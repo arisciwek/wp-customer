@@ -82,3 +82,15 @@ Update the search query in CompanyModel.php getDataTableData method to include a
 ## Tasks
 - [x] Update CompanyModel.php getDataTableData method to search all columns: code, name, type, level_name, agency_name, division_name, inspector_name
 - [x] Test the search functionality on all columns
+
+# TODO-1219: Fix Admin Users Displayed as Pengawas in Company Table
+
+## Issue
+Users with display names containing "Admin" (e.g., "Admin Aceh") are being displayed as supervisors (pengawas) in the company table, but admin users should not be shown as supervisors.
+
+## Solution
+Modify BranchDemoData.php generateInspectorID method to exclude users with 'admin_dinas' role from being selected as inspectors.
+
+## Tasks
+- [x] Update generateInspectorID method in BranchDemoData.php to match users with role 'pengawas'
+- [ ] Test the demo data generation to ensure admin users are not assigned as inspectors

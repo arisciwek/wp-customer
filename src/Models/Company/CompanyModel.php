@@ -181,9 +181,39 @@ class CompanyModel {
         // Complete query
         $sql = $select . $from . $join . $where . $order . $limit;
         
+        // Start timing
+        $start_time = microtime(true);
+        
         // Get paginated results
         $results = $wpdb->get_results($sql);
+        
+        // Calculate execution time
+        $execution_time = microtime(true) - $start_time;
+        
+        // Debug SQL Query - Print RAW query yang sebenarnya dieksekusi
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("=================================================================");
+            error_log("DEBUG SQL QUERY - getDataTableData() - " . date('Y-m-d H:i:s'));
+            error_log("=================================================================");
+            error_log("INPUT PARAMETERS:");
+            error_log("  - Start: " . $start);
+            error_log("  - Length: " . $length);
+            error_log("  - Search: " . ($search ?: '(empty)'));
+            error_log("  - Order Column: " . $orderColumn);
+            error_log("  - Order Direction: " . $orderDir);
+            error_log("  - Access Type: " . $access_type);
+            error_log("-----------------------------------------------------------------");
+            error_log("RAW SQL QUERY (Actual Executed):");
+            error_log($wpdb->last_query);
+            error_log("-----------------------------------------------------------------");
+        }
+        
         if ($results === null) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("ERROR: Query failed!");
+                error_log("MySQL Error: " . $wpdb->last_error);
+                error_log("=================================================================");
+            }
             throw new \Exception($wpdb->last_error);
         }
 
@@ -192,6 +222,26 @@ class CompanyModel {
 
         // Get total count
         $total = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table}");
+        
+        // Debug results
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("QUERY RESULTS:");
+            error_log("  - Execution Time: " . number_format($execution_time, 4) . " seconds");
+            error_log("  - Rows Returned: " . count($results));
+            error_log("  - Total Records: " . $total);
+            error_log("  - Filtered Records: " . $filtered);
+            error_log("  - Cache Status: MISS (new query executed)");
+            error_log("-----------------------------------------------------------------");
+            error_log("FOUND_ROWS Query:");
+            error_log($wpdb->last_query);
+            error_log("-----------------------------------------------------------------");
+            error_log("COUNT Query:");
+            // Get count query
+            $count_query = $wpdb->last_query;
+            error_log($count_query);
+            error_log("=================================================================");
+            error_log("");
+        }
 
         // Prepare result
         $result = [

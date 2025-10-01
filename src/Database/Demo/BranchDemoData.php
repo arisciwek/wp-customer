@@ -660,6 +660,7 @@ class BranchDemoData extends AbstractDemoData {
     /**
      * Generate inspector_id from agency employees with role 'pengawas' in the same province
      * Ensures unique assignment within the same agency
+     * Excludes users with 'admin_dinas' role
      */
     private function generateInspectorID($provinsi_id): ?int {
         $agency_id = $this->generateAgencyID($provinsi_id);
@@ -669,14 +670,17 @@ class BranchDemoData extends AbstractDemoData {
             $this->used_inspectors[$agency_id] = [];
         }
 
-        // Get all pengawas employees from this agency
+        // Get all pengawas employees from this agency, excluding admin_dinas users
         $pengawas_ids = $this->wpdb->get_col($this->wpdb->prepare(
             "SELECT ae.user_id FROM {$this->wpdb->prefix}app_agency_employees ae
              JOIN {$this->wpdb->usermeta} um ON ae.user_id = um.user_id
-             WHERE ae.agency_id = %d AND um.meta_key = 'wp_capabilities' AND um.meta_value LIKE %s",
+             WHERE ae.agency_id = %d AND um.meta_key = 'wp_capabilities'
+             AND um.meta_value LIKE %s",
             $agency_id,
             '%"pengawas"%'
         ));
+
+        $this->debug("Pengawas IDs found for agency {$agency_id}: " . implode(', ', $pengawas_ids));
 
         // Find unused pengawas
         $available_pengawas = array_diff($pengawas_ids, $this->used_inspectors[$agency_id]);
@@ -689,28 +693,7 @@ class BranchDemoData extends AbstractDemoData {
             return (int) $inspector_user_id;
         }
 
-        // Fallback: find any employee from this agency not used as inspector
-        $any_employee_ids = $this->wpdb->get_col($this->wpdb->prepare(
-            "SELECT user_id FROM {$this->wpdb->prefix}app_agency_employees
-             WHERE agency_id = %d",
-            $agency_id
-        ));
-
-        $available_employees = array_diff($any_employee_ids, $this->used_inspectors[$agency_id]);
-
-        if (!empty($available_employees)) {
-            $inspector_user_id = reset($available_employees);
-            $this->used_inspectors[$agency_id][] = $inspector_user_id;
-            return (int) $inspector_user_id;
-        }
-
-        // Last resort: pick any pengawas (allow duplicate if necessary)
-        if (!empty($pengawas_ids)) {
-            $inspector_user_id = reset($pengawas_ids);
-            $this->used_inspectors[$agency_id][] = $inspector_user_id;
-            return (int) $inspector_user_id;
-        }
-
+        // No available pengawas, return null
         return null;
     }
 
