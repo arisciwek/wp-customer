@@ -57,24 +57,30 @@ class CompanyModel {
         // If no cache, do the complex query
         global $wpdb;
         $result = $wpdb->get_row($wpdb->prepare("
-            SELECT b.*, 
+            SELECT b.*,
                    m.level_id,
                    m.start_date as membership_start,
                    m.end_date as membership_end,
                    m.status as membership_status,
                    l.name as level_name,
-                   c.name as customer_name
+                   c.name as customer_name,
+                   a.name as agency_name,
+                   d.name as division_name,
+                   u.display_name as inspector_name
             FROM {$this->table} b
             LEFT JOIN (
                 SELECT m1.*
                 FROM {$this->memberships_table} m1
                 LEFT JOIN {$this->memberships_table} m2
-                ON m1.branch_id = m2.branch_id 
+                ON m1.branch_id = m2.branch_id
                 AND m1.created_at < m2.created_at
                 WHERE m2.branch_id IS NULL
             ) m ON b.id = m.branch_id
             LEFT JOIN {$this->levels_table} l ON m.level_id = l.id
             LEFT JOIN {$wpdb->prefix}app_customers c ON b.customer_id = c.id
+            LEFT JOIN {$wpdb->prefix}app_agencies a ON b.agency_id = a.id
+            LEFT JOIN {$wpdb->prefix}app_divisions d ON b.division_id = d.id
+            LEFT JOIN {$wpdb->users} u ON b.inspector_id = u.ID
             WHERE b.id = %d
         ", $id));
 
@@ -121,21 +127,27 @@ class CompanyModel {
         global $wpdb;
         
         // Base query parts
-        $select = "SELECT SQL_CALC_FOUND_ROWS b.*, 
+        $select = "SELECT SQL_CALC_FOUND_ROWS b.*,
                          m.level_id,
                          l.name as level_name,
-                         c.name as customer_name";
+                         c.name as customer_name,
+                         a.name as agency_name,
+                         d.name as division_name,
+                         u.display_name as inspector_name";
         $from = " FROM {$this->table} b";
         $join = " LEFT JOIN (
                     SELECT m1.*
                     FROM {$this->memberships_table} m1
                     LEFT JOIN {$this->memberships_table} m2
-                    ON m1.branch_id = m2.branch_id 
+                    ON m1.branch_id = m2.branch_id
                     AND m1.created_at < m2.created_at
                     WHERE m2.branch_id IS NULL
                 ) m ON b.id = m.branch_id
                 LEFT JOIN {$this->levels_table} l ON m.level_id = l.id
-                LEFT JOIN {$wpdb->prefix}app_customers c ON b.customer_id = c.id";
+                LEFT JOIN {$wpdb->prefix}app_customers c ON b.customer_id = c.id
+                LEFT JOIN {$wpdb->prefix}app_agencies a ON b.agency_id = a.id
+                LEFT JOIN {$wpdb->prefix}app_divisions d ON b.division_id = d.id
+                LEFT JOIN {$wpdb->users} u ON b.inspector_id = u.ID";
         $where = " WHERE 1=1";
 
         // Add search if provided

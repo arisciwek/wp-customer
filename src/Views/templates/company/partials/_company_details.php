@@ -93,5 +93,29 @@ defined('ABSPATH') || exit;
                 </table>
             </div>
         </div>
+
+        <!-- Unit Kerja dan Pengawas -->
+        <div class="postbox">
+            <h3 class="hndle">
+                <span class="dashicons dashicons-groups"></span>
+                <?php _e('Unit Kerja dan Pengawas', 'wp-customer'); ?>
+            </h3>
+            <div class="inside">
+                <table class="form-table">
+                    <tr>
+                        <th><?php _e('Agency', 'wp-customer'); ?></th>
+                        <td><span id="company-agency-name"></span></td>
+                    </tr>
+                    <tr>
+                        <th><?php _e('Unit Kerja', 'wp-customer'); ?></th>
+                        <td><span id="company-division-name"></span></td>
+                    </tr>
+                    <tr>
+                        <th><?php _e('Pengawas', 'wp-customer'); ?></th>
+                        <td><span id="company-inspector-name"></span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
     </div>
 </div>

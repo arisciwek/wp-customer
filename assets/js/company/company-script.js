@@ -140,6 +140,11 @@
                 $('#company-phone').text(data.company.phone || '-');
                 $('#company-email').text(data.company.email || '-');
 
+                // Unit Kerja dan Pengawas
+                $('#company-agency-name').text(data.company.agency_name || '-');
+                $('#company-division-name').text(data.company.division_name || '-');
+                $('#company-inspector-name').text(data.company.inspector_name || '-');
+
                 // Membership Information
                 $('#company-level-name').text(data.company.level_name || '-');
                 $('#company-membership-status').text(data.company.membership_status || '-');

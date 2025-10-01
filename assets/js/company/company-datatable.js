@@ -56,6 +56,9 @@
                         <th>Nama Perusahaan</th>
                         <th>Tipe</th>
                         <th>Level</th>
+                        <th>Agency</th>
+                        <th>Unit Kerja</th>
+                        <th>Pengawas</th>
                         <th>Aksi</th>
                     </tr>
                 </thead>
@@ -99,6 +102,24 @@
                         data: 'level_name',
                         title: 'Level',
                         width: '100px',
+                        defaultContent: '-'
+                    },
+                    {
+                        data: 'agency_name',
+                        title: 'Agency',
+                        width: '120px',
+                        defaultContent: '-'
+                    },
+                    {
+                        data: 'division_name',
+                        title: 'Unit Kerja',
+                        width: '120px',
+                        defaultContent: '-'
+                    },
+                    {
+                        data: 'inspector_name',
+                        title: 'Pengawas',
+                        width: '120px',
                         defaultContent: '-'
                     },
                     {

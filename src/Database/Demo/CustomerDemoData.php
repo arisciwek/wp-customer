@@ -167,12 +167,12 @@ class CustomerDemoData extends AbstractDemoData {
                 if (isset($customer['provinsi_id'])) {
                     $provinsi_id = (int)$customer['provinsi_id'];
                     // Pastikan regency sesuai dengan provinsi ini
-                    $regency_id = isset($customer['regency_id']) ? 
-                        (int)$customer['regency_id'] : 
+                    $regency_id = isset($customer['regency_id']) ?
+                        (int)$customer['regency_id'] :
                         $this->getRandomRegencyId($provinsi_id);
                 } else {
-                    // Get random valid province-regency pair
-                    $provinsi_id = $this->getRandomProvinceId();
+                    // Get random province that has an agency
+                    $provinsi_id = $this->getRandomProvinceWithAgency();
                     $regency_id = $this->getRandomRegencyId($provinsi_id);
                 }
 
@@ -242,6 +242,23 @@ class CustomerDemoData extends AbstractDemoData {
      */
     public function getCustomerIds(): array {
         return self::$customer_ids;
+    }
+
+    /**
+     * Get random province ID that has an agency
+     */
+    private function getRandomProvinceWithAgency(): int {
+        // Get all provinces that have agencies
+        $provinces_with_agency = $this->wpdb->get_col(
+            "SELECT DISTINCT p.id FROM {$this->wpdb->prefix}wi_provinces p
+             INNER JOIN {$this->wpdb->prefix}app_agencies a ON p.code = a.provinsi_code"
+        );
+
+        if (empty($provinces_with_agency)) {
+            throw new \Exception('No provinces with agencies found');
+        }
+
+        return (int) $provinces_with_agency[array_rand($provinces_with_agency)];
     }
 
     /**

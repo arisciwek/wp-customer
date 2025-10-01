@@ -52,7 +52,7 @@ class Installer {
     public static function run() {
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         global $wpdb;
-        
+
         try {
             $wpdb->query('START TRANSACTION');
             self::debug("Starting database installation...");
@@ -63,6 +63,9 @@ class Installer {
                 self::debug("Creating {$table} table using {$class}...");
                 dbDelta($class::get_schema());
             }
+
+            // Run migrations for existing installations
+            self::runMigrations();
 
             // Verify all tables were created
             self::verify_tables();
@@ -76,5 +79,69 @@ class Installer {
             self::debug('Database installation failed: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Run database migrations for existing installations
+     */
+    private static function runMigrations() {
+        global $wpdb;
+
+        self::debug("Running migrations...");
+
+        // Migration for adding agency_id, division_id, inspector_id to branches table
+        $table = $wpdb->prefix . 'app_branches';
+        $columns = $wpdb->get_results("DESCRIBE {$table}");
+
+        $has_agency_id = false;
+        $has_division_id = false;
+        $has_inspector_id = false;
+        $code_length = 13; // default
+
+        foreach ($columns as $column) {
+            if ($column->Field === 'agency_id') $has_agency_id = true;
+            if ($column->Field === 'division_id') $has_division_id = true;
+            if ($column->Field === 'inspector_id') $has_inspector_id = true;
+            if ($column->Field === 'code') {
+                // Extract length from Type like varchar(13)
+                if (preg_match('/varchar\((\d+)\)/', $column->Type, $matches)) {
+                    $code_length = (int) $matches[1];
+                }
+            }
+        }
+
+        if (!$has_agency_id) {
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN agency_id bigint(20) UNSIGNED NOT NULL AFTER provinsi_id");
+            self::debug("Added agency_id column to branches table");
+        }
+
+        if (!$has_division_id) {
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN division_id bigint(20) UNSIGNED NULL AFTER regency_id");
+            self::debug("Added division_id column to branches table");
+        }
+
+        if (!$has_inspector_id) {
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN inspector_id bigint(20) UNSIGNED NULL AFTER user_id");
+            self::debug("Added inspector_id column to branches table");
+        }
+
+        if ($code_length < 20) {
+            $wpdb->query("ALTER TABLE {$table} MODIFY COLUMN code varchar(20) NOT NULL");
+            self::debug("Modified code column to varchar(20)");
+        }
+
+        // Add unique key for agency_id + inspector_id
+        $index_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND INDEX_NAME = 'inspector_agency'",
+            $wpdb->dbname, $table
+        ));
+
+        if (!$index_exists) {
+            $wpdb->query("ALTER TABLE {$table} ADD UNIQUE KEY inspector_agency (agency_id, inspector_id)");
+            self::debug("Added unique key inspector_agency to branches table");
+        }
+
+        self::debug("Migrations completed");
     }
 }

@@ -30,10 +30,19 @@
  * - customer_id    : REFERENCES app_customers(id) ON DELETE CASCADE
  *
  * Changelog:
+ * 1.0.4 - 2024-10-01
+ * - Added unique constraint for agency_id + inspector_id
+ *
+ * 1.0.3 - 2024-10-01
+ * - Added agency_id, division_id and inspector_id columns
+ *
+ * 1.0.2 - 2024-10-01
+ * - Added division_id and inspector_id columns
+ *
  * 1.0.1 - 2024-01-19
  * - Modified code field to varchar(17) for new format BR-TTTTRRRR-NNN
  * - Added unique constraint for customer_id + code
- * 
+ *
  * 1.0.0 - 2024-01-07
  * - Initial version
  */
@@ -51,7 +60,7 @@ class BranchesDB {
         return "CREATE TABLE {$table_name} (
             id bigint(20) UNSIGNED NOT NULL auto_increment,
             customer_id bigint(20) UNSIGNED NOT NULL,
-            code varchar(13) NOT NULL,
+            code varchar(20) NOT NULL,
             name varchar(100) NOT NULL,
             type enum('cabang','pusat') NOT NULL,
             nitku varchar(20) NULL COMMENT 'Nomor Identitas Tempat Kegiatan Usaha',
@@ -62,8 +71,11 @@ class BranchesDB {
             phone varchar(20) NULL,
             email varchar(100) NULL,
             provinsi_id bigint(20) UNSIGNED NULL,
+            agency_id bigint(20) UNSIGNED NOT NULL,
             regency_id bigint(20) UNSIGNED NULL,
+            division_id bigint(20) UNSIGNED NULL,
             user_id bigint(20) UNSIGNED NULL,
+            inspector_id bigint(20) UNSIGNED NULL,
             created_by bigint(20) NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -71,6 +83,7 @@ class BranchesDB {
             PRIMARY KEY  (id),
             UNIQUE KEY code (code),
             UNIQUE KEY customer_name (customer_id, name),
+            UNIQUE KEY inspector_agency (agency_id, inspector_id),
             KEY customer_id_index (customer_id),
             KEY created_by_index (created_by),
             KEY nitku_index (nitku),

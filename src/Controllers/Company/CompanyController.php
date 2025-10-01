@@ -193,6 +193,9 @@ class CompanyController {
                         'name' => esc_html($company->name),
                         'type' => esc_html($company->type),
                         'level_name' => esc_html($company->level_name ?? '-'),
+                        'agency_name' => esc_html($company->agency_name ?? '-'),
+                        'division_name' => esc_html($company->division_name ?? '-'),
+                        'inspector_name' => esc_html($company->inspector_name ?? '-'),
                         'actions' => $this->generateActionButtons($company)
                     ];
                 }, $result['data'])
