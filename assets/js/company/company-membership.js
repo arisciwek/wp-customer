@@ -171,52 +171,72 @@
          */
         loadAllMembershipLevels() {
             if (this.isLoading) return;
-            
+
             this.isLoading = true;
             this.showLoading();
+
+            console.log("Starting loadAllMembershipLevels...");
+
             $.ajax({
-                            url: wpCustomerData.ajaxUrl,
-                            type: 'POST',
-                            data: {
-                                action: 'get_all_membership_levels',
-                                nonce: wpCustomerData.nonce
-                            },
-                            success: (response) => {
-                                if (response.success) {
-                                    console.log("All membership levels response:", response);
-                                    this.debug.logResponse(response.data, 'All Membership Levels Data');
-                                    
-                                    // Simpan data level untuk referensi
-                                    if (response.data && response.data.levels && Array.isArray(response.data.levels)) {
-                                        this.allMembershipLevels = response.data.levels;
-                                        this.groupedFeatures = response.data.grouped_features;
-                                        
-                                        // Inisialisasi dengan data awal untuk user experience yang lebih baik
-                                        this.initializeUIWithLevelData();
-                                        
-                                        // Lanjutkan dengan memuat status membership
-                                        this.loadMembershipStatus();
-                                    } else {
-                                        console.log("Format data level membership tidak valid:", response.data);
-                                        CustomerToast.error('Format data level membership tidak valid');
-                                        this.hideLoading();
-                                        this.isLoading = false;
-                                    }
-                                } else {
-                                    console.log("Error response:", response);
-                                    CustomerToast.error(response.data && response.data.message ? response.data.message : 'Gagal memuat data level membership');
-                                    this.hideLoading();
-                                    this.isLoading = false;
-                                }
-                            },
-                            error: (xhr, status, error) => {
-                                console.log("AJAX error:", xhr, status, error);
-                                CustomerToast.error('Gagal memuat data level membership. Silakan coba lagi.');
-                                this.hideLoading();
-                                this.isLoading = false;
-                            }
-                        });
-                    },
+                url: wpCustomerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'get_all_membership_levels',
+                    nonce: wpCustomerData.nonce
+                },
+                success: (response) => {
+                    console.log("All membership levels response:", response);
+
+                    if (response.success) {
+                        this.debug.logResponse(response.data, 'All Membership Levels Data');
+
+                        // Simpan data level untuk referensi
+                        if (response.data && response.data.levels && Array.isArray(response.data.levels)) {
+                            this.allMembershipLevels = response.data.levels;
+                            this.groupedFeatures = response.data.grouped_features;
+
+                            // Inisialisasi dengan data awal untuk user experience yang lebih baik
+                            this.initializeUIWithLevelData();
+
+                            // Lanjutkan dengan memuat status membership - DON'T hide loading here
+                            // loadMembershipStatus() will manage its own loading state
+                            this.loadMembershipStatus();
+                        } else {
+                            console.error("Format data level membership tidak valid:", response.data);
+                            CustomerToast.error('Format data level membership tidak valid');
+                            this.hideLoading();
+                            this.isLoading = false;
+                        }
+                    } else {
+                        console.error("Error response:", response);
+                        const errorMessage = response.data && response.data.message ? response.data.message : 'Gagal memuat data level membership';
+                        CustomerToast.error(errorMessage);
+                        this.hideLoading();
+                        this.isLoading = false;
+                    }
+                },
+                error: (xhr, status, error) => {
+                    console.error("AJAX error in loadAllMembershipLevels:", {
+                        xhr: xhr,
+                        status: status,
+                        error: error,
+                        responseText: xhr.responseText
+                    });
+
+                    CustomerToast.error('Gagal memuat data level membership. Silakan coba lagi.');
+                    this.hideLoading();
+                    this.isLoading = false;
+                },
+                complete: () => {
+                    // Only clear loading if we didn't proceed to loadMembershipStatus
+                    if (!this.allMembershipLevels) {
+                        this.hideLoading();
+                        this.isLoading = false;
+                    }
+                    // If we did proceed to loadMembershipStatus, let it manage the loading state
+                }
+            });
+        },
 
                     /**
                      * Inisialisasi UI dengan data level dasar
@@ -270,15 +290,22 @@
                      * Load current membership status
                      */
                     loadMembershipStatus() {
-                        if (this.isLoading) return;
-                        
-                        this.isLoading = true;
-                        this.showLoading();
+                        // Don't check isLoading here since we want to allow this to run
+                        // even if loadAllMembershipLevels is still loading
+
+                        // Keep the existing loading state from loadAllMembershipLevels
+                        // or show loading if this is called independently
+                        if (!this.isLoading) {
+                            this.isLoading = true;
+                            this.showLoading();
+                        }
 
                         const companyId = this.getBranchId();
                         console.log("loadMembershipStatus - Branch ID: " + companyId);
 
                         if (!companyId) {
+                            console.error("No company ID found for membership status");
+                            CustomerToast.error('Company ID tidak ditemukan');
                             this.hideLoading();
                             this.isLoading = false;
                             return;
@@ -293,20 +320,31 @@
                                 nonce: wpCustomerData.nonce
                             },
                             success: (response) => {
+                                console.log("getMembershipStatus response:", response);
+
                                 if (response.success) {
-                                    console.log("getMembershipStatus response:", response);
                                     this.debug.logResponse(response.data, 'Membership Status Data');
                                     this.currentData = response.data;
                                     this.displayMembershipStatus(response.data);
                                     this.loadUpgradeOptions();
                                 } else {
-                                    CustomerToast.error(response.data.message || 'Failed to load membership status');
+                                    console.error("Error in membership status response:", response);
+                                    const errorMessage = response.data && response.data.message ? response.data.message : 'Gagal memuat status membership';
+                                    CustomerToast.error(errorMessage);
                                 }
                             },
-                            error: () => {
-                                CustomerToast.error('Failed to load membership status. Please try again.');
+                            error: (xhr, status, error) => {
+                                console.error("AJAX error in loadMembershipStatus:", {
+                                    xhr: xhr,
+                                    status: status,
+                                    error: error,
+                                    responseText: xhr.responseText
+                                });
+
+                                CustomerToast.error('Gagal memuat status membership. Silakan coba lagi.');
                             },
                             complete: () => {
+                                // Always clear loading state when membership status loading is complete
                                 this.hideLoading();
                                 this.isLoading = false;
                             }

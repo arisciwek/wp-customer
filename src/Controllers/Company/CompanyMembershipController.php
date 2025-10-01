@@ -45,10 +45,12 @@ class CompanyMembershipController {
         $this->validator = new CompanyMembershipValidator();
 
         // Register company-facing AJAX endpoints
+        add_action('wp_ajax_get_company_membership_status', [$this, 'getMembershipStatus']);
         add_action('wp_ajax_get_company_upgrade_options', [$this, 'getUpgradeOptions']);
         add_action('wp_ajax_request_upgrade_company_membership', [$this, 'requestUpgradeMembership']);
         add_action('wp_ajax_check_upgrade_eligibility_company_membership', [$this, 'checkUpgradeEligibility']);
-        
+        add_action('wp_ajax_get_all_membership_levels', [$this, 'getAllMembershipLevels']);
+
         // Register admin/staff AJAX endpoints
         add_action('wp_ajax_save_membership_level', [$this, 'saveMembershipLevel']);
         add_action('wp_ajax_get_company_membership_level_data', [$this, 'getMembershipLevelData']);
@@ -137,7 +139,7 @@ class CompanyMembershipController {
             }
             
             // User permission check (modify as needed)
-            if (!current_user_can('manage_options') && !$this->userCanAccessCompany($company_id)) {
+            if (!current_user_can('manage_options') && !$this->userCanAccessCustomer($company_id)) {
                 wp_send_json_error([
                     'message' => __('Anda tidak memiliki izin untuk mengakses data ini', 'wp-customer'),
                     'code' => 'access_denied'
@@ -753,7 +755,7 @@ class CompanyMembershipController {
             }
             
             // Get current membership
-            $current = $this->membership_model->findByCustomer($company_id);
+            $current = $this->membership_model->findByCompany($company_id);
             if (!$current) {
                 throw new \Exception(__('Tidak ditemukan data membership aktif', 'wp-customer'));
             }
@@ -979,7 +981,7 @@ Silakan verifikasi pembayaran di dashboard admin.', 'wp-customer'),
             }
             
             // Get current membership
-            $membership = $this->membership_model->findByCustomer($company_id);
+            $membership = $this->membership_model->findByCompany($company_id);
             if (!$membership) {
                 throw new \Exception(__('Tidak ditemukan data membership aktif', 'wp-customer'));
             }
@@ -1013,7 +1015,7 @@ Silakan verifikasi pembayaran di dashboard admin.', 'wp-customer'),
             $this->logMembershipExtension($company_id, $membership->id, $months);
             
             // Get updated membership for response
-            $updated = $this->membership_model->findByCustomer($company_id);
+            $updated = $this->membership_model->findByCompany($company_id);
             
             wp_send_json_success([
                 'message' => sprintf(
@@ -1076,7 +1078,7 @@ Silakan verifikasi pembayaran di dashboard admin.', 'wp-customer'),
             }
 
             // Get current membership
-            $current = $this->membership_model->findByCustomer($company_id);
+            $current = $this->membership_model->findByCompany($company_id);
             
             // Get all membership levels
             $levels = $this->level_model->get_all_levels();
@@ -1156,7 +1158,7 @@ Silakan verifikasi pembayaran di dashboard admin.', 'wp-customer'),
     private function canUpgrade($company_id, $level_id) {
         try {
             // Get current membership
-            $membership = $this->membership_model->findByCustomer($company_id);
+            $membership = $this->membership_model->findByCompany($company_id);
             if (!$membership) {
                 return false;
             }

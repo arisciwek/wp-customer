@@ -1,96 +1,29 @@
-# TODO-2231: Add Unit Kerja and Pengawas Columns to Company
+# TODO-2023: Fix Spinning Icon on Membership Tab
 
-/wp-customer/TODO.md
-
-## Issue
-Need to add three columns to the company table (BranchesDB.php):
-- agency_id: bigint(20) UNSIGNED NOT NULL, to link to agency based on province
-- division_id: bigint(20) UNSIGNED NULL, after regency_id, filled with division_id whose regency code matches the company's regency_id
-- inspector_id: bigint(20) UNSIGNED NULL, after user_id, selected from agency employees with role 'pengawas' in the same province
-
-These fields do not appear in create or edit forms, filled by code.
-
-## Solution
-- Update BranchesDB.php schema to add agency_id, division_id, inspector_id
-- Update BranchDemoData.php to generate values using database queries:
-  - agency_id: find agency by province_id
-  - division_id: find division by regency_id
-  - inspector_id: find pengawas employee from agency in same province
-- Update related models, controllers, views, JS to handle/display the new columns
-- Read and understand the mentioned files for proper implementation
-
-## Tasks
-- [x] Read all mentioned files to understand current structure
-- [x] Update src/Database/Tables/BranchesDB.php to add agency_id, division_id and inspector_id columns
-- [x] Update src/Database/Demo/BranchDemoData.php to add generateAgencyID, generateDivisionID, generateInspectorID methods
-- [x] Update CompanyModel.php to handle new fields (add agency join)
-- [x] Update CompanyController.php if needed
-- [x] Update company-datatable.js to display new columns (add Agency column)
-- [x] Update company views (_company_details.php, company-dashboard.php, company-left-panel.php)
-- [x] Update related demo data files as needed
-- [x] Test the implementation (migration added to Installer.php)
-
-# TODO-0751: Make inspector_id Column Unique Within Same agency_id
+/wp-customer/docs/TODO-2023-icon-berputar-pada-tab-membership.md
 
 ## Issue
-The inspector_id column in BranchesDB.php must be unique for 1 branch and within the same agency_id as the branch. This ensures that one inspector (pengawas) per agency can only be assigned to one branch.
+- Spinning icon appears on membership tab
+- Data is not displaying
+- Location: /wp-customer/src/Views/templates/company/partials/_company_membership.php
 
-## Solution
-- Add UNIQUE KEY constraint on (agency_id, inspector_id) in BranchesDB.php schema
-- Update changelog in BranchesDB.php
-- Add migration in Installer.php if needed
+## Root Cause Analysis
+After reviewing the code:
+1. The JavaScript file `company-membership.js` is trying to load membership data
+2. The AJAX endpoint `get_company_membership_status` is registered in CompanyController
+3. The CompanyMembershipController has a method `userCanAccessCompany` that doesn't exist (should be `userCanAccessCustomer`)
+4. The JavaScript is not properly handling the loading state after errors
 
-## Tasks
-- [x] Update src/Database/Tables/BranchesDB.php to add UNIQUE KEY (agency_id, inspector_id)
-- [x] Update changelog in BranchesDB.php
-- [x] Add migration in Installer.php if needed
-- [x] Test the implementation (skipped as not required)
-
-# TODO-0808: Fix Inspector Assignment Uniqueness in Demo Data
-
-## Issue
-Demo data generation fails with "Duplicate entry 'X-Y' for key 'wp_app_branches.inspector_agency'" because generateInspectorID always assigns the same inspector to multiple branches in the same agency.
-
-## Solution
-Modify BranchDemoData.php to track used inspectors per agency and ensure unique assignment within each agency.
+## Solution Plan
+1. Fix the method name issue in CompanyMembershipController
+2. Ensure proper error handling in JavaScript
+3. Fix the loading spinner removal on error
+4. Verify AJAX endpoints are properly registered
 
 ## Tasks
-- [x] Add $used_inspectors property to BranchDemoData.php to track used inspectors per agency
-- [x] Update generateInspectorID method to select unused inspectors, with fallback to any inspector if none available
-- [x] Test demo data generation to ensure no duplicates
-
-# TODO-0809: Fix Agency User Display Names Mismatch
-
-## Issue
-Agency user display names do not match the agency provinces (e.g., agency for DKI Jakarta has display name 'Admin Jawa Timur').
-
-## Solution
-Correct the display names in AgencyUsersData.php to match the agency provinces.
-
-## Tasks
-- [x] Update AgencyUsersData.php display names to match agency provinces
-- [ ] Regenerate agency demo data to apply the corrected names
-
-# TODO-1206: Make All Columns Searchable in Company DataTable
-
-## Issue
-Currently, the company DataTable only searches the first column (code) and name, but not other columns like type, level, agency, division, inspector.
-
-## Solution
-Update the search query in CompanyModel.php getDataTableData method to include all displayed columns in the WHERE clause.
-
-## Tasks
-- [x] Update CompanyModel.php getDataTableData method to search all columns: code, name, type, level_name, agency_name, division_name, inspector_name
-- [x] Test the search functionality on all columns
-
-# TODO-1219: Fix Admin Users Displayed as Pengawas in Company Table
-
-## Issue
-Users with display names containing "Admin" (e.g., "Admin Aceh") are being displayed as supervisors (pengawas) in the company table, but admin users should not be shown as supervisors.
-
-## Solution
-Modify BranchDemoData.php generateInspectorID method to exclude users with 'admin_dinas' role from being selected as inspectors.
-
-## Tasks
-- [x] Update generateInspectorID method in BranchDemoData.php to match users with role 'pengawas'
-- [ ] Test the demo data generation to ensure admin users are not assigned as inspectors
+- [x] Fix method name `userCanAccessCompany` to `userCanAccessCustomer` in CompanyMembershipController
+- [x] Update JavaScript to properly handle loading states
+- [x] Add better error logging for debugging
+- [x] Fix loading state management between loadAllMembershipLevels and loadMembershipStatus
+- [x] Fix all findByCustomer method calls to use findByCompany
+- [x] Test the membership tab functionality

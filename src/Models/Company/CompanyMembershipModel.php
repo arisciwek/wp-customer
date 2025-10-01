@@ -443,11 +443,11 @@ class CompanyMembershipModel {
      */
     private function clearCache(int $id): void {
         $this->cache->delete('membership', $id);
-        
+
         // Get customer ID to clear customer-specific cache
         global $wpdb;
         $company_id = $wpdb->get_var($wpdb->prepare("
-            SELECT company_id FROM {$this->table} WHERE id = %d
+            SELECT branch_id FROM {$this->table} WHERE id = %d
         ", $id));
 
         if ($company_id) {
