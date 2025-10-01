@@ -1150,12 +1150,12 @@
     // Initialize CompanyMembership when document is ready
     $(document).ready(() => {
         window.CustomerMembership = CompanyMembership;
-        
-        // Check if we're on the membership tab
-        if ($('#membership-info').length > 0) {
+
+        // Check if membership tab is active
+        if ($('.nav-tab[data-tab="membership-info"]').hasClass('nav-tab-active')) {
             CompanyMembership.init();
         }
-        
+
         // Add tab switch listener for Company panel
         $(document).on('wp_company_tab_switched', (e, tabId, companyObj) => {
             if (tabId === 'membership-info') {
