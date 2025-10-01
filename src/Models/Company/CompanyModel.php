@@ -152,16 +152,21 @@ class CompanyModel {
 
         // Add search if provided
         if (!empty($search)) {
+            $search_term = '%' . $wpdb->esc_like($search) . '%';
             $where .= $wpdb->prepare(
-                " AND (b.name LIKE %s OR b.code LIKE %s OR c.name LIKE %s)",
-                '%' . $wpdb->esc_like($search) . '%',
-                '%' . $wpdb->esc_like($search) . '%',
-                '%' . $wpdb->esc_like($search) . '%'
+                " AND (b.code LIKE %s OR b.name LIKE %s OR b.type LIKE %s OR l.name LIKE %s OR a.name LIKE %s OR d.name LIKE %s OR u.display_name LIKE %s)",
+                $search_term,
+                $search_term,
+                $search_term,
+                $search_term,
+                $search_term,
+                $search_term,
+                $search_term
             );
         }
 
         // Validate order column
-        $validColumns = ['code', 'name', 'type', 'customer_name', 'level_name'];
+        $validColumns = ['code', 'name', 'type', 'level_name', 'agency_name', 'division_name', 'inspector_name'];
         if (!in_array($orderColumn, $validColumns)) {
             $orderColumn = 'code';
         }

@@ -70,3 +70,15 @@ Correct the display names in AgencyUsersData.php to match the agency provinces.
 ## Tasks
 - [x] Update AgencyUsersData.php display names to match agency provinces
 - [ ] Regenerate agency demo data to apply the corrected names
+
+# TODO-1206: Make All Columns Searchable in Company DataTable
+
+## Issue
+Currently, the company DataTable only searches the first column (code) and name, but not other columns like type, level, agency, division, inspector.
+
+## Solution
+Update the search query in CompanyModel.php getDataTableData method to include all displayed columns in the WHERE clause.
+
+## Tasks
+- [x] Update CompanyModel.php getDataTableData method to search all columns: code, name, type, level_name, agency_name, division_name, inspector_name
+- [x] Test the search functionality on all columns
