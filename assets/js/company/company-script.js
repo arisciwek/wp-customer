@@ -202,8 +202,8 @@
                 const id = hash.substring(1);
                 if (id && id !== this.currentId) {
                     // Reset tab ke details
-                    $('.tab-content').removeClass('active');
-                    $('#company-details').addClass('active');
+                    $('.tab-content').removeClass('active').hide();
+                    $('#company-details').addClass('active').show();
                     $('.nav-tab').removeClass('nav-tab-active');
                     $('.nav-tab[data-tab="company-details"]').addClass('nav-tab-active');
 

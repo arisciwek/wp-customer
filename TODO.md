@@ -84,7 +84,7 @@ Compared to customer implementation:
 - [x] Add id !== currentId check in handleHashChange
 - [x] Move tab reset to handleHashChange and remove from datatable
 - [x] Only show loading overlay when opening first time
-- [ ] Test no flicker when switching companies
+- [x] Test no flicker when switching companies
 
 # TODO-2149: Fix Duplicate Entry Error in Membership Feature Groups Demo Data
 
@@ -105,3 +105,26 @@ After reviewing the code:
 1. Modify insertDefaultGroups to use INSERT ... ON DUPLICATE KEY UPDATE to handle existing records
 2. Create the missing CustomerDemoDataHelperTrait based on AgencyDemoDataHelperTrait
 3. Ensure demo data can be run multiple times safely
+
+# TODO-0037: Fix Company Tab Data Not Displaying After Clicking Membership Tab
+
+/wp-customer/docs/TODO-0037-data-pada-tab-perusahaan-tidak-tampil-setelah-klik-tab-membership.md
+
+## Issue
+- After clicking the membership tab, clicking view on company datatable doesn't display data on company tab
+- Data doesn't display even when switching between different records
+- Location: /wp-customer/assets/js/company/company-script.js
+
+## Root Cause Analysis
+After reviewing the code:
+1. When switching tabs using switchTab(), jQuery .hide() and .show() set inline display styles
+2. handleHashChange() only manipulates CSS classes but doesn't clear inline styles
+3. When resetting to details tab, company-details has inline display: none from previous .hide()
+4. Membership tab retains inline display: block from previous .show()
+5. This causes company details to remain hidden while membership tab stays visible
+
+## Tasks
+- [x] Update handleHashChange() to properly hide/show tabs using jQuery methods
+- [x] Ensure tab switching is consistent between switchTab() and handleHashChange()
+- [x] Clear inline display styles when switching tabs
+- [x] Test that company data displays correctly after membership tab interaction
