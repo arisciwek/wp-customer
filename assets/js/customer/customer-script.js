@@ -247,10 +247,6 @@
 
             console.log('Displaying customer data:', data);
 
-            // Show panel first
-            this.components.container.addClass('with-right-panel');
-            this.components.rightPanel.addClass('visible');
-
             try {
                 // Basic Information
                 $('#customer-header-name').text(data.customer.name);
@@ -381,13 +377,16 @@
                     }
                 });
 
+                // Show panel after data is filled
+                this.components.container.addClass('with-right-panel');
+                this.components.rightPanel.addClass('visible');
 
             } catch (error) {
                 console.error('Error displaying customer data:', error);
                 CustomerToast.error('Error displaying customer data');
             }
 
-        }, 
+        },
 
     handleLoadError() {
         this.components.detailsPanel.html(

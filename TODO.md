@@ -52,6 +52,40 @@ After reviewing the code:
 - [x] Modify company-membership.js to check if membership tab is active before initializing on page load
 - [x] Test that logs only appear when membership tab is active or clicked
 
+# TODO-0109: Fix Flicker on Company Right Panel
+
+/wp-customer/docs/TODO-0109-flicker-pada-company-right-panel.md
+
+## Issue
+- Flicker occurs when clicking different rows in company datatable
+- Panel shows/hides rapidly when switching between companies
+- Location: /wp-customer/assets/js/company/company-script.js, /wp-customer/assets/css/company/company-style.css
+
+## Root Cause Analysis
+Compared to customer implementation:
+1. Wrong order of operations: panel shown after loading hidden instead of before
+2. No smooth opacity transitions on right panel visibility
+3. Unnecessary 200ms delay in hideLoading method
+4. No check for id !== currentId before loading, causing reload on same row click
+5. Tab reset logic in wrong place (in datatable click instead of hash change handler)
+
+## Solution Plan
+1. Change loadCompanyData order: displayData then hideLoading (match customer)
+2. Add opacity transition to .wp-company-right-panel for smooth visibility
+3. Remove 200ms delay in hideLoading method
+4. Add check id !== currentId in handleHashChange to prevent reload on same click
+5. Move tab reset from datatable click to handleHashChange to match customer
+6. Only show loading overlay when opening panel first time, not when switching companies
+
+## Tasks
+- [x] Update company-script.js loadCompanyData method order
+- [x] Update company-style.css for opacity transitions
+- [x] Remove loading delay in hideLoading
+- [x] Add id !== currentId check in handleHashChange
+- [x] Move tab reset to handleHashChange and remove from datatable
+- [x] Only show loading overlay when opening first time
+- [ ] Test no flicker when switching companies
+
 # TODO-2149: Fix Duplicate Entry Error in Membership Feature Groups Demo Data
 
 /wp-customer/docs/TODO-2149-membership-feature-groups-error-duplicate-entry.md
@@ -71,9 +105,3 @@ After reviewing the code:
 1. Modify insertDefaultGroups to use INSERT ... ON DUPLICATE KEY UPDATE to handle existing records
 2. Create the missing CustomerDemoDataHelperTrait based on AgencyDemoDataHelperTrait
 3. Ensure demo data can be run multiple times safely
-
-## Tasks
-- [x] Create CustomerDemoDataHelperTrait.php with shouldClearData and clearExistingData methods
-- [x] Modify MembershipGroupsDemoData.php insertDefaultGroups to use ON DUPLICATE KEY UPDATE
-- [x] Fix foreign key constraint error in clearExistingData by deleting child records first
-- [x] Test demo data generation runs without duplicate errors

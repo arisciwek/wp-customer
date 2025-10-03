@@ -13,6 +13,14 @@
  *              Includes state management dan event handling.
  *              Terintegrasi dengan WordPress AJAX API.
  *
+ * Loading data dan display secara lengkap :
+ * Urutan operasi loadCompanyData disesuaikan
+ * Transisi opacity ditambahkan
+ * Delay loading dihapus
+ * Cek id !== currentId ditambahkan
+ * Reset tab dipindah ke handleHashChange
+ * Loading overlay hanya saat pertama buka
+ * 
  * Dependencies:
  * - jQuery
  * - DataTables
@@ -74,10 +82,9 @@
 
         async loadCompanyData(id) {
             if (!id || this.isLoading) return;
-
             this.isLoading = true;
-            this.showLoading();
-
+            const wasLoadingShown = !this.currentId;
+            if (wasLoadingShown) this.showLoading(); // only show loading when opening first time
             try {
                 const response = await $.ajax({
                     url: wpCustomerData.ajaxUrl,
@@ -88,24 +95,8 @@
                         nonce: wpCustomerData.nonce
                     }
                 });
-
                 if (response.success && response.data) {
-                    // Update URL hash tanpa reload
-                    const newHash = `#${id}`;
-                    if (window.location.hash !== newHash) {
-                        window.history.pushState(null, '', newHash);
-                    }
-
-                    // Reset tab ke default (Company Details)
-                    $('.nav-tab').removeClass('nav-tab-active');
-                    $('.nav-tab[data-tab="company-details"]').addClass('nav-tab-active');
-                    
-                    // Hide all tab content first
-                    $('.tab-content').removeClass('active').hide();
-                    // Show company details tab
-                    $('#company-details').addClass('active').show();
-
-                    // Update company data in UI
+                    // Show panel with data
                     this.displayData(response.data);
                     this.currentId = id;
                 }
@@ -115,15 +106,11 @@
                 this.handleLoadError();
             } finally {
                 this.isLoading = false;
-                this.hideLoading();
+                if (wasLoadingShown) this.hideLoading();
             }
         },
 
         displayData(data) {
-            // Show panel first
-            this.components.container.addClass('with-right-panel');
-            this.components.rightPanel.addClass('visible');
-
             try {
                 // Basic Information
                 $('#company-header-name').text(data.company.name);
@@ -131,7 +118,7 @@
                 $('#company-code').text(data.company.code || '-');
                 $('#company-type').text(data.company.type || '-');
                 $('#company-customer-name').text(data.company.customer_name || '-');
-                
+
                 // Location Information
                 $('#company-address').text(data.company.address || '-');
                 $('#company-postal-code').text(data.company.postal_code || '-');
@@ -148,10 +135,10 @@
                 // Membership Information
                 $('#company-level-name').text(data.company.level_name || '-');
                 $('#company-membership-status').text(data.company.membership_status || '-');
-                
+
                 if (data.company.membership_start && data.company.membership_end) {
                     $('#company-membership-period').text(
-                        `${new Date(data.company.membership_start).toLocaleDateString()} - 
+                        `${new Date(data.company.membership_start).toLocaleDateString()} -
                          ${new Date(data.company.membership_end).toLocaleDateString()}`
                     );
                 } else {
@@ -167,6 +154,10 @@
                     $('#company-coordinates').text('-');
                     $('#company-google-maps-link').hide();
                 }
+
+                // Show panel after data is filled
+                this.components.container.addClass('with-right-panel');
+                this.components.rightPanel.addClass('visible');
 
             } catch (error) {
                 console.error('Error displaying company data:', error);
@@ -209,7 +200,13 @@
             const hash = window.location.hash;
             if (hash) {
                 const id = hash.substring(1);
-                if (id) {
+                if (id && id !== this.currentId) {
+                    // Reset tab ke details
+                    $('.tab-content').removeClass('active');
+                    $('#company-details').addClass('active');
+                    $('.nav-tab').removeClass('nav-tab-active');
+                    $('.nav-tab[data-tab="company-details"]').addClass('nav-tab-active');
+
                     this.loadCompanyData(id);
                 }
             }

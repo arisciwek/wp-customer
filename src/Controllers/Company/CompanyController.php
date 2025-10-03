@@ -270,9 +270,47 @@ class CompanyController {
     }
 
     /**
+     * Validate company access - public endpoint untuk AJAX
+     * @since 1.0.0
+     */
+    public function validateCompanyAccess() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+
+            $company_id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+            if (!$company_id) {
+                throw new \Exception('Invalid company ID');
+            }
+
+            // Gunakan validator langsung
+            $access = $this->branchValidator->validateAccess($company_id);
+
+            if (!$access['has_access']) {
+                wp_send_json_error([
+                    'message' => __('Anda tidak memiliki akses ke company ini', 'wp-customer'),
+                    'code' => 'access_denied'
+                ]);
+                return;
+            }
+
+            wp_send_json_success([
+                'message' => 'Akses diberikan',
+                'company_id' => $company_id,
+                'access_type' => $access['access_type']
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage(),
+                'code' => 'error'
+            ]);
+        }
+    }
+
+    /**
      * Get company statistics
      * Endpoint: wp_ajax_get_company_stats
-     * 
+     *
      * @return void Response is sent as JSON
      */
     public function getStats() {
@@ -286,18 +324,18 @@ class CompanyController {
 
             // Get statistics from model
             $total_companies = $this->model->getTotalCount();
-            
+
             // Build response data
             $stats = [
                 'total_companies' => $total_companies
             ];
-            
+
             // Filter stats (allowing other modules to add stats)
             $stats = apply_filters('wp_company_stats_data', $stats);
 
             // Add to cache for faster access later
             $this->cache->set('company_stats', $stats, 120);
-            
+
             // Log and send response
             $this->debug_log("Stats loaded: " . print_r($stats, true));
             wp_send_json_success($stats);
@@ -308,5 +346,5 @@ class CompanyController {
                 'message' => $e->getMessage()
             ]);
         }
-    }    
+    }
 }

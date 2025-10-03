@@ -72,10 +72,13 @@
     border: 1px solid #ccd0d4;
     border-radius: 4px;
     display: none;
+    transition: width 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
 }
 
 .wp-company-right-panel.visible {
     display: block;
+    opacity: 1;
 }
 
 .wi-panel-header,
@@ -210,11 +213,11 @@
 /* Smooth Panel Transitions */
 .wp-company-left-panel,
 .wp-company-right-panel {
-    transition: width 0.3s ease, opacity 0.3s ease;
+    /* transition: width 0.3s ease, opacity 0.3s ease; */
 }
 
 .wp-company-right-panel {
-    opacity: 0;
+    opacity: 1;
 }
 
 .wp-company-right-panel.visible {
