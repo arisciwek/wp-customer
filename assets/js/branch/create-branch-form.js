@@ -44,6 +44,11 @@
                 this.validateField(e.target);
             });
 
+            // Load regencies when province changes
+            this.form.on('change', '#create-branch-provinsi', (e) => {
+                this.loadAvailableRegencies($(e.target).val());
+            });
+
             console.log('Branch Form element found:', this.form.length > 0);
             $('#add-branch-btn').on('click', () => {
                 const customerId = window.Customer?.currentId;
@@ -282,13 +287,53 @@
             }
         },
 
+        async loadAvailableRegencies(provinsiId) {
+            const regencySelect = this.form.find('#create-branch-regency');
+
+            if (!provinsiId) {
+                regencySelect.html('<option value="">Pilih Kabupaten/Kota</option>');
+                return;
+            }
+
+            try {
+                regencySelect.prop('disabled', true);
+
+                const response = await $.ajax({
+                    url: wpCustomerData.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'get_available_regencies',
+                        nonce: wpCustomerData.nonce,
+                        provinsi_id: provinsiId
+                    }
+                });
+
+                if (response.success) {
+                    let options = '<option value="">Pilih Kabupaten/Kota</option>';
+                    response.data.forEach(regency => {
+                        options += `<option value="${regency.id}">${regency.name}</option>`;
+                    });
+                    regencySelect.html(options);
+                } else {
+                    BranchToast.error(response.data?.message || 'Gagal memuat data kabupaten/kota');
+                    regencySelect.html('<option value="">Pilih Kabupaten/Kota</option>');
+                }
+            } catch (error) {
+                console.error('Load regencies error:', error);
+                BranchToast.error('Gagal menghubungi server untuk memuat kabupaten/kota');
+                regencySelect.html('<option value="">Pilih Kabupaten/Kota</option>');
+            } finally {
+                regencySelect.prop('disabled', false);
+            }
+        },
+
         resetForm() {
             if (!this.form || !this.form[0]) return;
-            
+
             this.form[0].reset();
             this.form.find('.form-error').remove();
             this.form.find('.error').removeClass('error');
-            
+
             if (this.form.data('validator')) {
                 this.form.validate().resetForm();
             }

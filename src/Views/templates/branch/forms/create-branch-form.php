@@ -129,15 +129,10 @@ defined('ABSPATH') || exit;
 
                         <div class="branch-form-group">
                             <label for="create-branch-regency" class="required-field">Kabupaten/Kota</label>
-                            <?php 
-                            do_action('wilayah_indonesia_regency_select', [
-                                'name' => 'regency_id',
-                                'id' => 'create-branch-regency',
-                                'class' => 'regular-text wilayah-regency-select',
-                                'required' => 'required',
-                                'data-dependent' => 'create-branch-provinsi'
-                            ]);
-                            ?>
+                            <select id="create-branch-regency" name="regency_id" class="regular-text" required>
+                                <option value="">Pilih Kabupaten/Kota</option>
+                            </select>
+                            <span class="field-hint"><?php _e('Hanya kabupaten/kota dengan cakupan agency yang ditampilkan', 'wp-customer'); ?></span>
                         </div>
 
                         <div class="branch-form-group">

@@ -83,7 +83,6 @@ class BranchesDB {
             PRIMARY KEY  (id),
             UNIQUE KEY code (code),
             UNIQUE KEY customer_name (customer_id, name),
-            UNIQUE KEY inspector_agency (agency_id, inspector_id),
             KEY customer_id_index (customer_id),
             KEY created_by_index (created_by),
             KEY nitku_index (nitku),

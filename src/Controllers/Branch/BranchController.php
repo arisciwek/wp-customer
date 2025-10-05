@@ -68,6 +68,7 @@ class BranchController {
         add_action('wp_ajax_create_branch_button', [$this, 'createBranchButton']);
 
         add_action('wp_ajax_validate_branch_access', [$this, 'validateBranchAccess']);
+        add_action('wp_ajax_get_available_regencies', [$this, 'getAvailableRegencies']);
 
     }
 
@@ -283,7 +284,7 @@ class BranchController {
             );
         }
 
-        // Edit button - gunakan canEditBranch
+        // Edit button - gunakan canUpdateBranch
         if ($this->validator->canUpdateBranch($branch, $customer)) {
             $actions .= sprintf(
                 '<button type="button" class="button edit-branch" data-id="%d" title="%s">
@@ -423,7 +424,7 @@ class BranchController {
                 }
 
                 // Permission check di awal
-                if (!$this->validator->canEditBranch($branch, $customer)) {
+                if (!$this->validator->canUpdateBranch($branch, $customer)) {
                     throw new \Exception('Anda tidak memiliki izin untuk mengedit cabang ini.');
                 }
 
@@ -443,6 +444,20 @@ class BranchController {
                    'user_id' => isset($_POST['user_id']) ? (int)$_POST['user_id'] : null,
                    'status' => isset($_POST['status']) ? sanitize_text_field($_POST['status']) : null
                ], function($value) { return $value !== null; });
+
+               // If province or regency changed, update agency and division
+               if (isset($data['provinsi_id']) && isset($data['regency_id'])) {
+                   try {
+                       $agencyDivision = $this->model->getAgencyAndDivisionIds($data['provinsi_id'], $data['regency_id']);
+                       $data['agency_id'] = $agencyDivision['agency_id'];
+                       $data['division_id'] = $agencyDivision['division_id'];
+                   } catch (\Exception $e) {
+                       throw new \Exception('Gagal menentukan agency dan division: ' . $e->getMessage());
+                   }
+               } elseif (isset($data['provinsi_id']) || isset($data['regency_id'])) {
+                   // If only one changed, need both to determine agency/division
+                   // For now, skip updating agency/division if not both provided
+               }
 
                 // Business logic validation
                 $errors = $this->validator->validateUpdate($data, $id);
@@ -507,6 +522,15 @@ class BranchController {
             }
         }
 
+        /**
+         * Create a new branch
+         *
+         * This method handles branch creation with automatic agency and division assignment
+         * based on selected province and regency. Agency and division IDs are mandatory
+         * and will be validated before saving.
+         *
+         * @return void Sends JSON response with success/error
+         */
         public function store() {
             try {
                 check_ajax_referer('wp_customer_nonce', 'nonce');
@@ -538,6 +562,23 @@ class BranchController {
                     'created_by' => get_current_user_id(),
                     'status' => 'active'
                 ];
+
+                // Assign agency and division based on province and regency
+                if ($data['provinsi_id'] && $data['regency_id']) {
+                    try {
+                        $agencyDivision = $this->model->getAgencyAndDivisionIds($data['provinsi_id'], $data['regency_id']);
+                        $data['agency_id'] = $agencyDivision['agency_id'];
+                        $data['division_id'] = $agencyDivision['division_id'];
+                    } catch (\Exception $e) {
+                        throw new \Exception('Gagal menentukan agency dan division: ' . $e->getMessage());
+                    }
+                }
+
+                // Validate branch creation data including agency/division assignment
+                $create_errors = $this->validator->validateCreate($data);
+                if (!empty($create_errors)) {
+                    throw new \Exception(reset($create_errors));
+                }
 
                 // Validasi type branch saat create
                 $type_validation = $this->validator->validateBranchTypeCreate($data['type'], $customer_id);
@@ -607,7 +648,7 @@ class BranchController {
             $customer = $this->customerModel->find($branch->customer_id);
             
             // Check edit permission first (since delete requires edit)
-            if (!$this->validator->canEditBranch($branch, $customer)) {
+            if (!$this->validator->canUpdateBranch($branch, $customer)) {
                 throw new \Exception('Permission denied');
             }
             
@@ -647,6 +688,49 @@ class BranchController {
             $branches = $this->model->getByCustomer($customer_id);
 
             wp_send_json_success($branches);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get available regencies for branch creation
+     * Only returns regencies that have divisions assigned through jurisdictions
+     *
+     * @return void Sends JSON response with available regencies
+     */
+    public function getAvailableRegencies() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+
+            $provinsi_id = isset($_POST['provinsi_id']) ? (int) $_POST['provinsi_id'] : 0;
+            if (!$provinsi_id) {
+                throw new \Exception('ID Provinsi tidak valid');
+            }
+
+            // Get regencies that have jurisdictions (and thus divisions) for the selected province
+            global $wpdb;
+
+            $regencies = $wpdb->get_results($wpdb->prepare("
+                SELECT DISTINCT r.id, r.name, r.code
+                FROM {$wpdb->prefix}wi_regencies r
+                INNER JOIN {$wpdb->prefix}app_agency_jurisdictions j ON r.code = j.jurisdiction_code
+                INNER JOIN {$wpdb->prefix}app_divisions d ON j.division_id = d.id
+                INNER JOIN {$wpdb->prefix}app_agencies a ON d.agency_id = a.id
+                WHERE r.province_id = %d
+                AND d.status = 'active'
+                AND a.status = 'active'
+                ORDER BY r.name ASC
+            ", $provinsi_id));
+
+            if ($regencies === null) {
+                throw new \Exception('Gagal mengambil data regencies');
+            }
+
+            wp_send_json_success($regencies);
 
         } catch (\Exception $e) {
             wp_send_json_error([

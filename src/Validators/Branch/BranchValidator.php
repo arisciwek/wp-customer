@@ -219,14 +219,43 @@ class BranchValidator {
         return apply_filters('wp_customer_can_delete_branch', false, $relation);
     }
 
+    /**
+     * Validate branch data for creation
+     * Ensures agency_id and division_id are properly assigned based on province and regency
+     *
+     * @param array $data Branch data to validate
+     * @return array Array of validation errors
+     */
+    public function validateCreate(array $data): array {
+        $errors = [];
+
+        // First run general form validation
+        $form_errors = $this->validateForm($data);
+        if (!empty($form_errors)) {
+            $errors = array_merge($errors, $form_errors);
+        }
+
+        // Validate that agency_id and division_id are not null/empty for create
+        // This ensures the automatic assignment from province/regency worked
+        if (empty($data['agency_id'])) {
+            $errors['agency_id'] = __('Agency ID wajib diisi. Pastikan provinsi yang dipilih memiliki agency.', 'wp-customer');
+        }
+
+        if (empty($data['division_id'])) {
+            $errors['division_id'] = __('Division ID wajib diisi. Pastikan regency yang dipilih memiliki division dalam agency.', 'wp-customer');
+        }
+
+        return $errors;
+    }
+
     public function validateForm(array $data, ?int $id = null): array {
         $errors = [];
-        
+
         // Validasi name
         $name = trim($data['name'] ?? '');
         if (empty($name)) {
             $errors['name'] = __('Nama cabang wajib diisi.', 'wp-customer');
-        } 
+        }
         elseif (mb_strlen($name) > 100) {
             $errors['name'] = __('Nama cabang maksimal 100 karakter.', 'wp-customer');
         }
@@ -244,7 +273,7 @@ class BranchValidator {
                 $errors['customer_id'] = __('Customer tidak ditemukan.', 'wp-customer');
             }
         }
-        
+
         // Validasi type
         if (empty($data['type'])) {
             $errors['type'] = __('Tipe cabang wajib dipilih.', 'wp-customer');
@@ -259,9 +288,9 @@ class BranchValidator {
                 $errors['type'] = __('Customer ini sudah memiliki kantor pusat.', 'wp-customer');
             }
         }
-        
+
         // Validasi lainnya sesuai kebutuhan
-        
+
         return $errors;
     }
 

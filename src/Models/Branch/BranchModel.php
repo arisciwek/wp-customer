@@ -110,7 +110,9 @@ class BranchModel {
             'phone' => $data['phone'] ?? null,
             'email' => $data['email'] ?? null,
             'provinsi_id' => $data['provinsi_id'] ?? null,
+            'agency_id' => $data['agency_id'] ?? null,
             'regency_id' => $data['regency_id'] ?? null,
+            'division_id' => $data['division_id'] ?? null,
             'user_id' => $data['user_id'] ?? null,
             'created_by' => $data['created_by'],
             'created_at' => current_time('mysql'),
@@ -124,17 +126,19 @@ class BranchModel {
             [
                 '%d', // customer_id
                 '%s', // code
-                '%s', // name 
+                '%s', // name
                 '%s', // type
                 '%s', // nitku
                 '%s', // postal_code
                 '%f', // latitude
-                '%f', // longitude 
+                '%f', // longitude
                 '%s', // address
                 '%s', // phone
                 '%s', // email
                 '%d', // provinsi_id
+                '%d', // agency_id
                 '%d', // regency_id
+                '%d', // division_id
                 '%d', // user_id
                 '%d', // created_by
                 '%s', // created_at
@@ -191,7 +195,9 @@ class BranchModel {
             'phone' => $data['phone'] ?? null,
             'email' => $data['email'] ?? null,
             'provinsi_id' => $data['provinsi_id'] ?? null,
+            'agency_id' => $data['agency_id'] ?? null,
             'regency_id' => $data['regency_id'] ?? null,
+            'division_id' => $data['division_id'] ?? null,
             'user_id' => $data['user_id'] ?? null,
             'status' => $data['status'] ?? null,
             'updated_at' => current_time('mysql')
@@ -208,7 +214,9 @@ class BranchModel {
                 case 'longitude':
                     return '%f';
                 case 'provinsi_id':
+                case 'agency_id':
                 case 'regency_id':
+                case 'division_id':
                     return '%d';
                 default:
                     return '%s';
@@ -441,19 +449,83 @@ class BranchModel {
 
     public function getByCustomer($customer_id) {
         global $wpdb;
-        
+
         $table = $wpdb->prefix . 'app_branches';
-        
+
         $query = $wpdb->prepare(
-            "SELECT id, name, address, phone, email, status 
-             FROM {$table} 
-             WHERE customer_id = %d 
+            "SELECT id, name, address, phone, email, status
+             FROM {$table}
+             WHERE customer_id = %d
              AND status = 'active'
              ORDER BY name ASC",
             $customer_id
         );
-        
+
         return $wpdb->get_results($query);
+    }
+
+    /**
+     * Get agency and division IDs based on province and regency IDs
+     *
+     * This method automatically assigns agency and division for branch creation
+     * based on geographical location. Agency is determined by province, and division
+     * is found through jurisdiction relationships for the selected regency.
+     *
+     * @param int $provinsi_id Province ID from wilayah-indonesia plugin
+     * @param int $regency_id Regency ID from wilayah-indonesia plugin
+     * @return array ['agency_id' => int|null, 'division_id' => int|null]
+     * @throws \Exception if agency not found for the province
+     */
+    public function getAgencyAndDivisionIds(int $provinsi_id, int $regency_id): array {
+        global $wpdb;
+
+        // Get province code
+        $province_table = $wpdb->prefix . 'wi_provinces';
+        $province = $wpdb->get_row($wpdb->prepare(
+            "SELECT code FROM {$province_table} WHERE id = %d",
+            $provinsi_id
+        ));
+
+        if (!$province) {
+            throw new \Exception('Province not found');
+        }
+
+        // Get agency for this province
+        $agency_table = $wpdb->prefix . 'app_agencies';
+        $agency = $wpdb->get_row($wpdb->prepare(
+            "SELECT id FROM {$agency_table} WHERE provinsi_code = %s AND status = 'active'",
+            $province->code
+        ));
+
+        if (!$agency) {
+            throw new \Exception('Agency not found for province: ' . $province->code);
+        }
+
+        // Get regency code
+        $regency_table = $wpdb->prefix . 'wi_regencies';
+        $regency = $wpdb->get_row($wpdb->prepare(
+            "SELECT code FROM {$regency_table} WHERE id = %d",
+            $regency_id
+        ));
+
+        if (!$regency) {
+            throw new \Exception('Regency not found');
+        }
+
+        // Get division for this agency and regency via jurisdiction table
+        $jurisdiction_table = $wpdb->prefix . 'app_agency_jurisdictions';
+        $division_table = $wpdb->prefix . 'app_divisions';
+        $division = $wpdb->get_row($wpdb->prepare(
+            "SELECT d.id FROM {$division_table} d
+             INNER JOIN {$jurisdiction_table} j ON d.id = j.division_id
+             WHERE d.agency_id = %d AND j.jurisdiction_code = %s AND d.status = 'active'",
+            $agency->id, $regency->code
+        ));
+
+        return [
+            'agency_id' => $agency->id,
+            'division_id' => $division ? $division->id : null
+        ];
     }
     
     /**
