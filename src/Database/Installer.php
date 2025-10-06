@@ -130,16 +130,16 @@ class Installer {
             self::debug("Modified code column to varchar(20)");
         }
 
-        // Add unique key for agency_id + inspector_id
+        // Remove unique key for agency_id + inspector_id if exists (inspector can manage multiple branches)
         $index_exists = $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
              WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND INDEX_NAME = 'inspector_agency'",
             $wpdb->dbname, $table
         ));
 
-        if (!$index_exists) {
-            $wpdb->query("ALTER TABLE {$table} ADD UNIQUE KEY inspector_agency (agency_id, inspector_id)");
-            self::debug("Added unique key inspector_agency to branches table");
+        if ($index_exists) {
+            $wpdb->query("ALTER TABLE {$table} DROP INDEX inspector_agency");
+            self::debug("Dropped unique key inspector_agency from branches table");
         }
 
         self::debug("Migrations completed");

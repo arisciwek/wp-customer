@@ -30,6 +30,8 @@
  * - customer_id    : REFERENCES app_customers(id) ON DELETE CASCADE
  *
  * Changelog:
+ * 1.0.5 - 2025-10-06
+ * - Removed unique constraint for agency_id + inspector_id (inspector can manage multiple branches)
  * 1.0.4 - 2024-10-01
  * - Added unique constraint for agency_id + inspector_id
  *
