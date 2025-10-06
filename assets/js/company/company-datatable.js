@@ -56,7 +56,7 @@
                         <th>Nama Perusahaan</th>
                         <th>Tipe</th>
                         <th>Level</th>
-                        <th>Agency</th>
+                        <th>Disnaker</th>
                         <th>Unit Kerja</th>
                         <th>Pengawas</th>
                         <th>Aksi</th>

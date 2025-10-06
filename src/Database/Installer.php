@@ -142,6 +142,18 @@ class Installer {
             self::debug("Dropped unique key inspector_agency from branches table");
         }
 
+        // Add unique key for customer_id + regency_id if not exists (prevent multiple branches per customer in same regency)
+        $customer_regency_exists = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+             WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND INDEX_NAME = 'customer_regency'",
+            $wpdb->dbname, $table
+        ));
+
+        if (!$customer_regency_exists) {
+            $wpdb->query("ALTER TABLE {$table} ADD UNIQUE KEY customer_regency (customer_id, regency_id)");
+            self::debug("Added unique key customer_regency to branches table");
+        }
+
         self::debug("Migrations completed");
     }
 }

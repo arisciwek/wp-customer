@@ -266,12 +266,15 @@ class BranchDemoData extends AbstractDemoData {
                 }
             }
 
+            // Generate extra branches for testing assign inspector
+            $this->generateExtraBranchesForTesting();
+
             if ($generated_count === 0) {
                 $this->debug('No new branches were generated - all branches already exist');
             } else {
                 // Reset auto increment only if we added new data
                 $this->wpdb->query(
-                    "ALTER TABLE {$this->wpdb->prefix}app_branches AUTO_INCREMENT = " . 
+                    "ALTER TABLE {$this->wpdb->prefix}app_branches AUTO_INCREMENT = " .
                     (count($this->branch_ids) + 1)
                 );
                 $this->debug("Branch generation completed. Total new branches processed: {$generated_count}");
@@ -457,6 +460,150 @@ class BranchDemoData extends AbstractDemoData {
             $this->branch_ids[] = $branch_id;
             $this->debug("Created cabang branch for customer {$customer->name} in {$regency_name}");
         }
+    }
+
+    /**
+     * Generate extra branches for testing assign inspector functionality
+     * These branches will have inspector_id = NULL so they appear in New Company tab
+     */
+    private function generateExtraBranchesForTesting(): void {
+        $this->debug("Generating extra branches for testing assign inspector...");
+
+        // Generate 15-20 extra branches across all customers
+        $extra_branch_count = rand(15, 20);
+        $generated_extra = 0;
+
+        // Get all customers for random selection
+        $customers = [];
+        foreach ($this->customer_ids as $customer_id) {
+            $customer = $this->customerModel->find($customer_id);
+            if ($customer) {
+                $customers[] = $customer;
+            }
+        }
+
+        if (empty($customers)) {
+            $this->debug("No customers available for extra branch generation");
+            return;
+        }
+
+        $userGenerator = new WPUserGenerator();
+
+        for ($i = 0; $i < $extra_branch_count; $i++) {
+            // Pick random customer
+            $customer = $customers[array_rand($customers)];
+
+            // Generate unique branch admin user
+            $branch_user_id = rand(10000, 99999); // Use high numbers to avoid conflicts
+            $user_data = [
+                'id' => $branch_user_id,
+                'username' => 'branch_admin_test_' . $branch_user_id,
+                'display_name' => 'Branch Admin Test ' . $branch_user_id,
+                'role' => 'customer'
+            ];
+
+            $wp_user_id = $userGenerator->generateUser($user_data);
+            if (!$wp_user_id) {
+                $this->debug("Failed to create test user for extra branch, skipping...");
+                continue;
+            }
+
+            // Get a random division that has jurisdictions
+            $division_data = $this->getRandomDivisionWithJurisdictions();
+            if (!$division_data) {
+                $this->debug("No division with jurisdictions found, skipping...");
+                continue;
+            }
+
+            $division_id = $division_data['id'];
+            $agency_id = $division_data['agency_id'];
+            $provinsi_id = $division_data['provinsi_id'];
+
+            // Get a random regency from this division's jurisdictions that doesn't already have a branch for this customer
+            $regency_id = null;
+            $max_attempts = 10; // Prevent infinite loop
+            $attempts = 0;
+
+            while ($attempts < $max_attempts) {
+                $candidate_regency_id = $this->getRandomRegencyFromDivisionJurisdictions($division_id);
+
+                if (!$candidate_regency_id) {
+                    break; // No more available regencies
+                }
+
+                // Check if this customer already has a branch in this regency
+                $existing_branch = $this->wpdb->get_var($this->wpdb->prepare(
+                    "SELECT id FROM {$this->wpdb->prefix}app_branches
+                     WHERE customer_id = %d AND regency_id = %d",
+                    $customer->id, $candidate_regency_id
+                ));
+
+                if (!$existing_branch) {
+                    $regency_id = $candidate_regency_id;
+                    break;
+                }
+
+                $attempts++;
+            }
+
+            if (!$regency_id) {
+                $this->debug("Could not find available regency for customer {$customer->id} in division {$division_id} after {$max_attempts} attempts, skipping...");
+                continue;
+            }
+
+            $regency_name = $this->getRegencyName($regency_id);
+            // Explicitly set inspector_id to NULL for testing
+            $inspector_id = null;
+
+            $this->debug("Generated extra branch - agency_id: {$agency_id}, division_id: {$division_id}, inspector_id: NULL for provinsi_id: {$provinsi_id}, regency_id: {$regency_id}");
+
+            // Generate unique branch code for testing
+            $branch_code = $customer->code . '-TEST' . str_pad($i + 1, 2, '0', STR_PAD_LEFT);
+
+            $branch_data = [
+                'customer_id' => $customer->id,
+                'code' => $branch_code,
+                'name' => sprintf('%s Test Branch %d - %s',
+                                $customer->name,
+                                $i + 1,
+                                $regency_name),
+                'type' => 'cabang',
+                'nitku' => $this->generateNITKU(),
+                'postal_code' => $this->generatePostalCode(),
+                'latitude' => $location['latitude'],
+                'longitude' => $location['longitude'],
+                'address' => $this->generateAddress($regency_name),
+                'phone' => $this->generatePhone(),
+                'email' => $this->generateEmail($customer->name, 'test' . ($i + 1)),
+                'provinsi_id' => $provinsi_id,
+                'agency_id' => $agency_id,
+                'regency_id' => $regency_id,
+                'division_id' => $division_id,
+                'user_id' => $wp_user_id,
+                'inspector_id' => $inspector_id,  // NULL for testing assign inspector
+                'created_by' => $customer->user_id,
+                'status' => 'active'
+            ];
+
+            $result = $this->wpdb->insert(
+                $this->wpdb->prefix . 'app_branches',
+                $branch_data,
+                ['%d', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%d', null, '%s']  // inspector_id is null
+            );
+
+            if ($result === false) {
+                $this->debug("Failed to create extra test branch: " . $this->wpdb->last_error);
+                continue;
+            }
+
+            $branch_id = $this->wpdb->insert_id;
+            $this->branch_ids[] = $branch_id;
+            $generated_extra++;
+
+            $this->debug("Created extra test branch {$branch_code} for customer {$customer->name} (inspector_id = NULL)");
+        }
+
+        $this->debug("Extra branch generation completed. Generated {$generated_extra} test branches with inspector_id = NULL");
     }
 
     /**
@@ -734,5 +881,107 @@ class BranchDemoData extends AbstractDemoData {
         return (int) $provinces_with_agency[array_rand($provinces_with_agency)];
     }
 
+    /**
+     * Get a random division that has jurisdictions
+     */
+    private function getRandomDivisionWithJurisdictions(): ?array {
+        // Get divisions that have jurisdictions
+        $divisions = $this->wpdb->get_results(
+            "SELECT DISTINCT d.id, d.agency_id, p.id as provinsi_id
+             FROM {$this->wpdb->prefix}app_divisions d
+             INNER JOIN {$this->wpdb->prefix}app_agencies a ON d.agency_id = a.id
+             INNER JOIN {$this->wpdb->prefix}wi_provinces p ON a.provinsi_code = p.code
+             INNER JOIN {$this->wpdb->prefix}app_agency_jurisdictions j ON d.id = j.division_id"
+        );
 
+        if (empty($divisions)) {
+            return null;
+        }
+
+        $division = $divisions[array_rand($divisions)];
+        return [
+            'id' => (int) $division->id,
+            'agency_id' => (int) $division->agency_id,
+            'provinsi_id' => (int) $division->provinsi_id
+        ];
+    }
+
+    /**
+     * Get a random regency from a division's jurisdictions
+     */
+    private function getRandomRegencyFromDivisionJurisdictions(int $division_id): ?int {
+        $regency_ids = $this->wpdb->get_col($this->wpdb->prepare(
+            "SELECT r.id FROM {$this->wpdb->prefix}wi_regencies r
+             INNER JOIN {$this->wpdb->prefix}app_agency_jurisdictions j ON r.code = j.jurisdiction_code
+             WHERE j.division_id = %d",
+            $division_id
+        ));
+
+        if (empty($regency_ids)) {
+            return null;
+        }
+
+        return (int) $regency_ids[array_rand($regency_ids)];
+    }
+
+    /**
+     * Get regency name by ID
+     */
+    private function getRegencyName(int $regency_id): string {
+        $regency_name = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT name FROM {$this->wpdb->prefix}wi_regencies WHERE id = %d",
+            $regency_id
+        ));
+
+        return $regency_name ?: 'Unknown Regency';
+    }
+
+    /**
+     * Generate address string
+     */
+    private function generateAddress(string $regency_name): string {
+        $street_names = ['Jl. Sudirman', 'Jl. Thamrin', 'Jl. Gatot Subroto', 'Jl. Ahmad Yani', 'Jl. Diponegoro'];
+        $street_number = rand(1, 999);
+
+        return sprintf('%s No. %d, %s',
+            $street_names[array_rand($street_names)],
+            $street_number,
+            $regency_name
+        );
+    }
+
+    /**
+     * Validate location data
+     */
+    private function validateLocation(?int $provinsi_id, ?int $regency_id): bool {
+        if (!$provinsi_id || !$regency_id) {
+            return false;
+        }
+
+        $regency = $this->wpdb->get_row($this->wpdb->prepare(
+            "SELECT r.*, p.name as province_name
+             FROM {$this->wpdb->prefix}wi_regencies r
+             JOIN {$this->wpdb->prefix}wi_provinces p ON r.province_id = p.id
+             WHERE r.id = %d AND r.province_id = %d",
+            $regency_id, $provinsi_id
+        ));
+
+        return $regency !== null;
+    }
+
+    /**
+     * Get random regency ID from a province
+     */
+    private function getRandomRegencyId(int $provinsi_id): int {
+        $regency_ids = $this->wpdb->get_col($this->wpdb->prepare(
+            "SELECT id FROM {$this->wpdb->prefix}wi_regencies WHERE province_id = %d",
+            $provinsi_id
+        ));
+
+        if (empty($regency_ids)) {
+            throw new \Exception("No regencies found for province ID: {$provinsi_id}");
+        }
+
+        return (int) $regency_ids[array_rand($regency_ids)];
+    }
 }
