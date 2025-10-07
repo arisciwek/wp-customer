@@ -43,7 +43,7 @@ class BranchModel {
 
     public function __construct() {
         global $wpdb;
-        $this->table = $wpdb->prefix . 'app_branches';
+        $this->table = $wpdb->prefix . 'app_agency_branches';
         $this->customer_table = $wpdb->prefix . 'app_customers';
         $this->customerModel = new CustomerModel();
         $this->cache = new CustomerCacheManager();   
@@ -450,7 +450,7 @@ class BranchModel {
     public function getByCustomer($customer_id) {
         global $wpdb;
 
-        $table = $wpdb->prefix . 'app_branches';
+        $table = $wpdb->prefix . 'app_agency_branches';
 
         $query = $wpdb->prepare(
             "SELECT id, name, address, phone, email, status

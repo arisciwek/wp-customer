@@ -56,7 +56,7 @@ defined('ABSPATH') || exit;
 class BranchesDB {
     public static function get_schema() {
         global $wpdb;
-        $table_name = $wpdb->prefix . 'app_branches';
+        $table_name = $wpdb->prefix . 'app_agency_branches';
         $charset_collate = $wpdb->get_charset_collate();
 
         return "CREATE TABLE {$table_name} (

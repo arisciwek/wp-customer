@@ -352,7 +352,7 @@ class SettingsController {
 
             switch($type) {
                 case 'branch':
-                    $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_branches");
+                    $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_agency_branches");
                     $has_data = ($count > 0);
                     break;
                 case 'customer':

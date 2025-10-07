@@ -21,7 +21,7 @@
  * - WordPress $wpdb
  * - app_customer_membership_levels table
  * - app_customers table
- * - app_branches table
+ * - app_agency_branches table
  *
  * Changelog:
  * 1.0.1 - 2024-02-09
@@ -74,7 +74,7 @@ class CustomerMembershipsDB {
                 ON DELETE CASCADE,
             CONSTRAINT `fk_membership_branch`
                 FOREIGN KEY (branch_id)
-                REFERENCES `{$wpdb->prefix}app_branches` (id)
+                REFERENCES `{$wpdb->prefix}app_agency_branches` (id)
                 ON DELETE CASCADE,
             CONSTRAINT `fk_membership_level`
                 FOREIGN KEY (level_id)

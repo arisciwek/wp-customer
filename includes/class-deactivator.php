@@ -58,7 +58,7 @@ class WP_Customer_Deactivator {
                 // First level - no dependencies
                 'app_customer_memberships',  // Drop this first as it references both customers and levels
                 'app_customer_employees',    // Drop this next as it references customers and branches
-                'app_branches',             // Drop this after employees as it only references customers
+                'app_agency_branches',             // Drop this after employees as it only references customers
                 // Second level - referenced by others
                 'app_customer_membership_levels',  // Can now be dropped as
                 'app_customer_membership_features',  // Can now be dropped as memberships is gone

@@ -27,7 +27,7 @@
  * - WP Database (wi_provinces, wi_regencies)
  * 
  * Database Design:
- * - app_branches
+ * - app_agency_branches
  *   * id             : Primary key
  *   * customer_id    : Foreign key ke customer
  *   * code           : Format Format kode: TTTT-RRXxRRXx-RR (13 karakter)
@@ -205,10 +205,10 @@ class BranchDemoData extends AbstractDemoData {
         
         if ($this->shouldClearData()) {
             // Delete existing branches
-            $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_branches WHERE id > 0");
+            $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_agency_branches WHERE id > 0");
             
             // Reset auto increment
-            $this->wpdb->query("ALTER TABLE {$this->wpdb->prefix}app_branches AUTO_INCREMENT = 1");
+            $this->wpdb->query("ALTER TABLE {$this->wpdb->prefix}app_agency_branches AUTO_INCREMENT = 1");
             
             $this->debug("Cleared existing branch data");
         }
@@ -236,7 +236,7 @@ class BranchDemoData extends AbstractDemoData {
 
                 // Check for existing pusat branch
                 $existing_pusat = $this->wpdb->get_row($this->wpdb->prepare(
-                    "SELECT * FROM {$this->wpdb->prefix}app_branches 
+                    "SELECT * FROM {$this->wpdb->prefix}app_agency_branches 
                      WHERE customer_id = %d AND type = 'pusat'",
                     $customer_id
                 ));
@@ -253,7 +253,7 @@ class BranchDemoData extends AbstractDemoData {
 
                 // Check for existing cabang branches
                 $existing_cabang_count = $this->wpdb->get_var($this->wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$this->wpdb->prefix}app_branches 
+                    "SELECT COUNT(*) FROM {$this->wpdb->prefix}app_agency_branches 
                      WHERE customer_id = %d AND type = 'cabang'",
                     $customer_id
                 ));
@@ -274,7 +274,7 @@ class BranchDemoData extends AbstractDemoData {
             } else {
                 // Reset auto increment only if we added new data
                 $this->wpdb->query(
-                    "ALTER TABLE {$this->wpdb->prefix}app_branches AUTO_INCREMENT = " .
+                    "ALTER TABLE {$this->wpdb->prefix}app_agency_branches AUTO_INCREMENT = " .
                     (count($this->branch_ids) + 1)
                 );
                 $this->debug("Branch generation completed. Total new branches processed: {$generated_count}");
@@ -351,7 +351,7 @@ class BranchDemoData extends AbstractDemoData {
         ];
     
         $result = $this->wpdb->insert(
-            $this->wpdb->prefix . 'app_branches',
+            $this->wpdb->prefix . 'app_agency_branches',
             $branch_data,
             ['%d', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%s']
         );
@@ -446,7 +446,7 @@ class BranchDemoData extends AbstractDemoData {
             ];
 
             $result = $this->wpdb->insert(
-                $this->wpdb->prefix . 'app_branches',
+                $this->wpdb->prefix . 'app_agency_branches',
                 $branch_data,
                 ['%d', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%s']
             );
@@ -533,7 +533,7 @@ class BranchDemoData extends AbstractDemoData {
 
                 // Check if this customer already has a branch in this regency
                 $existing_branch = $this->wpdb->get_var($this->wpdb->prepare(
-                    "SELECT id FROM {$this->wpdb->prefix}app_branches
+                    "SELECT id FROM {$this->wpdb->prefix}app_agency_branches
                      WHERE customer_id = %d AND regency_id = %d",
                     $customer->id, $candidate_regency_id
                 ));
@@ -586,7 +586,7 @@ class BranchDemoData extends AbstractDemoData {
             ];
 
             $result = $this->wpdb->insert(
-                $this->wpdb->prefix . 'app_branches',
+                $this->wpdb->prefix . 'app_agency_branches',
                 $branch_data,
                 ['%d', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%d', null, '%s']  // inspector_id is null
             );

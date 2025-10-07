@@ -37,7 +37,7 @@ class CompanyModel {
 
     public function __construct() {
         global $wpdb;
-        $this->table = $wpdb->prefix . 'app_branches';
+        $this->table = $wpdb->prefix . 'app_agency_branches';
         $this->memberships_table = $wpdb->prefix . 'app_customer_memberships';
         $this->levels_table = $wpdb->prefix . 'app_customer_membership_levels';
         $this->cache = new CustomerCacheManager();

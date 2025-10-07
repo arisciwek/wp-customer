@@ -7,7 +7,7 @@ class Installer {
     // Complete list of tables to install, in dependency order
     private static $tables = [
         'app_customers',
-        'app_branches',
+        'app_agency_branches',
         'app_customer_membership_features', // Added features table
         'app_customer_membership_levels',
         'app_customer_memberships',
@@ -20,7 +20,7 @@ class Installer {
         'app_customer_membership_levels' => Tables\CustomerMembershipLevelsDB::class,
         'app_customer_membership_features' => Tables\CustomerMembershipFeaturesDB::class,
         'app_customer_memberships' => Tables\CustomerMembershipsDB::class,
-        'app_branches' => Tables\BranchesDB::class,
+        'app_agency_branches' => Tables\BranchesDB::class,
         'app_customer_employees' => Tables\CustomerEmployeesDB::class
     ];
 
@@ -90,7 +90,7 @@ class Installer {
         self::debug("Running migrations...");
 
         // Migration for adding agency_id, division_id, inspector_id to branches table
-        $table = $wpdb->prefix . 'app_branches';
+        $table = $wpdb->prefix . 'app_agency_branches';
         $columns = $wpdb->get_results("DESCRIBE {$table}");
 
         $has_agency_id = false;

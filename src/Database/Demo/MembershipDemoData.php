@@ -82,7 +82,7 @@ class MembershipDemoData extends AbstractDemoData {
             $tables = [
                 'app_customer_memberships',
                 'app_customer_membership_levels',
-                'app_branches'
+                'app_agency_branches'
             ];
 
             foreach ($tables as $table) {
@@ -99,7 +99,7 @@ class MembershipDemoData extends AbstractDemoData {
 
             // Check for existing branches
             $branch_count = $wpdb->get_var("
-                SELECT COUNT(*) FROM {$wpdb->prefix}app_branches 
+                SELECT COUNT(*) FROM {$wpdb->prefix}app_agency_branches 
                 WHERE status = 'active'
             ");
             if ($branch_count == 0) {
@@ -129,7 +129,7 @@ class MembershipDemoData extends AbstractDemoData {
             // Get all active branches
             $branches = $wpdb->get_results("
                 SELECT b.*, c.user_id as customer_user_id 
-                FROM {$wpdb->prefix}app_branches b
+                FROM {$wpdb->prefix}app_agency_branches b
                 JOIN {$wpdb->prefix}app_customers c ON b.customer_id = c.id
                 WHERE b.status = 'active'
             ");
