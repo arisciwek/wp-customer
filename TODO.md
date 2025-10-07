@@ -1,5 +1,11 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2112: Remove Customer Level Membership Tab and Unused Files
+- [x] Issue: Membership berlaku di level branch (company), bukan customer. Tab membership di customer right panel perlu dihapus beserta file-file terkait yang tidak digunakan lagi.
+- [x] Target: Hapus tab membership, enqueue CSS/JS terkait, dan file-file yang tidak digunakan.
+- [x] Files: customer-right-panel.php, class-dependencies.php, hapus customer-membership.js dan customer-membership-tab-style.css
+- [x] Status: Completed
+
 ## Mismatch in company datatable
 - [x] TODO-2056: Fix heading mismatch in company datatable - change 'Agency' to 'Disnaker' in the columns title for agency_name in company-datatable.js
 

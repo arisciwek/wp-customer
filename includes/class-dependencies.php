@@ -203,7 +203,6 @@ public function enqueue_frontend_assets() {
 
             // Customer styles
             wp_enqueue_style('wp-customer-customer', WP_CUSTOMER_URL . 'assets/css/customer/customer-style.css', [], $this->version);
-            wp_enqueue_style('wp-customer-membership-levels-tab', WP_CUSTOMER_URL . 'assets/css/customer/customer-membership-tab-style.css', [], $this->version);
 
             wp_enqueue_style('wp-customer-customer-form', WP_CUSTOMER_URL . 'assets/css/customer/customer-form.css', [], $this->version);
 
@@ -420,13 +419,6 @@ public function enqueue_frontend_assets() {
             wp_enqueue_script('employee-toast', WP_CUSTOMER_URL . 'assets/js/employee/employee-toast.js', ['jquery'], $this->version, true);
             wp_enqueue_script('create-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/create-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
             wp_enqueue_script('edit-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/edit-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
-            wp_enqueue_script(
-                'wp-customer-membership',
-                WP_CUSTOMER_URL . 'assets/js/customer/customer-membership.js',
-                ['jquery', 'wp-customer', 'customer-toast'],
-                WP_CUSTOMER_VERSION,
-                true
-            );
 
             // Gunakan wpCustomerData untuk semua
             $customer_nonce = wp_create_nonce('wp_customer_nonce');

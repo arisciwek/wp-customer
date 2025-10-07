@@ -1,6 +1,22 @@
 
 <?php
-
+/**
+ * Customer Right Panel Template
+ *
+ * @package     WP_Customer
+ * @subpackage  Views/Templates
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/src/Views/templates/customer-right-panel.php
+ *
+ * Description: Template untuk panel kanan detail customer
+ *
+ * Changelog:
+ * 1.0.0 - 2024-12-20
+ * - Initial creation
+ * - Removed membership tab as membership applies at company level
+ */
 
 ?>
 
@@ -15,7 +31,6 @@
 
 <div class="nav-tab-wrapper">
     <a href="#" class="nav-tab nav-tab-customer-details nav-tab-active" data-tab="customer-details">Data Customer</a>
-    <a href="#" class="nav-tab" data-tab="membership-info">Membership</a>
     <a href="#" class="nav-tab" data-tab="branch-list">Cabang</a>
     <a href="#" class="nav-tab" data-tab="employee-list">Staff</a>
 </div>
@@ -26,7 +41,6 @@
 
 foreach ([
     'customer/partials/_customer_details.php',
-    'customer/partials/_customer_membership.php',
     'branch/partials/_customer_branch_list.php',
     'employee/partials/_employee_list.php'
 ] as $template) {
