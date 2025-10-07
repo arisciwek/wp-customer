@@ -457,7 +457,7 @@ class BranchValidator {
         global $wpdb;
         
         $branch_count = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}app_agency_branches WHERE customer_id = %d",
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches WHERE customer_id = %d",
             $customer_id
         ));
 
@@ -481,7 +481,7 @@ class BranchValidator {
 
         // Get current branch type
         $current_branch = $wpdb->get_row($wpdb->prepare(
-            "SELECT type FROM {$wpdb->prefix}app_agency_branches 
+            "SELECT type FROM {$wpdb->prefix}app_customer_branches 
              WHERE id = %d AND customer_id = %d",
             $branch_id, $customer_id
         ));
@@ -493,7 +493,7 @@ class BranchValidator {
 
         // Count remaining 'pusat' branches excluding current branch
         $pusat_count = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}app_agency_branches 
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches 
              WHERE customer_id = %d AND type = 'pusat' AND id != %d",
             $customer_id, $branch_id
         ));
@@ -513,7 +513,7 @@ class BranchValidator {
         
         // Get branch details including customer_id and type
         $branch = $wpdb->get_row($wpdb->prepare(
-            "SELECT type, customer_id FROM {$wpdb->prefix}app_agency_branches WHERE id = %d",
+            "SELECT type, customer_id FROM {$wpdb->prefix}app_customer_branches WHERE id = %d",
             $branch_id
         ));
 
@@ -528,7 +528,7 @@ class BranchValidator {
 
         // Count active non-pusat branches
         $active_branches = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$wpdb->prefix}app_agency_branches 
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches 
              WHERE customer_id = %d 
              AND type = 'cabang' 
              AND status = 'active'

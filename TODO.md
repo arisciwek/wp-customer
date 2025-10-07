@@ -1,8 +1,22 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2118: Implement Customer Payments Components
+- Issue: Customer Payments table exists but lacks Controller, Model, and Validator components
+- Root Cause: Application layer components missing for payment processing and tracking
+- Target: Create CompanyPaymentModel, CompanyPaymentController, CompanyPaymentValidator
+- Files: src/Models/Company/CompanyPaymentModel.php, src/Controllers/Company/CompanyPaymentController.php, src/Validators/Company/CompanyPaymentValidator.php
+- Status: Pending
+
+## TODO-2117: Implement Customer Invoices Components
+- Issue: Customer Invoices table exists but lacks Controller, Model, and Validator components
+- Root Cause: Application layer components missing for invoice management
+- Target: Create CompanyInvoiceModel, CompanyInvoiceController, CompanyInvoiceValidator
+- Files: src/Models/Company/CompanyInvoiceModel.php, src/Controllers/Company/CompanyInvoiceController.php, src/Validators/Company/CompanyInvoiceValidator.php
+- Status: Completed
+
 ## TODO-2116: Fix Table Name Mismatch for Branches Table
 - Issue: Table 'wppm.wp_app_customer_branches' doesn't exist during plugin activation
-- Root Cause: BranchesDB.php uses 'app_agency_branches' while Installer.php uses 'app_customer_branches'
+- Root Cause: BranchesDB.php uses 'app_customer_branches' while Installer.php uses 'app_customer_branches'
 - Target: Update BranchesDB.php schema to use 'app_customer_branches'
 - Files: src/Database/Tables/BranchesDB.php, src/Database/Installer.php
 - Status: Completed

@@ -52,7 +52,7 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
             }
 
             $branch_count = $this->wpdb->get_var(
-                "SELECT COUNT(*) FROM {$this->wpdb->prefix}app_agency_branches"
+                "SELECT COUNT(*) FROM {$this->wpdb->prefix}app_customer_branches"
             );
             
             if ($branch_count == 0) {
@@ -109,7 +109,7 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
 
 		    // Ambil branch pusat untuk assign owner
 		    $pusat_branch = $this->wpdb->get_row($this->wpdb->prepare(
-		        "SELECT * FROM {$this->wpdb->prefix}app_agency_branches 
+		        "SELECT * FROM {$this->wpdb->prefix}app_customer_branches 
 		         WHERE customer_id = %d AND type = 'pusat'",
 		        $customer->id
 		    ));
@@ -133,7 +133,7 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
         // 2. Branch admins (ID 12-41)
         for ($id = 12; $id <= 41; $id++) {
             $branch = $this->wpdb->get_row($this->wpdb->prepare(
-                "SELECT * FROM {$this->wpdb->prefix}app_agency_branches WHERE user_id = %d",
+                "SELECT * FROM {$this->wpdb->prefix}app_customer_branches WHERE user_id = %d",
                 $id
             ));
 

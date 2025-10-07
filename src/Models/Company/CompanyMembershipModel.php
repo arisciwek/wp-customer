@@ -36,6 +36,9 @@
 namespace WPCustomer\Models\Company;
 
 use WPCustomer\Cache\CustomerCacheManager;
+use WPCustomer\Models\Customer\CustomerModel;
+use WPCustomer\Models\Company\CompanyModel;
+use WPCustomer\Models\Company\CompanyInvoiceModel;
 
 class CompanyMembershipModel {
     /**
@@ -52,6 +55,24 @@ class CompanyMembershipModel {
     private $cache;
 
     /**
+     * Customer model instance
+     * @var CustomerModel
+     */
+    private $customer_model;
+
+    /**
+     * Company model instance
+     * @var CompanyModel
+     */
+    private $company_model;
+
+    /**
+     * Invoice model instance
+     * @var CompanyInvoiceModel
+     */
+    private $invoice_model;
+
+    /**
      * Constructor
      */
     public function __construct() {
@@ -59,6 +80,9 @@ class CompanyMembershipModel {
         $this->table = $wpdb->prefix . 'app_customer_memberships';
         $this->levels_table = $wpdb->prefix . 'app_customer_membership_levels';
         $this->cache = new CustomerCacheManager();
+        $this->customer_model = new CustomerModel();
+        $this->company_model = new CompanyModel();
+        $this->invoice_model = new CompanyInvoiceModel();
     }
 
     public function findByCompany($company_id) {
@@ -516,9 +540,9 @@ class CompanyMembershipModel {
 
         global $wpdb;
         $count = (int) $wpdb->get_var($wpdb->prepare("
-            SELECT COUNT(*) 
+            SELECT COUNT(*)
             FROM {$wpdb->prefix}app_customer_employees
-            WHERE branch_id = %d 
+            WHERE branch_id = %d
             AND status = 'active'
         ", $company_id));
 
@@ -526,6 +550,97 @@ class CompanyMembershipModel {
         $this->cache->set('customer_active_employee_count', $count, 300, $company_id);
 
         return $count;
+    }
+
+    /**
+     * Alias for findByCompany
+     *
+     * @param int $company_id Customer ID
+     * @return object|null Membership data or null
+     */
+    public function findByCustomer(int $company_id) {
+        return $this->findByCompany($company_id);
+    }
+
+    /**
+     * Get customer data by branch ID
+     *
+     * @param int $branch_id Branch ID
+     * @return object|null Customer data or null
+     */
+    public function getCustomerData(int $branch_id) {
+        $branch = $this->company_model->getBranchWithLatestMembership($branch_id);
+        if (!$branch) {
+            return null;
+        }
+        return $this->customer_model->find($branch->customer_id);
+    }
+
+    /**
+     * Get active branch count for a customer
+     *
+     * @param int $branch_id Branch ID
+     * @return int Number of active branches
+     */
+    public function getActiveBranchCount(int $branch_id): int {
+        // Get customer ID from branch
+        $branch = $this->company_model->getBranchWithLatestMembership($branch_id);
+        if (!$branch) {
+            return 0;
+        }
+        $customer_id = $branch->customer_id;
+
+        // Check cache first
+        $cached_count = $this->cache->get('customer_active_branch_count', $customer_id);
+        if ($cached_count !== null) {
+            return (int) $cached_count;
+        }
+
+        global $wpdb;
+        $count = (int) $wpdb->get_var($wpdb->prepare("
+            SELECT COUNT(*)
+            FROM {$wpdb->prefix}app_customer_branches
+            WHERE customer_id = %d
+            AND status = 'active'
+        ", $customer_id));
+
+        // Cache for 5 minutes since branch count can change
+        $this->cache->set('customer_active_branch_count', $count, 300, $customer_id);
+
+        return $count;
+    }
+
+    /**
+     * Get unpaid invoice count for a customer
+     *
+     * @param int $branch_id Branch ID
+     * @return int Number of unpaid invoices
+     */
+    public function getUnpaidInvoiceCount(int $branch_id): int {
+        // Get customer ID from branch
+        $branch = $this->company_model->getBranchWithLatestMembership($branch_id);
+        if (!$branch) {
+            return 0;
+        }
+        $customer_id = $branch->customer_id;
+
+        // Use the invoice model to get the count
+        return $this->invoice_model->getUnpaidInvoiceCount($customer_id);
+    }
+
+    /**
+     * Get company data by company ID (which is branch ID)
+     *
+     * @param int $company_id Branch ID
+     * @return object|null Customer data object or null
+     */
+    public function getCompanyData(int $company_id) {
+        // company_id is actually branch_id
+        $branch = $this->company_model->getBranchWithLatestMembership($company_id);
+        if (!$branch) {
+            return null;
+        }
+        return $this->customer_model->find($branch->customer_id);
     }
 
 }

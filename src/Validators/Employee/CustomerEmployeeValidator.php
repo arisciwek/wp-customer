@@ -320,7 +320,7 @@ class CustomerEmployeeValidator {
    private function isBranchAdmin($user_id, $branch_id): bool {
        global $wpdb;
        return (bool)$wpdb->get_var($wpdb->prepare(
-           "SELECT COUNT(*) FROM {$wpdb->prefix}app_agency_branches 
+           "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches 
             WHERE id = %d AND user_id = %d",
            $branch_id, $user_id
        ));

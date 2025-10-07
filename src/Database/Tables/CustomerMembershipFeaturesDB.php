@@ -86,8 +86,7 @@ class CustomerMembershipFeaturesDB {
                 KEY status (status),
                 KEY group_id_index (group_id),
                 KEY created_by_index (created_by),
-                KEY sort_order_index (sort_order),
-                FOREIGN KEY (group_id) REFERENCES {$table_groups}(id)
+                KEY sort_order_index (sort_order)
             ) $charset_collate;";
     }
 

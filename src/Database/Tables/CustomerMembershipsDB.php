@@ -21,13 +21,17 @@
  * - WordPress $wpdb
  * - app_customer_membership_levels table
  * - app_customers table
- * - app_agency_branches table
+ * - app_customer_branches table
  *
  * Changelog:
+ * 1.0.2 - 2024-10-08
+ * - Added upgrade tracking fields (upgrade_to_level_id, upgrade_period_months, upgrade_payment_id, upgrade_requested_at)
+ * - Added index for upgrade_to_level_id
+ *
  * 1.0.1 - 2024-02-09
  * - Added branch_id field with foreign key constraint
  * - Added branch relationship tracking
- * 
+ *
  * 1.0.0 - 2024-02-08
  * - Initial version
  * - Added membership status tracking
@@ -59,6 +63,10 @@ class CustomerMembershipsDB {
             payment_method varchar(50) NULL,
             payment_status enum('paid','pending','failed','refunded') NOT NULL DEFAULT 'pending',
             payment_date datetime NULL,
+            upgrade_to_level_id bigint(20) UNSIGNED NULL,
+            upgrade_period_months int NULL,
+            upgrade_payment_id varchar(50) NULL,
+            upgrade_requested_at datetime NULL,
             created_by bigint(20) UNSIGNED NOT NULL,
             created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime NULL ON UPDATE CURRENT_TIMESTAMP,
@@ -68,18 +76,7 @@ class CustomerMembershipsDB {
             KEY level_id (level_id),
             KEY status (status),
             KEY end_date (end_date),
-            CONSTRAINT `fk_membership_customer` 
-                FOREIGN KEY (customer_id) 
-                REFERENCES `{$wpdb->prefix}app_customers` (id)
-                ON DELETE CASCADE,
-            CONSTRAINT `fk_membership_branch`
-                FOREIGN KEY (branch_id)
-                REFERENCES `{$wpdb->prefix}app_agency_branches` (id)
-                ON DELETE CASCADE,
-            CONSTRAINT `fk_membership_level`
-                FOREIGN KEY (level_id)
-                REFERENCES `{$wpdb->prefix}app_customer_membership_levels` (id)
-                ON DELETE RESTRICT
+            KEY upgrade_to_level_id (upgrade_to_level_id)
         ) $charset_collate;";
     }
 }

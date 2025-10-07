@@ -12,6 +12,7 @@ class Installer {
         'app_customer_membership_levels',
         'app_customer_memberships',
         'app_customer_invoices',
+        'app_customer_payments',
         'app_customer_employees'
     ];
 
@@ -22,6 +23,7 @@ class Installer {
         'app_customer_membership_features' => Tables\CustomerMembershipFeaturesDB::class,
         'app_customer_memberships' => Tables\CustomerMembershipsDB::class,
         'app_customer_invoices' => Tables\CustomerInvoicesDB::class,
+        'app_customer_payments' => Tables\CustomerPaymentsDB::class,
         'app_customer_branches' => Tables\BranchesDB::class,
         'app_customer_employees' => Tables\CustomerEmployeesDB::class
     ];

@@ -39,7 +39,7 @@ class CustomerEmployeeModel {
         global $wpdb;
         $this->table = $wpdb->prefix . 'app_customer_employees';
         $this->customer_table = $wpdb->prefix . 'app_customers';
-        $this->branch_table = $wpdb->prefix . 'app_agency_branches';
+        $this->branch_table = $wpdb->prefix . 'app_customer_branches';
         $this->cache = new CustomerCacheManager();
     }
 

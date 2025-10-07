@@ -368,10 +368,15 @@ class CompanyMembershipController {
             
             $company_id = $result;
             $period_months = isset($_POST['period_months']) ? intval($_POST['period_months']) : 1;
-            
+
+            // Ensure period_months is at least 1
+            if ($period_months <= 0) {
+                $period_months = 1;
+            }
+
             // Validate period_months
-            if ($period_months < 1 || $period_months > 12) {
-                throw new \Exception(__('Periode tidak valid. Silakan pilih antara 1-12 bulan.', 'wp-customer'));
+            if ($period_months > 12) {
+                throw new \Exception(__('Periode tidak valid. Maksimal 12 bulan.', 'wp-customer'));
             }
 
             // Try to get from cache first
@@ -449,8 +454,8 @@ class CompanyMembershipController {
                 // Calculate savings compared to monthly payments
                 $monthly_total = floatval($level['price_per_month']) * $period_months;
                 $discount_percentage = 0;
-                
-                if ($period_months > 1) {
+
+                if ($period_months > 1 && $monthly_total > 0) {
                     $discount_percentage = ($monthly_total - $upgrade_price) / $monthly_total * 100;
                 }
                 
@@ -900,7 +905,7 @@ class CompanyMembershipController {
      */
     private function sendUpgradeNotification($company_id, $current_level, $target_level, $upgrade_price) {
         // Get customer data
-        $customer = $this->membership_model->getCustomerData($company_id);
+        $customer = $this->membership_model->getCompanyData($company_id);
         if (!$customer) {
             return;
         }

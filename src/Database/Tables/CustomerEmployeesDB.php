@@ -78,11 +78,7 @@ class CustomerEmployeesDB {
             PRIMARY KEY (id),
             UNIQUE KEY email (email),
             KEY customer_id_index (customer_id),
-            KEY created_by_index (created_by),
-            CONSTRAINT `{$wpdb->prefix}app_customer_employees_ibfk_1` 
-                FOREIGN KEY (customer_id) 
-                REFERENCES `{$wpdb->prefix}app_customers` (id) 
-                ON DELETE CASCADE
+            KEY created_by_index (created_by)
         ) $charset_collate;";
     }
 }

@@ -65,7 +65,7 @@ class CustomerMembershipLevelsDB {
             grace_period_days int NOT NULL DEFAULT 0,
             sort_order int NOT NULL DEFAULT 0,
             capabilities JSON NULL,
-            settings JSON NULL,           /* Tambahan untuk pengaturan level spesifik */
+            settings JSON NULL,
             created_by bigint(20) NOT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
