@@ -61,6 +61,26 @@
     font-size: 1.3em;
 }
 
+/* Reload Button Styles */
+#reload-companies {
+    background: #2271b1;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+}
+
+#reload-companies:hover {
+    background: #135e96;
+}
+
+#reload-companies:active {
+    background: #0d4a7a;
+}
+
 .wi-panel-content {
     padding: 20px;
 }

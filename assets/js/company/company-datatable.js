@@ -106,7 +106,7 @@
                     },
                     {
                         data: 'agency_name',
-                        title: 'Agency',
+                        title: 'Disnaker',
                         width: '120px',
                         defaultContent: '-'
                     },
@@ -172,6 +172,9 @@
             // Hash change event
             $(window).off('hashchange.companyTable')
                     .on('hashchange.companyTable', () => this.handleHashChange());
+
+            // Reload button event
+            $('#reload-companies').off('click').on('click', () => this.refresh());
         },
 
         bindActionButtons() {

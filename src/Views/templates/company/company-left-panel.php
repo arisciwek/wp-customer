@@ -20,6 +20,7 @@ defined('ABSPATH') || exit;
 <div id="wp-company-left-panel" class="wp-company-left-panel">
     <div class="wi-panel-header">
         <h2>Daftar Perusahaan</h2>
+        <button id="reload-companies" class="btn btn-sm btn-secondary">Reload</button>
     </div>
     
     <div class="wi-panel-content">
