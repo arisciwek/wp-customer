@@ -92,7 +92,7 @@ class CompanyModel {
         return $result;
     }
 
-    public function getDataTableData(int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
+    public function getDataTableData(int $start, int $length, string $search, string $orderColumn, string $orderDir, int $filterAktif = 1, int $filterTidakAktif = 0): array {
         // Dapatkan access_type dari validator
         global $wp_branch_validator;
         if (!$wp_branch_validator) {
@@ -105,11 +105,12 @@ class CompanyModel {
         $cached_result = $this->cache->getDataTableCache(
             'company_list',
             $access_type,
-            $start, 
+            $start,
             $length,
             $search,
             $orderColumn,
-            strtolower($orderDir)
+            strtolower($orderDir),
+            ['filter_aktif' => $filterAktif, 'filter_tidak_aktif' => $filterTidakAktif]
         );
 
         if ($cached_result) {
@@ -163,6 +164,19 @@ class CompanyModel {
                 $search_term,
                 $search_term
             );
+        }
+
+        // Add filter conditions
+        $filter_conditions = [];
+        if ($filterAktif && !$filterTidakAktif) {
+            $filter_conditions[] = "m.status = 'active'";
+        } elseif (!$filterAktif && $filterTidakAktif) {
+            $filter_conditions[] = "(m.status != 'active' OR m.status IS NULL)";
+        } elseif (!$filterAktif && !$filterTidakAktif) {
+            $filter_conditions[] = "1=0"; // No results if no filter selected
+        }
+        if (!empty($filter_conditions)) {
+            $where .= " AND " . implode(" AND ", $filter_conditions);
         }
 
         // Validate order column
@@ -259,7 +273,8 @@ class CompanyModel {
             $search,
             $orderColumn,
             strtolower($orderDir),
-            $result
+            $result,
+            ['filter_aktif' => $filterAktif, 'filter_tidak_aktif' => $filterTidakAktif]
         );
         
         return $result;

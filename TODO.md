@@ -1,5 +1,12 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2119: Add Aktif/Tidak Aktif Filter to Company DataTable
+- Issue: Company datatable lacks filter functionality for active/inactive companies
+- Root Cause: No UI elements or backend logic to filter companies by membership status
+- Target: Add multiselect filter with checkboxes for Aktif (default ON) and Tidak aktif (default OFF), AJAX supported
+- Files: src/Views/templates/company/company-left-panel.php, assets/css/company/company-style.css, assets/js/company/company-datatable.js, src/Controllers/Company/CompanyController.php, src/Models/Company/CompanyModel.php
+- Status: Completed
+
 ## TODO-2118: Implement Customer Payments Components
 - Issue: Customer Payments table exists but lacks Controller, Model, and Validator components
 - Root Cause: Application layer components missing for payment processing and tracking

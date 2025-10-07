@@ -24,6 +24,16 @@ defined('ABSPATH') || exit;
     </div>
     
     <div class="wi-panel-content">
+        <div class="company-filter-section">
+            <label class="filter-checkbox">
+                <input type="checkbox" id="filter-aktif" checked>
+                <span>Aktif</span>
+            </label>
+            <label class="filter-checkbox">
+                <input type="checkbox" id="filter-tidak-aktif">
+                <span>Tidak aktif</span>
+            </label>
+        </div>
         <table id="companies-table" class="display" style="width:100%">
             <thead>
                 <tr>

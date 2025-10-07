@@ -166,17 +166,19 @@ class CompanyController {
             $start = isset($_POST['start']) ? intval($_POST['start']) : 0;
             $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
             $search = isset($_POST['search']['value']) ? sanitize_text_field($_POST['search']['value']) : '';
-            
+            $filterAktif = isset($_POST['filter_aktif']) ? intval($_POST['filter_aktif']) : 1;
+            $filterTidakAktif = isset($_POST['filter_tidak_aktif']) ? intval($_POST['filter_tidak_aktif']) : 0;
+
             // Order parameters
-            $orderColumn = isset($_POST['order'][0]['column']) && isset($_POST['columns'][$_POST['order'][0]['column']]['data']) 
+            $orderColumn = isset($_POST['order'][0]['column']) && isset($_POST['columns'][$_POST['order'][0]['column']]['data'])
                 ? sanitize_text_field($_POST['columns'][$_POST['order'][0]['column']]['data'])
                 : 'name';
             $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
 
             $access = $this->branchValidator->validateAccess(0);
-            
+
             // Get fresh data
-            $result = $this->model->getDataTableData($start, $length, $search, $orderColumn, $orderDir);
+            $result = $this->model->getDataTableData($start, $length, $search, $orderColumn, $orderDir, $filterAktif, $filterTidakAktif);
             if (!$result) {
                 throw new \Exception('Failed to fetch company data');
             }

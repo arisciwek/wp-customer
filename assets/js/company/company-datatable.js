@@ -75,7 +75,9 @@
                         return {
                             ...d,
                             action: 'handle_company_datatable',
-                            nonce: wpCustomerData.nonce
+                            nonce: wpCustomerData.nonce,
+                            filter_aktif: $('#filter-aktif').is(':checked') ? 1 : 0,
+                            filter_tidak_aktif: $('#filter-tidak-aktif').is(':checked') ? 1 : 0
                         };
                     },
                     error: (xhr, error, thrown) => {
@@ -175,6 +177,9 @@
 
             // Reload button event
             $('#reload-companies').off('click').on('click', () => this.refresh());
+
+            // Filter events
+            $('#filter-aktif, #filter-tidak-aktif').off('change').on('change', () => this.refresh());
         },
 
         bindActionButtons() {
