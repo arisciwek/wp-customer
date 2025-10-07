@@ -1,5 +1,11 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2113: Remove 'Test' Text from BranchDemoData.php
+- Issue: Teks 'Test Branch' di BranchDemoData.php tidak diperlukan untuk demo ini.
+- Target: Ubah 'Test Branch' menjadi 'Branch' di generateExtraBranchesForTesting method
+- Files: src/Database/Demo/BranchDemoData.php
+- Status: Completed
+
 ## TODO-2112: Remove Customer Level Membership Tab and Unused Files
 - [x] Issue: Membership berlaku di level branch (company), bukan customer. Tab membership di customer right panel perlu dihapus beserta file-file terkait yang tidak digunakan lagi.
 - [x] Target: Hapus tab membership, enqueue CSS/JS terkait, dan file-file yang tidak digunakan.

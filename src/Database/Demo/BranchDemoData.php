@@ -266,8 +266,8 @@ class BranchDemoData extends AbstractDemoData {
                 }
             }
 
-            // Generate extra branches for testing assign inspector
-            $this->generateExtraBranchesForTesting();
+            // Generate extra branches for assign inspector
+            $this->generateExtraBranches();
 
             if ($generated_count === 0) {
                 $this->debug('No new branches were generated - all branches already exist');
@@ -419,7 +419,7 @@ class BranchDemoData extends AbstractDemoData {
 
             // Generate branch code: customer_code + cabang number + random 2 digits
             $cabang_num = str_replace('cabang', '', $cabang_key);
-            $branch_code = $customer->code . '-' . $cabang_num . str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
+            $branch_code = $customer->code . ' ' . $cabang_num . str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
 
             $branch_data = [
                 'customer_id' => $customer->id,
@@ -466,7 +466,7 @@ class BranchDemoData extends AbstractDemoData {
      * Generate extra branches for testing assign inspector functionality
      * These branches will have inspector_id = NULL so they appear in New Company tab
      */
-    private function generateExtraBranchesForTesting(): void {
+    private function generateExtraBranches(): void {
         $this->debug("Generating extra branches for testing assign inspector...");
 
         // Generate 15-20 extra branches across all customers
@@ -497,14 +497,14 @@ class BranchDemoData extends AbstractDemoData {
             $branch_user_id = rand(10000, 99999); // Use high numbers to avoid conflicts
             $user_data = [
                 'id' => $branch_user_id,
-                'username' => 'branch_admin_test_' . $branch_user_id,
-                'display_name' => 'Branch Admin Test ' . $branch_user_id,
+                'username' => 'branch_admin' . $branch_user_id,
+                'display_name' => 'Branch Admin ' . $branch_user_id,
                 'role' => 'customer'
             ];
 
             $wp_user_id = $userGenerator->generateUser($user_data);
             if (!$wp_user_id) {
-                $this->debug("Failed to create test user for extra branch, skipping...");
+                $this->debug("Failed to create user for extra branch, skipping...");
                 continue;
             }
 
@@ -558,15 +558,14 @@ class BranchDemoData extends AbstractDemoData {
             $this->debug("Generated extra branch - agency_id: {$agency_id}, division_id: {$division_id}, inspector_id: NULL for provinsi_id: {$provinsi_id}, regency_id: {$regency_id}");
 
             // Generate unique branch code for testing
-            $branch_code = $customer->code . '-TEST' . str_pad($i + 1, 2, '0', STR_PAD_LEFT);
+            $branch_code = $customer->code . ' ' . str_pad($i + 1, 2, '0', STR_PAD_LEFT);
 
             $branch_data = [
                 'customer_id' => $customer->id,
                 'code' => $branch_code,
-                'name' => sprintf('%s Test Branch %d - %s',
-                                $customer->name,
-                                $i + 1,
-                                $regency_name),
+                'name' => sprintf('%s Cabang %s',
+                                  $customer->name,
+                                  $regency_name),
                 'type' => 'cabang',
                 'nitku' => $this->generateNITKU(),
                 'postal_code' => $this->generatePostalCode(),
@@ -592,7 +591,7 @@ class BranchDemoData extends AbstractDemoData {
             );
 
             if ($result === false) {
-                $this->debug("Failed to create extra test branch: " . $this->wpdb->last_error);
+                $this->debug("Failed to create extra branch: " . $this->wpdb->last_error);
                 continue;
             }
 
@@ -600,10 +599,10 @@ class BranchDemoData extends AbstractDemoData {
             $this->branch_ids[] = $branch_id;
             $generated_extra++;
 
-            $this->debug("Created extra test branch {$branch_code} for customer {$customer->name} (inspector_id = NULL)");
+            $this->debug("Created extra branch {$branch_code} for customer {$customer->name} (inspector_id = NULL)");
         }
 
-        $this->debug("Extra branch generation completed. Generated {$generated_extra} test branches with inspector_id = NULL");
+        $this->debug("Extra branch generation completed. Generated {$generated_extra} branches with inspector_id = NULL");
     }
 
     /**
@@ -985,3 +984,4 @@ class BranchDemoData extends AbstractDemoData {
         return (int) $regency_ids[array_rand($regency_ids)];
     }
 }
+
