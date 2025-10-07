@@ -1,5 +1,26 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2116: Fix Table Name Mismatch for Branches Table
+- Issue: Table 'wppm.wp_app_customer_branches' doesn't exist during plugin activation
+- Root Cause: BranchesDB.php uses 'app_agency_branches' while Installer.php uses 'app_customer_branches'
+- Target: Update BranchesDB.php schema to use 'app_customer_branches'
+- Files: src/Database/Tables/BranchesDB.php, src/Database/Installer.php
+- Status: Completed
+
+## TODO-2115: Implement Customer Invoices Table
+- Issue: getUnpaidInvoiceCount returns 0 because app_customer_invoices table doesn't exist
+- Root Cause: Invoices functionality referenced but table not created
+- Target: Create table schema and update getUnpaidInvoiceCount method
+- Files: src/Database/Tables/CustomerInvoicesDB.php, src/Models/Company/CompanyMembershipModel.php
+- Status: Completed
+
+## TODO-2114: Fix Undefined Methods in CompanyMembershipModel
+- Issue: PHP Fatal error: Call to undefined method getCustomerData() in CompanyMembershipValidator.php:45
+- Root Cause: CompanyMembershipModel missing methods for upgrade validation
+- Target: Add getCustomerData, getActiveBranchCount, getUnpaidInvoiceCount, findByCustomer methods
+- Files: src/Models/Company/CompanyMembershipModel.php
+- Status: Completed
+
 ## TODO-2113: Remove 'Test' Text from BranchDemoData.php
 - Issue: Teks 'Test Branch' di BranchDemoData.php tidak diperlukan untuk demo ini.
 - Target: Ubah 'Test Branch' menjadi 'Branch' di generateExtraBranchesForTesting method
