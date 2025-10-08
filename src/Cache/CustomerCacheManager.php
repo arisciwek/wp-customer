@@ -231,12 +231,17 @@ class CustomerCacheManager {
         string $orderDir,
         ?array $additionalParams = null
     ) {
+        // Disable caching for company_list to ensure fresh data after inspector assignments
+        if ($context === 'company_list') {
+            return null;
+        }
+
         // Validate required parameters
         if (empty($context) || !$access_type || !is_numeric($start) || !is_numeric($length)) {
             $this->debug_log('Invalid parameters in getDataTableCache');
             return null;
         }
-        
+
         try {
             // Build components untuk kunci cache
             $components = [
@@ -279,6 +284,11 @@ class CustomerCacheManager {
         $data,
         ?array $additionalParams = null
     ) {
+        // Disable caching for company_list to ensure fresh data after inspector assignments
+        if ($context === 'company_list') {
+            return true;
+        }
+
         // Validate required parameters
         if (empty($context) || !$access_type || !is_numeric($start) || !is_numeric($length)) {
             $this->debug_log('Invalid parameters in setDataTableCache');
