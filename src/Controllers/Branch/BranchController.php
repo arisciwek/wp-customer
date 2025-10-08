@@ -718,7 +718,7 @@ class BranchController {
                 SELECT DISTINCT r.id, r.name, r.code
                 FROM {$wpdb->prefix}wi_regencies r
                 INNER JOIN {$wpdb->prefix}app_agency_jurisdictions j ON r.code = j.jurisdiction_code
-                INNER JOIN {$wpdb->prefix}app_divisions d ON j.division_id = d.id
+                INNER JOIN {$wpdb->prefix}app_agency_divisions d ON j.division_id = d.id
                 INNER JOIN {$wpdb->prefix}app_agencies a ON d.agency_id = a.id
                 WHERE r.province_id = %d
                 AND d.status = 'active'

@@ -763,7 +763,7 @@ class BranchDemoData extends AbstractDemoData {
 
         // Find division with matching regency_code
         $division_id = $this->wpdb->get_var($this->wpdb->prepare(
-            "SELECT id FROM {$this->wpdb->prefix}app_divisions WHERE regency_code = %s LIMIT 1",
+            "SELECT id FROM {$this->wpdb->prefix}app_agency_divisions WHERE regency_code = %s LIMIT 1",
             $regency_code
         ));
 
@@ -791,7 +791,7 @@ class BranchDemoData extends AbstractDemoData {
 
                 if ($agency_id) {
                     $division_id = $this->wpdb->get_var($this->wpdb->prepare(
-                        "SELECT id FROM {$this->wpdb->prefix}app_divisions WHERE agency_id = %d LIMIT 1",
+                        "SELECT id FROM {$this->wpdb->prefix}app_agency_divisions WHERE agency_id = %d LIMIT 1",
                         $agency_id
                     ));
 
@@ -887,7 +887,7 @@ class BranchDemoData extends AbstractDemoData {
         // Get divisions that have jurisdictions
         $divisions = $this->wpdb->get_results(
             "SELECT DISTINCT d.id, d.agency_id, p.id as provinsi_id
-             FROM {$this->wpdb->prefix}app_divisions d
+             FROM {$this->wpdb->prefix}app_agency_divisions d
              INNER JOIN {$this->wpdb->prefix}app_agencies a ON d.agency_id = a.id
              INNER JOIN {$this->wpdb->prefix}wi_provinces p ON a.provinsi_code = p.code
              INNER JOIN {$this->wpdb->prefix}app_agency_jurisdictions j ON d.id = j.division_id"

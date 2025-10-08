@@ -79,7 +79,7 @@ class CompanyModel {
             LEFT JOIN {$this->levels_table} l ON m.level_id = l.id
             LEFT JOIN {$wpdb->prefix}app_customers c ON b.customer_id = c.id
             LEFT JOIN {$wpdb->prefix}app_agencies a ON b.agency_id = a.id
-            LEFT JOIN {$wpdb->prefix}app_divisions d ON b.division_id = d.id
+            LEFT JOIN {$wpdb->prefix}app_agency_divisions d ON b.division_id = d.id
             LEFT JOIN {$wpdb->users} u ON b.inspector_id = u.ID
             WHERE b.id = %d
         ", $id));
@@ -147,7 +147,7 @@ class CompanyModel {
                 LEFT JOIN {$this->levels_table} l ON m.level_id = l.id
                 LEFT JOIN {$wpdb->prefix}app_customers c ON b.customer_id = c.id
                 LEFT JOIN {$wpdb->prefix}app_agencies a ON b.agency_id = a.id
-                LEFT JOIN {$wpdb->prefix}app_divisions d ON b.division_id = d.id
+                LEFT JOIN {$wpdb->prefix}app_agency_divisions d ON b.division_id = d.id
                 LEFT JOIN {$wpdb->users} u ON b.inspector_id = u.ID";
         $where = " WHERE 1=1";
 

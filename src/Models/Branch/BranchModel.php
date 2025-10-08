@@ -514,7 +514,7 @@ class BranchModel {
 
         // Get division for this agency and regency via jurisdiction table
         $jurisdiction_table = $wpdb->prefix . 'app_agency_jurisdictions';
-        $division_table = $wpdb->prefix . 'app_divisions';
+        $division_table = $wpdb->prefix . 'app_agency_divisions';
         $division = $wpdb->get_row($wpdb->prepare(
             "SELECT d.id FROM {$division_table} d
              INNER JOIN {$jurisdiction_table} j ON d.id = j.division_id
