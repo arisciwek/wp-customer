@@ -62,7 +62,7 @@ class CustomerEmployeeController {
         add_action('wp_ajax_delete_employee', [$this, 'delete']);
         add_action('wp_ajax_change_employee_status', [$this, 'changeStatus']);
 
-        add_action('wp_ajax_create_employee_button', [$this, 'createEmployeeButton']);        
+        add_action('wp_ajax_create_employee_button', [$this, 'createEmployeeButton']);
     }
 
     /**
@@ -362,6 +362,8 @@ class CustomerEmployeeController {
      */
     public function show() {
        try {
+           error_log('WP Customer Employee Debug - show called for ID: ' . ($_POST['id'] ?? 'not set'));
+
            check_ajax_referer('wp_customer_nonce', 'nonce');
 
            $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
@@ -374,11 +376,12 @@ class CustomerEmployeeController {
             if (!$customer) throw new \Exception('Customer not found');
 
             // Tambahkan pengecekan permission
-            if (!$this->validator->canViewEmployee($employee, $customer)) {
+            $canView = $this->validator->canViewEmployee($employee, $customer);
+            error_log('WP Customer Employee Debug - canViewEmployee result: ' . ($canView ? 'true' : 'false'));
+
+            if (!$canView) {
                 throw new \Exception('Anda tidak memiliki izin untuk melihat detail karyawan ini.');
             }
-
-
 
            // Validate view permission
            $errors = $this->validator->validateView($id);
@@ -394,9 +397,11 @@ class CustomerEmployeeController {
                $this->cache->set("employee_{$id}", $employee);
            }
 
+           error_log('WP Customer Employee Debug - show success for employee ID: ' . $id);
            wp_send_json_success($employee);
 
        } catch (\Exception $e) {
+           error_log('WP Customer Employee Debug - show error: ' . $e->getMessage());
            wp_send_json_error(['message' => $e->getMessage()]);
        }
     }

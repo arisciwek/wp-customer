@@ -27,8 +27,12 @@
     const EditBranchForm = {
         modal: null,
         form: null,
+        initialized: false,
 
         init() {
+            if (this.initialized) return;
+            this.initialized = true;
+
             this.modal = $('#edit-branch-modal');
             this.form = $('#edit-branch-form');
 

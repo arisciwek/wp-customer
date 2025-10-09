@@ -508,7 +508,7 @@
                     success: (response) => {
                         if (response.success) {
                             $('#tombol-tambah-branch').html(response.data.button);
-                            
+
                             // Bind click event using delegation
                             $('#tombol-tambah-branch').off('click', '#add-branch-btn')
                                 .on('click', '#add-branch-btn', () => {
@@ -523,6 +523,19 @@
                 if (window.BranchDataTable) {
                     window.BranchDataTable.init(this.currentId);
                 }
+
+                // Initialize branch forms only when tab is clicked
+                if (window.CreateBranchForm) {
+                    window.CreateBranchForm.init();
+                }
+                if (window.EditBranchForm) {
+                    window.EditBranchForm.init();
+                }
+
+                // Log branch form initialization only when tab is clicked
+                console.log('Starting bindEvents for CreateBranchForm');
+                console.log('Branch Form element found:', $('#create-branch-form').length > 0);
+                console.log('Edit modal visibility:', $('#edit-branch-modal').is(':visible'));
             }
         },
 

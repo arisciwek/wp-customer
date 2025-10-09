@@ -1,5 +1,12 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2020: Fix Branch Form Console Log Appearing on Customer View
+- Issue: When clicking the view button on the Customer datatable, console logs from branch forms appear, even though the branch form is on the second tab
+- Root Cause: Branch form scripts are initialized globally on document ready, causing methods and logs to execute on customer view
+- Target: Implement lazy initialization for branch forms so methods and logs only execute when branch tab is clicked
+- Files: assets/js/customer/customer-script.js, assets/js/branch/create-branch-form.js, assets/js/branch/edit-branch-form.js
+- Status: Completed
+
 ## TODO-2119: Add Aktif/Tidak Aktif Filter to Company DataTable
 - Issue: Company datatable lacks filter functionality for active/inactive companies
 - Root Cause: No UI elements or backend logic to filter companies by membership status
@@ -20,6 +27,13 @@
 - Target: Create CompanyInvoiceModel, CompanyInvoiceController, CompanyInvoiceValidator
 - Files: src/Models/Company/CompanyInvoiceModel.php, src/Controllers/Company/CompanyInvoiceController.php, src/Validators/Company/CompanyInvoiceValidator.php
 - Status: Completed
+
+## TODO-2021: Create Company Invoice Page
+- Issue: Need a dedicated admin page for managing Company Invoices with full functionality
+- Root Cause: No UI for invoice management despite existing models and tables
+- Target: Create complete invoice management page with dashboard, DataTable, detail panels, and CRUD operations
+- Files: Multiple template, controller, asset files (see TODO-2021.md for details)
+- Status: Pending
 
 ## TODO-2116: Fix Table Name Mismatch for Branches Table
 - Issue: Table 'wppm.wp_app_customer_branches' doesn't exist during plugin activation

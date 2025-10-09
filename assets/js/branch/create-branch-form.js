@@ -29,8 +29,12 @@
         modal: null,
         form: null,
         customerId: null,
+        initialized: false,
 
         init() {
+            if (this.initialized) return;
+            this.initialized = true;
+
             this.modal = $('#create-branch-modal');
             this.form = $('#create-branch-form');
             this.bindEvents();

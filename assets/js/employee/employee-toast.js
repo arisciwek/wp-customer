@@ -1,12 +1,12 @@
 /**
  * Employee Toast Component
  *
- * @package     WP_Customer
+ * @package     WP_Agency
  * @subpackage  Assets/JS/Employee
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/assets/js/employee/employee-toast.js
+ * Path: /wp-agency/assets/js/employee/employee-toast.js
  *
  * Description: Komponen toast notification khusus untuk employee.
  *              Support queue system untuk multiple notifications.
