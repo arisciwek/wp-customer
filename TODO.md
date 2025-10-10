@@ -69,6 +69,14 @@
 - Status: ✅ Completed
 - Notes: All 14 TODO-XXXX files in docs folder are now synchronized with TODO.md (see docs/TODO-2023-synchronize-todo-files-to-main-todo-md.md)
 
+## TODO-2123: Fix Total Pembayaran Not Matching Paid Invoices
+- Issue: Total Pembayaran on Company Invoice dashboard always shows 0, even though there are paid invoices (e.g., INV-20251010-55860 Rp 600.000, INV-20251010-32644 Rp 2.000.000)
+- Root Cause: Two problems - (1) ID mismatch between template (#total-payments) and JavaScript (#total-paid-amount), (2) Model counts payment records instead of summing paid invoice amounts
+- Target: Fix ID mismatch in dashboard template, update getStatistics() to calculate SUM(amount) from invoices with status='paid', add paid_invoices count and total_paid_amount fields
+- Files: src/Views/templates/company-invoice/company-invoice-dashboard.php (fix ID to total-paid-amount), src/Models/Company/CompanyInvoiceModel.php (getStatistics calculation logic)
+- Status: ✅ Completed
+- Notes: Changed from COUNT(payments) to SUM(invoice.amount WHERE status='paid'), added null coalescing for empty results (see docs/TODO-2123-fix-total-pembayaran-not-matching-paid-invoices.md)
+
 ## TODO-2021: Create Company Invoice Page
 - Issue: Need a dedicated admin page "WP Invoice Perusahaan" for managing company invoices with full functionality including invoice listing, detail view, and payment tracking
 - Root Cause: No UI menu and dashboard for invoice management despite existing CompanyInvoiceModel, CompanyInvoiceValidator, and database tables

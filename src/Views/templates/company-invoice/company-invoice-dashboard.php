@@ -44,7 +44,7 @@ defined('ABSPATH') || exit;
                         </div>
                         <div class="wi-stat-box">
                             <h3>Total Pembayaran</h3>
-                            <p class="wi-stat-number" id="total-payments">0</p>
+                            <p class="wi-stat-number" id="total-paid-amount">Rp 0</p>
                         </div>
                     </div>
                 </div>

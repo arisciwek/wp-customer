@@ -552,14 +552,14 @@ class CompanyInvoiceModel {
 
         $total_invoices = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table}");
         $pending_invoices = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table} WHERE status = 'pending'");
-
-        $payments_table = $wpdb->prefix . 'app_customer_payments';
-        $total_payments = $wpdb->get_var("SELECT COUNT(*) FROM {$payments_table}");
+        $paid_invoices = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table} WHERE status = 'paid'");
+        $total_paid_amount = $wpdb->get_var("SELECT SUM(amount) FROM {$this->table} WHERE status = 'paid'");
 
         return [
             'total_invoices' => (int) $total_invoices,
             'pending_invoices' => (int) $pending_invoices,
-            'total_payments' => (int) $total_payments
+            'paid_invoices' => (int) $paid_invoices,
+            'total_paid_amount' => (float) ($total_paid_amount ?? 0)
         ];
     }
 
