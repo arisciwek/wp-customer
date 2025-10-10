@@ -514,6 +514,12 @@ class CompanyInvoiceController {
             }
         }
 
+        // Calculate is_overdue directly without calling isOverdue() to avoid duplicate find()
+        $is_overdue = false;
+        if (($invoice->status ?? 'pending') === 'pending' && !empty($invoice->due_date)) {
+            $is_overdue = strtotime($invoice->due_date) < time();
+        }
+
         return [
             'id' => $invoice->id,
             'invoice_number' => $invoice->invoice_number ?? '',
@@ -537,7 +543,7 @@ class CompanyInvoiceController {
             'created_by_name' => $created_by_name,
             'created_at' => $invoice->created_at ?? '',
             'updated_at' => $invoice->updated_at ?? '',
-            'is_overdue' => $this->invoice_model->isOverdue($invoice->id)
+            'is_overdue' => $is_overdue
         ];
     }
 

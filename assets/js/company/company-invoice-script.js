@@ -245,8 +245,8 @@
             // Render action buttons based on status
             this.renderActionButtons(data.status, data.id, data.invoice_number, data.amount);
 
-            // Show invoice details tab
-            this.switchTab('invoice-details');
+            // Show invoice details tab (pass false to prevent re-loading)
+            this.switchTab('invoice-details', false);
         },
 
         renderPaymentInfo(data) {
@@ -316,7 +316,7 @@
             this.currentId = null;
         },
 
-        switchTab(tabId) {
+        switchTab(tabId, shouldLoadData = true) {
             // Update tab navigation
             $('.nav-tab').removeClass('nav-tab-active');
             $(`.nav-tab[data-tab="${tabId}"]`).addClass('nav-tab-active');
@@ -325,8 +325,8 @@
             $('.tab-content').removeClass('active');
             $(`#${tabId}`).addClass('active');
 
-            // Load data if needed
-            if (this.currentId) {
+            // Load data only if explicitly requested (e.g., when user clicks tab, not when rendering)
+            if (shouldLoadData && this.currentId) {
                 if (tabId === 'invoice-details') {
                     this.loadInvoiceDetails(this.currentId);
                 } else if (tabId === 'payment-info') {
