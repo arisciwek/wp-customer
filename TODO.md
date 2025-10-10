@@ -35,6 +35,40 @@
 - Files: src/Database/Demo/CompanyInvoiceDemoData.php, src/Database/Tables/CustomerInvoicesDB.php (add membership_id, level_id, invoice_type), src/Database/Demo/MembershipDemoData.php, settings tab files, split company-invoice assets, src/Controllers/SettingsController.php (add memberships case, company-invoices handler), src/Controllers/Company/CompanyInvoiceController.php (fix getInvoiceDetails, formatInvoiceData), assets/js/company/company-invoice-script.js (fix renderInvoiceDetails, switchTab) (see docs/TODO-2122-create-company-invoice-demo-data.md)
 - Status: Completed
 
+## TODO-2022: Enhances Company Invoice (3 Phases)
+- **Phase 1:** Invoice functionality incomplete - created_by uses wrong user, "Dibuat Oleh" shows ID instead of name, no payment action buttons, missing branch_admin role definition
+  - Root Cause: Demo data uses customer_user_id not branch admin, formatInvoiceData doesn't query user name, no payment modal integration, activator lacks getRoles() method
+  - Target: Add getRoles() method with customer/branch_admin/branch_staff roles, fix created_by to use branch.user_id, add created_by_name to response, create payment modal (extracted from membership), add action buttons (Bayar/Batalkan/Lihat Bukti) based on invoice status
+  - Files: includes/class-activator.php (add getRoles), src/Database/Demo/CompanyInvoiceDemoData.php (fix created_by), src/Controllers/Company/CompanyInvoiceController.php (add created_by_name, handle_invoice_payment), assets/js/company/company-invoice-payment-modal.js (new), assets/js/company/company-invoice-script.js (payment integration), src/Views/templates/company-invoice/partials/_company_invoice_details.php (action buttons), includes/class-dependencies.php (register modal script)
+  - Status: ✅ Completed
+- **Phase 2 (Review 01):** DataTable improvements - admin tidak paham asal angka "Jumlah", kolom Tanggal tidak signifikan
+  - Root Cause: Missing Level and Period columns, unclear amount calculation
+  - Target: Add Level column (membership tier), add Period column (subscription duration), remove Tanggal column, enhance search to include level name
+  - Files: src/Database/Tables/CustomerInvoicesDB.php (v1.2.0, add period_months), src/Database/Demo/CompanyInvoiceDemoData.php, src/Models/Company/CompanyInvoiceModel.php (JOIN levels), assets/js/company/company-invoice-datatable-script.js, src/Controllers/Company/CompanyInvoiceController.php
+  - Status: ✅ Completed
+- **Phase 3 (Review 02):** Upgrade tracking analytics - need to track upgrade patterns for business intelligence
+  - Root Cause: Schema only has level_id (target) but missing from_level_id (source), cannot analyze upgrade vs renewal ratio
+  - Target: Add from_level_id field to track upgrade patterns (Regular → Priority → Utama), display arrow indicator for upgrades, enable analytics for conversion rate and feature impact analysis
+  - Files: src/Database/Tables/CustomerInvoicesDB.php (v1.3.0, add from_level_id), src/Database/Demo/CompanyInvoiceDemoData.php (query + logic), src/Models/Company/CompanyInvoiceModel.php (JOIN both levels), assets/js/company/company-invoice-datatable-script.js (arrow indicator), src/Controllers/Company/CompanyInvoiceController.php (from_level_name)
+  - Status: ✅ Completed
+- **Phase 4 (Review 03-05):** Fixed JavaScript DataTable initialization error "Cannot read properties of undefined (reading 'style')"
+  - Root Cause: Column count mismatch between HTML template (7 columns) and JavaScript configuration (8 columns) - missing Level and Period headers in template
+  - Target: Add missing `<th>Level</th>` and `<th>Period</th>` headers to match JavaScript column configuration, add defensive checks for element existence and library loading
+  - Files: src/Views/templates/company-invoice/company-invoice-left-panel.php (add missing headers), assets/js/company/company-invoice-script.js (add element checks), assets/js/company/company-invoice-datatable-script.js (add DataTable availability check)
+  - Status: ✅ Completed
+- **Documentation:** docs/TODO-2022-enhances-company-invoice.md, claude-chats/task-2022.md
+- **Overall Status:** ✅ All 4 Phases Completed (23 total tasks completed)
+- **Testing Required:** Deactivate/reactivate plugin for schema v1.2.0 & v1.3.0, generate new demo data, test all features and analytics queries
+
+## TODO-2023: Synchronize TODO-XXXX Files to Main TODO.md
+- Issue: Several TODO-XXXX files in docs folder were not synchronized with main TODO.md, causing documentation inconsistency
+- Root Cause: TODO-2111 investigation file was created but never added to TODO.md tracking file
+- Investigation: Audited all 14 TODO-XXXX files in docs folder against TODO.md entries, found only TODO-2111 was missing (TODO-2021 and TODO-2122 were already present)
+- Target: Add missing TODO-2111 entry to TODO.md in chronological order, create TODO-2023 documentation file, verify all TODO-XXXX files are synchronized
+- Files: TODO.md (added TODO-2111 entry), docs/TODO-2023-synchronize-todo-files-to-main-todo-md.md (created documentation)
+- Status: ✅ Completed
+- Notes: All 14 TODO-XXXX files in docs folder are now synchronized with TODO.md (see docs/TODO-2023-synchronize-todo-files-to-main-todo-md.md)
+
 ## TODO-2021: Create Company Invoice Page
 - Issue: Need a dedicated admin page "WP Invoice Perusahaan" for managing company invoices with full functionality including invoice listing, detail view, and payment tracking
 - Root Cause: No UI menu and dashboard for invoice management despite existing CompanyInvoiceModel, CompanyInvoiceValidator, and database tables
@@ -81,6 +115,14 @@
 ## TODO-2110: Membuat tombol reload pada datatable company
 - [x] Tambahkan tombol reload di header panel kiri company-left-panel.php
 - [x] Bind event click pada tombol reload di company-datatable.js untuk memanggil refresh()
+
+## TODO-2111: Investigate Cache Key in Company DataTable
+- Issue: After inspector assignment in wp-agency, company datatable in wp-customer doesn't update immediately, only after 2 minutes (cache expiry)
+- Root Cause: Cached DataTable response in wp-customer not invalidated after inspector assignment, cache persists until natural expiry
+- Investigation: Cache type 'datatable', context 'company_list', expiry 120 seconds, stored in WordPress Object Cache with group 'wp_customer'
+- Files: assets/js/company/company-datatable.js, src/Controllers/Company/CompanyController.php, src/Models/Company/CompanyModel.php, src/Cache/CustomerCacheManager.php
+- Proposed Solution: Modify inspector assignment in wp-agency to clear relevant cache in wp-customer after successful assignment
+- Status: Investigation completed, solution proposed (see docs/TODO-2111-investigate-cache-key-in-company-dataTable.md)
 
 ## Fix Company DataTable Cache Clearing After Inspector Assignment (PENDING)
 - Issue: Datatable company tidak update langsung setelah assign inspector di wp-agency, hanya setelah 2 menit cache expiry
