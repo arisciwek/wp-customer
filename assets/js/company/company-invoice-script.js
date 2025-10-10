@@ -21,6 +21,12 @@
  * - Custom toast notifications
  *
  * Changelog:
+ * 1.0.1 - 2025-10-10
+ * - Added DataTable initialization error handling
+ * - Added console warnings for failed initialization
+ * - Added module availability check
+ * - Improved defensive programming
+ *
  * 1.0.0 - 2024-12-25
  * - Initial version
  * - Added DataTable integration
@@ -69,6 +75,12 @@
             // Use external DataTable configuration
             if (window.CompanyInvoiceDataTable && window.CompanyInvoiceDataTable.initDataTable) {
                 this.components.dataTable = window.CompanyInvoiceDataTable.initDataTable();
+
+                if (!this.components.dataTable) {
+                    console.warn('Company Invoice DataTable initialization returned null. Table may not be available on this page.');
+                }
+            } else {
+                console.error('CompanyInvoiceDataTable module not loaded. Check script dependencies.');
             }
         },
 
@@ -87,6 +99,34 @@
                 if (tabId) {
                     self.switchTab(tabId);
                 }
+            });
+
+            // Payment modal buttons
+            $(document).on('click', '.btn-pay-invoice', function(e) {
+                e.preventDefault();
+                const invoiceId = $(this).data('id');
+                const invoiceNumber = $(this).data('number');
+                const amount = $(this).data('amount');
+
+                if (window.InvoicePaymentModal) {
+                    window.InvoicePaymentModal.showPaymentModal(invoiceId, invoiceNumber, amount);
+                }
+            });
+
+            $(document).on('click', '.btn-cancel-invoice', function(e) {
+                e.preventDefault();
+                const invoiceId = $(this).data('id');
+                const invoiceNumber = $('#invoice-number').text();
+
+                if (window.InvoicePaymentModal) {
+                    window.InvoicePaymentModal.showCancelConfirmation(invoiceId, invoiceNumber);
+                }
+            });
+
+            $(document).on('click', '.btn-view-payment', function(e) {
+                e.preventDefault();
+                const invoiceId = $(this).data('id');
+                self.viewPaymentInfo(invoiceId);
             });
 
             // Outside click to close panel
@@ -200,7 +240,10 @@
 
             $('#invoice-due-date').text(this.formatDate(data.due_date));
             $('#invoice-created-at').text(this.formatDate(data.created_at));
-            $('#invoice-created-by').text(data.created_by || '-');
+            $('#invoice-created-by').text(data.created_by_name || '-');
+
+            // Render action buttons based on status
+            this.renderActionButtons(data.status, data.id, data.invoice_number, data.amount);
 
             // Show invoice details tab
             this.switchTab('invoice-details');
@@ -329,6 +372,37 @@
                     Payment
                 </button>
             `;
+        },
+
+        renderActionButtons(status, invoiceId, invoiceNumber, amount) {
+            let buttons = '';
+
+            if (status === 'pending' || status === 'overdue') {
+                buttons = `
+                    <button class="button button-primary btn-pay-invoice"
+                            data-id="${invoiceId}"
+                            data-number="${invoiceNumber}"
+                            data-amount="${amount}"
+                            style="margin-right: 10px;">
+                        Bayar Sekarang
+                    </button>
+                    <button class="button btn-cancel-invoice"
+                            data-id="${invoiceId}">
+                        Batalkan Invoice
+                    </button>
+                `;
+            } else if (status === 'paid') {
+                buttons = `
+                    <button class="button button-primary btn-view-payment"
+                            data-id="${invoiceId}">
+                        Lihat Bukti Pembayaran
+                    </button>
+                `;
+            } else if (status === 'cancelled') {
+                buttons = '<p class="description">Invoice telah dibatalkan</p>';
+            }
+
+            $('#invoice-actions-buttons').html(buttons);
         },
 
         formatCurrency(amount) {

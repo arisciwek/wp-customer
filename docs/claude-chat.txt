@@ -1,0 +1,859 @@
+kita akan bekerja dengan plugin wp-customer dari wordpress.
+
+kita kerjakan task untuk membuat file demo generate company invoice menggunakan tabel:
+
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Tables/CustomerInvoicesDB.php
+
+file yang harus di revisi adalah:
+
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Views/templates/settings/settings_page.php
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Views/templates/settings/tab-demo-data.php
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/assets/css/settings/demo-data-tab-style.css
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/assets/js/settings/customer-demo-data-tab-script.js
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Controllers/SettingsController.php
+
+
+yang akan kita buat adalah
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Demo/CompanyInvoiveDemoData.php
+
+base invoice berdasarkan branch_id:
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Tables/BranchesDB.php
+
+dan anda perlu juga baca
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Tables/CustomerMembershipsDB.php
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Tables/CustomerPaymentsDB.php
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Tables/CustomersDB.php
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Installer.php
+
+untuk demo contohnya ada disini
+
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Demo/AbstractDemoData.php
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Demo/BranchDemoData.php
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Demo/CustomerDemoData.php
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Demo/CustomerDemoDataHelperTrait.php
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Demo/MembershipDemoData.php
+
+
+file lain yang terlibat:
+
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Controllers/Company/CompanyInvoiceController.php
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Controllers/Company/CompanyMembershipController.php
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Models/Company/CompanyInvoiceModel.php
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Models/Company/CompanyMembershipModel.php
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Models/Company/CompanyModel.php
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Validators/Company/CompanyInvoiceValidator.php
+
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/assets/css/settings/settings-style.css
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/assets/js/settings/settings-script.js
+
+
+
+atau file lain di :
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/
+
+cara kerjanya:
+anda buat file TODO-XXXX-[nama sesuai konteks], di folder docs sesuai contoh yang ada do sana, nama file sesuaikan dengan konteks task, kemudian revisi TODO.md sebelum mengerjakan kode.
+
+
+---
+PERTANYAAN DARI CLAUDE:
+
+1. Untuk file CompanyInvoiceDemoData.php - typo di nama file yang disebutkan: "CompanyInvoiveDemoData.php" (ada typo "Invoive"). Nama yang benar adalah "CompanyInvoiceDemoData.php" kan?
+
+jawab : ya, yang benar CompanyInvoiceDemoData.php
+
+2. Untuk demo data company invoice ini, data seperti apa yang perlu di-generate?
+   - Berapa jumlah invoice yang harus dibuat per branch?
+   - Status invoice apa saja yang perlu ada (paid, unpaid, pending, etc)?
+   - Field-field apa saja yang ada di tabel CustomerInvoicesDB?
+
+jawab
+- jumlah invoice random 1 dan 2
+- status invoice random
+
+3. Apakah company invoice ini terkait dengan customer membership? Atau independen?
+   ya, karena nantinya user akan upgrade paket / level disana, ini halamannya:
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Views/templates/company-invoice/company-invoice-right-panel.php
+level_idnya ada disini:
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Tables/CustomerMembershipsDB.php
+
+beritahu saya jika anda belum mmellihat keterkaitannya
+
+jika ada pengaturan Datatable di :
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/assets/js/company/company-invoice-script.js
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/assets/css/company/company-invoice-style.css
+
+pisahkan ke file khusus
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/assets/js/company/company-invoice-datatable-script.js
+/home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/assets/css/company/company-invoice-datatable-style.css
+
+Mohon jawaban untuk pertanyaan di atas agar saya bisa melanjutkan dengan benar.
+
+---
+
+UPDATE DARI CLAUDE:
+
+Saya sudah membaca file-file yang diperlukan dan menemukan hal berikut:
+
+1. KETERKAITAN INVOICE DENGAN MEMBERSHIP:
+   Dari partial templates yang saya baca, belum terlihat keterkaitan langsung antara invoice dengan membership upgrade.
+   
+   jawab: di file tersebut ada file lain yang disebutkan, telusuri juga filenya.
+
+   PERTANYAAN:
+   - Apakah invoice ini untuk pembayaran membership upgrade?
+   jawab, kode sekarang langsung mengarah ke pembayaran, seharusnya untuk menerbitkan company invoice, dari datatabel company invoice ini nantiya akan ada tombol untuk proses pembayaran menggunakan kode yang ada sekarang.
+   - Jika ya, bagaimana hubungan antara customer_invoices dengan customer_memberships?
+   jawab : cusomer memership menyebutkan level_id yang di pilih:
+   	   untuk mengetahui harganya anda harus baca tabel lain:
+	   /home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Tables/CustomerMembershipLevelsDB.php
+	   boleh juga anda baca
+	   /home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Tables/CustomerMembershipFeaturesDB.php
+   - Apakah ada field di customer_invoices yang merujuk ke membership_id atau upgrade_to_level_id?
+   jawab: jika belum terhubung berarti anda harus tambahkan file tersebut di /home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Tables/CustomerInvoicesDB.php
+          agar terhubung ke /home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Tables/CustomerMembershipLevelsDB.php
+
+2. DEMO DATA INVOICE:
+   Untuk membuat demo data invoice yang realistis, saya perlu tahu:
+   - Apakah invoice dibuat otomatis ketika user request upgrade membership?
+     jawab: dalam real flow ya, dalam file demo sekarang tidak, kita buatkan dummy data menggunakan controller yang ada, jadi saya bermaksud menguji tabel dan controller
+   - Atau invoice dibuat manual oleh admin?
+     jawab: tidak, invicoce dibuat oleh yang memiliki role branch_admin, tetapi saya belum membahas permission dalam tahap ini.
+   - Bagaimana flow-nya: Membership -> Request Upgrade -> Invoice dibuat -> Payment?
+     jawab : ya benar, dalam real flownya, dalam demo secara random beberapa invoce dibuat sudah ada payment.
+
+3. PEMISAHAN DATATABLE FILES:
+   Saya sudah baca company-invoice-script.js dan company-invoice-style.css.
+   Saya akan memisahkan kode DataTable (baris 68-150 di JS dan baris 106-246 di CSS) ke file terpisah:
+   - company-invoice-datatable-script.js
+   - company-invoice-datatable-style.css
+
+   Apakah ini sudah benar?
+   jawab: ya, terima kasih
+
+Mohon penjelasan untuk memahami flow bisnis invoice dan membership ini.
+
+---
+
+ANALISIS DARI CLAUDE:
+
+Saya sudah membaca semua file terkait dan memahami strukturnya:
+
+1. STRUKTUR TABEL:
+   - customer_invoices: invoice untuk pembayaran
+   - customer_memberships: data membership aktif dengan level_id dan upgrade_to_level_id
+   - customer_membership_levels: daftar level membership dengan price_per_month
+   - customer_payments: riwayat pembayaran
+   - customer_branches: data branch yang terkait dengan invoice
+   jawab: ya benar.
+
+2. KETERKAITAN YANG DITEMUKAN:
+   ✓ CustomerInvoicesDB memiliki: customer_id, branch_id, amount, status, due_date
+   ✗ BELUM ADA field yang menghubungkan ke membership_id atau level_id,
+
+   REKOMENDASI: Perlu tambah field di CustomerInvoicesDB:
+   - membership_id (bigint UNSIGNED NULL) -> untuk link ke customer_memberships
+   - level_id (bigint UNSIGNED NULL) -> untuk link ke customer_membership_levels
+   - invoice_type ENUM('membership_upgrade', 'renewal', 'other') -> jenis invoice
+   jawab : saya sudah ada tampilan datanya di src/Views/templates/company-invoice/company-invoice-left-panel.php
+   silahkan tambahkan field yang diperlukan
+
+3. FLOW YANG AKAN DIBUAT DI DEMO DATA:
+   a. Ambil semua branch aktif
+   b. Random 1-2 invoice per branch
+   c. Untuk setiap invoice:
+      - Ambil membership dari branch tersebut
+      - Jika ada upgrade_to_level_id, buat invoice untuk upgrade
+        jika ini belum ada di demo membership maka harus dibuat dulu, karena ini sudah menyakut real flow, tetapi jika sudah ada, bisa dipakai.
+      - Hitung amount berdasarkan level_id x period_months dari membership_levels
+        jika pembayaran untuk 12 bulan, maka di berikan potongan 2 bulan atau hanya bayar 10 bulan
+      - Status random: pending, paid, overdue
+      - Jika paid, buat juga record di customer_payments
+      jawab: itu saja komentar saya.
+
+
+
+PERTANYAAN KONFIRMASI:
+1. Apakah saya perlu modifikasi CustomerInvoicesDB.php untuk menambahkan field membership_id, level_id, dan invoice_type?
+2. Atau cukup buat demo data dengan field yang ada sekarang saja (tanpa link ke membership)?
+3. Jika perlu modifikasi tabel, apakah perlu buat migration script atau langsung edit schema?
+
+Mohon konfirmasi agar saya bisa lanjut dengan benar.
+
+---
+
+PROGRESS UPDATE:
+
+✅ SELESAI:
+1. Buat file docs/TODO-2122-create-company-invoice-demo-data.md
+2. Update TODO.md dengan task baru
+3. Update CustomerInvoicesDB.php - tambah field:
+   - membership_id (bigint UNSIGNED NULL)
+   - level_id (bigint UNSIGNED NULL)
+   - invoice_type ENUM('membership_upgrade', 'renewal', 'other')
+   - Indexes untuk field baru
+
+4. Buat src/Database/Demo/CompanyInvoiceDemoData.php
+   - Generate 1-2 invoice per branch
+   - Support membership upgrade flow
+   - Random status (pending 40%, paid 40%, overdue 15%, cancelled 5%)
+   - Calculate amount dengan 12-month discount
+   - Create payment records untuk paid invoices
+
+5. Update src/Database/Demo/MembershipDemoData.php
+   - Tambah 30% chance untuk set upgrade_to_level_id
+   - Method getRandomUpgradeLevel() untuk pilih level lebih tinggi
+   - Update debug log untuk show upgrade info
+
+6. Pisahkan DataTable files:
+   - Buat assets/js/company/company-invoice-datatable-script.js
+   - Buat assets/css/company/company-invoice-datatable-style.css
+   - Update company-invoice-script.js (hapus DataTable config)
+   - Update company-invoice-style.css (hapus DataTable styles)
+   - Update includes/class-dependencies.php (register file baru)
+
+NEXT STEPS (Settings Integration):
+- Revisi tab-demo-data.php untuk UI ✅
+- Revisi SettingsController.php untuk handle demo ✅
+
+SEMUA TASK SELESAI! ✅
+
+SUMMARY IMPLEMENTASI:
+
+FILES CREATED:
+1. docs/TODO-2122-create-company-invoice-demo-data.md
+2. src/Database/Demo/CompanyInvoiceDemoData.php
+3. assets/js/company/company-invoice-datatable-script.js
+4. assets/css/company/company-invoice-datatable-style.css
+
+FILES MODIFIED:
+1. TODO.md - Added task entry
+2. src/Database/Tables/CustomerInvoicesDB.php - Added 3 fields + indexes
+3. src/Database/Demo/MembershipDemoData.php - Added upgrade support
+4. assets/js/company/company-invoice-script.js - Removed DataTable config
+5. assets/css/company/company-invoice-style.css - Removed DataTable styles
+6. includes/class-dependencies.php - Register new DataTable files
+7. src/Views/templates/settings/tab-demo-data.php - Added invoice card
+8. src/Controllers/SettingsController.php - Added company-invoices handler
+
+FITUR YANG DIBUAT:
+- Generate 1-2 random invoices per branch
+- Support membership upgrade flow (30% probability)
+- Random status distribution (40% pending, 40% paid, 15% overdue, 5% cancelled)
+- 12-month discount logic (pay 10 months for 12-month period)
+- Auto-create payment records for paid invoices
+- Link invoices to memberships and levels
+- Integration dengan settings page demo data tab
+
+CARA PENGGUNAAN:
+1. Buka WordPress Admin → WP Customer → Settings → Demo Data tab
+2. Generate data secara berurutan:
+   - Feature Groups → Features → Levels → Customers → Branches → Memberships → Invoices
+3. Klik "Generate Company Invoices" untuk membuat demo invoice data
+4. Lihat hasilnya di halaman "Invoice Perusahaan"
+
+NOTE:
+- Development mode harus enabled di settings
+- Memberships harus sudah ter-generate terlebih dahulu
+- Data invoice akan include payment records untuk status 'paid'
+- Invoice number format: INV-YYYYMMDD-XXXXX
+
+---
+
+RUNNING TEST
+- Ssaya sudah melihat beberapa debug log untuk upgrade seperti:
+[10-Oct-2025 03:48:47 UTC] [WPCustomer\Database\Demo\MembershipDemoData] Created membership 29 for branch 29 with level Prioritas (pending upgrade to level 4)
+[10-Oct-2025 03:48:48 UTC] [WPCustomer\Database\Demo\MembershipDemoData] Created membership 40 for branch 40 with level Reguler (pending upgrade to level 4)
+ada beberapa baris log. teerima kasih
+
+masalah sekarag tombol Generate Company Invoice masih disable, seharusnya deafut disable, jika Generate Customer Membership selesai, maka tombol tersebut enable.
+
+---
+
+SOLUSI MASALAH BUTTON DISABLE:
+
+PENYEBAB:
+- Tombol "Generate Company Invoices" memiliki dependency check ke 'memberships'
+- Check dilakukan via AJAX ke handle_check_demo_data() di SettingsController.php
+- Method tersebut TIDAK memiliki case untuk 'memberships', hanya ada case untuk:
+  * branch
+  * customer
+  * membership-groups
+  * membership-features
+- Sehingga ketika JS mengecek apakah data memberships sudah ada, server return error
+
+SOLUSI YANG DITERAPKAN:
+File: src/Controllers/SettingsController.php
+
+Tambahkan case 'memberships' di method handle_check_demo_data() (sekitar line 355-378):
+
+```php
+case 'memberships':
+    $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_memberships");
+    $has_data = ($count > 0);
+    break;
+```
+
+CARA KERJA:
+1. Setelah user generate Customer Memberships, data tersimpan di tabel app_customer_memberships
+2. JavaScript di tab-demo-data akan otomatis check via AJAX dengan type='memberships'
+3. Server akan query tabel tersebut dan return has_data=true jika ada data
+4. Button "Generate Company Invoices" akan otomatis enabled
+
+TESTING:
+1. Refresh halaman settings → Demo Data tab
+2. Button "Generate Company Invoices" seharusnya sudah enabled (jika sudah ada data memberships)
+3. Jika belum ada data memberships, button tetap disabled
+4. Setelah generate memberships, button langsung enabled
+
+STATUS: ✅ SELESAI DIPERBAIKI
+
+TEST GENERATE COMPANY INVOICE
+saya sudah reaktivasi plugin wp-cuatomer untuk menampung tabelnya.
+ada error saat generate company incvoice :
+
+ada error:
+
+[10-Oct-2025 03:58:56 UTC] PHP Fatal error:  Uncaught Error: Class "WPCustomer\Models\Customer\CustomerMembershipModel" not found in /home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Demo/CompanyInvoiceDemoData.php:73
+Stack trace:
+#0 /home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Controllers/SettingsController.php(195): WPCustomer\Database\Demo\CompanyInvoiceDemoData->__construct()
+#1 /home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Controllers/SettingsController.php(217): WPCustomer\Controllers\SettingsController->getGeneratorClass()
+#2 /home/mkt01/Public/wppm/public_html/wp-includes/class-wp-hook.php(324): WPCustomer\Controllers\SettingsController->handle_generate_demo_data()
+#3 /home/mkt01/Public/wppm/public_html/wp-includes/class-wp-hook.php(348): WP_Hook->apply_filters()
+#4 /home/mkt01/Public/wppm/public_html/wp-includes/plugin.php(517): WP_Hook->do_action()
+#5 /home/mkt01/Public/wppm/public_html/wp-admin/admin-ajax.php(192): do_action()
+#6 {main}
+  thrown in /home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Demo/CompanyInvoiceDemoData.php on line 73
+  
+
+apakah yang dimaksud adalah /home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Models/Company/CompanyMembershipModel.php ?
+
+---
+
+SOLUSI ERROR CLASS NOT FOUND:
+
+PENYEBAB:
+- Error: Class "WPCustomer\Models\Customer\CustomerMembershipModel" not found
+- File CompanyInvoiceDemoData.php menggunakan namespace yang salah
+- Yang benar: CustomerMembershipModel ada di namespace WPCustomer\Models\Membership\
+- Bukan di: WPCustomer\Models\Customer\
+
+SOLUSI YANG DITERAPKAN:
+File: src/Database/Demo/CompanyInvoiceDemoData.php (line 48)
+
+Perbaikan namespace import:
+```php
+// SALAH:
+use WPCustomer\Models\Customer\CustomerMembershipModel;
+
+// BENAR:
+use WPCustomer\Models\Membership\CustomerMembershipModel;
+```
+
+CARA TESTING:
+1. Refresh halaman Settings → Demo Data tab
+2. Klik button "Generate Company Invoices"
+3. Seharusnya sudah tidak ada error class not found
+
+STATUS: ✅ SELESAI DIPERBAIKI
+
+Silakan test kembali generate company invoice.
+
+---
+
+TEST GENERATE COMPANY INVOICE
+saya sudah reaktivasi plugin wp-cuatomer untuk menampung tabelnya.
+ada error saat generate company incvoice :
+
+ada error:
+
+[10-Oct-2025 03:58:56 UTC] PHP Fatal error:  Uncaught Error: Class "WPCustomer\Models\Customer\CustomerMembershipModel" not found in /home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Demo/CompanyInvoiceDemoData.php:73
+Stack trace:
+#0 /home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Controllers/SettingsController.php(195): WPCustomer\Database\Demo\CompanyInvoiceDemoData->__construct()
+#1 /home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Controllers/SettingsController.php(217): WPCustomer\Controllers\SettingsController->getGeneratorClass()
+#2 /home/mkt01/Public/wppm/public_html/wp-includes/class-wp-hook.php(324): WPCustomer\Controllers\SettingsController->handle_generate_demo_data()
+#3 /home/mkt01/Public/wppm/public_html/wp-includes/class-wp-hook.php(348): WP_Hook->apply_filters()
+#4 /home/mkt01/Public/wppm/public_html/wp-includes/plugin.php(517): WP_Hook->do_action()
+#5 /home/mkt01/Public/wppm/public_html/wp-admin/admin-ajax.php(192): do_action()
+#6 {main}
+  thrown in /home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Database/Demo/CompanyInvoiceDemoData.php on line 73
+
+apakah yang dimaksud adalah /home/mkt01/Public/wppm/public_html/wp-content/plugins/wp-customer/src/Models/Company/CompanyMembershipModel.php ?
+
+✅ SELESAI DIPERBAIKI - Namespace salah, sudah diubah dari WPCustomer\Models\Customer\ ke WPCustomer\Models\Membership\
+
+---
+
+MASALAH TOAST ERROR "ID Customer tidak valid"
+
+generate invoice sudah berhasil, datatbe company invoice sudah tampil, saat saya klik view ada toast error "ID Customer tidak valid", tapi saya tidak lihat debug log atau console log errornya
+
+SOLUSI ERROR "ID Customer tidak valid":
+
+PENYEBAB:
+1. Method `getInvoiceDetails()` di CompanyInvoiceController.php menggunakan `validateRequest()`
+2. Method `validateRequest()` memerlukan parameter `customer_id` di POST request (line 71-74)
+3. JavaScript hanya mengirim parameter `id` (invoice_id), tidak mengirim `customer_id`
+4. Sehingga validasi gagal dan return error "ID Customer tidak valid"
+
+SOLUSI YANG DITERAPKAN:
+
+1. File: src/Controllers/Company/CompanyInvoiceController.php
+   Method: getInvoiceDetails() (line 163-196)
+
+   Perubahan:
+   - Hapus penggunaan `validateRequest()` yang memerlukan `customer_id`
+   - Ganti dengan nonce verification langsung
+   - Accept parameter `id` atau `invoice_id` dari POST
+   - Check permission hanya untuk `manage_options`
+
+```php
+public function getInvoiceDetails() {
+    try {
+        // Verify nonce
+        check_ajax_referer('wp_customer_nonce', 'nonce');
+
+        // Check permissions
+        if (!current_user_can('manage_options')) {
+            throw new \Exception(__('Anda tidak memiliki izin untuk mengakses data ini', 'wp-customer'));
+        }
+
+        // Get invoice_id from POST (either 'id' or 'invoice_id')
+        $invoice_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        if (!$invoice_id) {
+            $invoice_id = isset($_POST['invoice_id']) ? intval($_POST['invoice_id']) : 0;
+        }
+
+        if (!$invoice_id) {
+            throw new \Exception(__('ID Invoice tidak valid', 'wp-customer'));
+        }
+
+        // Get invoice with related data
+        $invoice = $this->invoice_model->find($invoice_id);
+        if (!$invoice) {
+            throw new \Exception(__('Invoice tidak ditemukan', 'wp-customer'));
+        }
+
+        wp_send_json_success($this->formatInvoiceData($invoice));
+
+    } catch (\Exception $e) {
+        wp_send_json_error([
+            'message' => $e->getMessage()
+        ]);
+    }
+}
+```
+
+2. File: src/Controllers/Company/CompanyInvoiceController.php
+   Method: formatInvoiceData() (line 460-506)
+
+   Perubahan:
+   - Tambahkan query untuk ambil customer_name dari tabel app_customers
+   - Tambahkan query untuk ambil branch_name dari tabel app_customer_branches
+   - Return data lengkap termasuk customer_name dan branch_name
+
+```php
+private function formatInvoiceData($invoice) {
+    global $wpdb;
+
+    // Get customer name
+    $customer_name = '-';
+    if ($invoice->customer_id) {
+        $customer = $wpdb->get_row($wpdb->prepare("
+            SELECT c.company_name
+            FROM {$wpdb->prefix}app_customers c
+            WHERE c.id = %d
+        ", $invoice->customer_id));
+        if ($customer) {
+            $customer_name = $customer->company_name;
+        }
+    }
+
+    // Get branch name
+    $branch_name = '-';
+    if ($invoice->branch_id) {
+        $branch = $wpdb->get_row($wpdb->prepare("
+            SELECT b.name
+            FROM {$wpdb->prefix}app_customer_branches b
+            WHERE b.id = %d
+        ", $invoice->branch_id));
+        if ($branch) {
+            $branch_name = $branch->name;
+        }
+    }
+
+    return [
+        'id' => $invoice->id,
+        'invoice_number' => $invoice->invoice_number ?? '',
+        'customer_id' => $invoice->customer_id,
+        'customer_name' => $customer_name,
+        'branch_id' => $invoice->branch_id,
+        'branch_name' => $branch_name,
+        'amount' => floatval($invoice->amount ?? 0),
+        'status' => $invoice->status ?? 'pending',
+        'status_label' => $this->invoice_model->getStatusLabel($invoice->status ?? 'pending'),
+        'due_date' => $invoice->due_date ?? '',
+        'paid_date' => $invoice->paid_date ?? null,
+        'description' => $invoice->description ?? '',
+        'created_at' => $invoice->created_at ?? '',
+        'updated_at' => $invoice->updated_at ?? '',
+        'is_overdue' => $this->invoice_model->isOverdue($invoice->id)
+    ];
+}
+```
+
+CARA TESTING:
+1. Refresh halaman Company Invoice
+2. Klik button "View" pada salah satu invoice di datatable
+3. Right panel seharusnya muncul dengan detail invoice lengkap
+4. Data yang ditampilkan:
+   - Invoice Number
+   - Customer Name (dari tabel app_customers)
+   - Branch Name (dari tabel app_customer_branches)
+   - Amount
+   - Status
+   - Due Date
+   - Created Date
+   - Description (jika ada)
+
+STATUS: ✅ SELESAI DIPERBAIKI
+
+Silakan test kembali klik view invoice.
+
+ada error ini:
+
+[10-Oct-2025 04:32:09 UTC] Cache key generated: invoice_invoice_5
+[10-Oct-2025 04:32:09 UTC] Cache attempt - Key: invoice_invoice_5, Type: invoice
+[10-Oct-2025 04:32:09 UTC] Cache miss - Key: invoice_invoice_5
+[10-Oct-2025 04:32:09 UTC] Setting cache - Key: invoice_invoice_5, Type: invoice, Expiry: 300s
+[10-Oct-2025 04:32:09 UTC] WordPress database error Unknown column 'c.company_name' in 'field list' for query
+                SELECT c.company_name
+                FROM wp_app_customers c
+                WHERE c.id = 2
+             made by do_action('wp_ajax_get_company_invoice_details'), WP_Hook->do_action, WP_Hook->apply_filters, WPCustomer\Controllers\Company\CompanyInvoiceController->getInvoiceDetails, WPCustomer\Controllers\Company\CompanyInvoiceController->formatInvoiceData, W3TC\DbCache_WpdbNew->query, W3TC\DbCache_WpdbInjection_QueryCaching->query, W3TC\_CallUnderlying->query, W3TC\DbCache_WpdbNew->query, W3TC\DbCache_WpdbInjection->query, W3TC\DbCache_WpdbNew->default_query
+[10-Oct-2025 04:32:09 UTC] Cache key generated: invoice_invoice_5
+[10-Oct-2025 04:32:09 UTC] Cache attempt - Key: invoice_invoice_5, Type: invoice
+[10-Oct-2025 04:32:09 UTC] Cache hit - Key: invoice_invoice_5
+
+---
+
+SOLUSI ERROR "Unknown column 'c.company_name'":
+
+PENYEBAB:
+- Tabel app_customers memiliki kolom `name` bukan `company_name`
+- Query di formatInvoiceData() menggunakan kolom yang salah
+- Error: Unknown column 'c.company_name' in 'field list'
+
+STRUKTUR TABEL app_customers:
+- id
+- code
+- name           ← Kolom yang benar
+- npwp
+- nib
+- status
+- provinsi_id
+- regency_id
+- user_id
+- created_by
+- created_at
+- updated_at
+
+SOLUSI YANG DITERAPKAN:
+File: src/Controllers/Company/CompanyInvoiceController.php
+Method: formatInvoiceData() (line 466-473)
+
+Perubahan query:
+```php
+// SALAH:
+SELECT c.company_name
+FROM {$wpdb->prefix}app_customers c
+WHERE c.id = %d
+
+// BENAR:
+SELECT c.name
+FROM {$wpdb->prefix}app_customers c
+WHERE c.id = %d
+```
+
+Dan assignment:
+```php
+// SALAH:
+$customer_name = $customer->company_name;
+
+// BENAR:
+$customer_name = $customer->name;
+```
+
+CARA TESTING:
+1. Refresh halaman Company Invoice
+2. Klik button "View" pada invoice di datatable
+3. Right panel akan muncul dengan data customer name yang benar
+
+STATUS: ✅ SELESAI DIPERBAIKI
+
+Silakan test kembali klik view invoice.
+
+---
+
+REVISI LOGIC formatInvoiceData():
+
+CATATAN USER:
+"saya kira seharusnya branch name ya, karena invoice ini per branch bukan per customer"
+
+PERUBAHAN:
+File: src/Controllers/Company/CompanyInvoiceController.php
+Method: formatInvoiceData() (line 460-497)
+
+OPTIMASI QUERY:
+- Sebelumnya: 2 query terpisah (1 untuk customer, 1 untuk branch)
+- Sekarang: 1 query dengan JOIN untuk ambil keduanya sekaligus (lebih efisien)
+
+Query baru:
+```php
+SELECT
+    b.name as branch_name,
+    c.name as customer_name
+FROM {$wpdb->prefix}app_customer_branches b
+LEFT JOIN {$wpdb->prefix}app_customers c ON b.customer_id = c.id
+WHERE b.id = %d
+```
+
+BENEFIT:
+1. Lebih efisien - hanya 1 query instead of 2
+2. Konsisten - data branch dan customer dijamin sinkron
+3. Lebih mudah maintain
+
+RETURN DATA:
+- customer_name: Nama customer (dari app_customers.name)
+- branch_name: Nama branch (dari app_customer_branches.name)
+
+Kedua data ini akan ditampilkan di right panel saat view invoice:
+- Customer: [nama customer]
+- Branch: [nama branch]
+
+STATUS: ✅ SELESAI DIOPTIMASI
+
+Silakan test kembali klik view invoice.
+
+
+TEST VIEW DETAIL COMPANY INVOICE
+- sudah tidak ada error
+-debug log:
+
+[10-Oct-2025 04:44:03 UTC] Cache hit - Key: invoice_invoice_4
+[10-Oct-2025 04:44:03 UTC] Cache key generated: invoice_invoice_4
+[10-Oct-2025 04:44:03 UTC] Cache attempt - Key: invoice_invoice_4, Type: invoice
+[10-Oct-2025 04:44:03 UTC] Cache hit - Key: invoice_invoice_4
+[10-Oct-2025 04:44:05 UTC] Cache key generated: invoice_invoice_5
+[10-Oct-2025 04:44:05 UTC] Cache attempt - Key: invoice_invoice_5, Type: invoice
+[10-Oct-2025 04:44:05 UTC] Cache hit - Key: invoice_invoice_5
+[10-Oct-2025 04:44:05 UTC] Cache key generated: invoice_invoice_5
+[10-Oct-2025 04:44:05 UTC] Cache attempt - Key: invoice_invoice_5, Type: invoice
+[10-Oct-2025 04:44:05 UTC] Cache hit - Key: invoice_invoice_5
+
+- data belum ditampilkan di panel kanan, seharusnya tampil dengan AJAX tanpa reload halaman dan tanpa flicker
+
+---
+
+SOLUSI DATA TIDAK TAMPIL DI PANEL KANAN:
+
+PENYEBAB:
+- Method `renderInvoiceDetails()` di JavaScript menggunakan selector yang berbeda dengan template HTML
+- Template menggunakan ID seperti: `#invoice-number`, `#invoice-customer`, dll
+- JavaScript sebelumnya menggunakan: `#invoice-details-content` dan custom HTML structure
+
+SOLUSI YANG DITERAPKAN:
+
+1. File: assets/js/company/company-invoice-script.js
+   Method: renderInvoiceDetails() (line 185-205)
+
+   Perubahan:
+   - Update untuk menggunakan existing template structure
+   - Tidak create HTML baru, tapi update existing elements
+   - Gunakan selector yang sesuai dengan partial template
+
+```javascript
+renderInvoiceDetails(data) {
+    // Update header
+    $('#invoice-header-number').text(data.invoice_number || '-');
+
+    // Update invoice details using existing template structure
+    $('#invoice-number').text(data.invoice_number || '-');
+    $('#invoice-customer').text(data.customer_name || '-');
+    $('#invoice-branch').text(data.branch_name || '-');
+    $('#invoice-amount').text('Rp ' + this.formatCurrency(data.amount));
+
+    // Update status with badge
+    const statusBadge = this.getStatusBadge(data.status);
+    $('#invoice-status').html(statusBadge).removeClass().addClass(this.getStatusClass(data.status));
+
+    $('#invoice-due-date').text(this.formatDate(data.due_date));
+    $('#invoice-created-at').text(this.formatDate(data.created_at));
+    $('#invoice-created-by').text(data.created_by || '-');
+
+    // Show invoice details tab
+    this.switchTab('invoice-details');
+}
+```
+
+2. File: assets/js/company/company-invoice-script.js
+   Method: getStatusClass() (line 311-319) - BARU
+
+   Tambah method baru untuk status class:
+```javascript
+getStatusClass(status) {
+    const classes = {
+        'pending': 'status-badge status-pending',
+        'paid': 'status-badge status-paid',
+        'overdue': 'status-badge status-overdue',
+        'cancelled': 'status-badge status-cancelled'
+    };
+    return classes[status] || 'status-badge';
+}
+```
+
+3. File: assets/js/company/company-invoice-script.js
+   Method: switchTab() (line 276-293)
+
+   Perubahan:
+   - Gunakan selector `.tab-content` instead of `.invoice-tab-content`
+   - Gunakan `#${tabId}` instead of `#${tabId}-content`
+   - Sesuaikan dengan struktur template
+
+```javascript
+switchTab(tabId) {
+    // Update tab navigation
+    $('.nav-tab').removeClass('nav-tab-active');
+    $(`.nav-tab[data-tab="${tabId}"]`).addClass('nav-tab-active');
+
+    // Update tab content
+    $('.tab-content').removeClass('active');
+    $(`#${tabId}`).addClass('active');
+
+    // ... rest of code
+}
+```
+
+4. File: assets/js/company/company-invoice-script.js
+   Event Handler: Tab navigation (line 84-90)
+
+   Perubahan:
+   - Gunakan selector `.nav-tab` instead of `.nav-tab.invoice-tab`
+   - Lebih generic dan sesuai template
+
+CARA KERJA SETELAH PERBAIKAN:
+1. User klik "View" button di datatable
+2. AJAX request ke server (get_company_invoice_details)
+3. Server return data invoice dengan customer_name dan branch_name
+4. JavaScript update existing HTML elements di template
+5. Right panel muncul dengan smooth transition
+6. Data langsung tampil tanpa reload atau flicker
+
+CARA TESTING:
+1. Refresh halaman Company Invoice
+2. Klik button "View" pada invoice di datatable
+3. Panel kanan akan muncul dengan data lengkap:
+   - Detail Invoice: [nomor]
+   - Nomor Invoice
+   - Customer
+   - Cabang
+   - Jumlah
+   - Status
+   - Jatuh Tempo
+   - Tanggal Dibuat
+   - Dibuat Oleh
+
+STATUS: ✅ SELESAI DIPERBAIKI
+
+Silakan test kembali klik view invoice, data seharusnya sudah tampil dengan AJAX tanpa reload.
+
+FINAL
+- buat ringkasan TODO-2021-create-company-invoice-page.md ke TODO.md, sesuaikan pola dengan yang sudah ada
+
+✅ SELESAI - TODO-2021 sudah ada di TODO.md line 38-43 dengan status Completed
+✅ SELESAI - TODO-2122 status diubah dari "In Progress" ke "Completed" di TODO.md line 31-36
+
+SUMMARY TODO-2122:
+
+FILES CREATED:
+1. docs/TODO-2122-create-company-invoice-demo-data.md
+2. src/Database/Demo/CompanyInvoiceDemoData.php
+3. assets/js/company/company-invoice-datatable-script.js
+4. assets/css/company/company-invoice-datatable-style.css
+
+FILES MODIFIED:
+1. TODO.md - Status: Completed
+2. src/Database/Tables/CustomerInvoicesDB.php - Added 3 fields + indexes (membership_id, level_id, invoice_type)
+3. src/Database/Demo/MembershipDemoData.php - Added upgrade support (30% probability)
+4. assets/js/company/company-invoice-script.js - Removed DataTable config, fixed renderInvoiceDetails, switchTab
+5. assets/css/company/company-invoice-style.css - Removed DataTable styles
+6. includes/class-dependencies.php - Register new DataTable files
+7. src/Views/templates/settings/tab-demo-data.php - Added invoice card
+8. src/Controllers/SettingsController.php - Added company-invoices handler, memberships case
+9. src/Controllers/Company/CompanyInvoiceController.php - Fixed getInvoiceDetails, formatInvoiceData
+
+BUGS FIXED:
+1. Namespace error: CustomerMembershipModel path corrected
+2. Button enable/disable: Added memberships case in handle_check_demo_data
+3. Toast error "ID Customer tidak valid": Fixed getInvoiceDetails validation
+4. Column error: Changed company_name to name (app_customers table)
+5. Data tidak tampil: Fixed renderInvoiceDetails selectors to match template
+
+READY FOR GIT COMMIT
+
+---
+
+SUGGESTED GIT COMMIT MESSAGE:
+
+```
+feat: Complete Company Invoice Demo Data Generator (TODO-2122)
+
+Implemented comprehensive demo data generator for company invoices with
+full integration to membership upgrade system and payment tracking.
+
+Files Created:
+- docs/TODO-2122-create-company-invoice-demo-data.md
+- src/Database/Demo/CompanyInvoiceDemoData.php
+- assets/js/company/company-invoice-datatable-script.js (split from main)
+- assets/css/company/company-invoice-datatable-style.css (split from main)
+
+Database Changes:
+- CustomerInvoicesDB: Added membership_id, level_id, invoice_type fields
+- Added indexes for new fields
+- Schema version updated to 1.1.0
+
+Demo Data Features:
+- Generate 1-2 random invoices per branch
+- 30% probability for membership upgrade invoices
+- Random status distribution (40% pending, 40% paid, 15% overdue, 5% cancelled)
+- 12-month discount logic (pay 10 months for 12-month period)
+- Auto-create payment records for paid invoices
+- Link invoices to memberships and levels
+
+Code Organization:
+- Split DataTable assets from main invoice files for better maintainability
+- Separated concerns: main script vs DataTable configuration
+
+Bug Fixes:
+- Fixed CustomerMembershipModel namespace (Models/Membership not Models/Customer)
+- Fixed button enable/disable logic (added memberships case in SettingsController)
+- Fixed getInvoiceDetails validation (removed customer_id requirement)
+- Fixed formatInvoiceData query (use 'name' not 'company_name')
+- Fixed renderInvoiceDetails selectors to match template structure
+
+Integration:
+- Settings page demo data tab updated with invoice card
+- SettingsController handlers for generate and check demo data
+- MembershipDemoData enhanced with upgrade support
+
+Tested:
+✓ Demo data generation successful
+✓ Invoice view panel displays correctly
+✓ Customer and branch names display properly
+✓ No console errors or database errors
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+

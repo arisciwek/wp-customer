@@ -54,13 +54,17 @@ class WP_Customer_Activator {
                 return;
             }
 
-            // 2. Create customer role first if it doesn't exist
-            if (!get_role('customer')) {
-                add_role(
-                    'customer',
-                    __('Customer', 'wp-customer'),
-                    [] // Start with empty capabilities
-                );
+            // 2. Create roles if they don't exist
+            $all_roles = self::getRoles();
+
+            foreach ($all_roles as $role_slug => $role_name) {
+                if (!get_role($role_slug)) {
+                    add_role(
+                        $role_slug,
+                        $role_name,
+                        [] // Start with empty capabilities
+                    );
+                }
             }
 
             // 3. Now initialize permission model and add capabilities
@@ -124,5 +128,19 @@ class WP_Customer_Activator {
 
     private static function addVersion() {
         add_option('wp_customer_version', WP_CUSTOMER_VERSION);
+    }
+
+    /**
+     * Get all available roles with their display names
+     * Single source of truth for roles in the plugin
+     *
+     * @return array Array of role_slug => role_name pairs
+     */
+    public static function getRoles(): array {
+        return [
+            'customer' => __('Customer', 'wp-customer'),
+            'branch_admin' => __('Branch Admin', 'wp-customer'),
+            'branch_staff' => __('Branch Staff', 'wp-customer'),
+        ];
     }
 }

@@ -19,6 +19,12 @@
  * - CompanyInvoice object (dari company-invoice-script.js)
  *
  * Changelog:
+ * 1.0.1 - 2025-10-10
+ * - Added element existence check before DataTable initialization
+ * - Added DataTables library availability check
+ * - Added error handling with console warnings
+ * - Prevents "Cannot read properties of undefined" error
+ *
  * 1.0.0 - 2025-01-10
  * - Initial version (separated from company-invoice-script.js)
  * - Added DataTable configuration
@@ -32,8 +38,21 @@
     const CompanyInvoiceDataTable = {
         initDataTable() {
             const self = window.CompanyInvoice || this;
+            const $table = $('#company-invoices-table');
 
-            const dataTable = $('#company-invoices-table').DataTable({
+            // Check if table element exists before initializing
+            if ($table.length === 0) {
+                console.warn('Company Invoice table element not found. Skipping DataTable initialization.');
+                return null;
+            }
+
+            // Check if DataTable is available
+            if (typeof $.fn.DataTable === 'undefined') {
+                console.error('DataTables library not loaded. Cannot initialize invoice table.');
+                return null;
+            }
+
+            const dataTable = $table.DataTable({
                 serverSide: true,
                 processing: true,
                 ajax: {
@@ -64,6 +83,24 @@
                         orderable: true
                     },
                     {
+                        data: null,
+                        title: 'Level',
+                        orderable: false,
+                        render: function(data, type, row) {
+                            // Show upgrade indicator if from_level differs from target level
+                            if (row.is_upgrade && row.from_level_name && row.level_name) {
+                                return row.from_level_name + ' → ' + row.level_name + ' <span style="color: green; font-weight: bold;">⬆</span>';
+                            }
+                            // Show just the level name for renewal (same level)
+                            return row.level_name || '-';
+                        }
+                    },
+                    {
+                        data: 'period_months',
+                        title: 'Period',
+                        orderable: true
+                    },
+                    {
                         data: 'amount',
                         title: 'Jumlah',
                         orderable: true
@@ -79,11 +116,6 @@
                         orderable: true
                     },
                     {
-                        data: 'created_at',
-                        title: 'Tanggal',
-                        orderable: true
-                    },
-                    {
                         data: null,
                         title: 'Aksi',
                         orderable: false,
@@ -93,7 +125,7 @@
                     }
                 ],
                 pageLength: 10,
-                order: [[5, 'desc']], // Default sort by created date
+                order: [[6, 'desc']], // Default sort by due date
                 language: {
                     processing: 'Memuat...',
                     emptyTable: 'Tidak ada data invoice',

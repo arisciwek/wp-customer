@@ -142,7 +142,7 @@ class CompanyInvoiceDemoData extends AbstractDemoData {
                     b.*,
                     c.user_id as customer_user_id,
                     m.id as membership_id,
-                    m.level_id,
+                    m.level_id as current_level_id,
                     m.period_months,
                     m.upgrade_to_level_id,
                     ml.price_per_month
@@ -176,14 +176,16 @@ class CompanyInvoiceDemoData extends AbstractDemoData {
     private function createInvoice($branch, $current_date): void {
         global $wpdb;
 
-        // Determine invoice type and target level
+        // Determine invoice type, from_level, and target level
         $invoice_type = 'other';
-        $target_level_id = $branch->level_id;
+        $from_level_id = $branch->current_level_id; // Always start from current level
+        $target_level_id = $branch->current_level_id;
 
         // 30% chance to create upgrade invoice if upgrade_to_level_id exists
         if ($branch->upgrade_to_level_id && rand(1, 100) <= 30) {
             $invoice_type = 'membership_upgrade';
             $target_level_id = $branch->upgrade_to_level_id;
+            // from_level_id stays as current_level_id (upgrade scenario)
 
             // Get target level pricing
             $target_level = $wpdb->get_row($wpdb->prepare("
@@ -192,8 +194,10 @@ class CompanyInvoiceDemoData extends AbstractDemoData {
             ));
             $price_per_month = $target_level ? $target_level->price_per_month : $branch->price_per_month;
         } else {
-            // Regular renewal invoice
+            // Regular renewal invoice - same level
             $invoice_type = rand(0, 1) ? 'renewal' : 'other';
+            $target_level_id = $branch->current_level_id;
+            $from_level_id = $branch->current_level_id; // Same as target for renewal
             $price_per_month = $branch->price_per_month;
         }
 
@@ -242,15 +246,17 @@ class CompanyInvoiceDemoData extends AbstractDemoData {
             'customer_id' => $branch->customer_id,
             'branch_id' => $branch->id,
             'membership_id' => $branch->membership_id,
+            'from_level_id' => $from_level_id,
             'level_id' => $target_level_id,
             'invoice_type' => $invoice_type,
             'invoice_number' => $invoice_number,
             'amount' => $amount,
+            'period_months' => $period_months,
             'status' => $status,
             'due_date' => $due_date,
             'paid_date' => $paid_date,
             'description' => $description,
-            'created_by' => $branch->customer_user_id,
+            'created_by' => $branch->user_id ?: 1, // Use branch admin user_id, fallback to admin
             'created_at' => $current_date
         ];
 

@@ -18,10 +18,12 @@
  * - customer_id    : ID customer
  * - branch_id      : ID branch (nullable, for branch-specific invoices)
  * - membership_id  : ID membership terkait (nullable)
- * - level_id       : ID membership level terkait (nullable)
+ * - from_level_id  : ID level asal/saat ini (nullable, for upgrade tracking)
+ * - level_id       : ID membership level tujuan (nullable)
  * - invoice_type   : Jenis invoice (membership_upgrade, renewal, other)
  * - invoice_number : Nomor invoice unik
  * - amount         : Jumlah yang harus dibayar
+ * - period_months  : Periode berlangganan dalam bulan (1, 3, 6, 12)
  * - status         : Status invoice (pending, paid, overdue, cancelled)
  * - due_date       : Tanggal jatuh tempo
  * - paid_date      : Tanggal pembayaran (nullable)
@@ -37,6 +39,14 @@
  * - app_customer_membership_levels table
  *
  * Changelog:
+ * 1.3.0 - 2025-10-10
+ * - Added from_level_id field for upgrade tracking and analytics
+ * - Added index for from_level_id
+ * - Enables tracking of level changes (upgrade/renewal/downgrade)
+ *
+ * 1.2.0 - 2025-10-10
+ * - Added period_months field for subscription period tracking
+ *
  * 1.1.0 - 2025-01-10
  * - Added membership_id field for membership link
  * - Added level_id field for level link
@@ -62,10 +72,12 @@ class CustomerInvoicesDB {
             customer_id bigint(20) UNSIGNED NOT NULL,
             branch_id bigint(20) UNSIGNED NULL,
             membership_id bigint(20) UNSIGNED NULL,
+            from_level_id bigint(20) UNSIGNED NULL,
             level_id bigint(20) UNSIGNED NULL,
             invoice_type enum('membership_upgrade','renewal','other') NOT NULL DEFAULT 'other',
             invoice_number varchar(20) NOT NULL,
             amount decimal(10,2) NOT NULL,
+            period_months int(11) NOT NULL DEFAULT 1,
             status enum('pending','paid','overdue','cancelled') NOT NULL DEFAULT 'pending',
             due_date datetime NOT NULL,
             paid_date datetime NULL,
@@ -78,6 +90,7 @@ class CustomerInvoicesDB {
             KEY customer_id (customer_id),
             KEY branch_id (branch_id),
             KEY membership_id (membership_id),
+            KEY from_level_id (from_level_id),
             KEY level_id (level_id),
             KEY invoice_type (invoice_type),
             KEY status (status),

@@ -482,18 +482,21 @@ class CompanyInvoiceModel {
         ];
         $params = wp_parse_args($params, $defaults);
 
-        // Base query with JOIN to get company name
+        // Base query with JOIN to get company name and both level names
         $branches_table = $wpdb->prefix . 'app_customer_branches';
+        $levels_table = $wpdb->prefix . 'app_customer_membership_levels';
 
         $base_query = "FROM {$this->table} ci
-                      LEFT JOIN {$branches_table} b ON ci.branch_id = b.id";
+                      LEFT JOIN {$branches_table} b ON ci.branch_id = b.id
+                      LEFT JOIN {$levels_table} ml_from ON ci.from_level_id = ml_from.id
+                      LEFT JOIN {$levels_table} ml_to ON ci.level_id = ml_to.id";
 
         $where = " WHERE 1=1";
 
         // Search
         if (!empty($params['search'])) {
             $search = '%' . $wpdb->esc_like($params['search']) . '%';
-            $where .= $wpdb->prepare(" AND (ci.invoice_number LIKE %s OR b.name LIKE %s)", $search, $search);
+            $where .= $wpdb->prepare(" AND (ci.invoice_number LIKE %s OR b.name LIKE %s OR ml_from.name LIKE %s OR ml_to.name LIKE %s)", $search, $search, $search, $search);
         }
 
         // Get total records
@@ -505,8 +508,12 @@ class CompanyInvoiceModel {
         // Limit
         $limit = $wpdb->prepare("LIMIT %d, %d", $params['start'], $params['length']);
 
-        // Get data
-        $query = "SELECT ci.*, b.name as company_name {$base_query} {$where} {$order} {$limit}";
+        // Get data with both level names
+        $query = "SELECT ci.*,
+                         b.name as company_name,
+                         ml_from.name as from_level_name,
+                         ml_to.name as to_level_name
+                  {$base_query} {$where} {$order} {$limit}";
         $data = $wpdb->get_results($query);
 
         // Format data for DataTable
@@ -516,11 +523,14 @@ class CompanyInvoiceModel {
                 'id' => $row->id,
                 'invoice_number' => $row->invoice_number,
                 'company_name' => $row->company_name ?? '-',
+                'from_level_name' => $row->from_level_name ?? '-',
+                'level_name' => $row->to_level_name ?? '-',
+                'is_upgrade' => ($row->from_level_id && $row->level_id && $row->from_level_id != $row->level_id),
+                'period_months' => $row->period_months . ' bulan',
                 'amount' => 'Rp ' . number_format($row->amount, 0, ',', '.'),
                 'status' => $this->getStatusLabel($row->status),
                 'status_raw' => $row->status,
                 'due_date' => date('d/m/Y', strtotime($row->due_date)),
-                'created_at' => date('d/m/Y H:i', strtotime($row->created_at)),
                 'actions' => ''
             ];
         }

@@ -54,6 +54,7 @@ class CompanyInvoiceController {
         add_action('wp_ajax_handle_company_invoice_datatable', [$this, 'handleDataTableRequest']);
         add_action('wp_ajax_get_company_invoice_stats', [$this, 'getStatistics']);
         add_action('wp_ajax_get_company_invoice_payments', [$this, 'getCompanyInvoicePayments']);
+        add_action('wp_ajax_handle_invoice_payment', [$this, 'handle_invoice_payment']);
     }
 
     /**
@@ -460,8 +461,10 @@ class CompanyInvoiceController {
     private function formatInvoiceData($invoice) {
         global $wpdb;
 
-        // Get branch and customer data in single query (more efficient)
+        // Get branch, customer, and level data in single query (more efficient)
         $branch_data = null;
+        $level_name = '-';
+
         if ($invoice->branch_id) {
             $branch_data = $wpdb->get_row($wpdb->prepare("
                 SELECT
@@ -473,9 +476,43 @@ class CompanyInvoiceController {
             ", $invoice->branch_id));
         }
 
+        // Get from_level name
+        $from_level_name = '-';
+        if (!empty($invoice->from_level_id)) {
+            $from_level_data = $wpdb->get_row($wpdb->prepare("
+                SELECT name FROM {$wpdb->prefix}app_customer_membership_levels
+                WHERE id = %d
+            ", $invoice->from_level_id));
+
+            if ($from_level_data) {
+                $from_level_name = $from_level_data->name;
+            }
+        }
+
+        // Get to_level name
+        if (!empty($invoice->level_id)) {
+            $level_data = $wpdb->get_row($wpdb->prepare("
+                SELECT name FROM {$wpdb->prefix}app_customer_membership_levels
+                WHERE id = %d
+            ", $invoice->level_id));
+
+            if ($level_data) {
+                $level_name = $level_data->name;
+            }
+        }
+
         // Set branch and customer names
         $branch_name = $branch_data && $branch_data->branch_name ? $branch_data->branch_name : '-';
         $customer_name = $branch_data && $branch_data->customer_name ? $branch_data->customer_name : '-';
+
+        // Get created_by user name
+        $created_by_name = '-';
+        if (!empty($invoice->created_by)) {
+            $user = get_userdata($invoice->created_by);
+            if ($user) {
+                $created_by_name = $user->display_name ?: $user->user_login;
+            }
+        }
 
         return [
             'id' => $invoice->id,
@@ -484,12 +521,20 @@ class CompanyInvoiceController {
             'customer_name' => $customer_name,
             'branch_id' => $invoice->branch_id,
             'branch_name' => $branch_name,
+            'from_level_id' => $invoice->from_level_id ?? null,
+            'from_level_name' => $from_level_name,
+            'level_id' => $invoice->level_id ?? null,
+            'level_name' => $level_name,
+            'is_upgrade' => ($invoice->from_level_id && $invoice->level_id && $invoice->from_level_id != $invoice->level_id),
+            'period_months' => $invoice->period_months ?? 1,
             'amount' => floatval($invoice->amount ?? 0),
             'status' => $invoice->status ?? 'pending',
             'status_label' => $this->invoice_model->getStatusLabel($invoice->status ?? 'pending'),
             'due_date' => $invoice->due_date ?? '',
             'paid_date' => $invoice->paid_date ?? null,
             'description' => $invoice->description ?? '',
+            'created_by' => $invoice->created_by ?? 0,
+            'created_by_name' => $created_by_name,
             'created_at' => $invoice->created_at ?? '',
             'updated_at' => $invoice->updated_at ?? '',
             'is_overdue' => $this->invoice_model->isOverdue($invoice->id)
@@ -616,6 +661,97 @@ class CompanyInvoiceController {
             wp_send_json_error([
                 'message' => $e->getMessage()
             ], 400);
+        }
+    }
+
+    /**
+     * Handle invoice payment
+     */
+    public function handle_invoice_payment() {
+        try {
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+
+            if (!current_user_can('manage_options')) {
+                throw new \Exception(__('Permission denied', 'wp-customer'));
+            }
+
+            $invoice_id = isset($_POST['invoice_id']) ? intval($_POST['invoice_id']) : 0;
+            $payment_method = isset($_POST['payment_method']) ? sanitize_text_field($_POST['payment_method']) : '';
+
+            if (!$invoice_id || !$payment_method) {
+                throw new \Exception(__('Invalid parameters', 'wp-customer'));
+            }
+
+            // Get invoice
+            $invoice = $this->invoice_model->find($invoice_id);
+            if (!$invoice) {
+                throw new \Exception(__('Invoice tidak ditemukan', 'wp-customer'));
+            }
+
+            // Check if invoice is already paid
+            if ($invoice->status === 'paid') {
+                throw new \Exception(__('Invoice sudah dibayar', 'wp-customer'));
+            }
+
+            // Check if invoice is cancelled
+            if ($invoice->status === 'cancelled') {
+                throw new \Exception(__('Invoice sudah dibatalkan', 'wp-customer'));
+            }
+
+            // Validate payment method
+            $valid_methods = ['transfer_bank', 'virtual_account', 'kartu_kredit', 'e_wallet'];
+            if (!in_array($payment_method, $valid_methods)) {
+                throw new \Exception(__('Metode pembayaran tidak valid', 'wp-customer'));
+            }
+
+            // Mark invoice as paid
+            $paid_date = current_time('mysql');
+            $result = $this->invoice_model->markAsPaid($invoice_id, $paid_date);
+
+            if (!$result) {
+                throw new \Exception(__('Gagal memproses pembayaran', 'wp-customer'));
+            }
+
+            // Create payment record
+            global $wpdb;
+            $payment_table = $wpdb->prefix . 'app_customer_payments';
+
+            $payment_id = 'PAY-' . date('Ymd') . '-' . sprintf('%05d', rand(10000, 99999));
+            $payment_data = [
+                'payment_id' => $payment_id,
+                'company_id' => $invoice->customer_id,
+                'amount' => $invoice->amount,
+                'payment_method' => $payment_method,
+                'description' => sprintf(__('Payment for invoice %s', 'wp-customer'), $invoice->invoice_number),
+                'metadata' => json_encode([
+                    'invoice_id' => $invoice_id,
+                    'invoice_number' => $invoice->invoice_number,
+                    'payment_method' => $payment_method,
+                    'payment_date' => $paid_date
+                ]),
+                'status' => 'completed',
+                'created_at' => $paid_date,
+                'updated_at' => $paid_date
+            ];
+
+            $wpdb->insert($payment_table, $payment_data);
+
+            // Get updated invoice
+            $updated_invoice = $this->invoice_model->find($invoice_id);
+
+            // Clear cache
+            $this->cache->flush('invoice_list');
+            $this->cache->flush('invoice_stats');
+
+            wp_send_json_success([
+                'message' => __('Payment processed successfully', 'wp-customer'),
+                'invoice' => $this->formatInvoiceData($updated_invoice)
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
         }
     }
 

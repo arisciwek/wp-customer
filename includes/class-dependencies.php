@@ -471,7 +471,8 @@ class WP_Customer_Dependencies {
 
             // Company Invoice scripts (load DataTable config first)
             wp_enqueue_script('company-invoice-datatable', WP_CUSTOMER_URL . 'assets/js/company/company-invoice-datatable-script.js', ['jquery', 'datatables'], $this->version, true);
-            wp_enqueue_script('company-invoice-script', WP_CUSTOMER_URL . 'assets/js/company/company-invoice-script.js', ['jquery', 'datatables', 'customer-toast', 'company-invoice-datatable'], $this->version, true);
+            wp_enqueue_script('company-invoice-payment-modal', WP_CUSTOMER_URL . 'assets/js/company/company-invoice-payment-modal.js', ['jquery', 'customer-toast'], $this->version, true);
+            wp_enqueue_script('company-invoice-script', WP_CUSTOMER_URL . 'assets/js/company/company-invoice-script.js', ['jquery', 'datatables', 'customer-toast', 'company-invoice-datatable', 'company-invoice-payment-modal'], $this->version, true);
 
             // Localize script
             wp_localize_script('company-invoice-script', 'wpCustomerData', [

@@ -22,8 +22,9 @@
             <thead>
                 <tr>
                     <th>Nomor Invoice</th>
-                    <th>Customer</th>
                     <th>Cabang</th>
+                    <th>Level</th>
+                    <th>Period</th>
                     <th>Jumlah</th>
                     <th>Status</th>
                     <th>Jatuh Tempo</th>
