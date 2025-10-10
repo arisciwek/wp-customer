@@ -326,3 +326,4 @@ class CompanyInvoiceValidator {
         return $d && $d->format('Y-m-d') === $date;
     }
 }
+

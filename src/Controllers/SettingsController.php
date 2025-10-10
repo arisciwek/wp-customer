@@ -189,8 +189,10 @@ class SettingsController {
                 return new \WPCustomer\Database\Demo\MembershipFeaturesDemoData();
             case 'membership-level':
                 return new \WPCustomer\Database\Demo\MembershipLevelsDemoData();
-            case 'memberships':  // Tambah case ini
+            case 'memberships':
                 return new \WPCustomer\Database\Demo\MembershipDemoData();
+            case 'company-invoices':
+                return new \WPCustomer\Database\Demo\CompanyInvoiceDemoData();
             default:
                 throw new \Exception('Invalid demo data type: ' . $type);
         }
@@ -365,6 +367,10 @@ class SettingsController {
                     break;
                 case 'membership-features':
                     $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_membership_features");
+                    $has_data = ($count > 0);
+                    break;
+                case 'memberships':
+                    $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_memberships");
                     $has_data = ($count > 0);
                     break;
                 default:

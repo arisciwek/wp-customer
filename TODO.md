@@ -28,12 +28,19 @@
 - Files: src/Models/Company/CompanyInvoiceModel.php, src/Controllers/Company/CompanyInvoiceController.php, src/Validators/Company/CompanyInvoiceValidator.php
 - Status: Completed
 
+## TODO-2122: Create Company Invoice Demo Data Generator
+- Issue: Need demo data generator for company invoices to test invoice management, payment integration, and membership upgrade flow
+- Root Cause: CustomerInvoicesDB table has no demo data generator, cannot test features without sample data, missing invoice-membership link
+- Target: Create CompanyInvoiceDemoData.php with 1-2 invoices per branch, membership upgrade support, payment records for paid invoices, 12-month discount logic, split DataTable assets for better organization
+- Files: src/Database/Demo/CompanyInvoiceDemoData.php, src/Database/Tables/CustomerInvoicesDB.php (add membership_id, level_id, invoice_type), src/Database/Demo/MembershipDemoData.php, settings tab files, split company-invoice assets, src/Controllers/SettingsController.php (add memberships case, company-invoices handler), src/Controllers/Company/CompanyInvoiceController.php (fix getInvoiceDetails, formatInvoiceData), assets/js/company/company-invoice-script.js (fix renderInvoiceDetails, switchTab) (see docs/TODO-2122-create-company-invoice-demo-data.md)
+- Status: Completed
+
 ## TODO-2021: Create Company Invoice Page
-- Issue: Need a dedicated admin page for managing Company Invoices with full functionality
-- Root Cause: No UI for invoice management despite existing models and tables
-- Target: Create complete invoice management page with dashboard, DataTable, detail panels, and CRUD operations
-- Files: Multiple template, controller, asset files (see TODO-2021.md for details)
-- Status: Pending
+- Issue: Need a dedicated admin page "WP Invoice Perusahaan" for managing company invoices with full functionality including invoice listing, detail view, and payment tracking
+- Root Cause: No UI menu and dashboard for invoice management despite existing CompanyInvoiceModel, CompanyInvoiceValidator, and database tables
+- Target: Create complete invoice management page following customer-dashboard.php pattern with menu, dashboard statistics, left panel DataTable (CustomerInvoicesDB-BranchesDB), right panel tabs (invoice details, payment info), AJAX navigation, and "View Payment" button
+- Files: src/Views/templates/company-invoice/*.php, src/Controllers/Company/CompanyInvoiceController.php, src/Controllers/MenuManager.php, assets/css/company/company-invoice-style.css, assets/js/company/company-invoice-script.js, includes/class-dependencies.php (see docs/TODO-2021-create-company-invoice-page.md for details)
+- Status: Completed
 
 ## TODO-2116: Fix Table Name Mismatch for Branches Table
 - Issue: Table 'wppm.wp_app_customer_branches' doesn't exist during plugin activation

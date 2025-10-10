@@ -49,6 +49,11 @@ class CompanyInvoiceController {
         add_action('wp_ajax_delete_company_invoice', [$this, 'deleteInvoice']);
         add_action('wp_ajax_mark_invoice_paid', [$this, 'markInvoicePaid']);
         add_action('wp_ajax_get_unpaid_invoices', [$this, 'getUnpaidInvoices']);
+
+        // Register DataTable and panel handlers
+        add_action('wp_ajax_handle_company_invoice_datatable', [$this, 'handleDataTableRequest']);
+        add_action('wp_ajax_get_company_invoice_stats', [$this, 'getStatistics']);
+        add_action('wp_ajax_get_company_invoice_payments', [$this, 'getCompanyInvoicePayments']);
     }
 
     /**
@@ -157,32 +162,31 @@ class CompanyInvoiceController {
      */
     public function getInvoiceDetails() {
         try {
-            $result = $this->validateRequest();
-            if (is_wp_error($result)) {
-                throw new \Exception($result->get_error_message());
+            // Verify nonce
+            check_ajax_referer('wp_customer_nonce', 'nonce');
+
+            // Check permissions
+            if (!current_user_can('manage_options')) {
+                throw new \Exception(__('Anda tidak memiliki izin untuk mengakses data ini', 'wp-customer'));
             }
 
-            $customer_id = $result;
-            $invoice_id = isset($_POST['invoice_id']) ? intval($_POST['invoice_id']) : 0;
+            // Get invoice_id from POST (either 'id' or 'invoice_id')
+            $invoice_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+            if (!$invoice_id) {
+                $invoice_id = isset($_POST['invoice_id']) ? intval($_POST['invoice_id']) : 0;
+            }
 
             if (!$invoice_id) {
                 throw new \Exception(__('ID Invoice tidak valid', 'wp-customer'));
             }
 
-            // Get invoice
+            // Get invoice with related data
             $invoice = $this->invoice_model->find($invoice_id);
             if (!$invoice) {
                 throw new \Exception(__('Invoice tidak ditemukan', 'wp-customer'));
             }
 
-            // Check if invoice belongs to customer
-            if ($invoice->customer_id != $customer_id && !current_user_can('manage_options')) {
-                throw new \Exception(__('Anda tidak memiliki izin untuk mengakses invoice ini', 'wp-customer'));
-            }
-
-            wp_send_json_success([
-                'invoice' => $this->formatInvoiceData($invoice)
-            ]);
+            wp_send_json_success($this->formatInvoiceData($invoice));
 
         } catch (\Exception $e) {
             wp_send_json_error([
@@ -454,20 +458,165 @@ class CompanyInvoiceController {
      * @return array Formatted invoice data
      */
     private function formatInvoiceData($invoice) {
+        global $wpdb;
+
+        // Get branch and customer data in single query (more efficient)
+        $branch_data = null;
+        if ($invoice->branch_id) {
+            $branch_data = $wpdb->get_row($wpdb->prepare("
+                SELECT
+                    b.name as branch_name,
+                    c.name as customer_name
+                FROM {$wpdb->prefix}app_customer_branches b
+                LEFT JOIN {$wpdb->prefix}app_customers c ON b.customer_id = c.id
+                WHERE b.id = %d
+            ", $invoice->branch_id));
+        }
+
+        // Set branch and customer names
+        $branch_name = $branch_data && $branch_data->branch_name ? $branch_data->branch_name : '-';
+        $customer_name = $branch_data && $branch_data->customer_name ? $branch_data->customer_name : '-';
+
         return [
             'id' => $invoice->id,
-            'invoice_number' => $invoice->invoice_number,
+            'invoice_number' => $invoice->invoice_number ?? '',
             'customer_id' => $invoice->customer_id,
+            'customer_name' => $customer_name,
             'branch_id' => $invoice->branch_id,
-            'amount' => floatval($invoice->amount),
-            'status' => $invoice->status,
-            'status_label' => $this->invoice_model->getStatusLabel($invoice->status),
-            'due_date' => $invoice->due_date,
-            'paid_date' => $invoice->paid_date,
-            'description' => $invoice->description,
-            'created_at' => $invoice->created_at,
-            'updated_at' => $invoice->updated_at,
+            'branch_name' => $branch_name,
+            'amount' => floatval($invoice->amount ?? 0),
+            'status' => $invoice->status ?? 'pending',
+            'status_label' => $this->invoice_model->getStatusLabel($invoice->status ?? 'pending'),
+            'due_date' => $invoice->due_date ?? '',
+            'paid_date' => $invoice->paid_date ?? null,
+            'description' => $invoice->description ?? '',
+            'created_at' => $invoice->created_at ?? '',
+            'updated_at' => $invoice->updated_at ?? '',
             'is_overdue' => $this->invoice_model->isOverdue($invoice->id)
         ];
     }
+
+    /**
+     * Render main page template
+     */
+    public function render_page() {
+        if (!current_user_can('manage_options')) {
+            require_once WP_CUSTOMER_PATH . 'src/Views/templates/company-invoice/company-invoice-no-access.php';
+            return;
+        }
+
+        require_once WP_CUSTOMER_PATH . 'src/Views/templates/company-invoice/company-invoice-dashboard.php';
+    }
+
+    /**
+     * Handle DataTable AJAX request
+     */
+    public function handleDataTableRequest() {
+        try {
+            // Verify nonce
+            if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
+                throw new \Exception('Invalid nonce');
+            }
+
+            // Check permissions
+            if (!current_user_can('manage_options')) {
+                throw new \Exception(__('Anda tidak memiliki izin untuk mengakses data ini', 'wp-customer'));
+            }
+
+            // Get DataTable parameters
+            $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
+            $start = isset($_POST['start']) ? intval($_POST['start']) : 0;
+            $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
+            $search = isset($_POST['search']['value']) ? sanitize_text_field($_POST['search']['value']) : '';
+            $orderColumnIndex = isset($_POST['order'][0]['column']) ? intval($_POST['order'][0]['column']) : 0;
+            $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'desc';
+
+            // Map column index to field name
+            $columns = ['invoice_number', 'company_name', 'amount', 'status', 'created_at'];
+            $orderColumn = $columns[$orderColumnIndex] ?? 'created_at';
+
+            // Get data from model
+            $result = $this->invoice_model->getDataTableData([
+                'start' => $start,
+                'length' => $length,
+                'search' => $search,
+                'order_column' => $orderColumn,
+                'order_dir' => $orderDir
+            ]);
+
+            wp_send_json([
+                'draw' => $draw,
+                'recordsTotal' => $result['total'],
+                'recordsFiltered' => $result['filtered'],
+                'data' => $result['data']
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Get invoice statistics for dashboard
+     */
+    public function getStatistics() {
+        try {
+            // Verify nonce
+            if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
+                throw new \Exception('Invalid nonce');
+            }
+
+            // Check permissions
+            if (!current_user_can('manage_options')) {
+                throw new \Exception(__('Anda tidak memiliki izin untuk mengakses data ini', 'wp-customer'));
+            }
+
+            $stats = $this->invoice_model->getStatistics();
+
+            wp_send_json_success($stats);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
+    /**
+     * Get company invoice payments for payment info tab
+     */
+    public function getCompanyInvoicePayments() {
+        try {
+            // Verify nonce
+            if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
+                throw new \Exception('Invalid nonce');
+            }
+
+            // Check permissions
+            if (!current_user_can('manage_options')) {
+                throw new \Exception(__('Anda tidak memiliki izin untuk mengakses data ini', 'wp-customer'));
+            }
+
+            $invoice_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
+
+            if (!$invoice_id) {
+                throw new \Exception('Invalid invoice ID');
+            }
+
+            // Get payments
+            $payments = $this->invoice_model->getInvoicePayments($invoice_id);
+
+            wp_send_json_success([
+                'payments' => $payments
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ], 400);
+        }
+    }
+
 }

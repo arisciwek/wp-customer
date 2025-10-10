@@ -2,7 +2,7 @@
 /**
  * File: MenuManager.php
  * Path: /wp-customer/src/Controllers/MenuManager.php
- * 
+ *
  * @package     WP_Customer
  * @subpackage  Admin/Controllers
  * @version     1.0.1
@@ -14,6 +14,7 @@ namespace WPCustomer\Controllers;
 use WPCustomer\Controllers\SettingsController;
 use WPCustomer\Controllers\CustomerController;
 use WPCustomer\Controllers\Company\CompanyController;
+use WPCustomer\Controllers\Company\CompanyInvoiceController;
 
 class MenuManager {
     private $plugin_name;
@@ -21,6 +22,7 @@ class MenuManager {
     private $settings_controller;
     private $customer_controller;
     private $company_controller;  // Tambah property untuk CompanyController
+    private $company_invoice_controller;  // Tambah property untuk CompanyInvoiceController
 
     public function __construct($plugin_name, $version) {
         $this->plugin_name = $plugin_name;
@@ -28,6 +30,7 @@ class MenuManager {
         $this->settings_controller = new SettingsController();
         $this->customer_controller = new CustomerController();
         $this->company_controller = new CompanyController();  // Inisialisasi CompanyController
+        $this->company_invoice_controller = new CompanyInvoiceController();  // Inisialisasi CompanyInvoiceController
     }
 
     public function init() {
@@ -47,7 +50,7 @@ class MenuManager {
             30
         );
 
-        // Menu WP Perusahaan 
+        // Menu WP Perusahaan
         add_menu_page(
             __('WP Perusahaan', 'wp-customer'),
             __('WP Perusahaan', 'wp-customer'),
@@ -56,6 +59,17 @@ class MenuManager {
             [$this->company_controller, 'renderMainPage'],
             'dashicons-building',
             31
+        );
+
+        // Menu WP Invoice Perusahaan
+        add_menu_page(
+            __('Invoice Perusahaan', 'wp-customer'),
+            __('Invoice Perusahaan', 'wp-customer'),
+            'manage_options',
+            'invoice_perusahaan',  // Unique menu slug untuk invoice perusahaan
+            [$this->company_invoice_controller, 'render_page'],
+            'dashicons-media-spreadsheet',
+            32
         );
 
         // Submenu Settings

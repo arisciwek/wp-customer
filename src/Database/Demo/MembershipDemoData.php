@@ -137,13 +137,13 @@ class MembershipDemoData extends AbstractDemoData {
             foreach ($branches as $branch) {
                 // Get random membership level
                 $level = $this->getRandomLevel();
-                
+
                 // Determine if trial should be used
                 $use_trial = $level['is_trial_available'] && (bool)rand(0, 1);
 
 				// Get random period_months (1, 3, 6, atau 12 bulan)
 				$period_months = [1, 3, 6, 12][array_rand([1, 3, 6, 12])];
-                
+
 				// Random payment_date dalam 14 hari ke belakang
 				$random_days = rand(0, 14);
 				$payment_date = date('Y-m-d H:i:s', strtotime("-{$random_days} days"));
@@ -154,11 +154,11 @@ class MembershipDemoData extends AbstractDemoData {
 
 				// Calculate end_date based on period_months and start_date
 				$end_date = date('Y-m-d H:i:s', strtotime($start_date . " +{$period_months} months"));
-                
+
                 // Set trial dates if applicable
                 $trial_end_date = null;
                 if ($use_trial) {
-                    $trial_end_date = date('Y-m-d H:i:s', 
+                    $trial_end_date = date('Y-m-d H:i:s',
                         strtotime($start_date . ' +' . $level['trial_days'] . ' days')
                     );
                 }
@@ -168,6 +168,17 @@ class MembershipDemoData extends AbstractDemoData {
                 $payment_status = $is_paid ? 'paid' : 'pending';
                 $payment_date = $is_paid ? $current_date : null;
                 $price_paid = $is_paid ? $level['price_per_month'] : 0;
+
+				// 30% chance to set upgrade_to_level_id for invoice generation
+				$upgrade_to_level_id = null;
+				$upgrade_period_months = null;
+				if (rand(1, 100) <= 30) {
+				    $upgrade_level = $this->getRandomUpgradeLevel($level['id']);
+				    if ($upgrade_level) {
+				        $upgrade_to_level_id = $upgrade_level['id'];
+				        $upgrade_period_months = [3, 6, 12][array_rand([3, 6, 12])]; // Longer period for upgrades
+				    }
+				}
 
 				// Prepare membership data
 				$membership_data = [
@@ -184,6 +195,8 @@ class MembershipDemoData extends AbstractDemoData {
 				    'payment_method' => $is_paid ? 'bank_transfer' : null,
 				    'payment_status' => $payment_status,
 				    'payment_date' => $payment_date,
+				    'upgrade_to_level_id' => $upgrade_to_level_id,
+				    'upgrade_period_months' => $upgrade_period_months,
 				    'created_by' => $branch->customer_user_id,
 				    'created_at' => $current_date
 				];
@@ -195,7 +208,8 @@ class MembershipDemoData extends AbstractDemoData {
                 }
 
                 $this->membership_ids[] = $membership_id;
-                $this->debug("Created membership {$membership_id} for branch {$branch->id} with level {$level['name']}");
+                $upgrade_info = $upgrade_to_level_id ? " (pending upgrade to level {$upgrade_to_level_id})" : "";
+                $this->debug("Created membership {$membership_id} for branch {$branch->id} with level {$level['name']}{$upgrade_info}");
             }
 
             $this->debug('Membership generation completed. Total: ' . count($this->membership_ids));
@@ -211,6 +225,36 @@ class MembershipDemoData extends AbstractDemoData {
      */
     private function getRandomLevel(): array {
         return $this->levels_data[array_rand($this->levels_data)];
+    }
+
+    /**
+     * Get random upgrade level (higher than current level)
+     * Returns null if current level is already highest
+     */
+    private function getRandomUpgradeLevel(int $current_level_id): ?array {
+        // Get current level sort order
+        $current_level = null;
+        foreach ($this->levels_data as $level) {
+            if ($level['id'] == $current_level_id) {
+                $current_level = $level;
+                break;
+            }
+        }
+
+        if (!$current_level) {
+            return null;
+        }
+
+        // Get levels with higher sort_order
+        $higher_levels = array_filter($this->levels_data, function($level) use ($current_level) {
+            return $level['sort_order'] > $current_level['sort_order'];
+        });
+
+        if (empty($higher_levels)) {
+            return null;
+        }
+
+        return $higher_levels[array_rand($higher_levels)];
     }
 
     /**

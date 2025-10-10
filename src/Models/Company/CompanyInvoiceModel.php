@@ -463,4 +463,128 @@ class CompanyInvoiceModel {
     public function getBranchData(int $branch_id) {
         return $this->company_model->find($branch_id);
     }
+
+    /**
+     * Get DataTable data for company invoice listing
+     *
+     * @param array $params DataTable parameters
+     * @return array DataTable formatted data
+     */
+    public function getDataTableData(array $params = []): array {
+        global $wpdb;
+
+        $defaults = [
+            'start' => 0,
+            'length' => 10,
+            'search' => '',
+            'order_column' => 'created_at',
+            'order_dir' => 'desc'
+        ];
+        $params = wp_parse_args($params, $defaults);
+
+        // Base query with JOIN to get company name
+        $branches_table = $wpdb->prefix . 'app_customer_branches';
+
+        $base_query = "FROM {$this->table} ci
+                      LEFT JOIN {$branches_table} b ON ci.branch_id = b.id";
+
+        $where = " WHERE 1=1";
+
+        // Search
+        if (!empty($params['search'])) {
+            $search = '%' . $wpdb->esc_like($params['search']) . '%';
+            $where .= $wpdb->prepare(" AND (ci.invoice_number LIKE %s OR b.name LIKE %s)", $search, $search);
+        }
+
+        // Get total records
+        $total = $wpdb->get_var("SELECT COUNT(*) {$base_query} {$where}");
+
+        // Order
+        $order = "ORDER BY ci.{$params['order_column']} {$params['order_dir']}";
+
+        // Limit
+        $limit = $wpdb->prepare("LIMIT %d, %d", $params['start'], $params['length']);
+
+        // Get data
+        $query = "SELECT ci.*, b.name as company_name {$base_query} {$where} {$order} {$limit}";
+        $data = $wpdb->get_results($query);
+
+        // Format data for DataTable
+        $formatted_data = [];
+        foreach ($data as $row) {
+            $formatted_data[] = [
+                'id' => $row->id,
+                'invoice_number' => $row->invoice_number,
+                'company_name' => $row->company_name ?? '-',
+                'amount' => 'Rp ' . number_format($row->amount, 0, ',', '.'),
+                'status' => $this->getStatusLabel($row->status),
+                'status_raw' => $row->status,
+                'due_date' => date('d/m/Y', strtotime($row->due_date)),
+                'created_at' => date('d/m/Y H:i', strtotime($row->created_at)),
+                'actions' => ''
+            ];
+        }
+
+        return [
+            'total' => (int) $total,
+            'filtered' => (int) $total,
+            'data' => $formatted_data
+        ];
+    }
+
+    /**
+     * Get invoice statistics for dashboard
+     *
+     * @return array Statistics data
+     */
+    public function getStatistics(): array {
+        global $wpdb;
+
+        $total_invoices = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table}");
+        $pending_invoices = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table} WHERE status = 'pending'");
+
+        $payments_table = $wpdb->prefix . 'app_customer_payments';
+        $total_payments = $wpdb->get_var("SELECT COUNT(*) FROM {$payments_table}");
+
+        return [
+            'total_invoices' => (int) $total_invoices,
+            'pending_invoices' => (int) $pending_invoices,
+            'total_payments' => (int) $total_payments
+        ];
+    }
+
+    /**
+     * Get invoice payments
+     *
+     * @param int $invoice_id Invoice ID
+     * @return array Array of payment objects
+     */
+    public function getInvoicePayments(int $invoice_id): array {
+        global $wpdb;
+        $payments_table = $wpdb->prefix . 'app_customer_payments';
+
+        return $wpdb->get_results($wpdb->prepare("
+            SELECT * FROM {$payments_table}
+            WHERE invoice_id = %d
+            ORDER BY payment_date DESC
+        ", $invoice_id));
+    }
+
+    /**
+     * Get invoice company/branch data
+     *
+     * @param int $invoice_id Invoice ID
+     * @return object|null Company data
+     */
+    public function getInvoiceCompany(int $invoice_id) {
+        global $wpdb;
+        $branches_table = $wpdb->prefix . 'app_customer_branches';
+
+        return $wpdb->get_row($wpdb->prepare("
+            SELECT b.* FROM {$this->table} ci
+            LEFT JOIN {$branches_table} b ON ci.branch_id = b.id
+            WHERE ci.id = %d
+        ", $invoice_id));
+    }
 }
+
