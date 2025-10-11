@@ -6,7 +6,7 @@
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-agency/assets/js/employee/employee-toast.js
+ * Path: /wp-agency/assets/js/employee/customer-employee-toast.js
  *
  * Description: Komponen toast notification khusus untuk employee.
  *              Support queue system untuk multiple notifications.

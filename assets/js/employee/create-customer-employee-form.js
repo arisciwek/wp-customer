@@ -6,7 +6,7 @@
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/assets/js/employee/create-employee-form.js
+ * Path: /wp-customer/assets/js/employee/create-customer-employee-form.js
  *
  * Description: Handler untuk form tambah karyawan.
  *              Includes form validation, AJAX submission,

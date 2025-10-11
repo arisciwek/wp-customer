@@ -6,7 +6,7 @@
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/assets/js/employee/employee-datatable.js
+ * Path: /wp-customer/assets/js/employee/customer-employee-datatable.js
  *
  * Description: Komponen untuk mengelola DataTables karyawan.
  *              Includes state management, export functions,

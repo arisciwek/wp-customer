@@ -6,7 +6,7 @@
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/assets/js/employee/edit-employee-form.js
+ * Path: /wp-customer/assets/js/employee/edit-customer-employee-form.js
  *
  * Description: Handler untuk form edit karyawan.
  *              Includes form validation, AJAX submission,
