@@ -1,13 +1,13 @@
 <?php
 /**
- * Create Employee Form Template
+ * Create Customer Employee Form Template
  *
  * @package     WP_Customer
- * @subpackage  Views/Templates/Employee/Forms
+ * @subpackage  Views/Templates/CustomerEmployee/Forms
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Views/templates/employee/forms/create-employee-form.php
+ * Path: /wp-customer/src/Views/templates/customer-employee/forms/create-customer-employee-form.php
  *
  * Description: Form modal untuk menambah karyawan baru.
  *              Includes input validation, error handling,

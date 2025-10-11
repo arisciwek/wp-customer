@@ -1,13 +1,13 @@
 <?php
 /**
- * Employee List Template
+ * Customer Employee List Template
  *
  * @package     WP_Customer
- * @subpackage  Views/Templates/Employee/Partials
+ * @subpackage  Views/Templates/CustomerEmployee/Partials
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Views/templates/employee/partials/_employee_list.php
+ * Path: /wp-customer/src/Views/templates/customer-employee/partials/_customer_employee_list.php
  *
  * Description: Template untuk menampilkan daftar karyawan.
  *              Includes DataTable, loading states, empty states,
@@ -126,6 +126,6 @@ defined('ABSPATH') || exit;
 
 <?php
 // Include related modals
-require_once WP_CUSTOMER_PATH . 'src/Views/templates/employee/forms/create-employee-form.php';
-require_once WP_CUSTOMER_PATH . 'src/Views/templates/employee/forms/edit-employee-form.php';
+require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-employee/forms/create-customer-employee-form.php';
+require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-employee/forms/edit-customer-employee-form.php';
 ?>

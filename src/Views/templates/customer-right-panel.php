@@ -42,7 +42,7 @@
 foreach ([
     'customer/partials/_customer_details.php',
     'branch/partials/_customer_branch_list.php',
-    'employee/partials/_employee_list.php'
+    'customer-employee/partials/_customer_employee_list.php'
 ] as $template) {
     include_once WP_CUSTOMER_PATH . 'src/Views/templates/' . $template;
 }

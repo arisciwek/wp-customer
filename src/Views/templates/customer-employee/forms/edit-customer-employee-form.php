@@ -1,13 +1,13 @@
 <?php
 /**
- * Edit Employee Form Template
+ * Edit Customer Employee Form Template
  *
  * @package     WP_Customer
- * @subpackage  Views/Templates/Employee/Forms
+ * @subpackage  Views/Templates/CustomerEmployee/Forms
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Views/templates/employee/forms/edit-employee-form.php
+ * Path: /wp-customer/src/Views/templates/customer-employee/forms/edit-customer-employee-form.php
  *
  * Description: Form modal untuk mengedit data karyawan.
  *              Includes input validation, error handling,
