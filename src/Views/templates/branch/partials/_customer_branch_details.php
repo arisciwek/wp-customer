@@ -1,10 +1,25 @@
 <?php
+/**
+ * Customer Branch Details Template
+ *
+ * @package     WP_Customer
+ * @subpackage  Views/Templates/Branch/Partials
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/src/Views/templates/branch/partials/_customer_branch_details.php
+ *
+ * Description: Template untuk menampilkan detail cabang customer.
+ *              Includes export actions (PDF, DOCX),
+ *              informasi lengkap cabang, dan data terkait.
+ *
+ * Changelog:
+ * 1.0.0 - 2024-12-10
+ * - Initial release
+ * - Added branch details display
+ * - Added export functionality
+ */
 
-
-defined('ABSPATH') || exit;
-?>
-
-<?php
 defined('ABSPATH') || exit;
 ?>
 

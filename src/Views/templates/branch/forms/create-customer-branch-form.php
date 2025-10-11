@@ -1,13 +1,13 @@
 <?php
 /**
- * Create Branch Form Template
+ * Create Customer Branch Form Template
  *
  * @package     WP_Customer
  * @subpackage  Views/Templates/Branch/Forms
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Views/templates/branch/forms/create-branch-form.php
+ * Path: /wp-customer/src/Views/templates/branch/forms/create-customer-branch-form.php
  *
  * Description: Form modal untuk menambah cabang baru.
  *              Includes input validation, error handling,

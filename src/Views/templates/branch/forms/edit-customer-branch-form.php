@@ -1,13 +1,13 @@
 <?PHP
 /**
- * Edit Branch Form Template
+ * Edit Customer Branch Form Template
  *
  * @package     WP_Customer
  * @subpackage  Views/Templates/Branch/Forms
  * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Views/templates/branch/forms/edit-branch-form.php
+ * Path: /wp-customer/src/Views/templates/branch/forms/edit-customer-branch-form.php
  *
  * Description: Form modal untuk mengedit data cabang.
  *              Includes input validation, error handling,

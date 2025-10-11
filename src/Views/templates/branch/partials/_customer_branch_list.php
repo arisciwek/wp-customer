@@ -120,6 +120,6 @@ defined('ABSPATH') || exit;
 
 <?php
 // Include related modals
-require_once WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/create-branch-form.php';
-require_once WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/edit-branch-form.php';
+require_once WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/create-customer-branch-form.php';
+require_once WP_CUSTOMER_PATH . 'src/Views/templates/branch/forms/edit-customer-branch-form.php';
 ?>
