@@ -1,5 +1,13 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2125: Fix Duplicate Customer Data Loading on View Click
+- Issue: Cache debug logs show customer data loaded twice when clicking View button on customer DataTable, triggering duplicate cache access for the same customer
+- Root Cause: Controller call flow - show() calls validateAccess() first which triggers find(), then show() calls find() again
+- Target: Reorder operations in show() method - call find() first to set cache, then validateAccess() uses that cached data
+- Files: src/Controllers/CustomerController.php (show method)
+- Status: ✅ Completed
+- Notes: Optimized cache usage - first find() sets cache, second find() in getUserRelation() uses cache. No duplicate queries, cache works as designed (see docs/TODO-2125-fix-duplicate-customer-cache-loading.md)
+
 ## TODO-2124: Fix Duplicate Invoice Data Loading on View Click
 - Issue: Cache debug logs show invoice data loaded twice when clicking View button on company invoice DataTable, triggering duplicate AJAX requests and cache operations
 - Root Cause: JavaScript call flow - viewInvoiceDetails() loads data, then renderInvoiceDetails() calls switchTab() which loads data AGAIN because switchTab() always re-loads data on tab change

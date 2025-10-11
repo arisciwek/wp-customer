@@ -804,23 +804,23 @@ public function createPdfButton() {
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
             $this->debug_log("=== Start show() ===");
-            
+
             // Get and validate ID
             $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
             if (!$id) {
                 throw new \Exception('Invalid customer ID');
             }
 
-            // Validate access
-            $access = $this->validator->validateAccess($id);
-            if (!$access['has_access']) {
-                throw new \Exception('You do not have permission to view this customer');
-            }
-
-            // Get customer data
+            // Get customer data first (single find() call)
             $customer = $this->model->find($id);
             if (!$customer) {
                 throw new \Exception('Customer not found');
+            }
+
+            // Validate access (will use cached customer data in getUserRelation)
+            $access = $this->validator->validateAccess($id);
+            if (!$access['has_access']) {
+                throw new \Exception('You do not have permission to view this customer');
             }
 
             // Get membership data if needed
@@ -834,7 +834,7 @@ public function createPdfButton() {
             ];
 
             $this->debug_log("Sending response: " . print_r($response_data, true));
-            
+
             wp_send_json_success($response_data);
 
         } catch (\Exception $e) {
