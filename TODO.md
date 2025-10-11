@@ -1,5 +1,13 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2127: Implement Model-Level Cache Management for Customer Employee
+- Issue: Edit employee berhasil di database tapi DataTable tidak refresh, harus klik menu lain dulu baru data tampil. Model tidak memiliki cache di find() - selalu hit database, cache invalidation hanya di Controller layer (incomplete), related caches (counts, lists, datatables) tidak di-clear saat update/delete
+- Root Cause: WP Customer menggunakan setTimeout(500) untuk delay refresh DataTable (berbeda dari WP Agency yang direct refresh), tidak mengimplementasikan cache management di Model layer seperti WP Agency, cache invalidation tersebar di Controller dan tidak comprehensive
+- Target: Remove setTimeout() delay pattern dan gunakan direct refresh seperti WP Agency, implement Model-level cache management dengan cache read di find(), comprehensive cache invalidation di update/delete/changeStatus, remove duplicate cache operations dari Controller
+- Files: assets/js/employee/edit-employee-form.js (direct refresh), src/Models/Employee/CustomerEmployeeModel.php (add cache to find, comprehensive invalidation to update/delete/changeStatus), src/Controllers/Employee/CustomerEmployeeController.php (remove duplicate cache operations)
+- Status: ✅ Completed
+- Notes: WP Customer sekarang menggunakan WP Agency pattern - Model layer bertanggung jawab untuk cache management, Controller tetap thin (validation + coordination), cache comprehensive (single entity, counts, lists, datatables), DataTable langsung update setelah edit/delete/status change (see claude-chats/task-2127.md)
+
 ## TODO-2126: Fix 403 Forbidden Error on Staff Tab
 - Issue: Error 403 Forbidden when clicking Staff tab on customer detail page, causing all employee buttons to fail (add, edit, delete, approve, deactivate)
 - Root Cause: `check_ajax_referer()` without third parameter causes WordPress to die with 403 when nonce validation fails, preventing proper error messages

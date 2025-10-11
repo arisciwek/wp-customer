@@ -56,13 +56,12 @@ class CustomerEmployeeController {
 
         // Register AJAX endpoints
         add_action('wp_ajax_handle_customer_employee_datatable', [$this, 'handleDataTableRequest']);
-        add_action('wp_ajax_get_employee', [$this, 'show']);
-        add_action('wp_ajax_create_employee', [$this, 'store']);
-        add_action('wp_ajax_update_employee', [$this, 'update']);
-        add_action('wp_ajax_delete_employee', [$this, 'delete']);
-        add_action('wp_ajax_change_employee_status', [$this, 'changeStatus']);
-
-        add_action('wp_ajax_create_employee_button', [$this, 'createEmployeeButton']);
+        add_action('wp_ajax_get_customer_employee', [$this, 'show']);
+        add_action('wp_ajax_create_customer_employee', [$this, 'store']);
+        add_action('wp_ajax_update_customer_employee', [$this, 'update']);
+        add_action('wp_ajax_delete_customer_employee', [$this, 'delete']);
+        add_action('wp_ajax_change_customer_employee_status', [$this, 'changeStatus']);
+        add_action('wp_ajax_create_customer_employee_button', [$this, 'createEmployeeButton']);
     }
 
     /**
@@ -115,7 +114,10 @@ class CustomerEmployeeController {
      */
     public function handleDataTableRequest() {
         try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
+            if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
+                wp_send_json_error(['message' => 'Security check failed']);
+                return;
+            }
 
             // Get and validate parameters
             $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
@@ -259,11 +261,14 @@ class CustomerEmployeeController {
 
     public function createEmployeeButton() {
         try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
-            
+            if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
+                wp_send_json_error(['message' => 'Security check failed']);
+                return;
+            }
+
             $customer_id = isset($_POST['customer_id']) ? (int)$_POST['customer_id'] : 0;
             $branch_id = isset($_POST['branch_id']) ? (int)$_POST['branch_id'] : 0;
-            
+
             if (!$customer_id) {
                 throw new \Exception('ID Customer tidak valid');
             }
@@ -364,7 +369,10 @@ class CustomerEmployeeController {
        try {
            error_log('WP Customer Employee Debug - show called for ID: ' . ($_POST['id'] ?? 'not set'));
 
-           check_ajax_referer('wp_customer_nonce', 'nonce');
+           if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
+               wp_send_json_error(['message' => 'Security check failed']);
+               return;
+           }
 
            $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
            if (!$id) throw new \Exception('Invalid employee ID');
@@ -407,11 +415,14 @@ class CustomerEmployeeController {
     }
 
     /**
-     * Store dengan cache invalidation
+     * Store employee (cache invalidation handled by Model)
      */
     public function store() {
        try {
-           check_ajax_referer('wp_customer_nonce', 'nonce');
+           if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
+               wp_send_json_error(['message' => 'Security check failed']);
+               return;
+           }
 
            $data = [
                'customer_id' => isset($_POST['customer_id']) ? (int)$_POST['customer_id'] : 0,
@@ -458,10 +469,7 @@ class CustomerEmployeeController {
 
            wp_new_user_notification($user_id, null, 'user');
 
-           $this->cache->invalidateDataTableCache('customer_employee_list', [
-               'customer_id' => $data['customer_id']
-           ]);
-
+           // Cache invalidation now handled by Model
            $employee = $this->model->find($id);
            wp_send_json_success([
                'message' => __('Karyawan berhasil ditambahkan dan email aktivasi telah dikirim', 'wp-customer'),
@@ -475,11 +483,14 @@ class CustomerEmployeeController {
 
 
     /**
-     * Update dengan cache invalidation
+     * Update employee (cache invalidation handled by Model)
      */
     public function update() {
        try {
-           check_ajax_referer('wp_customer_nonce', 'nonce');
+           if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
+               wp_send_json_error(['message' => 'Security check failed']);
+               return;
+           }
 
            $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
            if (!$id) throw new \Exception('Invalid employee ID');
@@ -517,13 +528,8 @@ class CustomerEmployeeController {
                throw new \Exception('Failed to update employee');
            }
 
-           $this->cache->delete("employee_{$id}");
+           // Cache invalidation now handled by Model
            $employee = $this->model->find($id);
-           if ($employee) {
-               $this->cache->invalidateDataTableCache('customer_employee_list', [
-                   'customer_id' => $employee->customer_id
-               ]);
-           }
 
            wp_send_json_success([
                'message' => __('Data karyawan berhasil diperbarui', 'wp-customer'),
@@ -536,11 +542,14 @@ class CustomerEmployeeController {
     }
 
     /**
-     * Delete dengan cache invalidation
+     * Delete employee (cache invalidation handled by Model)
      */
     public function delete() {
        try {
-           check_ajax_referer('wp_customer_nonce', 'nonce');
+           if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
+               wp_send_json_error(['message' => 'Security check failed']);
+               return;
+           }
 
            $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
 
@@ -559,15 +568,14 @@ class CustomerEmployeeController {
            $errors = $this->validator->validateDelete($id);
            if (!empty($errors)) throw new \Exception(reset($errors));
 
+           // Store customer_id before deletion for cache invalidation
+           $customer_id = $employee->customer_id;
+
            if (!$this->model->delete($id)) {
                throw new \Exception('Failed to delete employee');
            }
 
-           $this->cache->delete("employee_{$id}");
-           $this->cache->invalidateDataTableCache('customer_employee_list', [
-               'customer_id' => $employee->customer_id
-           ]);
-
+           // Cache invalidation now handled by Model
            wp_send_json_success([
                'message' => __('Karyawan berhasil dihapus', 'wp-customer')
            ]);
@@ -578,11 +586,14 @@ class CustomerEmployeeController {
     }
 
     /**
-     * Change status dengan cache invalidation
+     * Change employee status (cache invalidation handled by Model)
      */
     public function changeStatus() {
        try {
-           check_ajax_referer('wp_customer_nonce', 'nonce');
+           if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
+               wp_send_json_error(['message' => 'Security check failed']);
+               return;
+           }
 
            $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
            if (!$id) throw new \Exception('Invalid employee ID');
@@ -609,11 +620,7 @@ class CustomerEmployeeController {
                throw new \Exception('Failed to update employee status');
            }
 
-           $this->cache->delete("employee_{$id}");
-           $this->cache->invalidateDataTableCache('customer_employee_list', [
-               'customer_id' => $employee->customer_id
-           ]);
-
+           // Cache invalidation now handled by Model
            $employee = $this->model->find($id);
            wp_send_json_success([
                'message' => __('Status karyawan berhasil diperbarui', 'wp-customer'),

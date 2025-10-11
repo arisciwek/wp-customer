@@ -99,8 +99,16 @@ public function create(array $data): ?int {
     public function find(int $id): ?object {
         global $wpdb;
 
-        return $wpdb->get_row($wpdb->prepare("
-            SELECT e.*, 
+        // Check cache first
+        $cached_employee = $this->cache->get('customer_employee', $id);
+
+        if ($cached_employee !== null) {
+            return $cached_employee;
+        }
+
+        // Query database if not cached
+        $result = $wpdb->get_row($wpdb->prepare("
+            SELECT e.*,
                    c.name as customer_name,
                    b.name as branch_name,
                    u.display_name as created_by_name
@@ -110,10 +118,27 @@ public function create(array $data): ?int {
             LEFT JOIN {$wpdb->users} u ON e.created_by = u.ID
             WHERE e.id = %d
         ", $id));
+
+        // Cache the result
+        if ($result) {
+            $this->cache->set('customer_employee', $result, $this->cache::getCacheExpiry(), $id);
+        }
+
+        return $result;
     }
 
     public function update(int $id, array $data): bool {
         global $wpdb;
+
+        // Get current employee data BEFORE update for cache invalidation
+        $current_employee = $this->find($id);
+        if (!$current_employee) {
+            return false;
+        }
+
+        $customer_id = $current_employee->customer_id;
+        $old_branch_id = $current_employee->branch_id;
+        $new_branch_id = $data['branch_id'] ?? $old_branch_id;
 
         // Only include status in update if it's provided and valid
         $updateData = [
@@ -126,7 +151,7 @@ public function create(array $data): ?int {
             'keterangan' => $data['keterangan'],
             'email' => $data['email'],
             'phone' => $data['phone'],
-            'branch_id' => $data['branch_id'],
+            'branch_id' => $new_branch_id,
             'updated_at' => current_time('mysql')
         ];
 
@@ -150,23 +175,59 @@ public function create(array $data): ?int {
             $format[] = '%s'; // status
         }
 
-        return $wpdb->update(
+        $result = $wpdb->update(
             $this->table,
             $updateData,
             ['id' => $id],
             $format,
             ['%d']
-        ) !== false;
+        );
+
+        if ($result !== false) {
+            // Comprehensive cache invalidation
+            $this->cache->delete('customer_employee', $id);
+            $this->cache->delete('customer_employee_count', (string)$customer_id);
+            $this->cache->delete('customer_active_employee_count', (string)$customer_id);
+
+            // Invalidate DataTable cache
+            $this->cache->invalidateDataTableCache('customer_employee_list', [
+                'customer_id' => (int)$customer_id
+            ]);
+        }
+
+        return $result !== false;
     }
 
     public function delete(int $id): bool {
         global $wpdb;
 
-        return $wpdb->delete(
+        // Get employee data BEFORE deletion for cache invalidation
+        $employee = $this->find($id);
+        if (!$employee) {
+            return false;
+        }
+
+        $customer_id = $employee->customer_id;
+
+        $result = $wpdb->delete(
             $this->table,
             ['id' => $id],
             ['%d']
-        ) !== false;
+        );
+
+        if ($result !== false) {
+            // Comprehensive cache invalidation
+            $this->cache->delete('customer_employee', $id);
+            $this->cache->delete('customer_employee_count', (string)$customer_id);
+            $this->cache->delete('customer_active_employee_count', (string)$customer_id);
+
+            // Invalidate DataTable cache
+            $this->cache->invalidateDataTableCache('customer_employee_list', [
+                'customer_id' => (int)$customer_id
+            ]);
+        }
+
+        return $result !== false;
     }
 
     public function existsByEmail(string $email, ?int $excludeId = null): bool {
@@ -339,8 +400,16 @@ public function create(array $data): ?int {
             return false;
         }
 
+        // Get employee data BEFORE status change for cache invalidation
+        $employee = $this->find($id);
+        if (!$employee) {
+            return false;
+        }
+
+        $customer_id = $employee->customer_id;
+
         global $wpdb;
-        return $wpdb->update(
+        $result = $wpdb->update(
             $this->table,
             [
                 'status' => $status,
@@ -349,7 +418,21 @@ public function create(array $data): ?int {
             ['id' => $id],
             ['%s', '%s'],
             ['%d']
-        ) !== false;
+        );
+
+        if ($result !== false) {
+            // Comprehensive cache invalidation
+            $this->cache->delete('customer_employee', $id);
+            $this->cache->delete('customer_employee_count', (string)$customer_id);
+            $this->cache->delete('customer_active_employee_count', (string)$customer_id);
+
+            // Invalidate DataTable cache
+            $this->cache->invalidateDataTableCache('customer_employee_list', [
+                'customer_id' => (int)$customer_id
+            ]);
+        }
+
+        return $result !== false;
     }
 
 
