@@ -470,14 +470,14 @@
                     url: wpCustomerData.ajaxUrl,
                     type: 'POST',
                     data: {
-                        action: 'create_employee_button',
+                        action: 'create_customer_employee_button',
                         customer_id: this.currentId,
                         nonce: wpCustomerData.nonce
                     },
                     success: (response) => {
                         if (response.success) {
                             $('#tombol-tambah-karyawan').html(response.data.button);
-                            
+
                             // Bind click event using delegation
                             $('#tombol-tambah-karyawan').off('click', '#add-employee-btn')
                                 .on('click', '#add-employee-btn', () => {
@@ -486,6 +486,9 @@
                                     }
                                 });
                         }
+                    },
+                    error: (xhr, status, error) => {
+                        console.error('Failed to load employee button:', error);
                     }
                 });
 

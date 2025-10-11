@@ -267,7 +267,7 @@
             }
 
             const formData = {
-                action: 'create_employee',
+                action: 'create_customer_employee',
                 nonce: wpCustomerData.nonce,
                 customer_id: this.customerId,
                 branch_id: this.form.find('[name="branch_id"]').val(),
@@ -285,8 +285,6 @@
                 email: this.form.find('[name="email"]').val().trim(),
                 phone: this.form.find('[name="phone"]').val().trim()
             };
-            
-            console.log('Sending data:', formData); // Add this
 
             this.setLoadingState(true);
 
@@ -298,19 +296,24 @@
                 });
 
                 if (response.success) {
-                    EmployeeToast.success('Karyawan berhasil ditambahkan');
+                    CustomerToast.success('Karyawan berhasil ditambahkan');
                     this.hideModal();
+
+                    // Trigger event
                     $(document).trigger('employee:created', [response.data]);
 
-                    if (window.EmployeeDataTable) {
-                        window.EmployeeDataTable.refresh();
-                    }
+                    // Refresh DataTable setelah modal tertutup
+                    setTimeout(() => {
+                        if (window.EmployeeDataTable) {
+                            window.EmployeeDataTable.refresh();
+                        }
+                    }, 500);
                 } else {
-                    EmployeeToast.error(response.data?.message || 'Gagal menambah karyawan');
+                    CustomerToast.error(response.data?.message || 'Gagal menambah karyawan');
                 }
             } catch (error) {
                 console.error('Create employee error:', error);
-                EmployeeToast.error('Gagal menghubungi server');
+                CustomerToast.error('Gagal menghubungi server');
             } finally {
                 this.setLoadingState(false);
             }

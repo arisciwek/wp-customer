@@ -72,7 +72,7 @@
                     url: wpCustomerData.ajaxUrl,
                     type: 'POST',
                     data: {
-                        action: 'get_employee',
+                        action: 'get_customer_employee',
                         id: id,
                         nonce: wpCustomerData.nonce
                     }
@@ -324,7 +324,7 @@
 
 
             const formData = {
-                action: 'update_employee',
+                action: 'update_customer_employee',
                 nonce: wpCustomerData.nonce,
                 id: id,
                 customer_id: this.customerId, // Added customer_id from class property

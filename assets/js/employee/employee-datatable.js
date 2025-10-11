@@ -112,7 +112,7 @@
                             url: wpCustomerData.ajaxUrl,
                             type: 'POST',
                             data: {
-                                action: 'delete_employee',
+                                action: 'delete_customer_employee',
                                 id: id,
                                 nonce: wpCustomerData.nonce
                             }
@@ -139,7 +139,7 @@
                     url: wpCustomerData.ajaxUrl,
                     type: 'POST',
                     data: {
-                        action: 'change_employee_status',
+                        action: 'change_customer_employee_status',
                         id: id,
                         status: status,
                         nonce: wpCustomerData.nonce
@@ -180,7 +180,7 @@
 
             const self = this;
             this.table = $('#employee-table').DataTable({
-                processing: true,
+                processing: false,  // Disable default processing indicator
                 serverSide: true,
                 ajax: {
                     url: wpCustomerData.ajaxUrl,
@@ -311,15 +311,8 @@
 
         refresh() {
             if (this.table) {
-                this.showLoading();
-                this.table.ajax.reload(() => {
-                    const info = this.table.page.info();
-                    if (info.recordsTotal === 0) {
-                        this.showEmpty();
-                    } else {
-                        this.showTable();
-                    }
-                }, false);
+                // Don't show loading on refresh, DataTable will handle it via dataSrc callback
+                this.table.ajax.reload(null, false);
             }
         }
     };

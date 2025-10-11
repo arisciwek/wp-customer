@@ -1,5 +1,13 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2126: Fix 403 Forbidden Error on Staff Tab
+- Issue: Error 403 Forbidden when clicking Staff tab on customer detail page, causing all employee buttons to fail (add, edit, delete, approve, deactivate)
+- Root Cause: `check_ajax_referer()` without third parameter causes WordPress to die with 403 when nonce validation fails, preventing proper error messages
+- Target: Change all nonce checks to non-fatal version with proper error handling, allowing JSON error responses instead of 403 die
+- Files: src/Controllers/Employee/CustomerEmployeeController.php (7 methods: handleDataTableRequest, createEmployeeButton, show, store, update, delete, changeStatus)
+- Status: ✅ Completed
+- Notes: All nonce checks now use parameter `false` to prevent auto-die, security validation remains intact with improved error handling (see docs/TODO-2126-fix-403-forbidden-error-on-staff-tab.md)
+
 ## TODO-2125: Fix Duplicate Customer Data Loading on View Click
 - Issue: Cache debug logs show customer data loaded twice when clicking View button on customer DataTable, triggering duplicate cache access for the same customer
 - Root Cause: Controller call flow - show() calls validateAccess() first which triggers find(), then show() calls find() again
