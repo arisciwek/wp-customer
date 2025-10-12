@@ -153,7 +153,15 @@ class BranchModel {
             return null;
         }
 
-        return (int) $wpdb->insert_id;
+        $branch_id = (int) $wpdb->insert_id;
+
+        // Comprehensive cache invalidation for new branch
+        if ($branch_id && isset($data['customer_id'])) {
+            // Invalidate DataTable cache for all access types
+            $this->invalidateAllDataTableCache('branch_list', (int)$data['customer_id']);
+        }
+
+        return $branch_id;
     }
 
     public function find(int $id): ?object {
@@ -233,9 +241,21 @@ class BranchModel {
 
         if ($result === false) {
             error_log('Update branch error: ' . $wpdb->last_error);
-            $this->cache->delete(self::KEY_BRANCH, $id);
-            $this->cache->delete(self::KEY_BRANCH_LIST);          
             return false;
+        }
+
+        // Get branch data untuk customer_id
+        $branch = $this->find($id);
+        if ($branch && $branch->customer_id) {
+            // Invalidate user relation cache
+            $this->invalidateUserRelationCache($id);
+
+            // Comprehensive cache invalidation
+            $this->cache->delete(self::KEY_BRANCH, $id);
+
+            // Invalidate DataTable cache for all access types
+            // Since we use access_type in cache key, we need to invalidate all possible access types
+            $this->invalidateAllDataTableCache('branch_list', (int)$branch->customer_id);
         }
 
         return true;
@@ -244,11 +264,27 @@ class BranchModel {
     public function delete(int $id): bool {
         global $wpdb;
 
-        return $wpdb->delete(
+        // Get branch data before deletion untuk cache invalidation
+        $branch = $this->find($id);
+
+        $result = $wpdb->delete(
             $this->table,
             ['id' => $id],
             ['%d']
-        ) !== false;
+        );
+
+        if ($result !== false && $branch && $branch->customer_id) {
+            // Comprehensive cache invalidation
+            $this->cache->delete(self::KEY_BRANCH, $id);
+
+            // Invalidate DataTable cache for all access types
+            $this->invalidateAllDataTableCache('branch_list', (int)$branch->customer_id);
+
+            // Invalidate user relation cache
+            $this->invalidateUserRelationCache($id);
+        }
+
+        return $result !== false;
     }
     public function existsByCode(string $code): bool {
         global $wpdb;
@@ -684,23 +720,87 @@ class BranchModel {
                 $this->cache->delete('branch_relation', "branch_relation_{$branch_id}_{$access_type}");
             } else if ($branch_id) {
                 // Invalidate all access types for this branch
-                // Since we can't easily list all access types, just clear all branch relation cache
-                $this->cache->clearCache('branch_relation');
-            } else if ($access_type) {
-                // Invalidate specific access type for all branches
-                // We'd need a pattern match capability in cache manager
-                $this->cache->clearCache('branch_relation');
+                // Delete specific patterns for common access types
+                $common_access_types = ['admin', 'customer_owner', 'branch_admin', 'staff', 'none'];
+                foreach ($common_access_types as $type) {
+                    $this->cache->delete('branch_relation', "branch_relation_{$branch_id}_{$type}");
+                }
             } else {
-                // Clear all relation cache
-                $this->cache->clearCache('branch_relation');
+                // For broader invalidation, delete common general patterns
+                $common_access_types = ['admin', 'customer_owner', 'branch_admin', 'staff', 'none'];
+                foreach ($common_access_types as $type) {
+                    $this->cache->delete('branch_relation', "branch_relation_general_{$type}");
+                }
             }
-            
+
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log("Invalidated branch relation cache: branch_id=$branch_id, access_type=$access_type");
             }
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log("Error in invalidateUserRelationCache: " . $e->getMessage());
+            }
+        }
+    }
+
+    /**
+     * Invalidate DataTable cache for all access types
+     *
+     * Since cache keys use access_type as component, we need to invalidate
+     * all possible access types when data changes
+     *
+     * @param string $context The DataTable context (e.g., 'branch_list')
+     * @param int $customer_id The customer ID to invalidate cache for
+     * @return void
+     */
+    private function invalidateAllDataTableCache(string $context, int $customer_id): void {
+        try {
+            $cache_group = 'wp_customer';
+            $customer_hash = md5(serialize($customer_id));
+
+            // List of all possible access types
+            $access_types = ['admin', 'customer_owner', 'branch_admin', 'staff', 'none'];
+
+            // Possible pagination/ordering variations to try
+            $starts = [0, 10, 20, 30, 40, 50];
+            $lengths = [10, 25, 50, 100];
+            $orders = ['asc', 'desc'];
+            $columns = ['name', 'code', 'type'];
+
+            $deleted = 0;
+
+            // Brute force delete all possible cache key combinations
+            foreach ($access_types as $access_type) {
+                foreach ($starts as $start) {
+                    foreach ($lengths as $length) {
+                        foreach ($orders as $orderDir) {
+                            foreach ($columns as $orderColumn) {
+                                // Try with empty search
+                                $components = [
+                                    $context,
+                                    $access_type,
+                                    "start_{$start}",
+                                    "length_{$length}",
+                                    md5(''), // empty search
+                                    $orderColumn,
+                                    $orderDir,
+                                    "customer_id_{$customer_hash}"
+                                ];
+
+                                $key = $this->cache->delete('datatable', ...$components);
+                                if ($key) $deleted++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Invalidated $deleted DataTable cache entries for context=$context, customer_id=$customer_id (brute force method)");
+            }
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Error in invalidateAllDataTableCache: " . $e->getMessage());
             }
         }
     }

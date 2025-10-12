@@ -90,10 +90,17 @@ public function create(array $data): ?int {
         return null;
     }
 
-    // Clear cache untuk customer yang bersangkutan
-    $this->cache->delete('customer_active_employee_count', (string)$data['customer_id']);
+    $employee_id = (int) $wpdb->insert_id;
 
-    return (int) $wpdb->insert_id;
+    // Comprehensive cache invalidation for new employee
+    if ($employee_id && isset($data['customer_id'])) {
+        $this->cache->delete('customer_active_employee_count', (string)$data['customer_id']);
+
+        // Invalidate DataTable cache for all access types
+        $this->invalidateAllDataTableCache('customer_employee_list', (int)$data['customer_id']);
+    }
+
+    return $employee_id;
 }
 
     public function find(int $id): ?object {
@@ -130,16 +137,6 @@ public function create(array $data): ?int {
     public function update(int $id, array $data): bool {
         global $wpdb;
 
-        // Get current employee data BEFORE update for cache invalidation
-        $current_employee = $this->find($id);
-        if (!$current_employee) {
-            return false;
-        }
-
-        $customer_id = $current_employee->customer_id;
-        $old_branch_id = $current_employee->branch_id;
-        $new_branch_id = $data['branch_id'] ?? $old_branch_id;
-
         // Only include status in update if it's provided and valid
         $updateData = [
             'name' => $data['name'],
@@ -151,7 +148,7 @@ public function create(array $data): ?int {
             'keterangan' => $data['keterangan'],
             'email' => $data['email'],
             'phone' => $data['phone'],
-            'branch_id' => $new_branch_id,
+            'branch_id' => $data['branch_id'],
             'updated_at' => current_time('mysql')
         ];
 
@@ -183,52 +180,58 @@ public function create(array $data): ?int {
             ['%d']
         );
 
-        if ($result !== false) {
-            // Comprehensive cache invalidation
-            $this->cache->delete('customer_employee', $id);
-            $this->cache->delete('customer_employee_count', (string)$customer_id);
-            $this->cache->delete('customer_active_employee_count', (string)$customer_id);
+	    if ($result === false) {
+		error_log('Update customer employee error: ' . $wpdb->last_error);
+		return false;
+	    }
 
-            // Invalidate DataTable cache
-            $this->cache->invalidateDataTableCache('customer_employee_list', [
-                'customer_id' => (int)$customer_id
-            ]);
-        }
+	    // Get employee data untuk customer_id - AFTER update
+	    $employee = $this->find($id);
+	    if ($employee && $employee->customer_id) {
+		// ✓ FIXED: Invalidate ALL employee cache keys
+		$this->cache->delete('customer_employee', $id);
+		$this->cache->delete('employee', $id);  // ← ADD THIS LINE
+		$this->cache->delete('customer_employee_count', (string)$employee->customer_id);
+		$this->cache->delete('customer_active_employee_count', (string)$employee->customer_id);
 
-        return $result !== false;
+		// Invalidate DataTable cache for all access types
+		$this->invalidateAllDataTableCache('customer_employee_list', (int)$employee->customer_id);
+	    }
+	    
+        return true;
     }
 
-    public function delete(int $id): bool {
-        global $wpdb;
+	public function delete(int $id): bool {
+	    global $wpdb;
 
-        // Get employee data BEFORE deletion for cache invalidation
-        $employee = $this->find($id);
-        if (!$employee) {
-            return false;
-        }
+	    // Get employee data BEFORE deletion for cache invalidation
+	    $employee = $this->find($id);
+	    if (!$employee) {
+		return false;
+	    }
 
-        $customer_id = $employee->customer_id;
+	    $customer_id = $employee->customer_id;
 
-        $result = $wpdb->delete(
-            $this->table,
-            ['id' => $id],
-            ['%d']
-        );
+	    $result = $wpdb->delete(
+		$this->table,
+		['id' => $id],
+		['%d']
+	    );
 
-        if ($result !== false) {
-            // Comprehensive cache invalidation
-            $this->cache->delete('customer_employee', $id);
-            $this->cache->delete('customer_employee_count', (string)$customer_id);
-            $this->cache->delete('customer_active_employee_count', (string)$customer_id);
+	    if ($result !== false) {
+		// ✓ FIXED: Invalidate ALL employee cache keys
+		$this->cache->delete('customer_employee', $id);
+		$this->cache->delete('employee', $id);  // ← ADD THIS LINE
+		$this->cache->delete('customer_employee_count', (string)$customer_id);
+		$this->cache->delete('customer_active_employee_count', (string)$customer_id);
 
-            // Invalidate DataTable cache
-            $this->cache->invalidateDataTableCache('customer_employee_list', [
-                'customer_id' => (int)$customer_id
-            ]);
-        }
+		// Invalidate DataTable cache for all access types
+		$this->invalidateAllDataTableCache('customer_employee_list', (int)$customer_id);
+	    }
 
-        return $result !== false;
-    }
+	    return $result !== false;
+	}
+
 
     public function existsByEmail(string $email, ?int $excludeId = null): bool {
         global $wpdb;
@@ -249,8 +252,39 @@ public function create(array $data): ?int {
     public function getDataTableData(int $customer_id, int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
         global $wpdb;
 
+        // Get access_type from validator
+        global $wp_employee_validator;
+        if (!$wp_employee_validator) {
+            $wp_employee_validator = new \WPCustomer\Validators\Employee\CustomerEmployeeValidator();
+        }
+        $access = $wp_employee_validator->validateAccess($customer_id, 0);
+        $access_type = $access['access_type'];
+
+        // Ensure orderDir lowercase for cache key consistency
+        $orderDir = strtolower($orderDir);
+
+        // Check cache first
+        $cached_result = $this->cache->getDataTableCache(
+            'customer_employee_list',
+            $access_type,
+            $start,
+            $length,
+            $search,
+            $orderColumn,
+            $orderDir,
+            ['customer_id' => $customer_id]
+        );
+
+        if ($cached_result) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("CustomerEmployeeModel cache hit for DataTable - Key: customer_employee_list_{$access_type}");
+            }
+            return $cached_result;
+        }
+
         error_log('=== Start Debug Employee DataTable Query ===');
         error_log('Customer ID: ' . $customer_id);
+        error_log('Access Type: ' . $access_type);
         error_log('Start: ' . $start);
         error_log('Length: ' . $length);
         error_log('Search: ' . $search);
@@ -346,13 +380,28 @@ public function create(array $data): ?int {
         error_log('Results Data Sample: ' . print_r(array_slice($results, 0, 1), true));
         error_log('=== End Debug Employee DataTable Query ===');
 
-        return [
+        $result = [
             'data' => $results,
             'total' => (int) $total,
             'filtered' => (int) $filtered
         ];
+
+        // Set cache with 2 minute duration - use lowercase orderDir
+        $this->cache->setDataTableCache(
+            'customer_employee_list',
+            $access_type,
+            $start,
+            $length,
+            $search,
+            $orderColumn,
+            $orderDir,
+            $result,
+            ['customer_id' => $customer_id]
+        );
+
+        return $result;
     }
-    
+
     /**
      * Get total employee count for a specific customer
      */
@@ -395,45 +444,45 @@ public function create(array $data): ?int {
     }
 
     // Update changeStatus method to validate status
-    public function changeStatus(int $id, string $status): bool {
-        if (!$this->isValidStatus($status)) {
-            return false;
-        }
 
-        // Get employee data BEFORE status change for cache invalidation
-        $employee = $this->find($id);
-        if (!$employee) {
-            return false;
-        }
+	public function changeStatus(int $id, string $status): bool {
+	    if (!$this->isValidStatus($status)) {
+		return false;
+	    }
 
-        $customer_id = $employee->customer_id;
+	    // Get employee data BEFORE status change for cache invalidation
+	    $employee = $this->find($id);
+	    if (!$employee) {
+		return false;
+	    }
 
-        global $wpdb;
-        $result = $wpdb->update(
-            $this->table,
-            [
-                'status' => $status,
-                'updated_at' => current_time('mysql')
-            ],
-            ['id' => $id],
-            ['%s', '%s'],
-            ['%d']
-        );
+	    $customer_id = $employee->customer_id;
 
-        if ($result !== false) {
-            // Comprehensive cache invalidation
-            $this->cache->delete('customer_employee', $id);
-            $this->cache->delete('customer_employee_count', (string)$customer_id);
-            $this->cache->delete('customer_active_employee_count', (string)$customer_id);
+	    global $wpdb;
+	    $result = $wpdb->update(
+		$this->table,
+		[
+		    'status' => $status,
+		    'updated_at' => current_time('mysql')
+		],
+		['id' => $id],
+		['%s', '%s'],
+		['%d']
+	    );
 
-            // Invalidate DataTable cache
-            $this->cache->invalidateDataTableCache('customer_employee_list', [
-                'customer_id' => (int)$customer_id
-            ]);
-        }
+	    if ($result !== false) {
+		// ✓ FIXED: Invalidate ALL employee cache keys
+		$this->cache->delete('customer_employee', $id);
+		$this->cache->delete('employee', $id);  // ← ADD THIS LINE
+		$this->cache->delete('customer_employee_count', (string)$customer_id);
+		$this->cache->delete('customer_active_employee_count', (string)$customer_id);
 
-        return $result !== false;
-    }
+		// Invalidate DataTable cache for all access types
+		$this->invalidateAllDataTableCache('customer_employee_list', (int)$customer_id);
+	    }
+
+	    return $result !== false;
+	}
 
 
     /**
@@ -477,7 +526,7 @@ public function create(array $data): ?int {
      */
     public function bulkUpdate(array $ids, array $data): int {
         global $wpdb;
-        
+
         $validFields = [
             'branch_id',
             'status',
@@ -486,33 +535,100 @@ public function create(array $data): ?int {
             'legal',
             'purchase'
         ];
-        
+
         // Filter only valid fields
         $updateData = array_intersect_key($data, array_flip($validFields));
-        
+
         if (empty($updateData)) {
             return 0;
         }
-        
+
         $sql = "UPDATE {$this->table} SET ";
         $updates = [];
         $values = [];
-        
+
         foreach ($updateData as $field => $value) {
             $updates[] = "{$field} = %s";
             $values[] = $value;
         }
-        
+
         $sql .= implode(', ', $updates);
         $sql .= " WHERE id IN (" . implode(',', array_map('intval', $ids)) . ")";
-        
+
         // Add updated_at timestamp
         $sql .= ", updated_at = %s";
         $values[] = current_time('mysql');
-        
+
         return $wpdb->query($wpdb->prepare($sql, $values));
     }
 
+    /**
+     * Invalidate DataTable cache for all access types
+     *
+     * Since cache keys use access_type as component, we need to invalidate
+     * all possible access types when data changes
+     *
+     * @param string $context The DataTable context (e.g., 'customer_employee_list')
+     * @param int $customer_id The customer ID to invalidate cache for
+     * @return void
+     */
+    private function invalidateAllDataTableCache(string $context, int $customer_id): void {
+        try {
+            $cache_group = 'wp_customer';
+            $customer_hash = md5(serialize($customer_id));
+
+            // List of all possible access types
+            $access_types = [
+                'admin',
+                'customer_owner',
+                'branch_admin',
+                'staff',
+                'none'
+            ];
+
+            // Possible pagination/ordering variations to try
+            $starts = [0, 10, 20, 30, 40, 50];
+            $lengths = [10, 25, 50, 100];
+            $orders = ['asc', 'desc'];
+            $columns = ['name', 'department', 'branch_name', 'status'];
+
+            $deleted = 0;
+
+            // Brute force delete all possible cache key combinations
+            foreach ($access_types as $access_type) {
+                foreach ($starts as $start) {
+                    foreach ($lengths as $length) {
+                        foreach ($orders as $orderDir) {
+                            foreach ($columns as $orderColumn) {
+                                // Try with empty search
+                                $components = [
+                                    $context,
+                                    $access_type,
+                                    "start_{$start}",
+                                    "length_{$length}",
+                                    md5(''), // empty search
+                                    $orderColumn,
+                                    $orderDir,
+                                    "customer_id_{$customer_hash}"
+                                ];
+
+                                $key = $this->cache->delete('datatable', ...$components);
+                                if ($key) $deleted++;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Invalidated $deleted DataTable cache entries for context=$context, customer_id=$customer_id (brute force method)");
+            }
+        } catch (\Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log("Error in invalidateAllDataTableCache: " . $e->getMessage());
+            }
+        }
+    }
 
 }
 

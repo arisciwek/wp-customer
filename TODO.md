@@ -1,5 +1,13 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2131: Fix DataTable Cache Invalidation with Access Type
+- Issue: DataTable cache was not properly invalidated when branch or employee data changed. Cache keys include `access_type` component, but invalidation only cleared cache for current user's access type, causing stale data for users with different access types
+- Root Cause: Incomplete cache invalidation strategy - `invalidateDataTableCache()` only cleared single access_type, missing comprehensive method to invalidate all access_type variations
+- Target: Add comprehensive cache invalidation to clear all possible access_type combinations (admin, customer_owner, branch_admin, staff, none) when data changes, use brute force approach to delete all pagination/ordering combinations
+- Files: src/Models/Branch/BranchModel.php (added `invalidateAllDataTableCache()` method, updated create/update/delete), src/Models/Employee/CustomerEmployeeModel.php (added `invalidateAllDataTableCache()` method, updated create/update/delete/changeStatus)
+- Status: ✅ Completed
+- Notes: Uses brute force invalidation (~720-960 cache keys checked) due to WordPress cache limitations. Only affects write operations (low frequency). Read operations still benefit from cache. Model layer handles all invalidation (Controller stays clean) (see docs/TODO-2131-fix-datatable-cache-invalidation.md)
+
 ## TODO-2130: Rename Branch Template Files
 - Issue: Branch template filenames were too generic (create-branch-form.php, edit-branch-form.php, _branch_details.php) and could potentially conflict with other plugins, not immediately clear which plugin the templates belong to, _branch_details.php lacked proper file header
 - Root Cause: Templates lacked plugin-specific prefix in filenames, inconsistent with plugin naming convention, missing documentation header

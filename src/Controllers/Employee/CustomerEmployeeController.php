@@ -110,115 +110,89 @@ class CustomerEmployeeController {
     }
 
     /**
-     * Handle DataTable AJAX request dengan cache
+     * Handle DataTable AJAX request (cache handled in Model)
      */
-    public function handleDataTableRequest() {
-        try {
-            if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
-                wp_send_json_error(['message' => 'Security check failed']);
-                return;
-            }
 
-            // Get and validate parameters
-            $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
-            $start = isset($_POST['start']) ? intval($_POST['start']) : 0;
-            $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
-            $search = isset($_POST['search']['value']) ? sanitize_text_field($_POST['search']['value']) : '';
-            $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
-            
-            if (!$customer_id) {
-                throw new \Exception('Customer ID is required');
-            }
+	public function handleDataTableRequest() {
+	    try {
+		if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
+		    wp_send_json_error(['message' => 'Security check failed']);
+		    return;
+		}
 
-            $orderColumn = isset($_POST['order'][0]['column']) ? intval($_POST['order'][0]['column']) : 0;
-            $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
+		// Get and validate parameters
+		$draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
+		$start = isset($_POST['start']) ? intval($_POST['start']) : 0;
+		$length = isset($_POST['length']) ? intval($_POST['length']) : 10;
+		$search = isset($_POST['search']['value']) ? sanitize_text_field($_POST['search']['value']) : '';
+		$customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
+		
+		if (!$customer_id) {
+		    throw new \Exception('Customer ID is required');
+		}
 
-            // Check cache first
-            $cached_result = $this->cache->getDataTableCache(
-                'customer_employee_list',
-                get_current_user_id(),
-                $start,
-                $length,
-                $search,
-                $orderColumn,
-                $orderDir,
-                ['customer_id' => $customer_id]
-            );
+		$orderColumn = isset($_POST['order'][0]['column']) ? intval($_POST['order'][0]['column']) : 0;
+		$orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
 
-            if ($cached_result !== null) {
-                wp_send_json($cached_result);
-                return;
-            }
+		// Map numeric column index to column name
+		$columns = ['name', 'department', 'branch_name', 'status', 'actions'];
+		$orderColumnName = isset($columns[$orderColumn]) ? $columns[$orderColumn] : 'name';
 
-            // Get fresh data if no cache
-            $result = $this->model->getDataTableData(
-                $customer_id, 
-                $start,
-                $length, 
-                $search,
-                $orderColumn,
-                $orderDir
-            );
+		// Get data from model (cache handled in model)
+		$result = $this->model->getDataTableData(
+		    $customer_id,
+		    $start,
+		    $length,
+		    $search,
+		    $orderColumnName,
+		    $orderDir
+		);
 
-            if (!$result) {
-                throw new \Exception('No data returned from model');
-            }
+		if (!$result) {
+		    throw new \Exception('No data returned from model');
+		}
 
-            // Format data with validation
-            $data = [];
-            foreach ($result['data'] as $employee) {
-                // Get customer for permission check
-                $customer = $this->customerModel->find($employee->customer_id);
-                if (!$this->validator->canViewEmployee($employee, $customer)) {
-                    continue;
-                }
+		// Format data with validation
+		$data = [];
+		foreach ($result['data'] as $employee) {
+		    // Get customer for permission check
+		    $customer = $this->customerModel->find($employee->customer_id);
+		    if (!$this->validator->canViewEmployee($employee, $customer)) {
+		        continue;
+		    }
 
-                $data[] = [
-                    'id' => $employee->id,
-                    'name' => esc_html($employee->name),
-                    'position' => esc_html($employee->position),
-                    'department' => $this->generateDepartmentsBadges([
-                        'finance' => (bool)$employee->finance,
-                        'operation' => (bool)$employee->operation,
-                        'legal' => (bool)$employee->legal,
-                        'purchase' => (bool)$employee->purchase
-                    ]),
-                    'email' => esc_html($employee->email),
-                    'branch_name' => esc_html($employee->branch_name),
-                    'status' => $employee->status,
-                    'actions' => $this->generateActionButtons($employee)
-                ];
-            }
+		    $data[] = [
+		        'id' => $employee->id,
+		        'name' => esc_html($employee->name),
+		        'position' => esc_html($employee->position),
+		        'department' => $this->generateDepartmentsBadges([
+		            'finance' => (bool)$employee->finance,
+		            'operation' => (bool)$employee->operation,
+		            'legal' => (bool)$employee->legal,
+		            'purchase' => (bool)$employee->purchase
+		        ]),
+		        'email' => esc_html($employee->email),
+		        'branch_name' => esc_html($employee->branch_name),
+		        'status' => $employee->status,
+		        'actions' => $this->generateActionButtons($employee)
+		    ];
+		}
 
-            $response = [
-                'draw' => $draw,
-                'recordsTotal' => $result['total'],
-                'recordsFiltered' => $result['filtered'],
-                'data' => $data
-            ];
+		$response = [
+		    'draw' => $draw,
+		    'recordsTotal' => $result['total'],
+		    'recordsFiltered' => $result['filtered'],
+		    'data' => $data
+		];
 
-            // Cache the result
-            $this->cache->setDataTableCache(
-                'customer_employee_list',
-                get_current_user_id(),
-                $start,
-                $length,
-                $search,
-                $orderColumn,
-                $orderDir,
-                $response,
-                ['customer_id' => $customer_id]
-            );
+		wp_send_json($response);
 
-            wp_send_json($response);
-
-        } catch (\Exception $e) {
-            wp_send_json_error([
-                'message' => $e->getMessage()
-            ], 400);
-        }
-    }
-
+	    } catch (\Exception $e) {
+		wp_send_json_error([
+		    'message' => $e->getMessage()
+		], 400);
+	    }
+	}
     /**
      * Generate HTML for department badges
      */

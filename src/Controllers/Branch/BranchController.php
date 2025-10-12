@@ -617,10 +617,7 @@ class BranchController {
                     throw new \Exception('Gagal menambah cabang');
                 }
 
-                // Invalidate cache
-                $this->cache->invalidateDataTableCache('branch_list', [
-                    'customer_id' => $customer_id
-                ]);
+                // Cache invalidation now handled by Model
 
                 wp_send_json_success([
                     'message' => 'Cabang berhasil ditambahkan',
