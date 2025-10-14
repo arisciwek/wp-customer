@@ -1,5 +1,15 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2136: Generate Branch Admin Names from Collection & Fix User ID Issue
+- Issue: (1) Branch admin names in BranchUsersData.php were hardcoded without collection system, some names duplicated with CustomerUsersData causing confusion in "login as user". (2) WordPress user IDs not following BranchUsersData definitions - generated random IDs (11690, 11971) instead of predefined IDs (12-41, 50-69). (3) Branch admins only had 'customer' role, missing 'customer_branch_admin' role
+- Root Cause: (1) No centralized name collection for branch admins. (2) WPUserGenerator using autoincrement instead of specified IDs in 3 places: generatePusatBranch(), generateCabangBranches(), generateExtraBranches() - extra branches used random IDs (rand(10000, 99999)). (3) Role assignment not implemented in branch generation
+- Target: (1) Create 40-word name collection different from CustomerUsersData. (2) Replace all 30 branch user names with collection-based 2-word combinations. (3) Add extra_branch_users array with 20 predefined users (IDs 50-69) for extra branches. (4) Fix all 3 generation methods to use predefined user IDs. (5) Add customer_branch_admin role to all branch users
+- Files Modified:
+  - src/Database/Demo/Data/BranchUsersData.php (added $name_collection with 40 words different from CustomerUsersData, updated all 30 branch users with collection-based names, added $extra_branch_users array with 20 users for extra branches IDs 50-69, added getNameCollection() and isValidName() helper methods)
+  - src/Database/Demo/BranchDemoData.php (fixed generatePusatBranch() to use predefined IDs and add customer_branch_admin role line 293-326, fixed generateCabangBranches() to use predefined IDs and add customer_branch_admin role line 400-422, fixed generateExtraBranches() to use BranchUsersData::$extra_branch_users instead of random IDs and add customer_branch_admin role line 491-545, fixed missing $location variable line 591)
+- Status: ✅ Completed
+- Notes: All 50 branch users (30 regular + 20 extra) now use unique collection-based names. No name overlap with CustomerUsersData. User IDs now follow BranchUsersData: regular branches 12-41, extra branches 50-69. All branch admins have both 'customer' and 'customer_branch_admin' roles. Extra branches no longer use random IDs - all predefined in BranchUsersData (see docs/TODO-2136-generate-branch-names-from-collection.md)
+
 ## TODO-2135: Generate Customer Admin Names from Collection
 - Issue: Customer admin names in CustomerUsersData.php were hardcoded and not generated from a defined collection, making them difficult to maintain and validate
 - Root Cause: No centralized name collection system, names were directly defined without pattern or validation mechanism

@@ -12,7 +12,7 @@
  * Description: Static employee user data for demo generation.
  *              Used by WPUserGenerator and CustomerEmployeeDemoData.
  *              60 users total (2 per branch × 30 branches)
- *              User IDs: 42-101
+ *              User IDs: 70-129
  */
 
 namespace WPCustomer\Database\Demo\Data;
@@ -21,8 +21,8 @@ defined('ABSPATH') || exit;
 
 class CustomerEmployeeUsersData {
     // Constants for user ID ranges
-    const USER_ID_START = 42;
-    const USER_ID_END = 101;
+    const USER_ID_START = 70;
+    const USER_ID_END = 129;
 
     public static $data = [
         // Customer 1 (PT Maju Bersama) - Branch 1 (Pusat)

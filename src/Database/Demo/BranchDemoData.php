@@ -198,11 +198,15 @@ class BranchDemoData extends AbstractDemoData {
         }
 
     protected function generate(): void {
+        // Increase max execution time for batch operations
+        // Branch generation with user creation can take significant time
+        ini_set('max_execution_time', '300'); // 300 seconds = 5 minutes
+
         if (!$this->isDevelopmentMode()) {
             $this->debug('Cannot generate data - not in development mode');
             throw new \Exception('Development mode is not enabled. Please enable it in settings first.');
         }
-        
+
         if ($this->shouldClearData()) {
             // Delete existing branches
             $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_customer_branches WHERE id > 0");
@@ -298,20 +302,31 @@ class BranchDemoData extends AbstractDemoData {
 
         // Generate WordPress user dulu
         $userGenerator = new WPUserGenerator();
-        
+
         // Ambil data user dari branch_users
         $user_data = $this->branch_users[$customer->id]['pusat'];
-        
-        // Generate WP User
+
+        // Generate WP User with specified ID
         $wp_user_id = $userGenerator->generateUser([
             'id' => $user_data['id'],
             'username' => $user_data['username'],
             'display_name' => $user_data['display_name'],
-            'role' => 'customer'  // atau role khusus untuk branch admin
+            'role' => 'customer'
         ]);
 
         if (!$wp_user_id) {
             throw new \Exception("Failed to create WordPress user for branch admin: {$user_data['display_name']}");
+        }
+
+        // Add customer_branch_admin role to user
+        $user = get_user_by('ID', $wp_user_id);
+        if ($user) {
+            $role_exists = get_role('customer_branch_admin');
+            if (!$role_exists) {
+                add_role('customer_branch_admin', __('Customer Branch Admin', 'wp-customer'), []);
+            }
+            $user->add_role('customer_branch_admin');
+            $this->debug("Added customer_branch_admin role to user {$wp_user_id} ({$user_data['display_name']})");
         }
 
         $regency_name = $this->getRegencyName($customer->regency_id);
@@ -392,11 +407,22 @@ class BranchDemoData extends AbstractDemoData {
                 'id' => $user_data['id'],
                 'username' => $user_data['username'],
                 'display_name' => $user_data['display_name'],
-                'role' => 'customer'  // atau role khusus untuk branch admin
+                'role' => 'customer'
             ]);
-            
+
             if (!$wp_user_id) {
                 throw new \Exception("Failed to create WordPress user for branch admin: {$user_data['display_name']}");
+            }
+
+            // Add customer_branch_admin role to user
+            $user = get_user_by('ID', $wp_user_id);
+            if ($user) {
+                $role_exists = get_role('customer_branch_admin');
+                if (!$role_exists) {
+                    add_role('customer_branch_admin', __('Customer Branch Admin', 'wp-customer'), []);
+                }
+                $user->add_role('customer_branch_admin');
+                $this->debug("Added customer_branch_admin role to user {$wp_user_id} ({$user_data['display_name']})");
             }
 
             // Get random province that has agency (different from used provinces)
@@ -469,9 +495,12 @@ class BranchDemoData extends AbstractDemoData {
     private function generateExtraBranches(): void {
         $this->debug("Generating extra branches for testing assign inspector...");
 
-        // Generate 15-20 extra branches across all customers
-        $extra_branch_count = rand(15, 20);
-        $generated_extra = 0;
+        // Get extra branch users from BranchUsersData
+        $extra_users = BranchUsersData::$extra_branch_users;
+        if (empty($extra_users)) {
+            $this->debug("No extra branch users defined, skipping extra branch generation");
+            return;
+        }
 
         // Get all customers for random selection
         $customers = [];
@@ -488,24 +517,35 @@ class BranchDemoData extends AbstractDemoData {
         }
 
         $userGenerator = new WPUserGenerator();
+        $generated_extra = 0;
 
-        for ($i = 0; $i < $extra_branch_count; $i++) {
+        // Generate extra branches using predefined users
+        foreach ($extra_users as $user_data) {
             // Pick random customer
             $customer = $customers[array_rand($customers)];
 
-            // Generate unique branch admin user
-            $branch_user_id = rand(10000, 99999); // Use high numbers to avoid conflicts
-            $user_data = [
-                'id' => $branch_user_id,
-                'username' => 'branch_admin' . $branch_user_id,
-                'display_name' => 'Branch Admin ' . $branch_user_id,
+            // Generate WP User with predefined data
+            $wp_user_id = $userGenerator->generateUser([
+                'id' => $user_data['id'],
+                'username' => $user_data['username'],
+                'display_name' => $user_data['display_name'],
                 'role' => 'customer'
-            ];
+            ]);
 
-            $wp_user_id = $userGenerator->generateUser($user_data);
             if (!$wp_user_id) {
-                $this->debug("Failed to create user for extra branch, skipping...");
+                $this->debug("Failed to create user for extra branch: {$user_data['display_name']}, skipping...");
                 continue;
+            }
+
+            // Add customer_branch_admin role to user
+            $user = get_user_by('ID', $wp_user_id);
+            if ($user) {
+                $role_exists = get_role('customer_branch_admin');
+                if (!$role_exists) {
+                    add_role('customer_branch_admin', __('Customer Branch Admin', 'wp-customer'), []);
+                }
+                $user->add_role('customer_branch_admin');
+                $this->debug("Added customer_branch_admin role to extra branch user {$wp_user_id} ({$user_data['display_name']})");
             }
 
             // Get a random division that has jurisdictions
@@ -552,13 +592,15 @@ class BranchDemoData extends AbstractDemoData {
             }
 
             $regency_name = $this->getRegencyName($regency_id);
+            $location = $this->generateValidLocation();
+
             // Explicitly set inspector_id to NULL for testing
             $inspector_id = null;
 
             $this->debug("Generated extra branch - agency_id: {$agency_id}, division_id: {$division_id}, inspector_id: NULL for provinsi_id: {$provinsi_id}, regency_id: {$regency_id}");
 
             // Generate unique branch code for testing
-            $branch_code = $customer->code . ' ' . str_pad($i + 1, 2, '0', STR_PAD_LEFT);
+            $branch_code = $customer->code . ' ' . str_pad($generated_extra + 1, 2, '0', STR_PAD_LEFT);
 
             $branch_data = [
                 'customer_id' => $customer->id,
@@ -573,7 +615,7 @@ class BranchDemoData extends AbstractDemoData {
                 'longitude' => $location['longitude'],
                 'address' => $this->generateAddress($regency_name),
                 'phone' => $this->generatePhone(),
-                'email' => $this->generateEmail($customer->name, 'test' . ($i + 1)),
+                'email' => $this->generateEmail($customer->name, 'extra' . ($generated_extra + 1)),
                 'provinsi_id' => $provinsi_id,
                 'agency_id' => $agency_id,
                 'regency_id' => $regency_id,
