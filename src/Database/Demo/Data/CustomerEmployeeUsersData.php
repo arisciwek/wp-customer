@@ -49,7 +49,7 @@ class CustomerEmployeeUsersData {
             'id' => 70,
             'customer_id' => 1,
             'branch_id' => 1,
-            'username' => 'finance_maju_1',
+            'username' => 'abdul_amir',
             'display_name' => 'Abdul Amir',
             'role' => 'customer',
             'departments' => [
@@ -63,7 +63,7 @@ class CustomerEmployeeUsersData {
             'id' => 71,
             'customer_id' => 1,
             'branch_id' => 1,
-            'username' => 'legal_maju_1',
+            'username' => 'anwar_asep',
             'display_name' => 'Anwar Asep',
             'role' => 'customer',
             'departments' => [
@@ -79,7 +79,7 @@ class CustomerEmployeeUsersData {
             'id' => 72,
             'customer_id' => 1,
             'branch_id' => 2,
-            'username' => 'operation_maju_2',
+            'username' => 'bambang_bagas',
             'display_name' => 'Bambang Bagas',
             'role' => 'customer',
             'departments' => [
@@ -93,7 +93,7 @@ class CustomerEmployeeUsersData {
             'id' => 73,
             'customer_id' => 1,
             'branch_id' => 2,
-            'username' => 'purchase_maju_2',
+            'username' => 'cahya_cindy',
             'display_name' => 'Cahya Cindy',
             'role' => 'customer',
             'departments' => [
@@ -109,7 +109,7 @@ class CustomerEmployeeUsersData {
             'id' => 74,
             'customer_id' => 1,
             'branch_id' => 3,
-            'username' => 'finance_maju_3',
+            'username' => 'danu_dimas',
             'display_name' => 'Danu Dimas',
             'role' => 'customer',
             'departments' => [
@@ -123,7 +123,7 @@ class CustomerEmployeeUsersData {
             'id' => 75,
             'customer_id' => 1,
             'branch_id' => 3,
-            'username' => 'legal_maju_3',
+            'username' => 'erna_erik',
             'display_name' => 'Erna Erik',
             'role' => 'customer',
             'departments' => [
@@ -139,7 +139,7 @@ class CustomerEmployeeUsersData {
             'id' => 76,
             'customer_id' => 2,
             'branch_id' => 4,
-            'username' => 'operation_tekno_4',
+            'username' => 'farhan_fitria',
             'display_name' => 'Farhan Fitria',
             'role' => 'customer',
             'departments' => [
@@ -153,7 +153,7 @@ class CustomerEmployeeUsersData {
             'id' => 77,
             'customer_id' => 2,
             'branch_id' => 4,
-            'username' => 'purchase_tekno_4',
+            'username' => 'galuh_gema',
             'display_name' => 'Galuh Gema',
             'role' => 'customer',
             'departments' => [
@@ -169,7 +169,7 @@ class CustomerEmployeeUsersData {
             'id' => 78,
             'customer_id' => 2,
             'branch_id' => 5,
-            'username' => 'finance_tekno_5',
+            'username' => 'halim_hendra',
             'display_name' => 'Halim Hendra',
             'role' => 'customer',
             'departments' => [
@@ -183,7 +183,7 @@ class CustomerEmployeeUsersData {
             'id' => 79,
             'customer_id' => 2,
             'branch_id' => 5,
-            'username' => 'legal_tekno_5',
+            'username' => 'indah_iwan',
             'display_name' => 'Indah Iwan',
             'role' => 'customer',
             'departments' => [
@@ -199,7 +199,7 @@ class CustomerEmployeeUsersData {
             'id' => 80,
             'customer_id' => 2,
             'branch_id' => 6,
-            'username' => 'operation_tekno_6',
+            'username' => 'joko_jenni',
             'display_name' => 'Joko Jenni',
             'role' => 'customer',
             'departments' => [
@@ -213,7 +213,7 @@ class CustomerEmployeeUsersData {
             'id' => 81,
             'customer_id' => 2,
             'branch_id' => 6,
-            'username' => 'purchase_tekno_6',
+            'username' => 'khalid_kania',
             'display_name' => 'Khalid Kania',
             'role' => 'customer',
             'departments' => [
@@ -229,7 +229,7 @@ class CustomerEmployeeUsersData {
             'id' => 82,
             'customer_id' => 3,
             'branch_id' => 7,
-            'username' => 'finance_sinar_7',
+            'username' => 'laras_lutfi',
             'display_name' => 'Laras Lutfi',
             'role' => 'customer',
             'departments' => [
@@ -243,7 +243,7 @@ class CustomerEmployeeUsersData {
             'id' => 83,
             'customer_id' => 3,
             'branch_id' => 7,
-            'username' => 'legal_sinar_7',
+            'username' => 'mulyadi_marina',
             'display_name' => 'Mulyadi Marina',
             'role' => 'customer',
             'departments' => [
@@ -259,7 +259,7 @@ class CustomerEmployeeUsersData {
             'id' => 84,
             'customer_id' => 3,
             'branch_id' => 8,
-            'username' => 'operation_sinar_8',
+            'username' => 'novianti_nur',
             'display_name' => 'Novianti Nur',
             'role' => 'customer',
             'departments' => [
@@ -273,7 +273,7 @@ class CustomerEmployeeUsersData {
             'id' => 85,
             'customer_id' => 3,
             'branch_id' => 8,
-            'username' => 'purchase_sinar_8',
+            'username' => 'oky_olivia',
             'display_name' => 'Oky Olivia',
             'role' => 'customer',
             'departments' => [
@@ -289,7 +289,7 @@ class CustomerEmployeeUsersData {
             'id' => 86,
             'customer_id' => 3,
             'branch_id' => 9,
-            'username' => 'finance_sinar_9',
+            'username' => 'prabu_priska',
             'display_name' => 'Prabu Priska',
             'role' => 'customer',
             'departments' => [
@@ -303,7 +303,7 @@ class CustomerEmployeeUsersData {
             'id' => 87,
             'customer_id' => 3,
             'branch_id' => 9,
-            'username' => 'legal_sinar_9',
+            'username' => 'qomar_qonita',
             'display_name' => 'Qomar Qonita',
             'role' => 'customer',
             'departments' => [
@@ -319,7 +319,7 @@ class CustomerEmployeeUsersData {
             'id' => 88,
             'customer_id' => 4,
             'branch_id' => 10,
-            'username' => 'operation_global_10',
+            'username' => 'reza_riana',
             'display_name' => 'Reza Riana',
             'role' => 'customer',
             'departments' => [
@@ -333,7 +333,7 @@ class CustomerEmployeeUsersData {
             'id' => 89,
             'customer_id' => 4,
             'branch_id' => 10,
-            'username' => 'purchase_global_10',
+            'username' => 'salim_silvia',
             'display_name' => 'Salim Silvia',
             'role' => 'customer',
             'departments' => [
@@ -349,7 +349,7 @@ class CustomerEmployeeUsersData {
             'id' => 90,
             'customer_id' => 4,
             'branch_id' => 11,
-            'username' => 'finance_global_11',
+            'username' => 'teguh_tiara',
             'display_name' => 'Teguh Tiara',
             'role' => 'customer',
             'departments' => [
@@ -363,7 +363,7 @@ class CustomerEmployeeUsersData {
             'id' => 91,
             'customer_id' => 4,
             'branch_id' => 11,
-            'username' => 'legal_global_11',
+            'username' => 'usman_umi',
             'display_name' => 'Usman Umi',
             'role' => 'customer',
             'departments' => [
@@ -379,7 +379,7 @@ class CustomerEmployeeUsersData {
             'id' => 92,
             'customer_id' => 4,
             'branch_id' => 12,
-            'username' => 'operation_global_12',
+            'username' => 'vikri_vivi',
             'display_name' => 'Vikri Vivi',
             'role' => 'customer',
             'departments' => [
@@ -393,7 +393,7 @@ class CustomerEmployeeUsersData {
             'id' => 93,
             'customer_id' => 4,
             'branch_id' => 12,
-            'username' => 'purchase_global_12',
+            'username' => 'wahyu_widya',
             'display_name' => 'Wahyu Widya',
             'role' => 'customer',
             'departments' => [
@@ -409,7 +409,7 @@ class CustomerEmployeeUsersData {
             'id' => 94,
             'customer_id' => 5,
             'branch_id' => 13,
-            'username' => 'finance_mitra_13',
+            'username' => 'yayan_yesi',
             'display_name' => 'Yayan Yesi',
             'role' => 'customer',
             'departments' => [
@@ -423,7 +423,7 @@ class CustomerEmployeeUsersData {
             'id' => 95,
             'customer_id' => 5,
             'branch_id' => 13,
-            'username' => 'legal_mitra_13',
+            'username' => 'zulkifli_zainal',
             'display_name' => 'Zulkifli Zainal',
             'role' => 'customer',
             'departments' => [
@@ -439,7 +439,7 @@ class CustomerEmployeeUsersData {
             'id' => 96,
             'customer_id' => 5,
             'branch_id' => 14,
-            'username' => 'operation_mitra_14',
+            'username' => 'ayu_bima',
             'display_name' => 'Ayu Bima',
             'role' => 'customer',
             'departments' => [
@@ -453,7 +453,7 @@ class CustomerEmployeeUsersData {
             'id' => 97,
             'customer_id' => 5,
             'branch_id' => 14,
-            'username' => 'purchase_mitra_14',
+            'username' => 'citra_doni',
             'display_name' => 'Citra Doni',
             'role' => 'customer',
             'departments' => [
@@ -469,7 +469,7 @@ class CustomerEmployeeUsersData {
             'id' => 98,
             'customer_id' => 5,
             'branch_id' => 15,
-            'username' => 'finance_mitra_15',
+            'username' => 'evi_fitra',
             'display_name' => 'Evi Fitra',
             'role' => 'customer',
             'departments' => [
@@ -483,7 +483,7 @@ class CustomerEmployeeUsersData {
             'id' => 99,
             'customer_id' => 5,
             'branch_id' => 15,
-            'username' => 'legal_mitra_15',
+            'username' => 'gunawan_hani',
             'display_name' => 'Gunawan Hani',
             'role' => 'customer',
             'departments' => [
@@ -499,7 +499,7 @@ class CustomerEmployeeUsersData {
             'id' => 100,
             'customer_id' => 6,
             'branch_id' => 16,
-            'username' => 'operation_karya_16',
+            'username' => 'abdul_bagas',
             'display_name' => 'Abdul Bagas',
             'role' => 'customer',
             'departments' => [
@@ -513,7 +513,7 @@ class CustomerEmployeeUsersData {
             'id' => 101,
             'customer_id' => 6,
             'branch_id' => 16,
-            'username' => 'purchase_karya_16',
+            'username' => 'amir_cindy',
             'display_name' => 'Amir Cindy',
             'role' => 'customer',
             'departments' => [
@@ -529,7 +529,7 @@ class CustomerEmployeeUsersData {
             'id' => 102,
             'customer_id' => 6,
             'branch_id' => 17,
-            'username' => 'finance_karya_17',
+            'username' => 'anwar_dimas',
             'display_name' => 'Anwar Dimas',
             'role' => 'customer',
             'departments' => [
@@ -543,7 +543,7 @@ class CustomerEmployeeUsersData {
             'id' => 103,
             'customer_id' => 6,
             'branch_id' => 17,
-            'username' => 'legal_karya_17',
+            'username' => 'asep_erik',
             'display_name' => 'Asep Erik',
             'role' => 'customer',
             'departments' => [
@@ -559,7 +559,7 @@ class CustomerEmployeeUsersData {
             'id' => 104,
             'customer_id' => 6,
             'branch_id' => 18,
-            'username' => 'operation_karya_18',
+            'username' => 'bambang_fitria',
             'display_name' => 'Bambang Fitria',
             'role' => 'customer',
             'departments' => [
@@ -573,7 +573,7 @@ class CustomerEmployeeUsersData {
             'id' => 105,
             'customer_id' => 6,
             'branch_id' => 18,
-            'username' => 'purchase_karya_18',
+            'username' => 'cahya_gema',
             'display_name' => 'Cahya Gema',
             'role' => 'customer',
             'departments' => [
@@ -589,7 +589,7 @@ class CustomerEmployeeUsersData {
             'id' => 106,
             'customer_id' => 7,
             'branch_id' => 19,
-            'username' => 'finance_bumi_19',
+            'username' => 'danu_hendra',
             'display_name' => 'Danu Hendra',
             'role' => 'customer',
             'departments' => [
@@ -603,7 +603,7 @@ class CustomerEmployeeUsersData {
             'id' => 107,
             'customer_id' => 7,
             'branch_id' => 19,
-            'username' => 'legal_bumi_19',
+            'username' => 'erna_iwan',
             'display_name' => 'Erna Iwan',
             'role' => 'customer',
             'departments' => [
@@ -619,7 +619,7 @@ class CustomerEmployeeUsersData {
             'id' => 108,
             'customer_id' => 7,
             'branch_id' => 20,
-            'username' => 'operation_bumi_20',
+            'username' => 'farhan_jenni',
             'display_name' => 'Farhan Jenni',
             'role' => 'customer',
             'departments' => [
@@ -633,7 +633,7 @@ class CustomerEmployeeUsersData {
             'id' => 109,
             'customer_id' => 7,
             'branch_id' => 20,
-            'username' => 'purchase_bumi_20',
+            'username' => 'galuh_kania',
             'display_name' => 'Galuh Kania',
             'role' => 'customer',
             'departments' => [
@@ -649,7 +649,7 @@ class CustomerEmployeeUsersData {
             'id' => 110,
             'customer_id' => 7,
             'branch_id' => 21,
-            'username' => 'finance_bumi_21',
+            'username' => 'halim_lutfi',
             'display_name' => 'Halim Lutfi',
             'role' => 'customer',
             'departments' => [
@@ -663,7 +663,7 @@ class CustomerEmployeeUsersData {
             'id' => 111,
             'customer_id' => 7,
             'branch_id' => 21,
-            'username' => 'legal_bumi_21',
+            'username' => 'indah_marina',
             'display_name' => 'Indah Marina',
             'role' => 'customer',
             'departments' => [
@@ -679,7 +679,7 @@ class CustomerEmployeeUsersData {
             'id' => 112,
             'customer_id' => 8,
             'branch_id' => 22,
-            'username' => 'operation_cipta_22',
+            'username' => 'joko_nur',
             'display_name' => 'Joko Nur',
             'role' => 'customer',
             'departments' => [
@@ -693,7 +693,7 @@ class CustomerEmployeeUsersData {
             'id' => 113,
             'customer_id' => 8,
             'branch_id' => 22,
-            'username' => 'purchase_cipta_22',
+            'username' => 'khalid_olivia',
             'display_name' => 'Khalid Olivia',
             'role' => 'customer',
             'departments' => [
@@ -709,7 +709,7 @@ class CustomerEmployeeUsersData {
             'id' => 114,
             'customer_id' => 8,
             'branch_id' => 23,
-            'username' => 'finance_cipta_23',
+            'username' => 'laras_priska',
             'display_name' => 'Laras Priska',
             'role' => 'customer',
             'departments' => [
@@ -723,7 +723,7 @@ class CustomerEmployeeUsersData {
             'id' => 115,
             'customer_id' => 8,
             'branch_id' => 23,
-            'username' => 'legal_cipta_23',
+            'username' => 'mulyadi_qonita',
             'display_name' => 'Mulyadi Qonita',
             'role' => 'customer',
             'departments' => [
@@ -739,7 +739,7 @@ class CustomerEmployeeUsersData {
             'id' => 116,
             'customer_id' => 8,
             'branch_id' => 24,
-            'username' => 'operation_cipta_24',
+            'username' => 'novianti_riana',
             'display_name' => 'Novianti Riana',
             'role' => 'customer',
             'departments' => [
@@ -753,7 +753,7 @@ class CustomerEmployeeUsersData {
             'id' => 117,
             'customer_id' => 8,
             'branch_id' => 24,
-            'username' => 'purchase_cipta_24',
+            'username' => 'oky_silvia',
             'display_name' => 'Oky Silvia',
             'role' => 'customer',
             'departments' => [
@@ -769,7 +769,7 @@ class CustomerEmployeeUsersData {
             'id' => 118,
             'customer_id' => 9,
             'branch_id' => 25,
-            'username' => 'finance_meta_25',
+            'username' => 'prabu_tiara',
             'display_name' => 'Prabu Tiara',
             'role' => 'customer',
             'departments' => [
@@ -783,7 +783,7 @@ class CustomerEmployeeUsersData {
             'id' => 119,
             'customer_id' => 9,
             'branch_id' => 25,
-            'username' => 'legal_meta_25',
+            'username' => 'qomar_umi',
             'display_name' => 'Qomar Umi',
             'role' => 'customer',
             'departments' => [
@@ -799,7 +799,7 @@ class CustomerEmployeeUsersData {
             'id' => 120,
             'customer_id' => 9,
             'branch_id' => 26,
-            'username' => 'operation_meta_26',
+            'username' => 'reza_vivi',
             'display_name' => 'Reza Vivi',
             'role' => 'customer',
             'departments' => [
@@ -813,7 +813,7 @@ class CustomerEmployeeUsersData {
             'id' => 121,
             'customer_id' => 9,
             'branch_id' => 26,
-            'username' => 'purchase_meta_26',
+            'username' => 'salim_widya',
             'display_name' => 'Salim Widya',
             'role' => 'customer',
             'departments' => [
@@ -829,7 +829,7 @@ class CustomerEmployeeUsersData {
             'id' => 122,
             'customer_id' => 9,
             'branch_id' => 27,
-            'username' => 'finance_meta_27',
+            'username' => 'teguh_yesi',
             'display_name' => 'Teguh Yesi',
             'role' => 'customer',
             'departments' => [
@@ -843,7 +843,7 @@ class CustomerEmployeeUsersData {
             'id' => 123,
             'customer_id' => 9,
             'branch_id' => 27,
-            'username' => 'legal_meta_27',
+            'username' => 'usman_zainal',
             'display_name' => 'Usman Zainal',
             'role' => 'customer',
             'departments' => [
@@ -859,7 +859,7 @@ class CustomerEmployeeUsersData {
             'id' => 124,
             'customer_id' => 10,
             'branch_id' => 28,
-            'username' => 'operation_delta_28',
+            'username' => 'vikri_ayu',
             'display_name' => 'Vikri Ayu',
             'role' => 'customer',
             'departments' => [
@@ -873,7 +873,7 @@ class CustomerEmployeeUsersData {
             'id' => 125,
             'customer_id' => 10,
             'branch_id' => 28,
-            'username' => 'purchase_delta_28',
+            'username' => 'wahyu_bima',
             'display_name' => 'Wahyu Bima',
             'role' => 'customer',
             'departments' => [
@@ -889,7 +889,7 @@ class CustomerEmployeeUsersData {
             'id' => 126,
             'customer_id' => 10,
             'branch_id' => 29,
-            'username' => 'finance_delta_29',
+            'username' => 'yayan_citra',
             'display_name' => 'Yayan Citra',
             'role' => 'customer',
             'departments' => [
@@ -903,7 +903,7 @@ class CustomerEmployeeUsersData {
             'id' => 127,
             'customer_id' => 10,
             'branch_id' => 29,
-            'username' => 'legal_delta_29',
+            'username' => 'zulkifli_doni',
             'display_name' => 'Zulkifli Doni',
             'role' => 'customer',
             'departments' => [
@@ -919,7 +919,7 @@ class CustomerEmployeeUsersData {
             'id' => 128,
             'customer_id' => 10,
             'branch_id' => 30,
-            'username' => 'operation_delta_30',
+            'username' => 'abdul_fitra',
             'display_name' => 'Abdul Fitra',
             'role' => 'customer',
             'departments' => [
@@ -933,7 +933,7 @@ class CustomerEmployeeUsersData {
             'id' => 129,
             'customer_id' => 10,
             'branch_id' => 30,
-            'username' => 'purchase_delta_30',
+            'username' => 'amir_hani',
             'display_name' => 'Amir Hani',
             'role' => 'customer',
             'departments' => [

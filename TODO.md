@@ -1,5 +1,14 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2138: Update Employee Username from Display Name
+- Issue: Employee usernames used department_company_branch pattern (finance_maju_1, legal_tekno_5) instead of reflecting actual user names. No correlation between username and display_name, making it difficult to remember usernames for "login as user" feature. Email addresses also followed this non-intuitive pattern.
+- Root Cause: Username field in CustomerEmployeeUsersData.php hardcoded with department/company/branch pattern instead of deriving from display_name like Customer and Branch users do
+- Target: Update all 60 employee usernames to use display_name pattern (lowercase + underscore), consistent with Customer Admin and Branch Admin naming patterns
+- Files Modified:
+  - src/Database/Demo/Data/CustomerEmployeeUsersData.php (updated all 60 username entries from department_company_branch pattern to display_name_lowercase_underscore pattern, line 52-936)
+- Status: ✅ Completed
+- Notes: All employee usernames now derived from display_name (e.g., abdul_amir instead of finance_maju_1). Email generation automatically follows new pattern (abdul_amir@example.com). Consistent with Customer Admin and Branch Admin naming patterns. Old users auto-cleaned by TODO-2137 force_delete mechanism. No code changes needed - WPUserGenerator automatically uses new username pattern (see docs/TODO-2138-update-employee-username-from-display-name.md)
+
 ## TODO-2137: Generate Employee Names from Collection & Fix User ID Issue
 - Issue: (1) Employee user IDs started at 42 instead of 70 as specified in documentation. (2) Missing customer 5 data (IDs 62-71). (3) Only ~40 employees exist, should be 60 (2 per branch × 30 branches). (4) Employee names hardcoded without collection system. (5) WP users not generated properly, missing customer_employee role. (6) Branch admin range only 12-41, doesn't include extra branches 50-69. (7) No max_execution_time protection for batch operations. (8) Review-01: User ID 72 conflict - existing user in corrupt state causing "user not found" error. (9) Review-02: User IDs 102-107+ are legacy users without demo meta, safety check prevented deletion
 - Root Cause: (1) ID sequence broken with gaps (42-61, then 72-101). (2) Customer 5 completely missing from data. (3) No centralized name collection for validation and maintenance. (4) generateNewEmployees() incomplete - no role assignment, narrow branch admin range. (5) No timeout protection for 60+ user generations. (6) Review-01: Old employee users from previous runs not cleaned up, causing conflicts with regeneration. (7) Review-02: Safety check too strict for development - need force delete for legacy users without demo meta
