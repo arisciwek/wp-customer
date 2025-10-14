@@ -149,7 +149,7 @@ error_log('Regency select hook exists: ' . (has_action('wilayah_indonesia_regenc
                             <select id="edit-user" name="user_id" class="regular-text">
                                 <option value=""><?php _e('Pilih Admin', 'wp-customer'); ?></option>
                                 <?php
-                                $users = get_users(['role__in' => ['Customer']]);
+                                $users = get_users(['role__in' => ['customer']]);
                                 foreach ($users as $user) {
                                     printf(
                                         '<option value="%d">%s</option>',
