@@ -62,6 +62,10 @@ class CustomerEmployeeController {
         add_action('wp_ajax_delete_customer_employee', [$this, 'delete']);
         add_action('wp_ajax_change_customer_employee_status', [$this, 'changeStatus']);
         add_action('wp_ajax_create_customer_employee_button', [$this, 'createEmployeeButton']);
+
+        // Hook untuk menampilkan field tambahan di profil user
+        add_action('show_user_profile', [$this, 'showProfileExtras']);
+        add_action('edit_user_profile', [$this, 'showProfileExtras']);        
     }
 
     /**
@@ -651,4 +655,22 @@ class CustomerEmployeeController {
             throw $e;
         }
     }
+
+
+
+    public function showProfileExtras($user) {
+        $employeeData = $this->model->getByUserId($user->ID);
+
+        // Debug ke error_log
+        if (defined('WP_DEBUG') && WP_DEBUG === true) {
+            error_log('=== [CustomerEmployeeController] showProfileExtras() ===');
+            error_log('User ID: ' . $user->ID);
+            error_log('Employee Data: ' . print_r($employeeData, true));
+        }
+
+        $user_roles = $user->roles;
+        $user_capabilities = array_keys(array_filter($user->allcaps));
+
+        require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-employee/partials/_customer_employee_profile_fields.php';
+    }    
 }
