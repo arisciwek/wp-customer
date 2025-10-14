@@ -274,8 +274,32 @@
 
                 // User Assignment (Admin only)
                 const $userSelect = this.form.find('#edit-user');
+
                 if ($userSelect.length && customer.user_id) {
+                    // Check if option exists
+                    const optionExists = $userSelect.find('option[value="' + customer.user_id + '"]').length > 0;
+                    
+                    console.log('User option exists:', optionExists);
+                    console.log('Owner name:', customer.owner_name);
+                    
+                    if (!optionExists) {
+                        // Jika option tidak ada, tambahkan dulu
+                        const ownerName = customer.owner_name || 'Unknown User';
+                        $userSelect.append(
+                            $('<option>', {
+                                value: customer.user_id,
+                                text: ownerName
+                            })
+                        );
+                        console.log('Added user option:', customer.user_id, ownerName);
+                    }
+                    
+                    // Set value
                     $userSelect.val(customer.user_id);
+                    
+                    // Debug verify
+                    console.log('Setting user_id:', customer.user_id);
+                    console.log('Select value after set:', $userSelect.val());
                 }
 
                 // Update modal title
