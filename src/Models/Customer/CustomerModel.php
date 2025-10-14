@@ -791,7 +791,7 @@
      * 
      * Determines the relationship between a user and a customer:
      * - is_admin: User has admin privileges
-     * - is_customer_owner: User is the owner of the customer
+     * - is_customer_admin: User is the owner of the customer
      * - is_customer_employee: User is an employee of the customer
      * 
      * @param int $customer_id Customer ID (0 for general check)
@@ -809,14 +809,14 @@
             // Determine base relation first - needed for access_type
             $base_relation = [
                 'is_admin' => current_user_can('edit_all_customers'),
-                'is_customer_owner' => false,
+                'is_customer_admin' => false,
                 'is_customer_employee' => false
             ];
             
             // Determine access type from base relation
             $access_type = 'none';
             if ($base_relation['is_admin']) $access_type = 'admin';
-            else if ($base_relation['is_customer_owner']) $access_type = 'customer_owner';
+            else if ($base_relation['is_customer_admin']) $access_type = 'customer_admin';
             else if ($base_relation['is_customer_employee']) $access_type = 'customer_employee';
             
             // Apply access_type filter
@@ -847,7 +847,7 @@
             // Default relation
             $relation = [
                 'is_admin' => $base_relation['is_admin'],
-                'is_customer_owner' => false,
+                'is_customer_admin' => false,
                 'is_customer_employee' => false,
                 'owner_of_customer_id' => null,
                 'owner_of_customer_name' => null
@@ -858,8 +858,8 @@
                 // Specific customer check
                 $customer = $this->find($customer_id);
                 if ($customer) {
-                    $relation['is_customer_owner'] = ((int)$customer->user_id === $user_id);
-                    if ($relation['is_customer_owner']) {
+                    $relation['is_customer_admin'] = ((int)$customer->user_id === $user_id);
+                    if ($relation['is_customer_admin']) {
                         $relation['owner_of_customer_id'] = $customer_id;
                         $relation['owner_of_customer_name'] = $customer->name;
                     }
@@ -874,7 +874,7 @@
                 ));
                 
                 if ($customer) {
-                    $relation['is_customer_owner'] = true;
+                    $relation['is_customer_admin'] = true;
                     $relation['owner_of_customer_id'] = (int)$customer->id;
                     $relation['owner_of_customer_name'] = $customer->name;
                 }
@@ -952,7 +952,7 @@
             
             return [
                 'is_admin' => current_user_can('edit_all_customers'),
-                'is_customer_owner' => false,
+                'is_customer_admin' => false,
                 'is_customer_employee' => false,
                 'access_type' => 'none',
                 'error' => true

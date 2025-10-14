@@ -147,7 +147,7 @@ class CustomerValidator {
      * Get user relation with customer (using model implementation with memory caching)
      *
      * @param int $customer_id Customer ID
-     * @return array Array containing relation information (is_admin, is_customer_owner, is_customer_employee, access_type)
+     * @return array Array containing relation information (is_admin, is_customer_admin, is_customer_employee, access_type)
      */
     public function getUserRelation(int $customer_id): array {
         $current_user_id = get_current_user_id();
@@ -199,7 +199,7 @@ class CustomerValidator {
      */
     public function canView(array $relation): bool {
         if ($relation['is_admin']) return true;
-        if ($relation['is_customer_owner'] && current_user_can('view_own_customer')) return true;
+        if ($relation['is_customer_admin'] && current_user_can('view_own_customer')) return true;
         if ($relation['is_customer_employee'] && current_user_can('view_own_customer')) return true;
         
         // Beri kesempatan plugin lain menambahkan custom view rules
@@ -211,7 +211,7 @@ class CustomerValidator {
      */
     public function canUpdate(array $relation): bool {
         if ($relation['is_admin']) return true;
-        if ($relation['is_customer_owner'] && current_user_can('edit_own_customer')) return true;
+        if ($relation['is_customer_admin'] && current_user_can('edit_own_customer')) return true;
 
         return apply_filters('wp_customer_can_update', false, $relation);
     }

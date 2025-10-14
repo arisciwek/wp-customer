@@ -580,7 +580,7 @@ public function create(array $data): ?int {
             // List of all possible access types
             $access_types = [
                 'admin',
-                'customer_owner',
+                'customer_admin',
                 'branch_admin',
                 'staff',
                 'none'

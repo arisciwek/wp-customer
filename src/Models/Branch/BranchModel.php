@@ -569,7 +569,7 @@ class BranchModel {
      * 
      * Determines the relationship between a user and a branch:
      * - is_admin: User has admin privileges for all branches
-     * - is_customer_owner: User is the owner of the parent customer
+     * - is_customer_admin: User is the owner of the parent customer
      * - is_branch_admin: User is the admin of this specific branch
      * - is_customer_employee: User is a staff member of this branch
      * 
@@ -588,7 +588,7 @@ class BranchModel {
             // Determine base relation first - needed for access_type
             $base_relation = [
                 'is_admin' => current_user_can('edit_all_branches'),
-                'is_customer_owner' => false,
+                'is_customer_admin' => false,
                 'is_branch_admin' => false,
                 'is_customer_employee' => false
             ];
@@ -627,7 +627,7 @@ class BranchModel {
             if (!$branch) {
                 return [
                     'is_admin' => $base_relation['is_admin'],
-                    'is_customer_owner' => false,
+                    'is_customer_admin' => false,
                     'is_branch_admin' => false,
                     'is_customer_employee' => false,
                     'access_type' => $access_type
@@ -647,7 +647,7 @@ class BranchModel {
             // Build relation
             $relation = [
                 'is_admin' => $base_relation['is_admin'],
-                'is_customer_owner' => $customer && (int)$customer->user_id === $user_id,
+                'is_customer_admin' => $customer && (int)$customer->user_id === $user_id,
                 'is_branch_admin' => (int)$branch->user_id === $user_id,
                 'is_customer_employee' => false,
                 'branch_id' => $branch_id,
@@ -667,7 +667,7 @@ class BranchModel {
             
             // Redetermine access type with complete relation info
             if ($relation['is_admin']) $access_type = 'admin';
-            else if ($relation['is_customer_owner']) $access_type = 'customer_owner';
+            else if ($relation['is_customer_admin']) $access_type = 'customer_admin';
             else if ($relation['is_branch_admin']) $access_type = 'branch_admin';
             else if ($relation['is_customer_employee']) $access_type = 'staff';
             else $access_type = 'none';
@@ -697,7 +697,7 @@ class BranchModel {
             
             return [
                 'is_admin' => current_user_can('edit_all_branches'),
-                'is_customer_owner' => false,
+                'is_customer_admin' => false,
                 'is_branch_admin' => false,
                 'is_customer_employee' => false,
                 'access_type' => 'none',
@@ -721,13 +721,13 @@ class BranchModel {
             } else if ($branch_id) {
                 // Invalidate all access types for this branch
                 // Delete specific patterns for common access types
-                $common_access_types = ['admin', 'customer_owner', 'branch_admin', 'staff', 'none'];
+                $common_access_types = ['admin', 'customer_admin', 'branch_admin', 'staff', 'none'];
                 foreach ($common_access_types as $type) {
                     $this->cache->delete('branch_relation', "branch_relation_{$branch_id}_{$type}");
                 }
             } else {
                 // For broader invalidation, delete common general patterns
-                $common_access_types = ['admin', 'customer_owner', 'branch_admin', 'staff', 'none'];
+                $common_access_types = ['admin', 'customer_admin', 'branch_admin', 'staff', 'none'];
                 foreach ($common_access_types as $type) {
                     $this->cache->delete('branch_relation', "branch_relation_general_{$type}");
                 }
@@ -759,7 +759,7 @@ class BranchModel {
             $customer_hash = md5(serialize($customer_id));
 
             // List of all possible access types
-            $access_types = ['admin', 'customer_owner', 'branch_admin', 'staff', 'none'];
+            $access_types = ['admin', 'customer_admin', 'branch_admin', 'staff', 'none'];
 
             // Possible pagination/ordering variations to try
             $starts = [0, 10, 20, 30, 40, 50];

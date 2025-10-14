@@ -81,7 +81,7 @@ class BranchValidator {
         if ($branch_id === 0) {
             $relation = [
                 'is_admin' => current_user_can('edit_all_branches'),
-                'is_customer_owner' => false,
+                'is_customer_admin' => false,
                 'is_branch_admin' => false, 
                 'is_customer_employee' => false,
                 'access_type' => current_user_can('edit_all_branches') ? 'admin' : 'none'
@@ -113,7 +113,7 @@ class BranchValidator {
             // Untuk validasi umum, kita tidak perlu data spesifik branch
             $relation = [
                 'is_admin' => current_user_can('edit_all_branches'),
-                'is_customer_owner' => false,
+                'is_customer_admin' => false,
                 'is_branch_admin' => false,
                 'is_customer_employee' => false,
                 'access_type' => current_user_can('edit_all_branches') ? 'admin' : 'none'
@@ -167,7 +167,7 @@ class BranchValidator {
      * Get access type from relation
      * 
      * @param array $relation User relation array
-     * @return string Access type (admin, customer_owner, branch_admin, staff, or none)
+     * @return string Access type (admin, customer_admin, branch_admin, staff, or none)
      */
     private function getAccessType(array $relation): string {
         return $relation['access_type'] ?? 'none';
@@ -178,7 +178,7 @@ class BranchValidator {
         $relation = $this->getUserRelation($branch->id);
         
         if ($relation['is_admin']) return true;
-        if ($relation['is_customer_owner']) return true;
+        if ($relation['is_customer_admin']) return true;
         if ($relation['is_branch_admin']) return true;
         if ($relation['is_customer_employee'] && current_user_can('view_own_branch')) return true;
     }
@@ -190,7 +190,7 @@ class BranchValidator {
         $customer_relation = $this->customer_model->getUserRelation($customer_id);
         
         if ($customer_relation['is_admin']) return true;
-        if ($customer_relation['is_customer_owner']) return true;
+        if ($customer_relation['is_customer_admin']) return true;
         if (current_user_can('add_branch')) return true;
         
         return apply_filters('wp_customer_can_create_branch', false, $customer_id, $current_user_id);
@@ -201,7 +201,7 @@ class BranchValidator {
         $relation = $this->getUserRelation($branch->id);
         
         if ($relation['is_admin']) return true;
-        if ($relation['is_customer_owner']) return true;
+        if ($relation['is_customer_admin']) return true;
         if ($relation['is_branch_admin'] && current_user_can('edit_own_branch')) return true;
 
     }
@@ -211,7 +211,7 @@ class BranchValidator {
         $relation = $this->getUserRelation($branch->id);
         
         if ($relation['is_admin'] && current_user_can('delete_branch')) return true;
-        if ($relation['is_customer_owner']) return true;
+        if ($relation['is_customer_admin']) return true;
         
         return apply_filters('wp_customer_can_delete_branch', false, $relation);
     }
