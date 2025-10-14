@@ -139,6 +139,7 @@ class WP_Customer_Activator {
     public static function getRoles(): array {
         return [
             'customer' => __('Customer', 'wp-customer'),
+            'customer_admin' => __('Customer Admin', 'wp-customer'),
             'branch_admin' => __('Branch Admin', 'wp-customer'),
             'branch_staff' => __('Branch Staff', 'wp-customer'),
         ];

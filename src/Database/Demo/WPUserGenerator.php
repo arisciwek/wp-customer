@@ -42,37 +42,59 @@ class WPUserGenerator {
 
     public function generateUser($data) {
         global $wpdb;
-        
+
+        error_log("[WPUserGenerator] === generateUser called ===");
+        error_log("[WPUserGenerator] Input data: " . json_encode($data));
+
         // 1. Check if user with this ID already exists
         $existing_user = get_user_by('ID', $data['id']);
+        error_log("[WPUserGenerator] Checking existing user with ID {$data['id']}: " . ($existing_user ? 'EXISTS' : 'NOT FOUND'));
+
         if ($existing_user) {
+            error_log("[WPUserGenerator] User exists - Display Name: {$existing_user->display_name}");
             // Update display name if different
             if ($existing_user->display_name !== $data['display_name']) {
                 wp_update_user([
                     'ID' => $data['id'],
                     'display_name' => $data['display_name']
                 ]);
+                error_log("[WPUserGenerator] Updated user display name: {$data['display_name']} with ID: {$data['id']}");
                 $this->debug("Updated user display name: {$data['display_name']} with ID: {$data['id']}");
             }
+            error_log("[WPUserGenerator] Returning existing user ID: {$data['id']}");
             return $data['id'];
         }
 
         // 2. Use username from data or generate new one
-        $username = isset($data['username']) 
-            ? $data['username'] 
+        $username = isset($data['username'])
+            ? $data['username']
             : $this->generateUniqueUsername($data['display_name']);
-        
+
+        error_log("[WPUserGenerator] Username to use: {$username}");
+
+        // Check if username already exists
+        $username_exists = username_exists($username);
+        error_log("[WPUserGenerator] Username '{$username}' exists check: " . ($username_exists ? "YES (ID: {$username_exists})" : 'NO'));
+
         // 3. Insert new user into database
+        $user_data_to_insert = [
+            'ID' => $data['id'],
+            'user_login' => $username,
+            'user_pass' => wp_hash_password('Demo_Data-2025'),
+            'user_email' => $username . '@example.com',
+            'display_name' => $data['display_name'],
+            'user_registered' => current_time('mysql')
+        ];
+        error_log("[WPUserGenerator] Attempting to insert user into {$wpdb->users}: " . json_encode([
+            'ID' => $user_data_to_insert['ID'],
+            'user_login' => $user_data_to_insert['user_login'],
+            'user_email' => $user_data_to_insert['user_email'],
+            'display_name' => $user_data_to_insert['display_name']
+        ]));
+
         $result = $wpdb->insert(
             $wpdb->users,
-            [
-                'ID' => $data['id'],
-                'user_login' => $username,
-                'user_pass' => wp_hash_password('Demo_Data-2025'),
-                'user_email' => $username . '@example.com',
-                'display_name' => $data['display_name'],
-                'user_registered' => current_time('mysql')
-            ],
+            $user_data_to_insert,
             [
                 '%d',
                 '%s',
@@ -83,14 +105,18 @@ class WPUserGenerator {
             ]
         );
 
+        error_log("[WPUserGenerator] wpdb->insert result: " . ($result === false ? 'FALSE' : $result));
         if ($result === false) {
+            error_log("[WPUserGenerator] ERROR: wpdb->last_error: " . $wpdb->last_error);
             throw new \Exception($wpdb->last_error);
         }
 
         $user_id = $data['id'];
+        error_log("[WPUserGenerator] User inserted successfully with ID: {$user_id}");
 
         // Insert user meta directly
-        $wpdb->insert(
+        error_log("[WPUserGenerator] Inserting user meta 'wp_customer_demo_user'");
+        $meta_result_1 = $wpdb->insert(
             $wpdb->usermeta,
             [
                 'user_id' => $user_id,
@@ -103,14 +129,17 @@ class WPUserGenerator {
                 '%s'
             ]
         );
+        error_log("[WPUserGenerator] Meta insert result (demo_user): " . ($meta_result_1 === false ? 'FALSE - ' . $wpdb->last_error : $meta_result_1));
 
         // Add role capability
-        $wpdb->insert(
+        $capabilities = serialize(array($data['role'] => true));
+        error_log("[WPUserGenerator] Inserting capabilities: {$capabilities}");
+        $meta_result_2 = $wpdb->insert(
             $wpdb->usermeta,
             [
                 'user_id' => $user_id,
                 'meta_key' => $wpdb->prefix . 'capabilities',
-                'meta_value' => serialize(array($data['role'] => true))
+                'meta_value' => $capabilities
             ],
             [
                 '%d',
@@ -118,9 +147,11 @@ class WPUserGenerator {
                 '%s'
             ]
         );
+        error_log("[WPUserGenerator] Meta insert result (capabilities): " . ($meta_result_2 === false ? 'FALSE - ' . $wpdb->last_error : $meta_result_2));
 
         // Update user level for backward compatibility
-        $wpdb->insert(
+        error_log("[WPUserGenerator] Inserting user_level");
+        $meta_result_3 = $wpdb->insert(
             $wpdb->usermeta,
             [
                 'user_id' => $user_id,
@@ -133,9 +164,12 @@ class WPUserGenerator {
                 '%s'
             ]
         );
+        error_log("[WPUserGenerator] Meta insert result (user_level): " . ($meta_result_3 === false ? 'FALSE - ' . $wpdb->last_error : $meta_result_3));
 
+        error_log("[WPUserGenerator] === User creation completed successfully ===");
+        error_log("[WPUserGenerator] Created user: {$data['display_name']} with ID: {$user_id}");
         $this->debug("Created user: {$data['display_name']} with ID: {$user_id}");
-        
+
         return $user_id;
     }
 
@@ -151,6 +185,59 @@ class WPUserGenerator {
         
         self::$usedUsernames[] = $username;
         return $username;
+    }
+
+    /**
+     * Delete demo users by IDs
+     *
+     * @param array $user_ids Array of user IDs to delete
+     * @return int Number of users deleted
+     */
+    public function deleteUsers(array $user_ids): int {
+        if (empty($user_ids)) {
+            return 0;
+        }
+
+        error_log("[WPUserGenerator] === Deleting demo users ===");
+        error_log("[WPUserGenerator] User IDs to delete: " . json_encode($user_ids));
+
+        $deleted_count = 0;
+
+        foreach ($user_ids as $user_id) {
+            // Check if user exists and is a demo user
+            $existing_user = get_user_by('ID', $user_id);
+
+            if (!$existing_user) {
+                error_log("[WPUserGenerator] User ID {$user_id} not found, skipping");
+                continue;
+            }
+
+            // Check if this is a demo user
+            $is_demo = get_user_meta($user_id, 'wp_customer_demo_user', true);
+
+            if ($is_demo !== '1') {
+                error_log("[WPUserGenerator] User ID {$user_id} is not a demo user, skipping for safety");
+                continue;
+            }
+
+            // Use WordPress function to delete user
+            // This will also delete all user meta automatically
+            require_once(ABSPATH . 'wp-admin/includes/user.php');
+
+            $result = wp_delete_user($user_id);
+
+            if ($result) {
+                $deleted_count++;
+                error_log("[WPUserGenerator] Deleted user ID {$user_id} ({$existing_user->user_login})");
+            } else {
+                error_log("[WPUserGenerator] Failed to delete user ID {$user_id}");
+            }
+        }
+
+        error_log("[WPUserGenerator] Deleted {$deleted_count} demo users");
+        $this->debug("Deleted {$deleted_count} demo users");
+
+        return $deleted_count;
     }
 
     private function debug($message) {

@@ -87,6 +87,10 @@
             }
 
             if ($result) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Debug: CustomerModel::find() - user_id: ' . ($result->user_id ?? 'NULL'));
+                }
+
                 // Cache the result for 2 minutes
                 $this->cache->set('customer', $result, 120, $id);
             }

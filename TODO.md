@@ -1,5 +1,21 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2132: Fix User WP Creation in Customer Demo Data
+- Issue: WordPress user not created when generating customer demo data, `user_id` field in `app_customers` table remains NULL
+- Root Cause (Initial): Bug in CustomerDemoData.php where wrong variable (`$wp_user_id` calculated as `1 + $customer['id']`) was used instead of correct `$user_id` returned by `generateUser()`
+- Root Cause (After Debug): Users were already created from previous generation, cleanup mechanism needed
+- Target: (1) Fix variable bug, (2) Add comprehensive debug logging, (3) Add user cleanup mechanism, (4) Add customer_admin role to generated users
+- Files Modified:
+  - src/Database/Demo/CustomerDemoData.php (fixed $user_id usage, added cleanup call, added customer_admin role assignment line 188-208, comprehensive debug logging)
+  - src/Database/Demo/WPUserGenerator.php (added deleteUsers() method line 190-241, comprehensive debug logging)
+- Status: ✅ Completed (All 3 Reviews)
+- Notes:
+  - Review-01: Added debug logging to identify issue
+  - Review-02: Found users already existed, implemented automatic cleanup with shouldClearData()
+  - Review-03: Users successfully created, added customer_admin role (users now have both "customer" and "customer_admin" roles)
+  - Final result: Demo users created with 2 roles, full debug logging, automatic cleanup before regeneration
+  - (see docs/TODO-2132-customer-demo-data-fix.md)
+
 ## TODO-2131: Fix DataTable Cache Invalidation with Access Type
 - Issue: DataTable cache was not properly invalidated when branch or employee data changed. Cache keys include `access_type` component, but invalidation only cleared cache for current user's access type, causing stale data for users with different access types
 - Root Cause: Incomplete cache invalidation strategy - `invalidateDataTableCache()` only cleared single access_type, missing comprehensive method to invalidate all access_type variations

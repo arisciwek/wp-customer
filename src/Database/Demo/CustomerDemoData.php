@@ -117,6 +117,19 @@ class CustomerDemoData extends AbstractDemoData {
         // Inisialisasi WPUserGenerator dan simpan reference ke static data
         $userGenerator = new WPUserGenerator();
 
+        // Clean up existing demo users if shouldClearData is enabled
+        if ($this->shouldClearData()) {
+            error_log("[CustomerDemoData] === Cleanup mode enabled - Deleting existing demo users ===");
+
+            // Get all user IDs from CustomerUsersData
+            $user_ids_to_delete = array_column($this->customer_users, 'id');
+            error_log("[CustomerDemoData] User IDs to clean: " . json_encode($user_ids_to_delete));
+
+            $deleted = $userGenerator->deleteUsers($user_ids_to_delete);
+            error_log("[CustomerDemoData] Cleaned up {$deleted} existing demo users");
+            $this->debug("Cleaned up {$deleted} existing demo users before generation");
+        }
+
         foreach (self::$customers as $customer) {
             try {
                 // 1. Cek existing customer
@@ -145,23 +158,70 @@ class CustomerDemoData extends AbstractDemoData {
                 }
 
                 // 2. Cek dan buat WP User jika belum ada
-                $wp_user_id = 1 + $customer['id'];  // Sesuai dengan indeks di CustomerUsersData
-                
+                error_log("[CustomerDemoData] === Processing Customer ID: {$customer['id']} - {$customer['name']} ===");
+
                 // Ambil data user dari static array
                 $user_data = $this->customer_users[$customer['id'] - 1];
-                $user_id = $userGenerator->generateUser([
+                error_log("[CustomerDemoData] User data from array: " . json_encode($user_data));
+
+                $user_params = [
                     'id' => $user_data['id'],
                     'username' => $user_data['username'],
                     'display_name' => $user_data['display_name'],
                     'role' => 'customer'
-                ]);
+                ];
+                error_log("[CustomerDemoData] Calling generateUser with params: " . json_encode($user_params));
+
+                $user_id = $userGenerator->generateUser($user_params);
+
+                error_log("[CustomerDemoData] generateUser returned user_id: " . ($user_id ?: 'NULL/FALSE'));
 
                 if (!$user_id) {
+                    error_log("[CustomerDemoData] ERROR: Failed to create WordPress user for customer: {$customer['name']}");
                     throw new \Exception("Failed to create WordPress user for customer: {$customer['name']}");
                 }
 
                 // Store user_id untuk referensi
-                self::$user_ids[$customer['id']] = $wp_user_id;
+                self::$user_ids[$customer['id']] = $user_id;
+                error_log("[CustomerDemoData] Stored user_id {$user_id} for customer ID {$customer['id']}");
+
+                // 2b. Add customer_admin role to the user
+                error_log("[CustomerDemoData] Adding customer_admin role to user {$user_id}");
+
+                // Check if customer_admin role exists in WordPress
+                $role_exists = get_role('customer_admin');
+                error_log("[CustomerDemoData] customer_admin role exists: " . ($role_exists ? 'YES' : 'NO'));
+
+                if (!$role_exists) {
+                    error_log("[CustomerDemoData] customer_admin role not found, creating it...");
+                    // Create the role if it doesn't exist
+                    add_role(
+                        'customer_admin',
+                        __('Customer Admin', 'wp-customer'),
+                        [] // Empty capabilities, will be set by PermissionModel
+                    );
+                    error_log("[CustomerDemoData] customer_admin role created");
+                }
+
+                $user = new \WP_User($user_id);
+
+                // Get current roles
+                $current_roles = $user->roles;
+                error_log("[CustomerDemoData] Current roles before adding: " . json_encode($current_roles));
+
+                // Add customer_admin role (this will not remove existing roles)
+                $user->add_role('customer_admin');
+
+                // Verify roles after adding
+                $user = new \WP_User($user_id); // Refresh user object
+                $updated_roles = $user->roles;
+                error_log("[CustomerDemoData] Roles after adding customer_admin: " . json_encode($updated_roles));
+
+                if (in_array('customer_admin', $updated_roles)) {
+                    error_log("[CustomerDemoData] Successfully added customer_admin role to user {$user_id}");
+                } else {
+                    error_log("[CustomerDemoData] WARNING: Failed to add customer_admin role to user {$user_id}");
+                }
 
                 // 3. Generate customer data baru
                 if (isset($customer['provinsi_id'])) {
@@ -202,21 +262,32 @@ class CustomerDemoData extends AbstractDemoData {
                     'status' => 'active',
                     'provinsi_id' => $provinsi_id ?: null,
                     'regency_id' => $regency_id ?: null,
-                    'user_id' => $wp_user_id,
+                    'user_id' => $user_id,
                     'created_by' => 1,
                     'created_at' => current_time('mysql'),
                     'updated_at' => current_time('mysql')
                 ];
 
+                error_log("[CustomerDemoData] Creating customer with data: " . json_encode([
+                    'id' => $customer_data['id'],
+                    'name' => $customer_data['name'],
+                    'user_id' => $customer_data['user_id'],
+                    'provinsi_id' => $customer_data['provinsi_id'],
+                    'regency_id' => $customer_data['regency_id']
+                ]));
+
                 // Use createDemoCustomer instead of create
                 if (!$this->customerController->createDemoCustomer($customer_data)) {
+                    error_log("[CustomerDemoData] ERROR: Failed to create customer with fixed ID");
                     throw new \Exception("Failed to create customer with fixed ID");
                 }
+
+                error_log("[CustomerDemoData] Successfully created customer ID {$customer['id']}");
 
                 // Track customer ID
                 self::$customer_ids[] = $customer['id'];
 
-                $this->debug("Created customer: {$customer['name']} with fixed ID: {$customer['id']} and WP User ID: {$wp_user_id}");
+                $this->debug("Created customer: {$customer['name']} with fixed ID: {$customer['id']} and WP User ID: {$user_id}");
 
             } catch (\Exception $e) {
                 $this->debug("Error processing customer {$customer['name']}: " . $e->getMessage());
