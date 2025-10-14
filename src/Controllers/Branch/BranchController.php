@@ -90,7 +90,7 @@ class BranchController {
             
             if (!$access['has_access']) {
                 wp_send_json_error([
-                    'message' => __('Anda tidak memiliki akses ke customer ini', 'wp-customer'),
+                    'message' => __('Anda tidak memiliki akses ke cabang customer ini', 'wp-customer'),
                     'code' => 'access_denied'
                 ]);
                 return;
