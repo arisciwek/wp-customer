@@ -1,5 +1,15 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2133: Add Read Capability to Customer Role
+- Issue: 'read' capability untuk customer role masih di wp-customer.php menggunakan init hook, tidak konsisten dengan arsitektur plugin
+- Root Cause: Capability management terpisah - seharusnya semua di PermissionModel.php
+- Target: Pindahkan 'read' capability dari wp-customer.php ke PermissionModel::addCapabilities()
+- Files Modified:
+  - src/Models/Settings/PermissionModel.php (added 'read' capability in addCapabilities() method, line 136-137)
+  - wp-customer.php (removed init hook for 'read' capability, line 137-142)
+- Status: ✅ Completed
+- Notes: 'read' capability wajib untuk wp-admin access, tidak perlu di $available_capabilities (WordPress core capability), dipersist saat plugin activation (see docs/TODO-2133-add-read-capability.md)
+
 ## TODO-2132: Fix User WP Creation in Customer Demo Data
 - Issue: WordPress user not created when generating customer demo data, `user_id` field in `app_customers` table remains NULL
 - Root Cause (Initial): Bug in CustomerDemoData.php where wrong variable (`$wp_user_id` calculated as `1 + $customer['id']`) was used instead of correct `$user_id` returned by `generateUser()`

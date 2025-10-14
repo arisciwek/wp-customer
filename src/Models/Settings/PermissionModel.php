@@ -133,6 +133,9 @@ class PermissionModel {
         // Set customer role capabilities
         $customer = get_role('customer');
         if ($customer) {
+            // Add 'read' capability - required for wp-admin access
+            $customer->add_cap('read');
+
             $default_capabiities = [
                 // Customer capabilities
                 'view_customer_list' => true,
@@ -142,7 +145,7 @@ class PermissionModel {
                 'view_own_customer' => true,
                 'delete_customer' => false,
 
-                // Branch capabilities  
+                // Branch capabilities
                 'add_branch' => true,
                 'view_branch_list' => true,
                 'view_own_branch' => true,
