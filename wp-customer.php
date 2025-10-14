@@ -75,6 +75,7 @@ class WPCustomer {
      */
     private function includeDependencies() {
         require_once WP_CUSTOMER_PATH . 'includes/class-loader.php';
+        require_once WP_CUSTOMER_PATH . 'includes/class-role-manager.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-activator.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-deactivator.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-dependencies.php';

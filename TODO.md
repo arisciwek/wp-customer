@@ -1,5 +1,17 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2134: Delete Roles on Deactivation & Centralize Role Management
+- Issue: (1) Roles not deleted on plugin deactivation - only 'customer' removed, missing customer_admin, branch_admin, customer_employee. (2) Role definitions in class-activator.php not accessible for external plugins or internal components
+- Root Cause: (1) Deactivator hardcoded to only remove 'customer' role. (2) WP_Customer_Activator class only loaded during activation hook, not accessible globally
+- Target: (1) Delete ALL plugin roles on deactivation. (2) Create centralized RoleManager accessible for external plugins and internal components. (3) Single source of truth for role definitions
+- Files Modified:
+  - includes/class-role-manager.php (NEW - centralized role management with helper methods)
+  - includes/class-activator.php (use RoleManager, deprecated old getRoles() method)
+  - includes/class-deactivator.php (delete ALL roles using RoleManager::getRoleSlugs())
+  - wp-customer.php (load RoleManager for global access)
+- Status: ✅ Completed
+- Notes: RoleManager provides getRoles(), getRoleSlugs(), isPluginRole(), roleExists(), getRoleName(). Always loaded via wp-customer.php. External plugins can access via class_exists() check. Backward compatible - old Activator::getRoles() still works (deprecated). (see docs/TODO-2134-role-cleanup-on-deactivation.md)
+
 ## TODO-2133: Add Read Capability to Customer Role
 - Issue: 'read' capability untuk customer role masih di wp-customer.php menggunakan init hook, tidak konsisten dengan arsitektur plugin
 - Root Cause: Capability management terpisah - seharusnya semua di PermissionModel.php

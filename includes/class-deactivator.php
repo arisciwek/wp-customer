@@ -15,6 +15,9 @@
 
 use WPCustomer\Cache\CustomerCacheManager;
 
+// Load RoleManager
+require_once WP_CUSTOMER_PATH . 'includes/class-role-manager.php';
+
 class WP_Customer_Deactivator {
     private static function debug($message) {
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -103,6 +106,7 @@ class WP_Customer_Deactivator {
             $permission_model = new \WPCustomer\Models\Settings\PermissionModel();
             $capabilities = array_keys($permission_model->getAllCapabilities());
 
+            // Remove custom capabilities from all roles
             foreach (get_editable_roles() as $role_name => $role_info) {
                 $role = get_role($role_name);
                 if (!$role) continue;
@@ -112,8 +116,16 @@ class WP_Customer_Deactivator {
                 }
             }
 
-            remove_role('customer');
-            self::debug("Capabilities and customer role removed successfully");
+            // Remove all plugin roles using RoleManager
+            $plugin_roles = WP_Customer_Role_Manager::getRoleSlugs();
+            foreach ($plugin_roles as $role_slug) {
+                if (WP_Customer_Role_Manager::roleExists($role_slug)) {
+                    remove_role($role_slug);
+                    self::debug("Removed role: {$role_slug}");
+                }
+            }
+
+            self::debug("Capabilities and all plugin roles removed successfully");
         } catch (\Exception $e) {
             self::debug("Error removing capabilities: " . $e->getMessage());
         }

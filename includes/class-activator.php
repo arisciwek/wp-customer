@@ -35,6 +35,9 @@
 use WPCustomer\Models\Settings\PermissionModel;
 use WPCustomer\Database\Installer;
 
+// Load RoleManager
+require_once WP_CUSTOMER_PATH . 'includes/class-role-manager.php';
+
 class WP_Customer_Activator {
     private static function logError($message) {
         if (defined('WP_DEBUG') && WP_DEBUG) {
@@ -55,7 +58,7 @@ class WP_Customer_Activator {
             }
 
             // 2. Create roles if they don't exist
-            $all_roles = self::getRoles();
+            $all_roles = WP_Customer_Role_Manager::getRoles();
 
             foreach ($all_roles as $role_slug => $role_name) {
                 if (!get_role($role_slug)) {
@@ -132,16 +135,12 @@ class WP_Customer_Activator {
 
     /**
      * Get all available roles with their display names
-     * Single source of truth for roles in the plugin
+     * DEPRECATED: Use WP_Customer_Role_Manager::getRoles() instead
      *
+     * @deprecated 1.0.2 Use WP_Customer_Role_Manager::getRoles()
      * @return array Array of role_slug => role_name pairs
      */
     public static function getRoles(): array {
-        return [
-            'customer' => __('Customer', 'wp-customer'),
-            'customer_admin' => __('Customer Admin', 'wp-customer'),
-            'branch_admin' => __('Branch Admin', 'wp-customer'),
-            'customer_employee' => __('Customer Employee', 'wp-customer'),
-        ];
+        return WP_Customer_Role_Manager::getRoles();
     }
 }
