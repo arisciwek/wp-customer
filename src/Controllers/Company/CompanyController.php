@@ -29,6 +29,7 @@ use WPCustomer\Models\Company\CompanyModel;
 use WPCustomer\Controllers\Company\CompanyMembershipController;
 use WPCustomer\Cache\CustomerCacheManager;
 use WPCustomer\Validators\Branch\BranchValidator;
+use WPCustomer\Validators\Company\CompanyValidator;
 
 class CompanyController {
     private $error_messages;
@@ -36,6 +37,7 @@ class CompanyController {
     private CustomerCacheManager $cache;
     private string $log_file;
     private BranchValidator $branchValidator;
+    private CompanyValidator $companyValidator;
     private CompanyMembershipController $membershipController;
 
     private const DEFAULT_LOG_FILE = 'logs/company.log';
@@ -43,6 +45,7 @@ class CompanyController {
     public function __construct() {
         $this->model = new CompanyModel();
         $this->branchValidator = new BranchValidator();
+        $this->companyValidator = new CompanyValidator();
         $this->cache = new CustomerCacheManager();
         $this->membershipController = new CompanyMembershipController();
 
@@ -229,16 +232,24 @@ class CompanyController {
     }
 
     /**
-     * Render main page template
+     * Render main page template with enhanced debugging
      */
     public function renderMainPage() {
-        if (!current_user_can('view_branch_list')) {
+        $this->debug_log("\n\n=== RENDER MAIN PAGE CALLED ===");
+        $this->debug_log("Current URL: " . $_SERVER['REQUEST_URI']);
+        $this->debug_log("Action: " . ($_GET['action'] ?? 'none'));
+        
+        // Check access
+        if (!$this->companyValidator->canAccessCompanyPage()) {
+            $this->debug_log("RENDERING: company-no-access.php");
             require_once WP_CUSTOMER_PATH . 'src/Views/templates/company/company-no-access.php';
             return;
         }
-
+        
+        $this->debug_log("RENDERING: company-dashboard.php");
         require_once WP_CUSTOMER_PATH . 'src/Views/templates/company/company-dashboard.php';
     }
+
 
     /**
      * Initialize log directory
