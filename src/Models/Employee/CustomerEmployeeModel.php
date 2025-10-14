@@ -630,5 +630,45 @@ public function create(array $data): ?int {
         }
     }
 
+    /**
+     * Ambil data lengkap employee berdasarkan user_id
+     */
+    public function getByUserId($user_id) {
+        global $wpdb;
+
+        $table_employees = "{$wpdb->prefix}app_customer_employees";
+        $table_branches  = "{$wpdb->prefix}app_customer_branches";
+        $table_customers = "{$wpdb->prefix}app_customers";
+        $table_users     = "{$wpdb->prefix}users";
+
+        $query = $wpdb->prepare("
+            SELECT 
+                ce.user_id,
+                u.display_name,
+                cb.name AS branch_name,
+                c.name AS customer_name
+            FROM $table_employees ce
+            JOIN $table_branches cb ON ce.branch_id = cb.id
+            JOIN $table_customers c ON ce.customer_id = c.id
+            JOIN $table_users u ON ce.user_id = u.ID
+            WHERE ce.user_id = %d
+            LIMIT 1
+        ", $user_id);
+
+         // Debug: tampilkan query SQL ke error_log
+         error_log('=== [CustomerEmployeeModel] SQL Query ===');
+         error_log($query);
+
+
+        $result = $wpdb->get_row($query, ARRAY_A);
+
+        // Debug hasil query
+        if (defined('WP_DEBUG') && WP_DEBUG === true) {
+            error_log('Query Result: ' . print_r($result, true));
+        }
+
+        return $result;
+    }
+
 }
 
