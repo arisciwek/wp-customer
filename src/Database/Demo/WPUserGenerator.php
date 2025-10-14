@@ -191,20 +191,22 @@ class WPUserGenerator {
      * Delete demo users by IDs
      *
      * @param array $user_ids Array of user IDs to delete
+     * @param bool $force_delete Force delete without demo user check (for development)
      * @return int Number of users deleted
      */
-    public function deleteUsers(array $user_ids): int {
+    public function deleteUsers(array $user_ids, bool $force_delete = false): int {
         if (empty($user_ids)) {
             return 0;
         }
 
         error_log("[WPUserGenerator] === Deleting demo users ===");
         error_log("[WPUserGenerator] User IDs to delete: " . json_encode($user_ids));
+        error_log("[WPUserGenerator] Force delete mode: " . ($force_delete ? 'YES' : 'NO'));
 
         $deleted_count = 0;
 
         foreach ($user_ids as $user_id) {
-            // Check if user exists and is a demo user
+            // Check if user exists
             $existing_user = get_user_by('ID', $user_id);
 
             if (!$existing_user) {
@@ -212,12 +214,22 @@ class WPUserGenerator {
                 continue;
             }
 
-            // Check if this is a demo user
-            $is_demo = get_user_meta($user_id, 'wp_customer_demo_user', true);
-
-            if ($is_demo !== '1') {
-                error_log("[WPUserGenerator] User ID {$user_id} is not a demo user, skipping for safety");
+            // Skip ID 1 (main admin) for safety even in force mode
+            if ($user_id == 1) {
+                error_log("[WPUserGenerator] User ID 1 is main admin, skipping for safety");
                 continue;
+            }
+
+            // Check if this is a demo user (unless force delete is enabled)
+            if (!$force_delete) {
+                $is_demo = get_user_meta($user_id, 'wp_customer_demo_user', true);
+
+                if ($is_demo !== '1') {
+                    error_log("[WPUserGenerator] User ID {$user_id} is not a demo user, skipping for safety");
+                    continue;
+                }
+            } else {
+                error_log("[WPUserGenerator] Force deleting user ID {$user_id} ({$existing_user->user_login})");
             }
 
             // Use WordPress function to delete user
@@ -234,8 +246,8 @@ class WPUserGenerator {
             }
         }
 
-        error_log("[WPUserGenerator] Deleted {$deleted_count} demo users");
-        $this->debug("Deleted {$deleted_count} demo users");
+        error_log("[WPUserGenerator] Deleted {$deleted_count} users");
+        $this->debug("Deleted {$deleted_count} users");
 
         return $deleted_count;
     }

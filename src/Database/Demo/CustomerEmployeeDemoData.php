@@ -73,6 +73,10 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
     }
 
     protected function generate(): void {
+        // Increase max execution time for batch operations
+        // Employee generation with WP user creation can take significant time
+        ini_set('max_execution_time', '300'); // 300 seconds = 5 minutes
+
         $this->debug('Starting employee data generation');
 
         try {
@@ -80,6 +84,16 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
             if ($this->shouldClearData()) {
                 $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_customer_employees");
                 $this->debug('Cleared existing employee data');
+
+                // Delete old employee WordPress users (IDs 70-129) to avoid conflicts
+                // Use force_delete=true in development to remove all users in range,
+                // even if they don't have demo user meta (handles legacy/corrupt users)
+                $employee_user_ids = array_keys(self::$employee_users);
+                if (!empty($employee_user_ids)) {
+                    $force_delete = true; // Force delete in development mode
+                    $deleted_count = $this->wpUserGenerator->deleteUsers($employee_user_ids, $force_delete);
+                    $this->debug("Deleted {$deleted_count} old employee WordPress users (force mode)");
+                }
             }
 
             // Tahap 1: Generate dari user yang sudah ada (customer owners & branch admins)
@@ -128,10 +142,10 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
 		            'purchase' => true
 		        ]
 		    );
-		} 
-		
-        // 2. Branch admins (ID 12-41)
-        for ($id = 12; $id <= 41; $id++) {
+		}
+
+        // 2. Branch admins (ID 12-69: regular 12-41 + extra branches 50-69)
+        for ($id = 12; $id <= 69; $id++) {
             $branch = $this->wpdb->get_row($this->wpdb->prepare(
                 "SELECT * FROM {$this->wpdb->prefix}app_customer_branches WHERE user_id = %d",
                 $id
@@ -167,6 +181,17 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
             if (!$user_id) {
                 $this->debug("Failed to create WP user: {$user_data['username']}");
                 continue;
+            }
+
+            // Add customer_employee role to user
+            $user = get_user_by('ID', $user_id);
+            if ($user) {
+                $role_exists = get_role('customer_employee');
+                if (!$role_exists) {
+                    add_role('customer_employee', __('Customer Employee', 'wp-customer'), []);
+                }
+                $user->add_role('customer_employee');
+                $this->debug("Added customer_employee role to user {$user_id} ({$user_data['display_name']})");
             }
 
             // Create employee record with department assignments
