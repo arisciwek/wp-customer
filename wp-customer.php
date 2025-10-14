@@ -134,6 +134,23 @@ class WPCustomer {
         add_action('wp_ajax_get_customer_stats', [$this->customer_controller, 'getStats']);
         add_action('wp_ajax_handle_customer_datatable', [$this->customer_controller, 'handleDataTableRequest']);
         add_action('wp_ajax_get_customer', [$this->customer_controller, 'show']);
+        add_action('init', function() {
+            $role = get_role('customer');
+            if ($role) {
+                $role->add_cap('read'); // wajib agar bisa masuk wp-admin
+            }
+        });
+
+        add_action('admin_menu', function() {
+            $user = wp_get_current_user();
+            if (in_array('customer', (array) $user->roles)) {
+                // hapus menu yang tidak perlu
+                remove_menu_page('edit.php'); // Posts
+                remove_menu_page('edit-comments.php'); // Comments
+                remove_menu_page('tools.php'); // Tools
+            }
+        });
+
     }
 
     /**
