@@ -160,6 +160,7 @@ class BranchValidator {
             'branch_id' => $branch_id,
             'customer_id' => $customer_id
         ];
+
     }
     
     /**
@@ -180,9 +181,6 @@ class BranchValidator {
         if ($relation['is_customer_owner']) return true;
         if ($relation['is_branch_admin']) return true;
         if ($relation['is_customer_employee'] && current_user_can('view_own_branch')) return true;
-        
-        // Beri kesempatan plugin lain menambahkan custom view rules
-        return apply_filters('wp_customer_can_view_branch', false, $relation);
     }
 
     public function canCreateBranch(int $customer_id): bool {
@@ -206,7 +204,6 @@ class BranchValidator {
         if ($relation['is_customer_owner']) return true;
         if ($relation['is_branch_admin'] && current_user_can('edit_own_branch')) return true;
 
-        return apply_filters('wp_customer_can_update_branch', false, $relation);
     }
 
     public function canDeleteBranch($branch, $customer): bool {
