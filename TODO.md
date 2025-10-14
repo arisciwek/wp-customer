@@ -1,5 +1,14 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2135: Generate Customer Admin Names from Collection
+- Issue: Customer admin names in CustomerUsersData.php were hardcoded and not generated from a defined collection, making them difficult to maintain and validate
+- Root Cause: No centralized name collection system, names were directly defined without pattern or validation mechanism
+- Target: Create name collection array with 24 words, generate all customer admin names from 2-word combinations using collection only, add helper methods for validation and access
+- Files Modified:
+  - src/Database/Demo/Data/CustomerUsersData.php (added $name_collection array with 24 words, updated all 10 entries in $data with collection-based names, added getNameCollection() and isValidName() helper methods)
+- Status: ✅ Completed
+- Notes: All names use unique 2-word combinations from collection (e.g., 'Andi Budi', 'Citra Dewi'). Collection provides 276 possible combinations (24 x 23 / 2) for future expansion. Helper methods ensure validation and external access. Pattern: username = lowercase_underscore, display_name = Title Case Space (see docs/TODO-2135-generate-names-from-collection.md)
+
 ## TODO-2134: Delete Roles on Deactivation & Centralize Role Management
 - Issue: (1) Roles not deleted on plugin deactivation - only 'customer' removed, missing customer_admin, branch_admin, customer_employee. (2) Role definitions in class-activator.php not accessible for external plugins or internal components
 - Root Cause: (1) Deactivator hardcoded to only remove 'customer' role. (2) WP_Customer_Activator class only loaded during activation hook, not accessible globally
