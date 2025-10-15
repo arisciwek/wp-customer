@@ -133,7 +133,7 @@ class CompanyController {
             }
 
             // Validate access
-            if (!current_user_can('view_branch_list')) {
+            if (!current_user_can('view_customer_branch_list')) {
                 throw new \Exception('You do not have permission to view this data');
             }
 
@@ -220,7 +220,7 @@ class CompanyController {
      * Generate action buttons for DataTable
      */
     private function generateActionButtons($company): string {
-        if (!current_user_can('view_branch_list')) {
+        if (!current_user_can('view_customer_branch_list')) {
             return '';
         }
 
@@ -331,7 +331,7 @@ class CompanyController {
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
             // Validate user permissions
-            if (!current_user_can('view_branch_list')) {
+            if (!current_user_can('view_customer_branch_list')) {
                 throw new \Exception('Anda tidak memiliki izin untuk melihat data ini');
             }
 

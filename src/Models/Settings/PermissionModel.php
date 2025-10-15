@@ -37,22 +37,22 @@ class PermissionModel {
         'delete_customer' => 'Hapus Customer',
 
         // Branch capabilities
-        'view_branch_list' => 'Lihat Daftar Cabang',
-        'view_branch_detail' => 'Lihat Detail Cabang',
-        'view_own_branch' => 'Lihat Cabang Sendiri',
-        'add_branch' => 'Tambah Cabang',
-        'edit_all_branches' => 'Edit Semua Cabang',
-        'edit_own_branch' => 'Edit Cabang Sendiri',
-        'delete_branch' => 'Hapus Cabang',
+        'view_customer_branch_list' => 'Lihat Daftar Cabang',
+        'view_customer_branch_detail' => 'Lihat Detail Cabang',
+        'view_own_customer_branch' => 'Lihat Cabang Sendiri',
+        'add_customer_branch' => 'Tambah Cabang',
+        'edit_all_customer_branches' => 'Edit Semua Cabang',
+        'edit_own_customer_branch' => 'Edit Cabang Sendiri',
+        'delete_customer_branch' => 'Hapus Cabang',
 
         // Employee capabilities
-        'view_employee_list' => 'Lihat Daftar Karyawan',
-        'view_employee_detail' => 'Lihat Detail Karyawan', 
-        'view_own_employee' => 'Lihat Karyawan Sendiri',
-        'add_employee' => 'Tambah Karyawan',
-        'edit_all_employees' => 'Edit Karyawan',
-        'edit_own_employee' => 'Edit Karyawan Sendiri',
-        'delete_employee' => 'Hapus Karyawan'        
+        'view_customer_employee_list' => 'Lihat Daftar Karyawan',
+        'view_customer_employee_detail' => 'Lihat Detail Karyawan',
+        'view_own_customer_employee' => 'Lihat Karyawan Sendiri',
+        'add_customer_employee' => 'Tambah Karyawan',
+        'edit_all_customer_employees' => 'Edit Karyawan',
+        'edit_own_customer_employee' => 'Edit Karyawan Sendiri',
+        'delete_customer_employee' => 'Hapus Karyawan'
     ];
 
     // Define base capabilities untuk setiap role beserta nilai default-nya
@@ -71,25 +71,25 @@ class PermissionModel {
         'branch' => [
             'title' => 'Branch Permissions',
             'caps' => [
-                'view_branch_list',
-                'view_branch_detail',
-                'view_own_branch',
-                'add_branch',
-                'edit_all_branches',
-                'edit_own_branch',
-                'delete_branch'
+                'view_customer_branch_list',
+                'view_customer_branch_detail',
+                'view_own_customer_branch',
+                'add_customer_branch',
+                'edit_all_customer_branches',
+                'edit_own_customer_branch',
+                'delete_customer_branch'
             ]
         ],
         'employee' => [
             'title' => 'Employee Permissions',
             'caps' => [
-                'view_employee_list',
-                'view_employee_detail',
-                'view_own_employee',
-                'add_employee',
-                'edit_all_employees',
-                'edit_own_employee',
-                'delete_employee'
+                'view_customer_employee_list',
+                'view_customer_employee_detail',
+                'view_own_customer_employee',
+                'add_customer_employee',
+                'edit_all_customer_employees',
+                'edit_own_customer_employee',
+                'delete_customer_employee'
             ]
         ]
     ];
@@ -139,6 +139,7 @@ class PermissionModel {
             $default_capabiities = [
                 // Customer capabilities
                 'view_customer_list' => true,
+                'view_customer_detail' => true,
                 'add_customer' => false,
                 'view_own_customer' => true,
                 'edit_own_customer' => true,
@@ -146,18 +147,20 @@ class PermissionModel {
                 'delete_customer' => false,
 
                 // Branch capabilities
-                'add_branch' => true,
-                'view_branch_list' => true,
-                'view_own_branch' => true,
-                'edit_own_branch' => true,
-                'delete_branch' => false,
+                'add_customer_branch' => true,
+                'view_customer_branch_list' => true,
+                'view_customer_branch_detail' => true,
+                'view_own_customer_branch' => true,
+                'edit_own_customer_branch' => true,
+                'delete_customer_branch' => false,
 
                 // Employee capabilities
-                'add_employee' => true,
-                'view_employee_list' => true,
-                'view_own_employee' => true,
-                'edit_own_employee' => true,
-                'delete_employee' => false
+                'add_customer_employee' => true,
+                'view_customer_employee_list' => true,
+                'view_customer_employee_detail' => true,
+                'view_own_customer_employee' => true,
+                'edit_own_customer_employee' => true,
+                'delete_customer_employee' => false
             ];
 
             foreach ($default_capabiities as $cap => $enabled) {

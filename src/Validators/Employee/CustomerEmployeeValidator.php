@@ -56,11 +56,11 @@ class CustomerEmployeeValidator {
        }
 
        // System Admin Check
-       if (current_user_can('view_employee_detail')) {
+       if (current_user_can('view_customer_employee_detail')) {
            return true;
        }
 
-       return apply_filters('wp_customer_can_view_employee', false, $employee, $customer, $current_user_id);
+       return apply_filters('wp_customer_can_view_customer_employee', false, $employee, $customer, $current_user_id);
    }
 
    public function canCreateEmployee($customer_id, $branch_id): bool {
@@ -72,17 +72,17 @@ class CustomerEmployeeValidator {
            return true;
        }
 
-       // Branch Admin Check dengan add_employee capability
-       if ($this->isBranchAdmin($current_user_id, $branch_id) && current_user_can('add_employee')) {
+       // Branch Admin Check dengan add_customer_employee capability
+       if ($this->isBranchAdmin($current_user_id, $branch_id) && current_user_can('add_customer_employee')) {
            return true;
        }
 
        // System Admin Check
-       if (current_user_can('add_employee')) {
+       if (current_user_can('add_customer_employee')) {
            return true;
        }
 
-       return apply_filters('wp_customer_can_create_employee', false, $customer_id, $branch_id, $current_user_id);
+       return apply_filters('wp_customer_can_create_customer_employee', false, $customer_id, $branch_id, $current_user_id);
    }
 
    public function canEditEmployee($employee, $customer): bool {
@@ -94,23 +94,23 @@ class CustomerEmployeeValidator {
        }
 
        // Branch Admin Check
-       if ($this->isBranchAdmin($current_user_id, $employee->branch_id) && 
-           current_user_can('edit_own_employee')) {
+       if ($this->isBranchAdmin($current_user_id, $employee->branch_id) &&
+           current_user_can('edit_own_customer_employee')) {
            return true;
        }
 
        // Creator Check
-       if ((int)$employee->created_by === (int)$current_user_id && 
-           current_user_can('edit_own_employee')) {
+       if ((int)$employee->created_by === (int)$current_user_id &&
+           current_user_can('edit_own_customer_employee')) {
            return true;
        }
 
        // System Admin Check
-       if (current_user_can('edit_all_employees')) {
+       if (current_user_can('edit_all_customer_employees')) {
            return true;
        }
 
-       return apply_filters('wp_customer_can_edit_employee', false, $employee, $customer, $current_user_id);
+       return apply_filters('wp_customer_can_edit_customer_employee', false, $employee, $customer, $current_user_id);
    }
 
    public function canDeleteEmployee($employee, $customer): bool {
@@ -122,19 +122,19 @@ class CustomerEmployeeValidator {
        }
 
        // Branch Admin Check
-       if ($this->isBranchAdmin($current_user_id, $employee->branch_id) && 
-           current_user_can('delete_employee')) {
+       if ($this->isBranchAdmin($current_user_id, $employee->branch_id) &&
+           current_user_can('delete_customer_employee')) {
            return true;
        }
 
        // Creator Check
-       if ((int)$employee->created_by === (int)$current_user_id && 
-           current_user_can('delete_employee')) {
+       if ((int)$employee->created_by === (int)$current_user_id &&
+           current_user_can('delete_customer_employee')) {
            return true;
        }
 
        // System Admin Check
-       if (current_user_can('delete_employee')) {
+       if (current_user_can('delete_customer_employee')) {
            return true;
        }
 
@@ -521,7 +521,7 @@ class CustomerEmployeeValidator {
         $current_user_id = get_current_user_id();
 
         // CRITICAL FIX: Check admin capability FIRST
-        $is_admin = current_user_can('view_all_employees') || current_user_can('edit_all_employees');
+        $is_admin = current_user_can('view_customer_employee_list') || current_user_can('edit_all_customer_employees');
 
         // Handle special case for customer_id = 0 (general validation)
         if ($customer_id === 0) {
@@ -534,7 +534,7 @@ class CustomerEmployeeValidator {
             ];
 
             return [
-                'has_access' => current_user_can('view_employee_list') || $is_admin,
+                'has_access' => current_user_can('view_customer_employee_list') || $is_admin,
                 'access_type' => $is_admin ? 'admin' : 'none',
                 'relation' => $relation,
                 'customer_id' => 0,

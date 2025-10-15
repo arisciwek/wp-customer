@@ -424,8 +424,8 @@ class BranchModel {
 
     /**
      * Get total branch count based on user permission
-     * Only users with 'view_branch_list' capability can see all branches
-     * 
+     * Only users with 'view_customer_branch_list' capability can see all branches
+     *
      * @param int|null $id Optional customer ID for filtering
      * @return int Total number of branches
      */
@@ -455,13 +455,13 @@ class BranchModel {
         ));
         error_log('User has customer: ' . ($has_customer > 0 ? 'yes' : 'no'));
 
-        if ($has_customer > 0 && current_user_can('view_own_customer') && current_user_can('view_own_branch')) {
+        if ($has_customer > 0 && current_user_can('view_own_customer') && current_user_can('view_own_customer_branch')) {
             $where .= " AND p.user_id = %d";
             $params[] = get_current_user_id();
             error_log('Added user restriction: ' . $where);
         }
 
-        if (current_user_can('edit_all_customer') && current_user_can('edit_all_branch')) {
+        if (current_user_can('edit_all_customer') && current_user_can('edit_all_customer_branches')) {
             error_log('Added user restriction: ' . $where);
         }
 
@@ -587,7 +587,7 @@ class BranchModel {
             
             // Determine base relation first - needed for access_type
             $base_relation = [
-                'is_admin' => current_user_can('edit_all_branches'),
+                'is_admin' => current_user_can('edit_all_customer_branches'),
                 'is_customer_admin' => false,
                 'is_branch_admin' => false,
                 'is_customer_employee' => false
@@ -696,7 +696,7 @@ class BranchModel {
             }
             
             return [
-                'is_admin' => current_user_can('edit_all_branches'),
+                'is_admin' => current_user_can('edit_all_customer_branches'),
                 'is_customer_admin' => false,
                 'is_branch_admin' => false,
                 'is_customer_employee' => false,

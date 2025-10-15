@@ -1,5 +1,32 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2141: Rename Capabilities dengan Menambah Prefix "customer"
+- Issue: Capability names untuk branch dan employee terlalu generic (view_branch_list, add_employee, dll) dan berpotensi konflik dengan plugin lain yang menggunakan nama serupa
+- Root Cause: Penamaan capabilities tidak memiliki prefix plugin-specific, sehingga tidak unik dan bisa bentrok dengan plugin lain dalam ekosistem WordPress
+- Target: Tambahkan prefix "customer" ke semua branch dan employee capabilities untuk memastikan keunikan dan menghindari konflik
+- Files Modified:
+  - src/Models/Settings/PermissionModel.php (updated capability definitions in $available_capabilities and $displayed_capabilities_in_tabs arrays, updated default capabilities in addCapabilities())
+  - src/Views/templates/settings/tab-permissions.php (updated capability descriptions array)
+  - src/Validators/Branch/BranchValidator.php (updated all capability checks and comments)
+  - src/Models/Branch/BranchModel.php (updated capability checks and comments)
+  - src/Validators/Company/CompanyValidator.php (updated capability checks and comments)
+  - src/Validators/Employee/CustomerEmployeeValidator.php (updated all capability checks and filter hooks)
+  - src/Controllers/Branch/BranchController.php (updated capability checks)
+  - src/Controllers/Company/CompanyController.php (updated capability checks)
+  - src/Controllers/MenuManager.php (updated menu capability)
+  - src/Views/templates/branch/partials/_customer_branch_list.php (updated template capability check)
+  - src/Views/templates/customer-employee/partials/_customer_employee_list.php (updated template capability check)
+- Status: ✅ Completed (Including Review-01)
+- Notes:
+  - 14 capabilities renamed (7 branch + 7 employee)
+  - Branch: view_branch_list → view_customer_branch_list, add_branch → add_customer_branch, etc.
+  - Employee: view_employee_list → view_customer_employee_list, add_employee → add_customer_employee, etc.
+  - Filter hooks also updated: wp_customer_can_delete_branch → wp_customer_can_delete_customer_branch
+  - Installation existing perlu reset permissions atau manual update untuk role yang sudah dikustomisasi
+  - Review-01: Access denied issue RESOLVED - migration class removed after successful fix
+  - Untuk instalasi existing: Gunakan "Reset to Default" di Settings jika diperlukan
+  - (see docs/TODO-2141-capability-rename.md)
+
 ## TODO-2140: Fix Customer Branch Admin Role Assignment - Users Not Persisted to Database
 - Issue: User melaporkan bahwa role customer_branch_admin tidak ditambahkan ke user saat generate branch, meskipun ada kode untuk menambahkannya
 - Investigation: Dilakukan verifikasi komprehensif. Initial test dengan get_user_by() menunjukkan users memiliki role. Direct database query mengungkap masalah CRITICAL: SEMUA 50 branch admin users (ID 12-69) TIDAK ADA di database wp_users! Users hanya di cache/runtime, tidak persisted

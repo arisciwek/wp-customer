@@ -37,7 +37,7 @@
  *    - This is ownership-based permission, not capability-based
  * 
  * 2. Regular User Rights:
- *    - Users with edit_own_branch can only edit branches they created
+ *    - Users with edit_own_customer_branch can only edit branches they created
  *    - Created_by field determines ownership for regular users
  * 
  * 3. Staff Rights:
@@ -45,13 +45,13 @@
  *    - View rights are automatic for customer scope
  * 
  * 4. Administrator Rights:
- *    - Only administrators use edit_all_branches capability
+ *    - Only administrators use edit_all_customer_branches capability
  *    - This is for system-wide access, not customer-scope access
- *    
+ *
  * Example:
  * - If user is customer owner: Can edit all branches under their customer
- * - If user has edit_own_branch: Can only edit branches where created_by matches
- * - If user has edit_branch: System administrator with full access
+ * - If user has edit_own_customer_branch: Can only edit branches where created_by matches
+ * - If user has edit_customer_branch: System administrator with full access
  */
 
 namespace WPCustomer\Validators\Branch;
@@ -80,11 +80,11 @@ class BranchValidator {
         // Handle special case for branch_id 0 (general validation)
         if ($branch_id === 0) {
             $relation = [
-                'is_admin' => current_user_can('edit_all_branches'),
+                'is_admin' => current_user_can('edit_all_customer_branches'),
                 'is_customer_admin' => false,
                 'is_branch_admin' => false, 
                 'is_customer_employee' => false,
-                'access_type' => current_user_can('edit_all_branches') ? 'admin' : 'none'
+                'access_type' => current_user_can('edit_all_customer_branches') ? 'admin' : 'none'
             ];
             
             // Cache the result
@@ -112,15 +112,15 @@ class BranchValidator {
         if ($branch_id === 0) {
             // Untuk validasi umum, kita tidak perlu data spesifik branch
             $relation = [
-                'is_admin' => current_user_can('edit_all_branches'),
+                'is_admin' => current_user_can('edit_all_customer_branches'),
                 'is_customer_admin' => false,
                 'is_branch_admin' => false,
                 'is_customer_employee' => false,
-                'access_type' => current_user_can('edit_all_branches') ? 'admin' : 'none'
+                'access_type' => current_user_can('edit_all_customer_branches') ? 'admin' : 'none'
             ];
             
             return [
-                'has_access' => current_user_can('view_branch_list'),
+                'has_access' => current_user_can('view_customer_branch_list'),
                 'access_type' => $relation['is_admin'] ? 'admin' : 'none',
                 'relation' => $relation,
                 'branch_id' => 0,
@@ -180,7 +180,7 @@ class BranchValidator {
         if ($relation['is_admin']) return true;
         if ($relation['is_customer_admin']) return true;
         if ($relation['is_branch_admin']) return true;
-        if ($relation['is_customer_employee'] && current_user_can('view_own_branch')) return true;
+        if ($relation['is_customer_employee'] && current_user_can('view_own_customer_branch')) return true;
     }
 
     public function canCreateBranch(int $customer_id): bool {
@@ -191,7 +191,7 @@ class BranchValidator {
         
         if ($customer_relation['is_admin']) return true;
         if ($customer_relation['is_customer_admin']) return true;
-        if (current_user_can('add_branch')) return true;
+        if (current_user_can('add_customer_branch')) return true;
         
         return apply_filters('wp_customer_can_create_branch', false, $customer_id, $current_user_id);
     }
@@ -202,7 +202,7 @@ class BranchValidator {
         
         if ($relation['is_admin']) return true;
         if ($relation['is_customer_admin']) return true;
-        if ($relation['is_branch_admin'] && current_user_can('edit_own_branch')) return true;
+        if ($relation['is_branch_admin'] && current_user_can('edit_own_customer_branch')) return true;
 
     }
 
@@ -210,10 +210,10 @@ class BranchValidator {
         // Dapatkan relasi user dengan branch
         $relation = $this->getUserRelation($branch->id);
         
-        if ($relation['is_admin'] && current_user_can('delete_branch')) return true;
+        if ($relation['is_admin'] && current_user_can('delete_customer_branch')) return true;
         if ($relation['is_customer_admin']) return true;
-        
-        return apply_filters('wp_customer_can_delete_branch', false, $relation);
+
+        return apply_filters('wp_customer_can_delete_customer_branch', false, $relation);
     }
 
     /**

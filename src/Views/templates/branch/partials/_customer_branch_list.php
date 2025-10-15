@@ -52,7 +52,7 @@ defined('ABSPATH') || exit;
                 <h4><?php _e('Belum Ada Data', 'wp-customer'); ?></h4>
                 <p>
                     <?php
-                    if (current_user_can('add_branch')) {
+                    if (current_user_can('add_customer_branch')) {
                         _e('Belum ada cabang yang ditambahkan. Klik tombol "Tambah Cabang" untuk menambahkan data baru.', 'wp-customer');
                     } else {
                         _e('Belum ada cabang yang ditambahkan.', 'wp-customer');

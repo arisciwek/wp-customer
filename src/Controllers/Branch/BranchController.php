@@ -678,7 +678,7 @@ class BranchController {
             }
 
             // Periksa permission
-            if (!current_user_can('view_branch_list') && !current_user_can('view_own_branch')) {
+            if (!current_user_can('view_customer_branch_list') && !current_user_can('view_own_customer_branch')) {
                 throw new \Exception('Anda tidak memiliki akses untuk melihat data cabang');
             }
 

@@ -36,22 +36,22 @@ function get_capability_description($capability) {
         'delete_customer' => __('Memungkinkan menghapus data customer', 'wp-customer'),
         
         // Branch capabilities
-        'view_branch_list' => __('Memungkinkan melihat daftar semua cabang', 'wp-customer'),
-        'view_branch_detail' => __('Memungkinkan melihat detail informasi cabang', 'wp-customer'),
-        'view_own_branch' => __('Memungkinkan melihat cabang yang ditugaskan', 'wp-customer'),
-        'add_branch' => __('Memungkinkan menambahkan data cabang baru', 'wp-customer'),
-        'edit_all_branches' => __('Memungkinkan mengedit semua data cabang', 'wp-customer'),
-        'edit_own_branch' => __('Memungkinkan mengedit hanya cabang yang ditugaskan', 'wp-customer'),
-        'delete_branch' => __('Memungkinkan menghapus data cabang', 'wp-customer'),
+        'view_customer_branch_list' => __('Memungkinkan melihat daftar semua cabang', 'wp-customer'),
+        'view_customer_branch_detail' => __('Memungkinkan melihat detail informasi cabang', 'wp-customer'),
+        'view_own_customer_branch' => __('Memungkinkan melihat cabang yang ditugaskan', 'wp-customer'),
+        'add_customer_branch' => __('Memungkinkan menambahkan data cabang baru', 'wp-customer'),
+        'edit_all_customer_branches' => __('Memungkinkan mengedit semua data cabang', 'wp-customer'),
+        'edit_own_customer_branch' => __('Memungkinkan mengedit hanya cabang yang ditugaskan', 'wp-customer'),
+        'delete_customer_branch' => __('Memungkinkan menghapus data cabang', 'wp-customer'),
 
         // Employee capabilities
-        'view_employee_list' => __('Memungkinkan melihat daftar semua karyawan', 'wp-customer'),
-        'view_employee_detail' => __('Memungkinkan melihat detail informasi karyawan', 'wp-customer'),
-        'view_own_employee' => __('Memungkinkan melihat karyawan yang ditugaskan', 'wp-customer'),
-        'add_employee' => __('Memungkinkan menambahkan data karyawan baru', 'wp-customer'),
-        'edit_all_employees' => __('Memungkinkan mengedit semua data karyawan', 'wp-customer'),
-        'edit_own_employee' => __('Memungkinkan mengedit hanya karyawan yang ditugaskan', 'wp-customer'),
-        'delete_employee' => __('Memungkinkan menghapus data karyawan', 'wp-customer')
+        'view_customer_employee_list' => __('Memungkinkan melihat daftar semua karyawan', 'wp-customer'),
+        'view_customer_employee_detail' => __('Memungkinkan melihat detail informasi karyawan', 'wp-customer'),
+        'view_own_customer_employee' => __('Memungkinkan melihat karyawan yang ditugaskan', 'wp-customer'),
+        'add_customer_employee' => __('Memungkinkan menambahkan data karyawan baru', 'wp-customer'),
+        'edit_all_customer_employees' => __('Memungkinkan mengedit semua data karyawan', 'wp-customer'),
+        'edit_own_customer_employee' => __('Memungkinkan mengedit hanya karyawan yang ditugaskan', 'wp-customer'),
+        'delete_customer_employee' => __('Memungkinkan menghapus data karyawan', 'wp-customer')
     ];
 
     return isset($descriptions[$capability]) ? $descriptions[$capability] : '';

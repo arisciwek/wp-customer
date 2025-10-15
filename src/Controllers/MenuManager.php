@@ -54,7 +54,7 @@ class MenuManager {
         add_menu_page(
             __('WP Perusahaan', 'wp-customer'),
             __('WP Perusahaan', 'wp-customer'),
-            'view_branch_list',
+            'view_customer_branch_list',
             'perusahaan',  // Unique menu slug untuk perusahaan
             [$this->company_controller, 'renderMainPage'],
             'dashicons-building',

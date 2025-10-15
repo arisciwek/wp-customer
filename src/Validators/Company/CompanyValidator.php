@@ -16,8 +16,8 @@
  *
  * Permission Logic:
  * 1. Administrator (manage_options): Full access to all companies
- * 2. User with view_branch_list: Can view list of companies
- * 3. User with view_own_branch: Can view branches they manage
+ * 2. User with view_customer_branch_list: Can view list of companies
+ * 3. User with view_own_customer_branch: Can view branches they manage
  * 4. Customer Owner (user_id in customers): Can view all branches under their customer
  * 5. Employee (in customer_employees): Can view branches they work in
  *
@@ -91,8 +91,8 @@ class CompanyValidator {
             'username' => $user->user_login,
             'roles' => $user->roles,
             'is_admin' => current_user_can('manage_options'),
-            'has_view_branch_list' => current_user_can('view_branch_list'),
-            'has_view_own_branch' => current_user_can('view_own_branch'),
+            'has_view_branch_list' => current_user_can('view_customer_branch_list'),
+            'has_view_own_branch' => current_user_can('view_own_customer_branch'),
             'customer_count' => (int)$customer_count,
             'employee_count' => (int)$employee_count,
             'accessible_branches' => (int)$accessible_branches,
@@ -129,13 +129,13 @@ class CompanyValidator {
             return true;
         }
 
-        // Check if has view_branch_list capability
-        if (current_user_can('view_branch_list')) {
+        // Check if has view_customer_branch_list capability
+        if (current_user_can('view_customer_branch_list')) {
             return true;
         }
 
-        // Check if has view_own_branch capability
-        if (current_user_can('view_own_branch')) {
+        // Check if has view_own_customer_branch capability
+        if (current_user_can('view_own_customer_branch')) {
             return true;
         }
 

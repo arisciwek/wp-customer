@@ -52,7 +52,7 @@ defined('ABSPATH') || exit;
                 <h4><?php _e('Belum Ada Data', 'wp-customer'); ?></h4>
                 <p>
                     <?php
-                    if (current_user_can('add_employee')) {
+                    if (current_user_can('add_customer_employee')) {
                         _e('Belum ada karyawan yang ditambahkan. Klik tombol "Tambah Karyawan" untuk menambahkan data baru.', 'wp-customer');
                     } else {
                         _e('Belum ada karyawan yang ditambahkan.', 'wp-customer');
