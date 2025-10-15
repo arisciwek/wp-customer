@@ -207,13 +207,47 @@ class BranchDemoData extends AbstractDemoData {
             throw new \Exception('Development mode is not enabled. Please enable it in settings first.');
         }
 
+        // Initialize WPUserGenerator for cleanup
+        $userGenerator = new WPUserGenerator();
+
+        // Clean up existing demo users if shouldClearData is enabled
         if ($this->shouldClearData()) {
+            error_log("[BranchDemoData] === Cleanup mode enabled - Deleting existing demo users ===");
+
+            // Collect all branch admin user IDs from BranchUsersData
+            $user_ids_to_delete = [];
+
+            // Regular branch users (pusat + cabang for each customer)
+            foreach ($this->branch_users as $customer_id => $branches) {
+                if (isset($branches['pusat'])) {
+                    $user_ids_to_delete[] = $branches['pusat']['id'];
+                }
+                if (isset($branches['cabang1'])) {
+                    $user_ids_to_delete[] = $branches['cabang1']['id'];
+                }
+                if (isset($branches['cabang2'])) {
+                    $user_ids_to_delete[] = $branches['cabang2']['id'];
+                }
+            }
+
+            // Extra branch users
+            $extra_users = BranchUsersData::$extra_branch_users;
+            foreach ($extra_users as $user_data) {
+                $user_ids_to_delete[] = $user_data['id'];
+            }
+
+            error_log("[BranchDemoData] User IDs to clean: " . json_encode($user_ids_to_delete));
+
+            $deleted = $userGenerator->deleteUsers($user_ids_to_delete);
+            error_log("[BranchDemoData] Cleaned up {$deleted} existing demo users");
+            $this->debug("Cleaned up {$deleted} existing demo users before generation");
+
             // Delete existing branches
             $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_customer_branches WHERE id > 0");
-            
+
             // Reset auto increment
             $this->wpdb->query("ALTER TABLE {$this->wpdb->prefix}app_customer_branches AUTO_INCREMENT = 1");
-            
+
             $this->debug("Cleared existing branch data");
         }
 

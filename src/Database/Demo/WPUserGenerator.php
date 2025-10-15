@@ -46,14 +46,20 @@ class WPUserGenerator {
         error_log("[WPUserGenerator] === generateUser called ===");
         error_log("[WPUserGenerator] Input data: " . json_encode($data));
 
-        // 1. Check if user with this ID already exists
-        $existing_user = get_user_by('ID', $data['id']);
-        error_log("[WPUserGenerator] Checking existing user with ID {$data['id']}: " . ($existing_user ? 'EXISTS' : 'NOT FOUND'));
+        // 1. Check if user with this ID already exists using DIRECT DATABASE QUERY
+        // IMPORTANT: Don't use get_user_by() because it can return cached/filtered objects
+        // that don't actually exist in database
+        $existing_user_row = $wpdb->get_row($wpdb->prepare(
+            "SELECT ID, user_login, display_name FROM {$wpdb->users} WHERE ID = %d",
+            $data['id']
+        ));
 
-        if ($existing_user) {
-            error_log("[WPUserGenerator] User exists - Display Name: {$existing_user->display_name}");
+        error_log("[WPUserGenerator] Checking existing user with ID {$data['id']} via direct DB query: " . ($existing_user_row ? 'EXISTS' : 'NOT FOUND'));
+
+        if ($existing_user_row) {
+            error_log("[WPUserGenerator] User exists in database - Display Name: {$existing_user_row->display_name}");
             // Update display name if different
-            if ($existing_user->display_name !== $data['display_name']) {
+            if ($existing_user_row->display_name !== $data['display_name']) {
                 wp_update_user([
                     'ID' => $data['id'],
                     'display_name' => $data['display_name']

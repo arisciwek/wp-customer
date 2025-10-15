@@ -1,5 +1,22 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2140: Fix Customer Branch Admin Role Assignment - Users Not Persisted to Database
+- Issue: User melaporkan bahwa role customer_branch_admin tidak ditambahkan ke user saat generate branch, meskipun ada kode untuk menambahkannya
+- Investigation: Dilakukan verifikasi komprehensif. Initial test dengan get_user_by() menunjukkan users memiliki role. Direct database query mengungkap masalah CRITICAL: SEMUA 50 branch admin users (ID 12-69) TIDAK ADA di database wp_users! Users hanya di cache/runtime, tidak persisted
+- Root Cause: BranchDemoData MISSING user cleanup mechanism yang ada di CustomerDemoData. Old/corrupt user references di cache membuat WPUserGenerator detect user "exists", return early, dan tidak create user baru di database. $wpdb->insert() report success tapi user tidak persisted
+- Target: (1) Bandingkan CustomerDemoData vs BranchDemoData. (2) Tambahkan cleanup mechanism untuk delete old users sebelum regeneration. (3) Verify users tersimpan di database
+- Files Modified:
+  - src/Database/Demo/BranchDemoData.php (added user cleanup mechanism in generate() method line 210-252: collect regular branch IDs 12-41 and extra branch IDs 50-69, call deleteUsers(), cleanup branches table)
+  - src/Database/Demo/WPUserGenerator.php (changed user existence check from get_user_by() to direct DB query line 49-72 to avoid cache issues)
+- Status: ✅ Completed (All Reviews)
+- Notes:
+  - Review-01: Discovered critical bug via direct SQL query - users tidak di database
+  - User feedback: "untuk generate yang lain berhasil, customer_admin, agency_admin" - revealed only Branch generation failed
+  - Solution: Added cleanup mechanism like CustomerDemoData pattern
+  - Verification: 50/50 branch admin users successfully created with customer_branch_admin role in database
+  - Test result: Regular 30/30, Extra 20/20, All roles assigned correctly ✓
+  - (see docs/TODO-2140-verify-customer-branch-admin-role.md)
+
 ## TODO-2139: Fix Inspector ID NULL pada Generate Branch
 - Issue: Saat generate branch menggunakan generatePusatBranch() dan generateCabangBranches(), field inspector_id masih NULL padahal seharusnya terisi jika querynya dapat menemukan pengawas
 - Root Cause: (1) Query menggunakan meta_key 'wp_capabilities' yang salah, seharusnya '{$wpdb->prefix}capabilities'. (2) Pattern role '%"pengawas"%' tidak tepat, role sebenarnya adalah 'agency_pengawas' dan 'agency_pengawas_spesialis'. (3) Tidak ada filter status employee
