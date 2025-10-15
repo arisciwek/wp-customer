@@ -858,14 +858,19 @@ class BranchDemoData extends AbstractDemoData {
             $this->used_inspectors[$agency_id] = [];
         }
 
-        // Get all pengawas employees from this agency, excluding admin_dinas users
+        // Get all pengawas employees from this agency
+        // Roles: agency_pengawas, agency_pengawas_spesialis
         $pengawas_ids = $this->wpdb->get_col($this->wpdb->prepare(
             "SELECT ae.user_id FROM {$this->wpdb->prefix}app_agency_employees ae
-             JOIN {$this->wpdb->usermeta} um ON ae.user_id = um.user_id
-             WHERE ae.agency_id = %d AND um.meta_key = 'wp_capabilities'
-             AND um.meta_value LIKE %s",
+             JOIN {$this->wpdb->prefix}usermeta um ON ae.user_id = um.user_id
+             WHERE ae.agency_id = %d
+             AND ae.status = 'active'
+             AND um.meta_key = %s
+             AND (um.meta_value LIKE %s OR um.meta_value LIKE %s)",
             $agency_id,
-            '%"pengawas"%'
+            $this->wpdb->prefix . 'capabilities',
+            '%"agency_pengawas"%',
+            '%"agency_pengawas_spesialis"%'
         ));
 
         $this->debug("Pengawas IDs found for agency {$agency_id}: " . implode(', ', $pengawas_ids));

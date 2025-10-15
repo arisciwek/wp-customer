@@ -1,5 +1,14 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2139: Fix Inspector ID NULL pada Generate Branch
+- Issue: Saat generate branch menggunakan generatePusatBranch() dan generateCabangBranches(), field inspector_id masih NULL padahal seharusnya terisi jika querynya dapat menemukan pengawas
+- Root Cause: (1) Query menggunakan meta_key 'wp_capabilities' yang salah, seharusnya '{$wpdb->prefix}capabilities'. (2) Pattern role '%"pengawas"%' tidak tepat, role sebenarnya adalah 'agency_pengawas' dan 'agency_pengawas_spesialis'. (3) Tidak ada filter status employee
+- Target: Perbaiki query di generateInspectorID() untuk menggunakan meta_key yang benar, pattern role yang tepat, dan tambahkan filter status active
+- Files Modified:
+  - src/Database/Demo/BranchDemoData.php (fixed generateInspectorID() query line 853-891: changed meta_key to dynamic prefix, added status filter, updated role patterns to agency_pengawas and agency_pengawas_spesialis)
+- Status: ✅ Completed
+- Notes: Query sekarang menggunakan $this->wpdb->prefix . 'capabilities' untuk meta_key, mencari role 'agency_pengawas' dan 'agency_pengawas_spesialis', dan memfilter hanya employee dengan status 'active'. generateExtraBranches() tetap menggunakan inspector_id = NULL untuk testing assign inspector (see docs/TODO-2139-fix-inspector-id-null.md)
+
 ## TODO-2138: Update Employee Username from Display Name
 - Issue: Employee usernames used department_company_branch pattern (finance_maju_1, legal_tekno_5) instead of reflecting actual user names. No correlation between username and display_name, making it difficult to remember usernames for "login as user" feature. Email addresses also followed this non-intuitive pattern.
 - Root Cause: Username field in CustomerEmployeeUsersData.php hardcoded with department/company/branch pattern instead of deriving from display_name like Customer and Branch users do
