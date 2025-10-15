@@ -1,5 +1,14 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2143: Fix canViewBranch() Return Type Error
+- Issue: PHP Fatal error pada BranchValidator::canViewBranch() - Return value must be of type bool, none returned
+- Root Cause: Method canViewBranch() dan canUpdateBranch() memiliki return type declaration `: bool` tetapi tidak memiliki explicit return statement di akhir function, menyebabkan PHP mengembalikan null ketika tidak ada kondisi if yang terpenuhi
+- Target: Tambahkan `return false;` di akhir kedua method untuk memastikan selalu mengembalikan boolean value
+- Files Modified:
+  - src/Validators/Branch/BranchValidator.php (added return false to canViewBranch() line 185, added return false to canUpdateBranch() line 209)
+- Status: ✅ Completed
+- Notes: Default behavior return false (deny access) adalah best practice untuk security. Fix mencegah PHP Fatal error dan memastikan type safety (see docs/TODO-2143-fix-canviewbranch-return.md)
+
 ## TODO-2142: Display User Information in Admin Bar
 - Issue: Diperlukan cara mudah untuk melihat informasi user (branch, roles) untuk debugging capabilities dan user assignments
 - Root Cause: Tidak ada visual indicator untuk quickly check user's branch assignment dan roles tanpa query database manual

@@ -176,11 +176,13 @@ class BranchValidator {
     public function canViewBranch($branch, $customer): bool {
         // Dapatkan relasi user dengan branch ini
         $relation = $this->getUserRelation($branch->id);
-        
+
         if ($relation['is_admin']) return true;
         if ($relation['is_customer_admin']) return true;
         if ($relation['is_branch_admin']) return true;
         if ($relation['is_customer_employee'] && current_user_can('view_own_customer_branch')) return true;
+
+        return false;
     }
 
     public function canCreateBranch(int $customer_id): bool {
@@ -199,11 +201,12 @@ class BranchValidator {
     public function canUpdateBranch($branch, $customer): bool {
         // Dapatkan relasi user dengan branch ini
         $relation = $this->getUserRelation($branch->id);
-        
+
         if ($relation['is_admin']) return true;
         if ($relation['is_customer_admin']) return true;
         if ($relation['is_branch_admin'] && current_user_can('edit_own_customer_branch')) return true;
 
+        return false;
     }
 
     public function canDeleteBranch($branch, $customer): bool {
