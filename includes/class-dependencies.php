@@ -34,7 +34,7 @@ class WP_Customer_Dependencies {
         $this->version = $version;
         add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_assets']);
         add_action('admin_enqueue_scripts', [$this, 'leaflet_enqueue_scripts']); // Add this line
-
+        add_action('wp_head', [$this, 'enqueue_admin_bar_styles']); // Add for frontend admin bar
     }
 
     public function enqueue_frontend_assets() {
@@ -119,6 +119,16 @@ class WP_Customer_Dependencies {
 
         $screen = get_current_screen();
         if (!$screen) return;
+
+        // Admin bar styles - load on all admin pages
+        if (is_admin()) {
+            wp_enqueue_style(
+                'wp-customer-admin-bar',
+                WP_CUSTOMER_URL . 'assets/css/customer/customer-admin-bar.css',
+                [],
+                $this->version
+            );
+        }
         // Check if we're on the registration page
         if (get_query_var('wp_customer_register')) {
             // Enqueue registration-specific styles
@@ -526,6 +536,18 @@ class WP_Customer_Dependencies {
                 'error' => __('Gagal memuat data', 'wp-customer')
             ]
         ]);
+    }
+
+    public function enqueue_admin_bar_styles() {
+        // Only load if admin bar is showing and user is logged in
+        if (is_admin_bar_showing() && is_user_logged_in()) {
+            wp_enqueue_style(
+                'wp-customer-admin-bar',
+                WP_CUSTOMER_URL . 'assets/css/customer/customer-admin-bar.css',
+                [],
+                $this->version
+            );
+        }
     }
 
     public function leaflet_enqueue_scripts() {

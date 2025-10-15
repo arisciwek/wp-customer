@@ -1,5 +1,32 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2142: Display User Information in Admin Bar
+- Issue: Diperlukan cara mudah untuk melihat informasi user (branch, roles) untuk debugging capabilities dan user assignments
+- Root Cause: Tidak ada visual indicator untuk quickly check user's branch assignment dan roles tanpa query database manual
+- Target: Tampilkan info user di admin bar untuk user dengan customer-related roles
+- Files Modified:
+  - includes/class-admin-bar-info.php (main class, enhanced queries in Review-04 & Review-07)
+  - wp-customer.php (fixed initialization timing in Review-03)
+  - test-admin-bar-info.php (enhanced debugging in Review-07, added cache clear)
+  - assets/css/customer/customer-admin-bar.css (NEW Review-05, fixed specificity Review-06)
+  - includes/class-dependencies.php (added CSS registration in Review-05)
+  - src/Models/Employee/CustomerEmployeeModel.php (fixed user_id bug in Review-08)
+- Status: ✅ Completed (All Reviews)
+- Notes:
+  - Menampilkan customer/branch name dan roles di admin bar (RIGHT SIDE)
+  - Dropdown dengan detail: user info, branch relation, capabilities
+  - Hanya untuk user dengan role: customer, customer_admin, customer_branch_admin, customer_employee
+  - Review-01: Implemented caching dengan CustomerCacheManager (5 minute cache, 95% query reduction)
+  - Review-02: Fixed terminology - "company" → "customer" untuk konsistensi
+  - Review-03: Fixed fatal error - hooked init to WordPress 'init' action untuk ensure functions available
+  - Review-04: Fixed SQL column names - branches uses `user_id`, employees uses boolean department flags
+  - Review-05: Moved to right side of admin bar, created dedicated CSS file, removed inline styles
+  - Review-06: Fixed CSS specificity dengan #wpadminbar prefix untuk override WordPress default styles
+  - Review-07: Fixed employee branch detection - check branch status, handle orphaned employees, add cache clear
+  - Review-08: FOUND BUG - CustomerEmployeeModel::create() using get_current_user_id() instead of $data['user_id']
+  - ACTION REQUIRED: Re-generate demo data after fix applied
+  - (see docs/TODO-2142-admin-bar-user-info.md)
+
 ## TODO-2141: Rename Capabilities dengan Menambah Prefix "customer"
 - Issue: Capability names untuk branch dan employee terlalu generic (view_branch_list, add_employee, dll) dan berpotensi konflik dengan plugin lain yang menggunakan nama serupa
 - Root Cause: Penamaan capabilities tidak memiliki prefix plugin-specific, sehingga tidak unik dan bisa bentrok dengan plugin lain dalam ekosistem WordPress

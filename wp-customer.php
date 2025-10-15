@@ -80,6 +80,7 @@ class WPCustomer {
         require_once WP_CUSTOMER_PATH . 'includes/class-deactivator.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-dependencies.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-init-hooks.php';
+        require_once WP_CUSTOMER_PATH . 'includes/class-admin-bar-info.php';
 
         $this->loader = new WP_Customer_Loader();
 
@@ -112,6 +113,9 @@ class WPCustomer {
         // Initialize other hooks
         $init_hooks = new WP_Customer_Init_Hooks();
         $init_hooks->init();
+
+        // Initialize admin bar info display after WordPress is loaded
+        $this->loader->add_action('init', 'WP_Customer_Admin_Bar_Info', 'init');
     }
 
     /**

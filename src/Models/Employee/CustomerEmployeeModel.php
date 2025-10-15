@@ -51,7 +51,7 @@ public function create(array $data): ?int {
         [
             'customer_id' => $data['customer_id'],  // Ambil customer_id dari data
             'branch_id' => $data['branch_id'],
-            'user_id' => get_current_user_id(),
+            'user_id' => $data['user_id'] ?? get_current_user_id(), // Use provided user_id or current user as fallback
             'name' => $data['name'],
             'position' => $data['position'],
             'finance' => $data['finance'],
@@ -61,7 +61,7 @@ public function create(array $data): ?int {
             'keterangan' => $data['keterangan'],
             'email' => $data['email'],
             'phone' => $data['phone'],
-            'created_by' => get_current_user_id(),
+            'created_by' => $data['created_by'] ?? get_current_user_id(), // Allow override for demo data
             'created_at' => current_time('mysql'),
             'updated_at' => current_time('mysql'),
             'status' => $data['status'] ?? 'active'
