@@ -12,6 +12,13 @@
  * Description: Model untuk mengelola hak akses plugin
  *
  * Changelog:
+ * 1.2.0 - 2025-01-16
+ * - Added default capabilities for customer_admin role
+ * - Added default capabilities for customer_branch_admin role
+ * - Added default capabilities for customer_employee role
+ * - Updated resetToDefault() to handle all customer roles
+ * - Implemented hierarchical permission system (admin > customer_admin > branch_admin > employee)
+ *
  * 1.1.0 - 2024-12-08
  * - Added view_own_customer capability
  * - Updated default role capabilities for editor and author roles
@@ -171,6 +178,141 @@ class PermissionModel {
                 }
             }
         }
+
+        // Set customer_admin role capabilities
+        // Customer Admin adalah owner dari customer, manages semua yang ada di bawah customer mereka
+        $customer_admin = get_role('customer_admin');
+        if ($customer_admin) {
+            // Add 'read' capability - required for wp-admin access
+            $customer_admin->add_cap('read');
+
+            $default_capabilities = [
+                // Customer capabilities - owner manages their customer
+                'view_customer_list' => true,
+                'view_customer_detail' => true,
+                'view_own_customer' => true,
+                'add_customer' => false,           // Cannot create new customers
+                'edit_own_customer' => true,       // Can edit their own customer
+                'edit_all_customers' => false,     // Cannot edit other customers
+                'delete_customer' => false,        // Cannot delete customers
+
+                // Branch capabilities - full access to their branches
+                'view_customer_branch_list' => true,
+                'view_customer_branch_detail' => true,
+                'view_own_customer_branch' => true,
+                'add_customer_branch' => true,     // Can create branches under their customer
+                'edit_all_customer_branches' => true,   // Can edit all branches under their customer
+                'edit_own_customer_branch' => true,
+                'delete_customer_branch' => false,  // Cannot delete branches under their customer
+
+                // Employee capabilities - full access to their employees
+                'view_customer_employee_list' => true,
+                'view_customer_employee_detail' => true,
+                'view_own_customer_employee' => true,
+                'add_customer_employee' => true,   // Can hire employees
+                'edit_all_customer_employees' => true,  // Can edit all employees under their customer
+                'edit_own_customer_employee' => true,
+                'delete_customer_employee' => false // Cannot remove employees
+            ];
+
+            foreach ($default_capabilities as $cap => $enabled) {
+                if ($enabled) {
+                    $customer_admin->add_cap($cap);
+                } else {
+                    $customer_admin->remove_cap($cap);
+                }
+            }
+        }
+
+        // Set customer_branch_admin role capabilities
+        // Branch Admin manages satu branch dan employee di branch tersebut
+        $customer_branch_admin = get_role('customer_branch_admin');
+        if ($customer_branch_admin) {
+            // Add 'read' capability - required for wp-admin access
+            $customer_branch_admin->add_cap('read');
+
+            $default_capabilities = [
+                // Customer capabilities - can view parent customer
+                'view_customer_list' => true,      // Can see customer list (filtered to their customer)
+                'view_customer_detail' => true,    // Can see their customer details
+                'view_own_customer' => true,
+                'add_customer' => false,           // Cannot create customers
+                'edit_own_customer' => false,      // Cannot edit customer
+                'edit_all_customers' => false,
+                'delete_customer' => false,
+
+                // Branch capabilities - manages only their branch
+                'view_customer_branch_list' => true,
+                'view_customer_branch_detail' => true,
+                'view_own_customer_branch' => true,
+                'add_customer_branch' => false,    // Cannot create new branches
+                'edit_all_customer_branches' => false, // Cannot edit other branches
+                'edit_own_customer_branch' => true,    // Can edit their own branch
+                'delete_customer_branch' => false,     // Cannot delete branches
+
+                // Employee capabilities - manages employees in their branch
+                'view_customer_employee_list' => true,
+                'view_customer_employee_detail' => true,
+                'view_own_customer_employee' => true,
+                'add_customer_employee' => true,       // Can hire employees for their branch
+                'edit_all_customer_employees' => false, // Cannot edit all employees
+                'edit_own_customer_employee' => true,   // Can edit employees in their branch
+                'delete_customer_employee' => true      // Can remove employees from their branch
+            ];
+
+            foreach ($default_capabilities as $cap => $enabled) {
+                if ($enabled) {
+                    $customer_branch_admin->add_cap($cap);
+                } else {
+                    $customer_branch_admin->remove_cap($cap);
+                }
+            }
+        }
+
+        // Set customer_employee role capabilities
+        // Employee hanya bisa melihat informasi yang relevan dengan pekerjaan mereka
+        $customer_employee = get_role('customer_employee');
+        if ($customer_employee) {
+            // Add 'read' capability - required for wp-admin access
+            $customer_employee->add_cap('read');
+
+            $default_capabilities = [
+                // Customer capabilities - view only
+                'view_customer_list' => true,      // Can see customer (their employer)
+                'view_customer_detail' => true,
+                'view_own_customer' => true,
+                'add_customer' => false,
+                'edit_own_customer' => false,
+                'edit_all_customers' => false,
+                'delete_customer' => false,
+
+                // Branch capabilities - view only their branch
+                'view_customer_branch_list' => true,
+                'view_customer_branch_detail' => true,
+                'view_own_customer_branch' => true,
+                'add_customer_branch' => false,
+                'edit_all_customer_branches' => false,
+                'edit_own_customer_branch' => false,   // Cannot edit branch
+                'delete_customer_branch' => false,
+
+                // Employee capabilities - view only
+                'view_customer_employee_list' => true,
+                'view_customer_employee_detail' => true,
+                'view_own_customer_employee' => true,
+                'add_customer_employee' => false,
+                'edit_all_customer_employees' => false,
+                'edit_own_customer_employee' => false,  // Cannot edit employees
+                'delete_customer_employee' => false
+            ];
+
+            foreach ($default_capabilities as $cap => $enabled) {
+                if ($enabled) {
+                    $customer_employee->add_cap($cap);
+                } else {
+                    $customer_employee->remove_cap($cap);
+                }
+            }
+        }
     }
 
     public function resetToDefault(): bool {
@@ -193,8 +335,8 @@ class PermissionModel {
                     continue;
                 }
 
-                // Customer role gets its specific default capabilities
-                if ($role_name === 'customer') {
+                // Customer roles get their specific default capabilities
+                if (in_array($role_name, ['customer', 'customer_admin', 'customer_branch_admin', 'customer_employee'])) {
                     $this->addCapabilities(); // Gunakan method yang sudah ada
                 }
             }

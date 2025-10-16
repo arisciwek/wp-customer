@@ -1,5 +1,22 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2145: Default Capabilities untuk Role yang Belum Terdefinisi
+- Issue: Role customer_admin, customer_branch_admin, dan customer_employee belum memiliki default capabilities di PermissionModel::addCapabilities(), padahal role sudah terdaftar di RoleManager::getRoles()
+- Root Cause: PermissionModel::addCapabilities() hanya mendefinisikan capabilities untuk 'administrator' dan 'customer', tidak ada definisi untuk 3 role lainnya
+- Target: Lengkapi default capabilities untuk customer_admin (full access owner), customer_branch_admin (branch scope), dan customer_employee (view only)
+- Files Modified:
+  - src/Models/Settings/PermissionModel.php (updated changelog to v1.2.0 line 15-20, added customer_admin capabilities line 175-218, added customer_branch_admin capabilities line 220-263, added customer_employee capabilities line 265-308, updated resetToDefault() to handle all customer roles line 331-334)
+- Status: ✅ Completed
+- Notes:
+  - Hierarchical permission system: admin > customer_admin > customer_branch_admin > customer_employee
+  - Customer Admin: full access to all branches/employees under their customer (can create/edit/delete)
+  - Branch Admin: manages only their branch and its employees (can edit own branch, hire/manage employees)
+  - Employee: view-only access to related customer/branch/employees (no edit/create/delete)
+  - All roles include 'read' capability for wp-admin access
+  - Integration dengan access type detection dari Task-2144 (getUserRelation())
+  - Filter hooks mendukung custom access type via wp_customer_access_type
+  - (see docs/TODO-2145-default-capabilities.md)
+
 ## TODO-2144: Fix Cache Key Access Type untuk Customer List
 - Issue: Cache key untuk customer list dari beberapa access type selalu menggunakan "user", seharusnya menggunakan access type sesuai user login (admin, customer_admin, customer_employee)
 - Root Cause (Initial): Logic di CustomerModel::getDataTableData() line 391 terlalu sederhana - hanya membedakan 'admin' vs 'user', tidak memperhitungkan access_type yang lebih lengkap
