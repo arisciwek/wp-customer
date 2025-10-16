@@ -61,11 +61,11 @@ class MenuManager {
             31
         );
 
-        // Menu WP Invoice Perusahaan
+        // Menu WP Invoice Membership
         add_menu_page(
-            __('Invoice Perusahaan', 'wp-customer'),
-            __('Invoice Perusahaan', 'wp-customer'),
-            'manage_options',
+            __('Invoice Membership', 'wp-customer'),
+            __('Invoice Membership', 'wp-customer'),
+            'view_customer_membership_invoice_list',
             'invoice_perusahaan',  // Unique menu slug untuk invoice perusahaan
             [$this->company_invoice_controller, 'render_page'],
             'dashicons-media-spreadsheet',

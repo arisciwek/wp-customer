@@ -34,6 +34,7 @@ namespace WPCustomer\Controllers;
 
 use WPCustomer\Models\Customer\CustomerModel;
 use WPCustomer\Models\Branch\BranchModel;
+use WPCustomer\Models\Employee\CustomerEmployeeModel;
 use WPCustomer\Validators\CustomerValidator;
 use WPCustomer\Cache\CustomerCacheManager;
 
@@ -42,7 +43,8 @@ class CustomerController {
     private CustomerModel $model;
     private CustomerValidator $validator;
     private CustomerCacheManager $cache;
-    private BranchModel $branchModel;  // Tambahkan ini
+    private BranchModel $branchModel;
+    private CustomerEmployeeModel $employeeModel;
 
     private string $log_file;
 
@@ -64,7 +66,8 @@ class CustomerController {
 
     public function __construct() {
         $this->model = new CustomerModel();
-        $this->branchModel = new BranchModel();  // Inisialisasi di constructor
+        $this->branchModel = new BranchModel();
+        $this->employeeModel = new CustomerEmployeeModel();
         $this->validator = new CustomerValidator();
         $this->cache = new CustomerCacheManager();
 
@@ -102,6 +105,7 @@ class CustomerController {
         add_action('wp_ajax_create_customer_button', [$this, 'createCustomerButton']);
 
         add_action('wp_ajax_create_customer_pdf_button', [$this, 'createPdfButton']);
+        add_action('wp_ajax_get_customer_stats', [$this, 'getStats']);
 
         // Debug cache di folder uploads 
         /*
@@ -933,7 +937,7 @@ public function createPdfButton() {
 
             // Get customer_id from query param
             $customer_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
-            
+
             // Validate access if customer_id provided
             if ($customer_id) {
                 $access = $this->validator->validateAccess($customer_id);
@@ -944,7 +948,8 @@ public function createPdfButton() {
 
             $stats = [
                 'total_customers' => $this->model->getTotalCount(),
-                'total_branches' => $this->branchModel->getTotalCount($customer_id)
+                'total_branches' => $this->branchModel->getTotalCount($customer_id),
+                'total_employees' => $this->employeeModel->getTotalCount($customer_id)
             ];
 
             wp_send_json_success($stats);

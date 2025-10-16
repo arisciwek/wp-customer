@@ -59,7 +59,17 @@ class PermissionModel {
         'add_customer_employee' => 'Tambah Karyawan',
         'edit_all_customer_employees' => 'Edit Karyawan',
         'edit_own_customer_employee' => 'Edit Karyawan Sendiri',
-        'delete_customer_employee' => 'Hapus Karyawan'
+        'delete_customer_employee' => 'Hapus Karyawan',
+
+        // Membership Invoice capabilities
+        'view_customer_membership_invoice_list' => 'Lihat Daftar Invoice Membership',
+        'view_customer_membership_invoice_detail' => 'Lihat Detail Invoice Membership',
+        'view_own_customer_membership_invoice' => 'Lihat Invoice Membership Sendiri',
+        'create_customer_membership_invoice' => 'Buat Invoice Membership',
+        'edit_all_customer_membership_invoices' => 'Edit Semua Invoice Membership',
+        'edit_own_customer_membership_invoice' => 'Edit Invoice Membership Sendiri',
+        'delete_customer_membership_invoice' => 'Hapus Invoice Membership',
+        'approve_customer_membership_invoice' => 'Approve Invoice Membership'
     ];
 
     // Define base capabilities untuk setiap role beserta nilai default-nya
@@ -98,6 +108,19 @@ class PermissionModel {
                 'edit_own_customer_employee',
                 'delete_customer_employee'
             ]
+        ],
+        'membership_invoice' => [
+            'title' => 'Membership Invoice Permissions',
+            'caps' => [
+                'view_customer_membership_invoice_list',
+                'view_customer_membership_invoice_detail',
+                'view_own_customer_membership_invoice',
+                'create_customer_membership_invoice',
+                'edit_all_customer_membership_invoices',
+                'edit_own_customer_membership_invoice',
+                'delete_customer_membership_invoice',
+                'approve_customer_membership_invoice'
+            ]
         ]
     ];
 
@@ -105,7 +128,8 @@ class PermissionModel {
        return array_merge(
             $this->displayed_capabilities_in_tabs['customer']['caps'],
             $this->displayed_capabilities_in_tabs['branch']['caps'],
-            $this->displayed_capabilities_in_tabs['employee']['caps']
+            $this->displayed_capabilities_in_tabs['employee']['caps'],
+            $this->displayed_capabilities_in_tabs['membership_invoice']['caps']
         );
     } 
 
@@ -167,7 +191,17 @@ class PermissionModel {
                 'view_customer_employee_detail' => true,
                 'view_own_customer_employee' => true,
                 'edit_own_customer_employee' => true,
-                'delete_customer_employee' => false
+                'delete_customer_employee' => false,
+
+                // Membership Invoice capabilities
+                'view_customer_membership_invoice_list' => true,
+                'view_customer_membership_invoice_detail' => true,
+                'view_own_customer_membership_invoice' => true,
+                'create_customer_membership_invoice' => false,
+                'edit_all_customer_membership_invoices' => false,
+                'edit_own_customer_membership_invoice' => false,
+                'delete_customer_membership_invoice' => false,
+                'approve_customer_membership_invoice' => false
             ];
 
             foreach ($default_capabiities as $cap => $enabled) {
@@ -212,7 +246,17 @@ class PermissionModel {
                 'add_customer_employee' => true,   // Can hire employees
                 'edit_all_customer_employees' => true,  // Can edit all employees under their customer
                 'edit_own_customer_employee' => true,
-                'delete_customer_employee' => false // Cannot remove employees
+                'delete_customer_employee' => false, // Cannot remove employees
+
+                // Membership Invoice capabilities - full access for their branches
+                'view_customer_membership_invoice_list' => true,
+                'view_customer_membership_invoice_detail' => true,
+                'view_own_customer_membership_invoice' => true,
+                'create_customer_membership_invoice' => true,   // Can create invoices
+                'edit_all_customer_membership_invoices' => true, // Can edit all invoices under their customer
+                'edit_own_customer_membership_invoice' => true,
+                'delete_customer_membership_invoice' => false,   // Cannot delete invoices
+                'approve_customer_membership_invoice' => false   // Cannot approve (needs higher authority)
             ];
 
             foreach ($default_capabilities as $cap => $enabled) {
@@ -257,7 +301,17 @@ class PermissionModel {
                 'add_customer_employee' => true,       // Can hire employees for their branch
                 'edit_all_customer_employees' => false, // Cannot edit all employees
                 'edit_own_customer_employee' => true,   // Can edit employees in their branch
-                'delete_customer_employee' => true      // Can remove employees from their branch
+                'delete_customer_employee' => true,     // Can remove employees from their branch
+
+                // Membership Invoice capabilities - limited to their branch
+                'view_customer_membership_invoice_list' => true,
+                'view_customer_membership_invoice_detail' => true,
+                'view_own_customer_membership_invoice' => true,
+                'create_customer_membership_invoice' => false,   // Cannot create invoices
+                'edit_all_customer_membership_invoices' => false, // Cannot edit all invoices
+                'edit_own_customer_membership_invoice' => true,   // Can edit invoices for their branch
+                'delete_customer_membership_invoice' => false,    // Cannot delete invoices
+                'approve_customer_membership_invoice' => false    // Cannot approve invoices
             ];
 
             foreach ($default_capabilities as $cap => $enabled) {
@@ -302,7 +356,17 @@ class PermissionModel {
                 'add_customer_employee' => false,
                 'edit_all_customer_employees' => false,
                 'edit_own_customer_employee' => false,  // Cannot edit employees
-                'delete_customer_employee' => false
+                'delete_customer_employee' => false,
+
+                // Membership Invoice capabilities - view only
+                'view_customer_membership_invoice_list' => true,
+                'view_customer_membership_invoice_detail' => true,
+                'view_own_customer_membership_invoice' => true,
+                'create_customer_membership_invoice' => false,
+                'edit_all_customer_membership_invoices' => false,
+                'edit_own_customer_membership_invoice' => false,  // Cannot edit invoices
+                'delete_customer_membership_invoice' => false,
+                'approve_customer_membership_invoice' => false
             ];
 
             foreach ($default_capabilities as $cap => $enabled) {

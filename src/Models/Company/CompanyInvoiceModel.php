@@ -482,25 +482,104 @@ class CompanyInvoiceModel {
         ];
         $params = wp_parse_args($params, $defaults);
 
+        error_log('=== Debug CompanyInvoiceModel getDataTableData ===');
+        error_log('User ID: ' . get_current_user_id());
+
+        // Get user relation from CustomerModel to determine access
+        $relation = $this->customer_model->getUserRelation(0);
+        $access_type = $relation['access_type'];
+
+        error_log('Access type: ' . $access_type);
+
         // Base query with JOIN to get company name and both level names
         $branches_table = $wpdb->prefix . 'app_customer_branches';
+        $customers_table = $wpdb->prefix . 'app_customers';
         $levels_table = $wpdb->prefix . 'app_customer_membership_levels';
 
         $base_query = "FROM {$this->table} ci
                       LEFT JOIN {$branches_table} b ON ci.branch_id = b.id
+                      LEFT JOIN {$customers_table} c ON b.customer_id = c.id
                       LEFT JOIN {$levels_table} ml_from ON ci.from_level_id = ml_from.id
                       LEFT JOIN {$levels_table} ml_to ON ci.level_id = ml_to.id";
 
         $where = " WHERE 1=1";
+        $where_params = [];
+
+        // Apply access filtering
+        error_log('Building WHERE clause:');
+        error_log('Initial WHERE: ' . $where);
+
+        if ($relation['is_admin']) {
+            // Administrator - see all invoices
+            error_log('User is admin - no additional restrictions');
+        }
+        elseif ($relation['is_customer_admin']) {
+            // Customer Admin - see all invoices for branches under their customer
+            $where .= " AND c.user_id = %d";
+            $where_params[] = get_current_user_id();
+            error_log('Added customer admin restriction');
+        }
+        elseif ($relation['is_branch_admin']) {
+            // Branch Admin - only see invoices for their branch
+            $branch_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$branches_table}
+                 WHERE user_id = %d LIMIT 1",
+                get_current_user_id()
+            ));
+
+            if ($branch_id) {
+                $where .= " AND ci.branch_id = %d";
+                $where_params[] = $branch_id;
+                error_log('Added branch admin restriction for branch: ' . $branch_id);
+            } else {
+                $where .= " AND 1=0"; // No branch found
+                error_log('Branch admin has no branch - blocking access');
+            }
+        }
+        elseif ($relation['is_customer_employee']) {
+            // Employee - only see invoices for the branch they work in
+            $employee_branch = $wpdb->get_var($wpdb->prepare(
+                "SELECT branch_id FROM {$wpdb->prefix}app_customer_employees
+                 WHERE user_id = %d AND status = 'active' LIMIT 1",
+                get_current_user_id()
+            ));
+
+            if ($employee_branch) {
+                $where .= " AND ci.branch_id = %d";
+                $where_params[] = $employee_branch;
+                error_log('Added employee restriction for branch: ' . $employee_branch);
+            } else {
+                $where .= " AND 1=0"; // No branch found
+                error_log('Employee has no branch - blocking access');
+            }
+        }
+        else {
+            // No access
+            $where .= " AND 1=0";
+            error_log('User has no access - blocking all');
+        }
+
+        // Apply extensibility filter
+        $where = apply_filters('wp_company_membership_invoice_datatable_where', $where, $access_type, $relation, $where_params);
+
+        // Prepare WHERE clause with params
+        if (!empty($where_params)) {
+            $where_prepared = $wpdb->prepare($where, $where_params);
+        } else {
+            $where_prepared = $where;
+        }
 
         // Search
         if (!empty($params['search'])) {
             $search = '%' . $wpdb->esc_like($params['search']) . '%';
-            $where .= $wpdb->prepare(" AND (ci.invoice_number LIKE %s OR b.name LIKE %s OR ml_from.name LIKE %s OR ml_to.name LIKE %s)", $search, $search, $search, $search);
+            $search_clause = $wpdb->prepare(" AND (ci.invoice_number LIKE %s OR b.name LIKE %s OR ml_from.name LIKE %s OR ml_to.name LIKE %s)", $search, $search, $search, $search);
+            $where_prepared .= $search_clause;
         }
 
+        error_log('Final WHERE: ' . $where_prepared);
+
         // Get total records
-        $total = $wpdb->get_var("SELECT COUNT(*) {$base_query} {$where}");
+        $total = $wpdb->get_var("SELECT COUNT(*) {$base_query} {$where_prepared}");
 
         // Order
         $order = "ORDER BY ci.{$params['order_column']} {$params['order_dir']}";
@@ -513,8 +592,12 @@ class CompanyInvoiceModel {
                          b.name as company_name,
                          ml_from.name as from_level_name,
                          ml_to.name as to_level_name
-                  {$base_query} {$where} {$order} {$limit}";
+                  {$base_query} {$where_prepared} {$order} {$limit}";
+
+        error_log('Final Query: ' . $query);
         $data = $wpdb->get_results($query);
+        error_log('Total records: ' . count($data));
+        error_log('=== End Debug ===');
 
         // Format data for DataTable
         $formatted_data = [];
@@ -561,6 +644,112 @@ class CompanyInvoiceModel {
             'paid_invoices' => (int) $paid_invoices,
             'total_paid_amount' => (float) ($total_paid_amount ?? 0)
         ];
+    }
+
+    /**
+     * Get total invoice count based on user permission with access_type filtering
+     *
+     * @return int Total number of invoices
+     */
+    public function getTotalCount(): int {
+        global $wpdb;
+
+        error_log('=== Debug CompanyInvoiceModel getTotalCount ===');
+        error_log('User ID: ' . get_current_user_id());
+
+        // Get user relation from CustomerModel to determine access
+        $relation = $this->customer_model->getUserRelation(0);
+        $access_type = $relation['access_type'];
+
+        error_log('Access type: ' . $access_type);
+        error_log('Is admin: ' . ($relation['is_admin'] ? 'yes' : 'no'));
+        error_log('Is customer admin: ' . ($relation['is_customer_admin'] ? 'yes' : 'no'));
+        error_log('Is branch admin: ' . ($relation['is_branch_admin'] ? 'yes' : 'no'));
+        error_log('Is employee: ' . ($relation['is_customer_employee'] ? 'yes' : 'no'));
+
+        // Base query parts
+        $select = "SELECT SQL_CALC_FOUND_ROWS ci.*";
+        $from = " FROM {$this->table} ci";
+        $join = " LEFT JOIN {$wpdb->prefix}app_customer_branches b ON ci.branch_id = b.id
+                  LEFT JOIN {$wpdb->prefix}app_customers c ON b.customer_id = c.id";
+
+        // Default where clause
+        $where = " WHERE 1=1";
+        $params = [];
+
+        // Debug query building process
+        error_log('Building WHERE clause:');
+        error_log('Initial WHERE: ' . $where);
+
+        // Apply filtering based on access type
+        if ($relation['is_admin']) {
+            // Administrator - see all invoices
+            error_log('User is admin - no additional restrictions');
+        }
+        elseif ($relation['is_customer_admin']) {
+            // Customer Admin - see all invoices for branches under their customer
+            $where .= " AND c.user_id = %d";
+            $params[] = get_current_user_id();
+            error_log('Added customer admin restriction: ' . $where);
+        }
+        elseif ($relation['is_branch_admin']) {
+            // Branch Admin - only see invoices for their branch
+            $branch_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}app_customer_branches
+                 WHERE user_id = %d LIMIT 1",
+                get_current_user_id()
+            ));
+
+            if ($branch_id) {
+                $where .= " AND ci.branch_id = %d";
+                $params[] = $branch_id;
+                error_log('Added branch admin restriction for branch: ' . $branch_id);
+            } else {
+                $where .= " AND 1=0"; // No branch found
+                error_log('Branch admin has no branch - blocking access');
+            }
+        }
+        elseif ($relation['is_customer_employee']) {
+            // Employee - only see invoices for the branch they work in
+            $employee_branch = $wpdb->get_var($wpdb->prepare(
+                "SELECT branch_id FROM {$wpdb->prefix}app_customer_employees
+                 WHERE user_id = %d AND status = 'active' LIMIT 1",
+                get_current_user_id()
+            ));
+
+            if ($employee_branch) {
+                $where .= " AND ci.branch_id = %d";
+                $params[] = $employee_branch;
+                error_log('Added employee restriction for branch: ' . $employee_branch);
+            } else {
+                $where .= " AND 1=0"; // No branch found
+                error_log('Employee has no branch - blocking access');
+            }
+        }
+        else {
+            // No access
+            $where .= " AND 1=0";
+            error_log('User has no access - blocking all');
+        }
+
+        // Apply filter for extensibility
+        $where = apply_filters('wp_company_membership_invoice_total_count_where', $where, $access_type, $relation, $params);
+
+        // Complete query
+        $query = $select . $from . $join . $where;
+        $final_query = !empty($params) ? $wpdb->prepare($query, $params) : $query;
+
+        error_log('Final Query: ' . $final_query);
+
+        // Execute query
+        $wpdb->get_results($final_query);
+
+        // Get total and log
+        $total = (int) $wpdb->get_var("SELECT FOUND_ROWS()");
+        error_log('Total count result: ' . $total);
+        error_log('=== End Debug ===');
+
+        return $total;
     }
 
     /**

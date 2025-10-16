@@ -166,11 +166,6 @@ class CompanyInvoiceController {
             // Verify nonce
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            // Check permissions
-            if (!current_user_can('manage_options')) {
-                throw new \Exception(__('Anda tidak memiliki izin untuk mengakses data ini', 'wp-customer'));
-            }
-
             // Get invoice_id from POST (either 'id' or 'invoice_id')
             $invoice_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
             if (!$invoice_id) {
@@ -179,6 +174,12 @@ class CompanyInvoiceController {
 
             if (!$invoice_id) {
                 throw new \Exception(__('ID Invoice tidak valid', 'wp-customer'));
+            }
+
+            // Validate access to view this specific invoice
+            $access_check = $this->validator->canViewInvoice($invoice_id);
+            if (is_wp_error($access_check)) {
+                throw new \Exception($access_check->get_error_message());
             }
 
             // Get invoice with related data
@@ -201,11 +202,6 @@ class CompanyInvoiceController {
      */
     public function createInvoice() {
         try {
-            // Only admin/staff can create invoices
-            if (!current_user_can('manage_options') && !current_user_can('create_customer_invoices')) {
-                throw new \Exception(__('Anda tidak memiliki izin untuk membuat invoice', 'wp-customer'));
-            }
-
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
             $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
@@ -215,13 +211,14 @@ class CompanyInvoiceController {
             $description = isset($_POST['description']) ? sanitize_textarea_field($_POST['description']) : '';
 
             // Validate required fields
-            if (!$customer_id || $amount <= 0 || empty($due_date)) {
+            if (!$branch_id || $amount <= 0 || empty($due_date)) {
                 throw new \Exception(__('Data invoice tidak lengkap', 'wp-customer'));
             }
 
-            // Validate due date
-            if (strtotime($due_date) <= time()) {
-                throw new \Exception(__('Tanggal jatuh tempo harus di masa depan', 'wp-customer'));
+            // Validate access to create invoice for this branch
+            $access_check = $this->validator->canCreateInvoice($branch_id);
+            if (is_wp_error($access_check)) {
+                throw new \Exception($access_check->get_error_message());
             }
 
             // Prepare invoice data
@@ -259,11 +256,6 @@ class CompanyInvoiceController {
      */
     public function updateInvoice() {
         try {
-            // Only admin/staff can update invoices
-            if (!current_user_can('manage_options') && !current_user_can('edit_customer_invoices')) {
-                throw new \Exception(__('Anda tidak memiliki izin untuk mengupdate invoice', 'wp-customer'));
-            }
-
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
             $invoice_id = isset($_POST['invoice_id']) ? intval($_POST['invoice_id']) : 0;
@@ -274,6 +266,12 @@ class CompanyInvoiceController {
 
             if (!$invoice_id) {
                 throw new \Exception(__('ID Invoice tidak valid', 'wp-customer'));
+            }
+
+            // Validate access to edit this invoice
+            $access_check = $this->validator->canEditInvoice($invoice_id);
+            if (is_wp_error($access_check)) {
+                throw new \Exception($access_check->get_error_message());
             }
 
             // Get existing invoice
@@ -330,17 +328,18 @@ class CompanyInvoiceController {
      */
     public function deleteInvoice() {
         try {
-            // Only admin can delete invoices
-            if (!current_user_can('manage_options')) {
-                throw new \Exception(__('Anda tidak memiliki izin untuk menghapus invoice', 'wp-customer'));
-            }
-
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
             $invoice_id = isset($_POST['invoice_id']) ? intval($_POST['invoice_id']) : 0;
 
             if (!$invoice_id) {
                 throw new \Exception(__('ID Invoice tidak valid', 'wp-customer'));
+            }
+
+            // Validate access to delete this invoice
+            $access_check = $this->validator->canDeleteInvoice($invoice_id);
+            if (is_wp_error($access_check)) {
+                throw new \Exception($access_check->get_error_message());
             }
 
             // Get invoice before deletion
@@ -551,7 +550,9 @@ class CompanyInvoiceController {
      * Render main page template
      */
     public function render_page() {
-        if (!current_user_can('manage_options')) {
+        // Validate user access to view invoice list
+        $access_check = $this->validator->canViewInvoiceList();
+        if (is_wp_error($access_check)) {
             require_once WP_CUSTOMER_PATH . 'src/Views/templates/company-invoice/company-invoice-no-access.php';
             return;
         }
@@ -569,9 +570,10 @@ class CompanyInvoiceController {
                 throw new \Exception('Invalid nonce');
             }
 
-            // Check permissions
-            if (!current_user_can('manage_options')) {
-                throw new \Exception(__('Anda tidak memiliki izin untuk mengakses data ini', 'wp-customer'));
+            // Validate access using validator
+            $access_check = $this->validator->canViewInvoiceList();
+            if (is_wp_error($access_check)) {
+                throw new \Exception($access_check->get_error_message());
             }
 
             // Get DataTable parameters

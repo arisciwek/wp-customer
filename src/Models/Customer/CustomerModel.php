@@ -331,10 +331,10 @@
     // VERSION 1: getTotalCount dengan query terpisah + cache
     public function getTotalCount(): int {
         global $wpdb;
-        
+
         error_log('--- Debug CustomerModel getTotalCount ---');
         error_log('Checking cache first...');
-        
+
         // Cek cache
         $cached_total = $this->cache->get('customer_total_count', get_current_user_id());
         if ($cached_total !== null) {
@@ -357,28 +357,63 @@
 
         $current_user_id = get_current_user_id();
 
-        $has_customer = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table} WHERE user_id = %d",
-            $current_user_id
-        ));
-        error_log('User has customer: ' . ($has_customer > 0 ? 'yes' : 'no'));
+        // Get user relation to determine access
+        $relation = $this->getUserRelation(0); // 0 for general access check
+        $access_type = $relation['access_type'];
 
-        if ($has_customer > 0 && current_user_can('view_customer_list') && current_user_can('edit_own_customer')) {
+        error_log('Access type: ' . $access_type);
+        error_log('Is admin: ' . ($relation['is_admin'] ? 'yes' : 'no'));
+        error_log('Is customer admin: ' . ($relation['is_customer_admin'] ? 'yes' : 'no'));
+        error_log('Is branch admin: ' . ($relation['is_branch_admin'] ? 'yes' : 'no'));
+        error_log('Is employee: ' . ($relation['is_customer_employee'] ? 'yes' : 'no'));
+
+        // Apply filtering based on access type
+        if ($relation['is_admin']) {
+            // Administrator - see all customers
+            error_log('User is admin - no additional restrictions');
+        }
+        elseif ($relation['is_customer_admin']) {
+            // Customer Admin - only see their own customer
             $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
-            error_log('Added own customer restriction: ' . $where);
-        } elseif (current_user_can('view_customer_list') && current_user_can('edit_all_customers')) {
-            error_log('User can view all customers - no additional restrictions');
+            error_log('Added customer admin restriction: ' . $where);
+        }
+        elseif ($relation['is_branch_admin']) {
+            // Branch Admin - only see customer where they manage a branch
+            $customer_id = $relation['branch_admin_of_customer_id'];
+            if ($customer_id) {
+                $where .= $wpdb->prepare(" AND p.id = %d", $customer_id);
+                error_log('Added branch admin restriction for customer: ' . $customer_id);
+            } else {
+                $where .= " AND 1=0"; // No access if no customer found
+                error_log('Branch admin has no customer - blocking access');
+            }
+        }
+        elseif ($relation['is_customer_employee']) {
+            // Employee - only see customer where they work
+            $customer_id = $relation['employee_of_customer_id'];
+            if ($customer_id) {
+                $where .= $wpdb->prepare(" AND p.id = %d", $customer_id);
+                error_log('Added employee restriction for customer: ' . $customer_id);
+            } else {
+                $where .= " AND 1=0"; // No access if no customer found
+                error_log('Employee has no customer - blocking access');
+            }
+        }
+        else {
+            // No access
+            $where .= " AND 1=0";
+            error_log('User has no access - blocking all');
         }
 
         $sql = $select . $from . $where;
         error_log('Final Query: ' . $sql);
-        
+
         $total = (int) $wpdb->get_var($sql);
-        
+
         // Set cache
         $this->cache->set('customer_total_count', $total, 120, get_current_user_id());
         error_log('Set new cache value: ' . $total);
-        
+
         error_log('Total count result: ' . $total);
         error_log('--- End Debug ---');
 
@@ -419,29 +454,35 @@
         $join .= " LEFT JOIN {$wpdb->users} u ON p.user_id = u.ID";
         $where = " WHERE 1=1";
 
-        // Cek relasi user dengan customer
-        $has_customer = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table} WHERE user_id = %d",
-            $current_user_id
-        ));
-
-        // Cek status employee
-        $employee_customer = $wpdb->get_var($wpdb->prepare(
-            "SELECT customer_id FROM {$this->employee_table} WHERE user_id = %d",
-            $current_user_id
-        ));
-
-        // Permission based filtering
-        if (current_user_can('edit_all_customers')) {
+        // Apply same filtering logic as getTotalCount using relation
+        if ($relation['is_admin']) {
+            // Administrator - see all customers
             // No additional restrictions
         }
-        else if ($has_customer > 0 && current_user_can('view_own_customer')) {
+        elseif ($relation['is_customer_admin']) {
+            // Customer Admin - only see their own customer
             $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
         }
-        else if ($employee_customer && current_user_can('view_own_customer')) {
-            $where .= $wpdb->prepare(" AND p.id = %d", $employee_customer);
+        elseif ($relation['is_branch_admin']) {
+            // Branch Admin - only see customer where they manage a branch
+            $customer_id = $relation['branch_admin_of_customer_id'];
+            if ($customer_id) {
+                $where .= $wpdb->prepare(" AND p.id = %d", $customer_id);
+            } else {
+                $where .= " AND 1=0"; // No access if no customer found
+            }
+        }
+        elseif ($relation['is_customer_employee']) {
+            // Employee - only see customer where they work
+            $customer_id = $relation['employee_of_customer_id'];
+            if ($customer_id) {
+                $where .= $wpdb->prepare(" AND p.id = %d", $customer_id);
+            } else {
+                $where .= " AND 1=0"; // No access if no customer found
+            }
         }
         else {
+            // No access
             $where .= " AND 1=0";
         }
 

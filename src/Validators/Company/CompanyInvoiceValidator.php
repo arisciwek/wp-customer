@@ -24,14 +24,17 @@ namespace WPCustomer\Validators\Company;
 
 use WPCustomer\Models\Company\CompanyInvoiceModel;
 use WPCustomer\Models\Customer\CustomerModel;
+use WPCustomer\Models\Company\CompanyModel;
 
 class CompanyInvoiceValidator {
     private $invoice_model;
     private $customer_model;
+    private $company_model;
 
     public function __construct() {
         $this->invoice_model = new CompanyInvoiceModel();
         $this->customer_model = new CustomerModel();
+        $this->company_model = new CompanyModel();
     }
 
     /**
@@ -324,6 +327,287 @@ class CompanyInvoiceValidator {
     private function isValidDate($date) {
         $d = \DateTime::createFromFormat('Y-m-d', $date);
         return $d && $d->format('Y-m-d') === $date;
+    }
+
+    /**
+     * Validate user access to view invoice list
+     *
+     * @return bool|WP_Error True if valid or WP_Error with reason
+     */
+    public function canViewInvoiceList() {
+        $user_id = get_current_user_id();
+
+        // Check if user is logged in
+        if (!$user_id) {
+            return new \WP_Error(
+                'not_logged_in',
+                __('Anda harus login terlebih dahulu', 'wp-customer')
+            );
+        }
+
+        // Check basic capability
+        if (!current_user_can('view_customer_membership_invoice_list')) {
+            return new \WP_Error(
+                'no_permission',
+                __('Anda tidak memiliki akses untuk melihat daftar invoice', 'wp-customer')
+            );
+        }
+
+        return true;
+    }
+
+    /**
+     * Validate user access to view specific invoice
+     *
+     * @param int $invoice_id Invoice ID
+     * @return bool|WP_Error True if valid or WP_Error with reason
+     */
+    public function canViewInvoice($invoice_id) {
+        $user_id = get_current_user_id();
+
+        // Check if user is logged in
+        if (!$user_id) {
+            return new \WP_Error(
+                'not_logged_in',
+                __('Anda harus login terlebih dahulu', 'wp-customer')
+            );
+        }
+
+        // Check basic capability
+        if (!current_user_can('view_customer_membership_invoice_detail')) {
+            return new \WP_Error(
+                'no_permission',
+                __('Anda tidak memiliki akses untuk melihat detail invoice', 'wp-customer')
+            );
+        }
+
+        // Get invoice
+        $invoice = $this->invoice_model->find($invoice_id);
+        if (!$invoice) {
+            return new \WP_Error(
+                'invoice_not_found',
+                __('Invoice tidak ditemukan', 'wp-customer')
+            );
+        }
+
+        // Get user relation to determine access
+        $relation = $this->customer_model->getUserRelation(0);
+
+        // Admin can access all invoices
+        if ($relation['is_admin']) {
+            return true;
+        }
+
+        // Get branch data to validate access
+        $branch = $this->invoice_model->getBranchData($invoice->branch_id);
+        if (!$branch) {
+            return new \WP_Error(
+                'invalid_invoice',
+                __('Data invoice tidak valid', 'wp-customer')
+            );
+        }
+
+        // Customer Admin: can access invoices for branches under their customer
+        if ($relation['is_customer_admin']) {
+            $customer = $this->customer_model->find($branch->customer_id);
+            if ($customer && $customer->user_id == $user_id) {
+                return true;
+            }
+        }
+
+        // Branch Admin: can only access invoices for their branch
+        if ($relation['is_branch_admin']) {
+            if ($branch->user_id == $user_id) {
+                return true;
+            }
+        }
+
+        // Employee: can only access invoices for the branch they work in
+        if ($relation['is_customer_employee']) {
+            global $wpdb;
+            $employee_branch = $wpdb->get_var($wpdb->prepare(
+                "SELECT branch_id FROM {$wpdb->prefix}app_customer_employees
+                 WHERE user_id = %d AND status = 'active' LIMIT 1",
+                $user_id
+            ));
+
+            if ($employee_branch && $employee_branch == $invoice->branch_id) {
+                return true;
+            }
+        }
+
+        return new \WP_Error(
+            'access_denied',
+            __('Anda tidak memiliki akses untuk melihat invoice ini', 'wp-customer')
+        );
+    }
+
+    /**
+     * Validate user access to create invoice
+     *
+     * @param int $branch_id Branch ID for the invoice
+     * @return bool|WP_Error True if valid or WP_Error with reason
+     */
+    public function canCreateInvoice($branch_id) {
+        $user_id = get_current_user_id();
+
+        // Check if user is logged in
+        if (!$user_id) {
+            return new \WP_Error(
+                'not_logged_in',
+                __('Anda harus login terlebih dahulu', 'wp-customer')
+            );
+        }
+
+        // Check basic capability
+        if (!current_user_can('create_customer_membership_invoice')) {
+            return new \WP_Error(
+                'no_permission',
+                __('Anda tidak memiliki akses untuk membuat invoice', 'wp-customer')
+            );
+        }
+
+        // Get branch data
+        $branch = $this->invoice_model->getBranchData($branch_id);
+        if (!$branch) {
+            return new \WP_Error(
+                'invalid_branch',
+                __('Branch tidak ditemukan', 'wp-customer')
+            );
+        }
+
+        // Get user relation to determine access
+        $relation = $this->customer_model->getUserRelation(0);
+
+        // Admin can create invoices for any branch
+        if ($relation['is_admin']) {
+            return true;
+        }
+
+        // Customer Admin: can create invoices for branches under their customer
+        if ($relation['is_customer_admin']) {
+            $customer = $this->customer_model->find($branch->customer_id);
+            if ($customer && $customer->user_id == $user_id) {
+                return true;
+            }
+        }
+
+        return new \WP_Error(
+            'access_denied',
+            __('Anda tidak memiliki akses untuk membuat invoice untuk branch ini', 'wp-customer')
+        );
+    }
+
+    /**
+     * Validate user access to edit invoice
+     *
+     * @param int $invoice_id Invoice ID
+     * @return bool|WP_Error True if valid or WP_Error with reason
+     */
+    public function canEditInvoice($invoice_id) {
+        $user_id = get_current_user_id();
+
+        // Check if user is logged in
+        if (!$user_id) {
+            return new \WP_Error(
+                'not_logged_in',
+                __('Anda harus login terlebih dahulu', 'wp-customer')
+            );
+        }
+
+        // Get invoice
+        $invoice = $this->invoice_model->find($invoice_id);
+        if (!$invoice) {
+            return new \WP_Error(
+                'invoice_not_found',
+                __('Invoice tidak ditemukan', 'wp-customer')
+            );
+        }
+
+        // Get user relation to determine access
+        $relation = $this->customer_model->getUserRelation(0);
+
+        // Get branch data
+        $branch = $this->invoice_model->getBranchData($invoice->branch_id);
+        if (!$branch) {
+            return new \WP_Error(
+                'invalid_invoice',
+                __('Data invoice tidak valid', 'wp-customer')
+            );
+        }
+
+        // Admin can edit all invoices
+        if ($relation['is_admin'] && current_user_can('edit_all_customer_membership_invoices')) {
+            return true;
+        }
+
+        // Customer Admin: can edit invoices for branches under their customer
+        if ($relation['is_customer_admin'] && current_user_can('edit_all_customer_membership_invoices')) {
+            $customer = $this->customer_model->find($branch->customer_id);
+            if ($customer && $customer->user_id == $user_id) {
+                return true;
+            }
+        }
+
+        // Branch Admin: can edit invoices for their branch
+        if ($relation['is_branch_admin'] && current_user_can('edit_own_customer_membership_invoice')) {
+            if ($branch->user_id == $user_id) {
+                return true;
+            }
+        }
+
+        return new \WP_Error(
+            'access_denied',
+            __('Anda tidak memiliki akses untuk mengedit invoice ini', 'wp-customer')
+        );
+    }
+
+    /**
+     * Validate user access to delete invoice
+     *
+     * @param int $invoice_id Invoice ID
+     * @return bool|WP_Error True if valid or WP_Error with reason
+     */
+    public function canDeleteInvoice($invoice_id) {
+        $user_id = get_current_user_id();
+
+        // Check if user is logged in
+        if (!$user_id) {
+            return new \WP_Error(
+                'not_logged_in',
+                __('Anda harus login terlebih dahulu', 'wp-customer')
+            );
+        }
+
+        // Check basic capability
+        if (!current_user_can('delete_customer_membership_invoice')) {
+            return new \WP_Error(
+                'no_permission',
+                __('Anda tidak memiliki akses untuk menghapus invoice', 'wp-customer')
+            );
+        }
+
+        // Get invoice
+        $invoice = $this->invoice_model->find($invoice_id);
+        if (!$invoice) {
+            return new \WP_Error(
+                'invoice_not_found',
+                __('Invoice tidak ditemukan', 'wp-customer')
+            );
+        }
+
+        // Get user relation to determine access
+        $relation = $this->customer_model->getUserRelation(0);
+
+        // Only admin can delete invoices
+        if (!$relation['is_admin']) {
+            return new \WP_Error(
+                'access_denied',
+                __('Hanya administrator yang dapat menghapus invoice', 'wp-customer')
+            );
+        }
+
+        return true;
     }
 }
 

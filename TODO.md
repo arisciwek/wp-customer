@@ -1,5 +1,39 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2146: Implementasi Access Type pada Plugin
+- Issue: Branch Admin dan Employee melihat semua data (10 customers, 49 branches) instead of filtered data berdasarkan relasi mereka
+- Root Cause: getTotalCount() dan getDataTableData() methods menggunakan simple permission check, tidak mempertimbangkan hierarchical access berdasarkan getUserRelation()
+- Target: Implementasi filtering berdasarkan access_type untuk Customer, Branch, Employee list, Dashboard statistics, Company module (alias Branch), dan Company Invoice (Membership Invoice)
+- Files Modified:
+  - src/Models/Customer/CustomerModel.php (getTotalCount() lines 332-421, getDataTableData() lines 457-487)
+  - src/Models/Branch/BranchModel.php (getTotalCount() lines 433-518, getDataTableData() lines 314-423)
+  - src/Models/Employee/CustomerEmployeeModel.php (getTotalCount() lines 442-543, getDataTableData() lines 252-434)
+  - src/Controllers/CustomerController.php (added EmployeeModel, getStats() with total_employees lines 934-962)
+  - src/Models/Company/CompanyModel.php (getTotalCount() lines 286-374, getDataTableData() lines 155-255)
+  - src/Models/Settings/PermissionModel.php (added membership invoice capabilities lines 64-72, 112-124, 196-204, 251-259, 306-314, 361-369)
+  - src/Controllers/MenuManager.php (changed capability from manage_options to view_customer_membership_invoice_list line 68)
+  - src/Models/Company/CompanyInvoiceModel.php (getTotalCount() lines 99-198, getDataTableData() lines 473-600)
+  - src/Validators/Company/CompanyInvoiceValidator.php (added access validation methods lines 332-611)
+  - src/Controllers/Company/CompanyInvoiceController.php (integrated validator checks lines 553-562, 567-578, 164-191, 203-222, 257-275, 329-343)
+- Status: ✅ **COMPLETED**
+- Notes:
+  - Review-01: Customer & Branch filtering ✅ (DataTable + getTotalCount)
+  - Review-02: Employee statistics ✅ (Fixed dashboard employee count from 0)
+  - Review-03: Company module ✅ (Alias Branch dengan hooks untuk extensibility)
+  - Review-04: Company Invoice (Membership Invoice) module ✅ (Added capabilities, filtering, validation)
+  - Customer filtering: ✅ Admin (10), Customer Admin (1), Branch Admin (1), Employee (1)
+  - Branch filtering: ✅ Admin (49), Customer Admin (4), Branch Admin (1), Employee (1)
+  - Employee filtering: ✅ Admin (all), Customer Admin (all under customer), Branch Admin (branch only), Employee (same branch)
+  - Company filtering: ✅ Same as Branch (Admin=all, Customer Admin=3, Branch Admin=1, Employee=1)
+  - Invoice filtering: ✅ Admin (all), Customer Admin (all branches under customer), Branch Admin (own branch), Employee (own branch view-only)
+  - Dashboard statistics: ✅ Total customers, branches, employees display correctly per access_type
+  - Extensibility hooks:
+    - apply_filters('wp_company_total_count_where'), apply_filters('wp_company_datatable_where')
+    - apply_filters('wp_company_membership_invoice_total_count_where'), apply_filters('wp_company_membership_invoice_datatable_where')
+  - Uses getUserRelation() from Task-2144 for consistent access determination
+  - Membership Invoice terminology untuk differentiate from future invoice types
+  - (see docs/TODO-2146-implementasi-access-type.md)
+
 ## TODO-2145: Default Capabilities untuk Role yang Belum Terdefinisi
 - Issue: Role customer_admin, customer_branch_admin, dan customer_employee belum memiliki default capabilities di PermissionModel::addCapabilities(), padahal role sudah terdaftar di RoleManager::getRoles()
 - Root Cause: PermissionModel::addCapabilities() hanya mendefinisikan capabilities untuk 'administrator' dan 'customer', tidak ada definisi untuk 3 role lainnya

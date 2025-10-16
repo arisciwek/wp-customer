@@ -301,6 +301,37 @@ public function create(array $data): ?int {
         $where = " WHERE e.customer_id = %d";
         $params = [$customer_id];
 
+        // Add branch filtering for employees and branch admins
+        $current_user_id = get_current_user_id();
+
+        // Check if user is employee or branch admin
+        $employee_info = $wpdb->get_row($wpdb->prepare(
+            "SELECT branch_id FROM {$this->table}
+             WHERE user_id = %d AND status = 'active'",
+            $current_user_id
+        ));
+
+        $branch_admin_info = $wpdb->get_row($wpdb->prepare(
+            "SELECT id FROM {$this->branch_table}
+             WHERE user_id = %d",
+            $current_user_id
+        ));
+
+        // Apply branch filtering for non-admins
+        if (!current_user_can('edit_all_customer_employees')) {
+            if ($employee_info && $employee_info->branch_id) {
+                // Employee - only see employees in same branch
+                $where .= " AND e.branch_id = %d";
+                $params[] = $employee_info->branch_id;
+                error_log("Applied employee branch filter: branch_id = {$employee_info->branch_id}");
+            } elseif ($branch_admin_info && $branch_admin_info->id) {
+                // Branch Admin - only see employees in their managed branch
+                $where .= " AND e.branch_id = %d";
+                $params[] = $branch_admin_info->id;
+                error_log("Applied branch admin filter: branch_id = {$branch_admin_info->id}");
+            }
+        }
+
         error_log('Initial Query Parts:');
         error_log('Select: ' . $select);
         error_log('From: ' . $from);
@@ -403,24 +434,112 @@ public function create(array $data): ?int {
     }
 
     /**
-     * Get total employee count for a specific customer
+     * Get total employee count based on user permission with access_type filtering
+     *
+     * @param int|null $customer_id Optional customer ID for filtering
+     * @return int Total number of employees
      */
     public function getTotalCount(?int $customer_id = null): int {
         global $wpdb;
 
-        $sql = "SELECT COUNT(*) FROM {$this->table}";
+        error_log('=== Debug CustomerEmployeeModel getTotalCount ===');
+        error_log('User ID: ' . get_current_user_id());
+        error_log('Customer ID param: ' . ($customer_id ?? 'null'));
+
+        // Get user relation from CustomerModel to determine access
+        $customerModel = new \WPCustomer\Models\Customer\CustomerModel();
+        $relation = $customerModel->getUserRelation(0);
+        $access_type = $relation['access_type'];
+
+        error_log('Access type: ' . $access_type);
+        error_log('Is admin: ' . ($relation['is_admin'] ? 'yes' : 'no'));
+        error_log('Is customer admin: ' . ($relation['is_customer_admin'] ? 'yes' : 'no'));
+        error_log('Is branch admin: ' . ($relation['is_branch_admin'] ? 'yes' : 'no'));
+        error_log('Is employee: ' . ($relation['is_customer_employee'] ? 'yes' : 'no'));
+
+        // Base query parts
+        $select = "SELECT SQL_CALC_FOUND_ROWS e.*";
+        $from = " FROM {$this->table} e";
+        $join = " LEFT JOIN {$this->branch_table} b ON e.branch_id = b.id
+                  LEFT JOIN {$this->customer_table} c ON e.customer_id = c.id";
+
+        // Default where clause
+        $where = " WHERE 1=1";
         $params = [];
 
+        // Add customer_id filter if provided
         if ($customer_id) {
-            $sql .= " WHERE customer_id = %d";
+            $where .= " AND e.customer_id = %d";
             $params[] = $customer_id;
+            error_log('Added customer filter: customer_id = ' . $customer_id);
         }
 
-        if (!empty($params)) {
-            $sql = $wpdb->prepare($sql, $params);
+        // Apply filtering based on access type
+        if ($relation['is_admin']) {
+            // Administrator - see all employees
+            error_log('User is admin - no additional restrictions');
+        }
+        elseif ($relation['is_customer_admin']) {
+            // Customer Admin - see all employees under their customer
+            $where .= " AND c.user_id = %d";
+            $params[] = get_current_user_id();
+            error_log('Added customer admin restriction');
+        }
+        elseif ($relation['is_branch_admin']) {
+            // Branch Admin - only see employees in their managed branch
+            $branch_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$this->branch_table}
+                 WHERE user_id = %d LIMIT 1",
+                get_current_user_id()
+            ));
+
+            if ($branch_id) {
+                $where .= " AND e.branch_id = %d";
+                $params[] = $branch_id;
+                error_log('Added branch admin restriction for branch: ' . $branch_id);
+            } else {
+                $where .= " AND 1=0"; // No branch found
+                error_log('Branch admin has no branch - blocking access');
+            }
+        }
+        elseif ($relation['is_customer_employee']) {
+            // Employee - only see employees in the same branch
+            $employee_branch = $wpdb->get_var($wpdb->prepare(
+                "SELECT branch_id FROM {$this->table}
+                 WHERE user_id = %d AND status = 'active' LIMIT 1",
+                get_current_user_id()
+            ));
+
+            if ($employee_branch) {
+                $where .= " AND e.branch_id = %d";
+                $params[] = $employee_branch;
+                error_log('Added employee restriction for branch: ' . $employee_branch);
+            } else {
+                $where .= " AND 1=0"; // No branch found
+                error_log('Employee has no branch - blocking access');
+            }
+        }
+        else {
+            // No access
+            $where .= " AND 1=0";
+            error_log('User has no access - blocking all');
         }
 
-        return (int) $wpdb->get_var($sql);
+        // Complete query
+        $query = $select . $from . $join . $where;
+        $final_query = !empty($params) ? $wpdb->prepare($query, $params) : $query;
+
+        error_log('Final Query: ' . $final_query);
+
+        // Execute query
+        $wpdb->get_results($final_query);
+
+        // Get total and log
+        $total = (int) $wpdb->get_var("SELECT FOUND_ROWS()");
+        error_log('Total count result: ' . $total);
+        error_log('=== End Debug ===');
+
+        return $total;
     }
 
     /**

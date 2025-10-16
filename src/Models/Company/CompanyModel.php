@@ -150,20 +150,66 @@ class CompanyModel {
                 LEFT JOIN {$wpdb->prefix}app_agency_divisions d ON b.division_id = d.id
                 LEFT JOIN {$wpdb->users} u ON b.inspector_id = u.ID";
         $where = " WHERE 1=1";
+        $where_params = [];
+
+        // Get user relation for access filtering
+        $customerModel = new CustomerModel();
+        $relation = $customerModel->getUserRelation(0);
+
+        // Apply filtering based on access type
+        if ($relation['is_admin']) {
+            // Administrator - see all companies
+            error_log('CompanyModel DataTable: User is admin - no additional restrictions');
+        }
+        elseif ($relation['is_customer_admin']) {
+            // Customer Admin - see all companies under their customer
+            $where .= " AND c.user_id = %d";
+            $where_params[] = get_current_user_id();
+            error_log('CompanyModel DataTable: Added customer admin restriction');
+        }
+        elseif ($relation['is_branch_admin']) {
+            // Branch Admin - only see their own company/branch
+            $where .= " AND b.user_id = %d";
+            $where_params[] = get_current_user_id();
+            error_log('CompanyModel DataTable: Added branch admin restriction');
+        }
+        elseif ($relation['is_customer_employee']) {
+            // Employee - only see the company/branch they work in
+            $employee_branch = $wpdb->get_var($wpdb->prepare(
+                "SELECT branch_id FROM {$wpdb->prefix}app_customer_employees
+                 WHERE user_id = %d AND status = 'active' LIMIT 1",
+                get_current_user_id()
+            ));
+
+            if ($employee_branch) {
+                $where .= " AND b.id = %d";
+                $where_params[] = $employee_branch;
+                error_log('CompanyModel DataTable: Added employee restriction for branch: ' . $employee_branch);
+            } else {
+                $where .= " AND 1=0"; // No branch found
+                error_log('CompanyModel DataTable: Employee has no branch - blocking access');
+            }
+        }
+        else {
+            // No access
+            $where .= " AND 1=0";
+            error_log('CompanyModel DataTable: User has no access - blocking all');
+        }
+
+        // Apply filter for extensibility (allow other plugins to modify WHERE clause)
+        $where = apply_filters('wp_company_datatable_where', $where, $access_type, $relation, $where_params);
 
         // Add search if provided
         if (!empty($search)) {
             $search_term = '%' . $wpdb->esc_like($search) . '%';
-            $where .= $wpdb->prepare(
-                " AND (b.code LIKE %s OR b.name LIKE %s OR b.type LIKE %s OR l.name LIKE %s OR a.name LIKE %s OR d.name LIKE %s OR u.display_name LIKE %s)",
-                $search_term,
-                $search_term,
-                $search_term,
-                $search_term,
-                $search_term,
-                $search_term,
-                $search_term
-            );
+            $where .= " AND (b.code LIKE %s OR b.name LIKE %s OR b.type LIKE %s OR l.name LIKE %s OR a.name LIKE %s OR d.name LIKE %s OR u.display_name LIKE %s)";
+            $where_params[] = $search_term;
+            $where_params[] = $search_term;
+            $where_params[] = $search_term;
+            $where_params[] = $search_term;
+            $where_params[] = $search_term;
+            $where_params[] = $search_term;
+            $where_params[] = $search_term;
         }
 
         // Add filter conditions
@@ -190,16 +236,23 @@ class CompanyModel {
         $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
 
         // Add limit
-        $limit = $wpdb->prepare(" LIMIT %d, %d", $start, $length);
+        $limit = " LIMIT %d, %d";
+        $where_params[] = $start;
+        $where_params[] = $length;
 
         // Complete query
         $sql = $select . $from . $join . $where . $order . $limit;
-        
+
         // Start timing
         $start_time = microtime(true);
-        
-        // Get paginated results
-        $results = $wpdb->get_results($sql);
+
+        // Prepare and execute query
+        if (!empty($where_params)) {
+            $prepared_sql = $wpdb->prepare($sql, $where_params);
+            $results = $wpdb->get_results($prepared_sql);
+        } else {
+            $results = $wpdb->get_results($sql);
+        }
         
         // Calculate execution time
         $execution_time = microtime(true) - $start_time;
@@ -281,19 +334,95 @@ class CompanyModel {
     }
 
     /**
-     * Get total count based on user permission
+     * Get total count based on user permission with access_type filtering
      */
     public function getTotalCount(): int {
-        $cached_count = $this->cache->get('company_total_count', get_current_user_id());
-        if ($cached_count !== null) {
-            return (int) $cached_count;
+        global $wpdb;
+
+        error_log('=== Debug CompanyModel getTotalCount ===');
+        error_log('User ID: ' . get_current_user_id());
+
+        // Get user relation from CustomerModel to determine access
+        $customerModel = new CustomerModel();
+        $relation = $customerModel->getUserRelation(0);
+        $access_type = $relation['access_type'];
+
+        error_log('Access type: ' . $access_type);
+        error_log('Is admin: ' . ($relation['is_admin'] ? 'yes' : 'no'));
+        error_log('Is customer admin: ' . ($relation['is_customer_admin'] ? 'yes' : 'no'));
+        error_log('Is branch admin: ' . ($relation['is_branch_admin'] ? 'yes' : 'no'));
+        error_log('Is employee: ' . ($relation['is_customer_employee'] ? 'yes' : 'no'));
+
+        // Base query parts
+        $select = "SELECT SQL_CALC_FOUND_ROWS r.*, p.name as customer_name";
+        $from = " FROM {$this->table} r";
+        $join = " LEFT JOIN {$wpdb->prefix}app_customers p ON r.customer_id = p.id";
+
+        // Default where clause
+        $where = " WHERE 1=1";
+        $params = [];
+
+        // Debug query building process
+        error_log('Building WHERE clause:');
+        error_log('Initial WHERE: ' . $where);
+
+        // Apply filtering based on access type
+        if ($relation['is_admin']) {
+            // Administrator - see all companies
+            error_log('User is admin - no additional restrictions');
+        }
+        elseif ($relation['is_customer_admin']) {
+            // Customer Admin - see all companies under their customer
+            $where .= " AND p.user_id = %d";
+            $params[] = get_current_user_id();
+            error_log('Added customer admin restriction: ' . $where);
+        }
+        elseif ($relation['is_branch_admin']) {
+            // Branch Admin - only see their own company/branch
+            $where .= " AND r.user_id = %d";
+            $params[] = get_current_user_id();
+            error_log('Added branch admin restriction - only own branch');
+        }
+        elseif ($relation['is_customer_employee']) {
+            // Employee - only see the company/branch they work in
+            $employee_branch = $wpdb->get_var($wpdb->prepare(
+                "SELECT branch_id FROM {$wpdb->prefix}app_customer_employees
+                 WHERE user_id = %d AND status = 'active' LIMIT 1",
+                get_current_user_id()
+            ));
+
+            if ($employee_branch) {
+                $where .= " AND r.id = %d";
+                $params[] = $employee_branch;
+                error_log('Added employee restriction for branch: ' . $employee_branch);
+            } else {
+                $where .= " AND 1=0"; // No branch found
+                error_log('Employee has no branch - blocking access');
+            }
+        }
+        else {
+            // No access
+            $where .= " AND 1=0";
+            error_log('User has no access - blocking all');
         }
 
-        global $wpdb;
-        $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$this->table}");
+        // Apply filter for extensibility
+        $where = apply_filters('wp_company_total_count_where', $where, $access_type, $relation, $params);
 
-        $this->cache->set('company_total_count', $count, 120, get_current_user_id());
+        // Complete query
+        $query = $select . $from . $join . $where;
+        $final_query = !empty($params) ? $wpdb->prepare($query, $params) : $query;
 
-        return $count;
+        error_log('Final Query: ' . $final_query);
+
+        // Execute query
+        $wpdb->get_results($final_query);
+
+        // Get total and log
+        $total = (int) $wpdb->get_var("SELECT FOUND_ROWS()");
+        error_log('Total count result: ' . $total);
+        error_log('=== End Debug ===');
+
+        return $total;
     }
 }
