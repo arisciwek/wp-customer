@@ -125,23 +125,44 @@ class CompanyController {
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
             $this->debug_log("=== Start show() ===");
-            
+
             // Get and validate ID
             $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
             if (!$id) {
                 throw new \Exception('Invalid company ID');
             }
 
-            // Validate access
+            $this->debug_log("Company ID requested: " . $id);
+            $this->debug_log("Current user ID: " . get_current_user_id());
+
+            // Validate basic capability
             if (!current_user_can('view_customer_branch_list')) {
+                $this->debug_log("User does not have view_customer_branch_list capability");
                 throw new \Exception('You do not have permission to view this data');
             }
+
+            // Validate specific access to this company/branch
+            $this->debug_log("Calling validateAccess for branch ID: " . $id);
+
+            $access = $this->branchValidator->validateAccess($id);
+
+            $this->debug_log("Access validation result: " . print_r($access, true));
+
+            if (!$access['has_access']) {
+                $this->debug_log("Access denied for branch ID: " . $id . " - access_type: " . ($access['access_type'] ?? 'none'));
+                throw new \Exception(__('Anda tidak memiliki akses untuk melihat company ini', 'wp-customer'));
+            }
+
+            $this->debug_log("Access granted with access_type: " . ($access['access_type'] ?? 'unknown'));
 
             // Get company data with latest membership
             $company = $this->model->getBranchWithLatestMembership($id);
             if (!$company) {
+                $this->debug_log("Company not found for ID: " . $id);
                 throw new \Exception('Company not found');
             }
+
+            $this->debug_log("Company data retrieved successfully");
 
             wp_send_json_success([
                 'company' => $company

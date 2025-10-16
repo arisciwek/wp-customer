@@ -231,8 +231,12 @@
                 }
             } catch (error) {
                 console.error('Error loading customer:', error);
+
+                // Tampilkan toast error
                 CustomerToast.error(error.message || 'Failed to load customer data');
-                this.handleLoadError();
+
+                // Update panel dengan pesan yang sesuai (access denied atau generic error)
+                this.handleLoadError(error.message);
             } finally {
                 this.isLoading = false;
                 this.hideLoading();
@@ -388,13 +392,29 @@
 
         },
 
-    handleLoadError() {
-        this.components.detailsPanel.html(
-            '<div class="error-message">' +
-            '<p>Failed to load customer data. Please try again.</p>' +
-            '<button class="button retry-load">Retry</button>' +
-            '</div>'
-        );
+    handleLoadError(errorMessage = null) {
+        // Deteksi jika error adalah access denied
+        const isAccessDenied = errorMessage &&
+            (errorMessage.toLowerCase().includes('permission') ||
+             errorMessage.toLowerCase().includes('akses'));
+
+        let errorHtml;
+
+        if (isAccessDenied) {
+            // Access denied - tampilkan pesan tegas tanpa tombol retry
+            errorHtml = '<div class="access-denied-message" style="padding: 40px 20px; text-align: center;">' +
+                       '<div class="dashicons dashicons-lock" style="font-size: 48px; color: #d63638; margin-bottom: 20px;"></div>' +
+                       '<h3 style="color: #d63638; margin-bottom: 10px;">Akses Ditolak</h3>' +
+                       '<p style="font-size: 14px; color: #646970;">Anda tidak memiliki akses untuk melihat detail customer ini.</p>' +
+                       '</div>';
+        } else {
+            // Generic error - untuk error lain yang bukan access denied
+            errorHtml = '<div class="error-message" style="padding: 40px 20px; text-align: center;">' +
+                       '<p style="color: #646970;">Terjadi kesalahan saat memuat data customer.</p>' +
+                       '</div>';
+        }
+
+        this.components.detailsPanel.html(errorHtml);
     },
 
               // Helper function untuk label capability

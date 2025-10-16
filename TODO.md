@@ -1,5 +1,51 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2148: Fix invalidateUserRelationCache in BranchModel
+- Issue: Method invalidateUserRelationCache() di BranchModel tidak konsisten dengan CustomerModel - menggunakan parameter $access_type instead of $user_id, logic berbeda dengan CustomerModel pattern
+- Root Cause: BranchModel implementation diverged dari CustomerModel pattern. Cache key pattern di getUserRelation() uses access_type, tapi saat invalidate kita tidak tahu access_type user yang memiliki relasi dengan branch
+- Target: Tulis ulang invalidateUserRelationCache() berdasarkan CustomerModel pattern baris per baris - gunakan clearCache() untuk semua case karena access_type tidak diketahui saat invalidation
+- Files Modified:
+  - src/Models/Branch/BranchModel.php (rewrote invalidateUserRelationCache() method lines 877-918: changed signature from ($branch_id, $access_type) to ($branch_id, $user_id), changed all logic to use clearCache('branch_relation') for consistency with CustomerModel, added comprehensive documentation explaining why clearCache is used)
+- Status: ❌  **PENDING**
+- Notes:
+  - Signature changed: invalidateUserRelationCache(int $branch_id = null, string $access_type = null) → invalidateUserRelationCache(int $branch_id = null, int $user_id = null)
+  - Logic simplified: All cases now use clearCache('branch_relation') instead of looping through access types
+  - Consistent with CustomerModel approach
+  - Cache key pattern in getUserRelation() is branch_relation_{$branch_id}_{$access_type}, but we don't know access_type when invalidating
+  - Decision: Use Opsi 1 (clearCache) - simple, reliable, consistent with CustomerModel
+  - Known Issue: CustomerModel::invalidateUserRelationCache() also has wrong cache key pattern (uses $user_id instead of $access_type) - needs separate fix
+  - (see docs/TODO-2148-fix-invalidate-user-relation-cache.md)
+
+## TODO-2147: Access Denied Message untuk Customer & Company Detail
+- Issue: Pesan error tidak jelas ketika user mengubah hash manual untuk mengakses customer/company yang tidak berelasi - menampilkan pesan generic "Failed to load customer/company data" dengan tombol retry, padahal seharusnya menampilkan pesan access denied yang spesifik. Part 3: Company tidak memiliki validasi URL direct access seperti customer. Review-04: Behavior Company tidak konsisten - redirect instead of stay di page seperti Customer. Review-05: Debug logs untuk BranchModel::getUserRelation() tidak muncul. Review-06: BranchModel::getUserRelation() pattern berbeda dengan CustomerModel - access_type determined before database check
+- Root Cause: Method handleLoadError() tidak membedakan antara access denied error dan generic system error, semua error ditampilkan dengan format yang sama. Company (Branch) tidak punya validasi spesifik untuk access control. Part 3: Company-script.js tidak memiliki method validateCompanyAccess() dan handleInitialState() yang melakukan validasi sebelum load data. Review-04: handleInitialState() salah implementasi - redirect ke halaman utama instead of load data dan tampilkan error di panel. Review-05: error_log() output ke stdout instead of log file. Review-06: Access type determined BEFORE database relations checked, causing wrong cache keys
+- Target: Implementasi deteksi error type di handleLoadError() untuk menampilkan pesan access denied yang jelas tanpa tombol retry, berbeda dengan generic error. Tambahkan validasi access di CompanyController::show(). Part 3: Tambahkan validateCompanyAccess() dan update handleInitialState() untuk validasi URL direct access. Review-04: Perbaiki handleInitialState() agar load data langsung tanpa redirect, konsisten dengan Customer behavior. Review-05: Implementasi debug_log() method di BranchModel untuk proper logging. Review-06: Rewrite BranchModel::getUserRelation() to match CustomerModel pattern
+- Files Modified:
+  - **Part 1 - Customer:** assets/js/customer/customer-script.js (updated handleLoadError() lines 391-414 to detect access denied, updated catch block in loadCustomerData() lines 232-243 to pass error message)
+  - **Part 2 - Company:** assets/js/company/company-script.js (added handleLoadError() method lines 281-304, updated catch block in loadCompanyData() lines 128-156), src/Controllers/Company/CompanyController.php (added BranchValidator::validateAccess() in show() method lines 152-162)
+  - **Part 3 - URL Validation:** assets/js/company/company-script.js (added validateCompanyAccess() method lines 83-106 for AJAX access validation, updated handleInitialState() lines 260-271 to load data directly - FIXED in Review-04), src/Controllers/Company/CompanyController.php (validateCompanyAccess() method lines 309-341 already exists with AJAX action registered line 65)
+  - **Review-04 - Behavior Fix:** assets/js/company/company-script.js (updated handleInitialState() lines 260-271 to load data directly without redirect, consistent with Customer implementation)
+  - **Review-05 & Review-06 - Debug Logging:** src/Models/Branch/BranchModel.php (Review-06: completely rewrote getUserRelation() method lines 649-875 to match CustomerModel pattern - check database FIRST, determine access_type from actual data, use correct cache keys, log directly to debug.log)
+- Status: ✅ **COMPLETED** (All Parts including Review-06)
+- Notes:
+  - **Customer:** Access denied message "Anda tidak memiliki akses untuk melihat detail customer ini"
+  - **Company:** Access denied message "Anda tidak memiliki akses untuk melihat detail company ini"
+  - Detection keywords: "permission" atau "akses" (case-insensitive)
+  - Styling: Inline CSS menggunakan WordPress standard colors (#d63638 untuk error, #646970 untuk text)
+  - Company adalah alias dari Branch, sehingga #11 adalah branch_id
+  - Company validation menggunakan BranchValidator::validateAccess($branch_id)
+  - Administrator tetap dapat mengakses semua customer dan company tanpa batasan
+  - Panel tidak di-block penuh, hanya konten tab yang berubah
+  - Toast notification tetap digunakan untuk feedback cepat
+  - Pattern sama untuk kedua implementasi (Customer & Company)
+  - **Review-04:** Behavior sekarang konsisten - tetap di page, tampilkan error di panel (TIDAK redirect)
+  - **Review-06:** BranchModel::getUserRelation() completely rewritten to match CustomerModel pattern:
+    - Check database relations FIRST before determining access_type
+    - Use actual access_type in cache keys (not always 'none')
+    - Log to debug.log with format: "BranchModel::getUserRelation - Cache miss for access_type X and branch Y"
+    - Shows complete Access Result array with relation details
+  - (see docs/TODO-2147-access-denied-message.md)
+
 ## TODO-2146: Implementasi Access Type pada Plugin
 - Issue: Branch Admin dan Employee melihat semua data (10 customers, 49 branches) instead of filtered data berdasarkan relasi mereka
 - Root Cause: getTotalCount() dan getDataTableData() methods menggunakan simple permission check, tidak mempertimbangkan hierarchical access berdasarkan getUserRelation()

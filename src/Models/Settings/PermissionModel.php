@@ -307,7 +307,7 @@ class PermissionModel {
                 'view_customer_membership_invoice_list' => true,
                 'view_customer_membership_invoice_detail' => true,
                 'view_own_customer_membership_invoice' => true,
-                'create_customer_membership_invoice' => false,   // Cannot create invoices
+                'create_customer_membership_invoice' => true,   // Can create invoices
                 'edit_all_customer_membership_invoices' => false, // Cannot edit all invoices
                 'edit_own_customer_membership_invoice' => true,   // Can edit invoices for their branch
                 'delete_customer_membership_invoice' => false,    // Cannot delete invoices

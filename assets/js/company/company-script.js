@@ -80,6 +80,31 @@
             $(window).off('hashchange.Company').on('hashchange.Company', () => this.handleHashChange());
         },
 
+        validateCompanyAccess(companyId, onSuccess, onError) {
+            $.ajax({
+                url: wpCustomerData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'validate_company_access',
+                    id: companyId,
+                    nonce: wpCustomerData.nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        if (onSuccess) onSuccess(response.data);
+                    } else {
+                        if (onError) onError(response.data);
+                    }
+                },
+                error: (xhr) => {
+                    if (onError) onError({
+                        message: 'Terjadi kesalahan saat validasi akses',
+                        code: 'server_error'
+                    });
+                }
+            });
+        },
+
         async loadCompanyData(id) {
             if (!id || this.isLoading) return;
             this.isLoading = true;
@@ -102,8 +127,28 @@
                 }
             } catch (error) {
                 console.error('Error loading company:', error);
-                CustomerToast.error(error.message || 'Failed to load company data');
-                this.handleLoadError();
+
+                // Extract error message dari response
+                let errorMessage = 'Failed to load company data';
+                if (error.responseJSON && error.responseJSON.data && error.responseJSON.data.message) {
+                    errorMessage = error.responseJSON.data.message;
+                } else if (error.message) {
+                    errorMessage = error.message;
+                }
+
+                // Tampilkan toast error
+                CustomerToast.error(errorMessage);
+
+                // Update panel dengan pesan yang sesuai (access denied atau generic error)
+                this.handleLoadError(errorMessage);
+
+                // Pastikan panel tetap terbuka untuk menampilkan error
+                this.components.container.addClass('with-right-panel');
+                this.components.rightPanel.addClass('visible');
+
+                // Update currentId ke ID yang sedang dicoba diakses
+                // agar tidak stuck di ID lama
+                this.currentId = id;
             } finally {
                 this.isLoading = false;
                 if (wasLoadingShown) this.hideLoading();
@@ -215,7 +260,13 @@
         handleInitialState() {
             const hash = window.location.hash;
             if (hash && hash.startsWith('#')) {
-                this.handleHashChange();
+                const companyId = parseInt(hash.substring(1));
+                if (companyId) {
+                    // Langsung load data tanpa validasi terpisah
+                    // Validasi akan dilakukan di loadCompanyData() dan CompanyController::show()
+                    // Jika access denied, error akan di-handle dan tampilkan pesan di panel
+                    this.loadCompanyData(companyId);
+                }
             }
         },
 
@@ -225,6 +276,31 @@
 
         hideLoading() {
             this.components.rightPanel.removeClass('loading');
+        },
+
+        handleLoadError(errorMessage = null) {
+            // Deteksi jika error adalah access denied
+            const isAccessDenied = errorMessage &&
+                (errorMessage.toLowerCase().includes('permission') ||
+                 errorMessage.toLowerCase().includes('akses'));
+
+            let errorHtml;
+
+            if (isAccessDenied) {
+                // Access denied - tampilkan pesan tegas tanpa tombol retry
+                errorHtml = '<div class="access-denied-message" style="padding: 40px 20px; text-align: center;">' +
+                           '<div class="dashicons dashicons-lock" style="font-size: 48px; color: #d63638; margin-bottom: 20px;"></div>' +
+                           '<h3 style="color: #d63638; margin-bottom: 10px;">Akses Ditolak</h3>' +
+                           '<p style="font-size: 14px; color: #646970;">Anda tidak memiliki akses untuk melihat detail company ini.</p>' +
+                           '</div>';
+            } else {
+                // Generic error - untuk error lain yang bukan access denied
+                errorHtml = '<div class="error-message" style="padding: 40px 20px; text-align: center;">' +
+                           '<p style="color: #646970;">Terjadi kesalahan saat memuat data company.</p>' +
+                           '</div>';
+            }
+
+            this.components.detailsPanel.html(errorHtml);
         },
 
         loadStats() {

@@ -74,7 +74,9 @@ class BranchValidator {
 
         // Check class memory cache first (for single request performance)
         if (isset($this->relationCache[$branch_id])) {
-            return $this->relationCache[$branch_id];
+            $cached = $this->relationCache[$branch_id];
+            $cached['from_cache'] = true;
+            return $cached;
         }
         
         // Handle special case for branch_id 0 (general validation)
@@ -118,7 +120,7 @@ class BranchValidator {
                 'is_customer_employee' => false,
                 'access_type' => current_user_can('edit_all_customer_branches') ? 'admin' : 'none'
             ];
-            
+
             return [
                 'has_access' => current_user_can('view_customer_branch_list'),
                 'access_type' => $relation['is_admin'] ? 'admin' : 'none',
@@ -127,7 +129,7 @@ class BranchValidator {
                 'customer_id' => 0
             ];
         }
-        
+
         // Dapatkan relasi user dengan branch ini
         $relation = $this->getUserRelation($branch_id);
         
@@ -152,10 +154,13 @@ class BranchValidator {
         if ($customer_id) {
             $customer = $this->customer_model->find($customer_id);
         }
-        
+
+        $has_access = $this->canViewBranch($branch, $customer);
+        $access_type = $relation['access_type'] ?? 'none';
+
         return [
-            'has_access' => $this->canViewBranch($branch, $customer),
-            'access_type' => $relation['access_type'] ?? 'none',
+            'has_access' => $has_access,
+            'access_type' => $access_type,
             'relation' => $relation,
             'branch_id' => $branch_id,
             'customer_id' => $customer_id
