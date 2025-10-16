@@ -142,7 +142,7 @@ class PermissionModel {
                 'view_customer_detail' => true,
                 'add_customer' => false,
                 'view_own_customer' => true,
-                'edit_own_customer' => true,
+                'edit_own_customer' => false,
                 'view_own_customer' => true,
                 'delete_customer' => false,
 

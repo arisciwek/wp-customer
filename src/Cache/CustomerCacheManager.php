@@ -451,6 +451,11 @@ class CustomerCacheManager {
         $this->delete('customer', $id);
         // Clear customer list cache
         $this->delete('customer_total_count', get_current_user_id());
+
+        // Clear datatable cache untuk semua access_type
+        // Karena customer data berubah, semua user dengan access_type berbeda
+        // perlu melihat data yang fresh
+        $this->invalidateDataTableCache('customer_list');
     }
 
     /**

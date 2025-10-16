@@ -1,5 +1,16 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2144: Fix Cache Key Access Type untuk Customer List
+- Issue: Cache key untuk customer list dari beberapa access type selalu menggunakan "user", seharusnya menggunakan access type sesuai user login (admin, customer_admin, customer_employee)
+- Root Cause (Initial): Logic di CustomerModel::getDataTableData() line 391 terlalu sederhana - hanya membedakan 'admin' vs 'user', tidak memperhitungkan access_type yang lebih lengkap
+- Root Cause (Review-01): Access type masih 'none' untuk semua non-admin users. Di CustomerModel::getUserRelation(), access_type ditentukan SEBELUM query database untuk check relasi sebenarnya. Timeline salah: set base_relation with false values → determine access_type (selalu 'none') → generate cache key → check cache → query database (TOO LATE - sudah cached dengan key yang salah!)
+- Target: Gunakan getUserRelation() untuk mendapatkan access_type yang konsisten, invalidate cache untuk semua access_type saat data berubah, refactor getUserRelation() untuk determine access_type SETELAH query database
+- Files Modified:
+  - src/Models/Customer/CustomerModel.php (changed access_type logic line 389-392 to use getUserRelation(), added cache invalidation after update line 324-325, Review-01: refactored getUserRelation() lines 813-944 to do lightweight queries BEFORE cache check, determine access_type from actual data, optimized detail fetching)
+  - src/Cache/CustomerCacheManager.php (added datatable cache invalidation in invalidateCustomerCache() line 455-459)
+- Status: **PENDING** (Including Review-01)
+- Notes: Setiap access_type sekarang mendapat cache key unik (admin, customer_admin, customer_employee), getUserRelation() sudah memiliki caching built-in sehingga performance impact minimal, cache invalidation lebih comprehensive untuk ensure data consistency. Review-01: Access type sekarang ditentukan dari data database aktual (lightweight COUNT queries) SEBELUM cache check, bukan dari asumsi. Flow baru: validate → query database → determine access_type → cache check → build details if cache miss. Performance impact acceptable (1-2 lightweight queries, hasil di-cache) (see docs/TODO-2144-fix-cache-key-access-type.md)
+
 ## TODO-2143: Fix canViewBranch() Return Type Error
 - Issue: PHP Fatal error pada BranchValidator::canViewBranch() - Return value must be of type bool, none returned
 - Root Cause: Method canViewBranch() dan canUpdateBranch() memiliki return type declaration `: bool` tetapi tidak memiliki explicit return statement di akhir function, menyebabkan PHP mengembalikan null ketika tidak ada kondisi if yang terpenuhi
