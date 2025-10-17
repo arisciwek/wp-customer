@@ -1,285 +1,225 @@
-# WP Customer Release Notes - Version 1.0.9
+# WP Customer Release Notes - Version 1.0.10
 
 ## Overview
-This release focuses on comprehensive demo data generation improvements, implementing collection-based name generation system, fixing user management issues, and centralizing role management. All demo user types now follow consistent naming patterns with proper cleanup mechanisms and role assignments.
+This release focuses on comprehensive bug fixes for the Company module, including data persistence on page reload, access control validation, error handling, and access type detection. Multiple reviews addressed critical issues ensuring Company module behavior now matches Customer module pattern completely.
 
-## 🚀 New Features & Enhancements
+## 🚀 Bug Fixes & Enhancements
 
-### TODO-2138: Update Employee Username from Display Name
-- **Issue**: Employee usernames used department_company_branch pattern (finance_maju_1, legal_tekno_5) instead of reflecting actual user names. No correlation between username and display_name, making it difficult to remember usernames for "login as user" feature.
+### TODO-2155: Fix Company Tab Utama Hilang Saat Reload
+**Multiple Critical Issues Fixed Across 6 Reviews**
 
-- **Root Cause**: Username field hardcoded with department/company/branch pattern instead of deriving from display_name like Customer and Branch users.
-
-- **Solution**: Updated all 60 employee usernames to use display_name pattern (lowercase + underscore), consistent with Customer Admin and Branch Admin naming patterns.
-
-- **Files Modified**:
-  - `src/Database/Demo/Data/CustomerEmployeeUsersData.php` - Updated all 60 username entries from department pattern to name-based pattern
-
+#### Base Issue
+- **Problem**: Data pada tab utama menu Perusahaan hilang saat halaman di-reload dengan URL hash tertentu (misal `page=perusahaan#1`). Berbeda dengan menu Customer yang tetap menampilkan data saat di-reload.
+- **Root Cause**: `loadCompanyData()` TIDAK update URL hash via `window.history.pushState()` seperti `loadCustomerData()`. Saat reload, `window.location.hash` kosong sehingga `handleInitialState()` tidak load data.
+- **Solution**: Tambahkan update URL hash dan reset tab di `loadCompanyData()` untuk match Customer pattern.
+- **Files Modified**: `assets/js/company/company-script.js` (v1.0.1)
 - **Benefits**:
-  - ✅ Usernames now reflect actual user names (abdul_amir vs finance_maju_1)
-  - ✅ Email addresses more natural (abdul_amir@example.com)
-  - ✅ Consistent naming pattern across all demo user types
-  - ✅ Better UX for "login as user" feature
+  - ✅ Data tetap tampil saat reload
+  - ✅ Tab otomatis reset ke default
+  - ✅ URL hash selalu sinkron dengan data yang ditampilkan
+  - ✅ Konsisten dengan Customer behavior
 
-### TODO-2137: Generate Employee Names from Collection & Fix User ID Issue
-- **Issue**: Multiple critical issues - Employee user IDs started at 42 instead of 70, missing customer 5 data, only ~40 employees instead of 60, names hardcoded without collection system, WP users not generated properly, missing customer_employee role, narrow branch admin range, no timeout protection, user cleanup conflicts.
+#### Review-01: Tab Membership Error
+- **Problem**: Saat akses tab membership ada error "Call to undefined method getCustomerOwner()"
+- **Root Cause**: CompanyMembershipController menggunakan method `getCustomerOwner()` yang tidak ada, method yang benar adalah `getCompanyData()`
+- **Solution**: Ganti method call ke `getCompanyData()` yang tersedia di Model
+- **Files Modified**: `src/Controllers/Company/CompanyMembershipController.php` (line 105-112)
+- **Benefits**:
+  - ✅ Tab Membership dapat diakses tanpa error
+  - ✅ Ownership validation berfungsi dengan benar
 
-- **Root Cause**: ID sequence broken with gaps, customer 5 missing, no centralized name collection, incomplete user generation, old users not cleaned up causing conflicts.
+#### Review-02: Customer Employee Access Denied
+- **Problem**: User dengan role `customer_employee` dan `customer_branch_admin` mendapat "access_denied" saat akses tab Membership, padahal seharusnya punya akses
+- **Root Cause**: `userCanAccessCustomer()` hanya cek admin dan owner, TIDAK cek branch admin atau employee. Pattern berbeda dengan CompanyController yang sudah benar.
+- **Solution**: Ganti `userCanAccessCustomer()` untuk menggunakan BranchValidator::validateAccess() seperti CompanyController, tambahkan debug logging seperti task-2154
+- **Files Modified**: `src/Controllers/Company/CompanyMembershipController.php` (line 28-48, line 90-106)
+- **Benefits**:
+  - ✅ customer_employee dapat akses tab Membership
+  - ✅ customer_branch_admin dapat akses tab Membership
+  - ✅ Debug logging muncul seperti task-2154
+  - ✅ Konsisten dengan CompanyController pattern
 
+#### Review-03: Company Invoice Error
+- **Problem**: Company Invoice error "Call to undefined method CompanyModel::find()"
+- **Root Cause**: CompanyInvoiceModel menggunakan `CompanyModel::find()` yang tidak ada, method yang benar adalah `getBranchWithLatestMembership()`
+- **Solution**: Ganti `find()` call ke `getBranchWithLatestMembership()` yang tersedia di CompanyModel
+- **Files Modified**: `src/Models/Company/CompanyInvoiceModel.php` (line 463-466)
+- **Benefits**:
+  - ✅ Company Invoice dapat diakses tanpa error
+  - ✅ Branch data dengan membership info tersedia untuk invoice processing
+
+#### Review-04: Direct URL Access Handling
+- **Problem**: Access denied message tidak muncul saat akses URL non-related company langsung
+- **Root Cause**: Company `handleInitialState()` langsung load data tanpa validasi, berbeda dengan Customer yang validate FIRST lalu redirect on error
+- **Solution**: Tambahkan validateCompanyAccess() call di handleInitialState() dengan redirect on error, match Customer pattern
+- **Files Modified**: `assets/js/company/company-script.js` (v1.0.2 - line 282-298, line 150-167)
+- **Benefits**:
+  - ✅ Direct URL access FIXED
+  - ✅ Now validates FIRST then redirects on access denied
+  - ✅ Matches Customer pattern: validate → redirect on error → load on success
+  - ✅ Consistent UX across Customer and Company menus
+
+#### Review-05: Error Handling & Console Logging
+- **Problem**: Company console logs tidak menampilkan error handling yang jelas. Saat `response.success = false`, tidak ada error yang di-throw. Catch block tidak ter-trigger.
+- **Root Cause**: Company's `loadCompanyData()` ONLY handles success case. When `response.success = false`, function silently completes without error.
 - **Solution**:
-  1. Created 60-word name collection different from Customer & Branch collections
-  2. Fixed all user IDs to sequential 70-129
-  3. Added customer 5 with 6 employees (IDs 94-99)
-  4. Completed all 60 employees for 30 branches
-  5. Added customer_employee role assignment
-  6. Expanded branch admin range to 12-69
-  7. Added max_execution_time 300 seconds
-  8. **Review-01**: Added cleanup mechanism to delete old employee users
-  9. **Review-02**: Added force_delete parameter for legacy users in development
-
+  1. Added comprehensive console logging to trace execution flow
+  2. Fixed error throwing in `loadCompanyData()` - added else clause to throw error when `response.success = false`
 - **Files Modified**:
-  - `src/Database/Demo/Data/CustomerEmployeeUsersData.php` - Added 60-word collection, fixed IDs, added customer 5
-  - `src/Database/Demo/CustomerEmployeeDemoData.php` - Added timeout, role assignment, cleanup mechanism
-  - `src/Database/Demo/WPUserGenerator.php` - Added force_delete parameter with safety checks
-
+  - `assets/js/company/company-script.js` (v1.0.3 - added logging, added else clause line 183-187)
+  - `assets/js/customer/customer-script.js` (added logging for comparison)
 - **Benefits**:
-  - ✅ Complete 60 employees with unique collection-based names
-  - ✅ NO overlap between Customer (24), Branch (40), and Employee (60) word collections
-  - ✅ All employees have both 'customer' and 'customer_employee' roles
-  - ✅ Automatic cleanup prevents conflicts with old/corrupt users
-  - ✅ Force delete handles legacy users in development safely
+  - ✅ Company error handling now matches Customer pattern completely
+  - ✅ Console logging comprehensive untuk debugging
+  - ✅ Error thrown correctly when `response.success = false`
+  - ✅ Catch block properly handles access denied errors
+  - ✅ Debugging dengan console log sangat efektif (user feedback: "kita sudah 3 hari membahas ini")
 
-### TODO-2136: Generate Branch Admin Names from Collection & Fix User ID Issue
-- **Issue**: Branch admin names hardcoded without collection system, some duplicated with CustomerUsersData causing confusion. WordPress user IDs not following definitions - generated random IDs instead of predefined IDs. Missing customer_branch_admin role.
-
-- **Root Cause**: No centralized name collection, WPUserGenerator using autoincrement/random IDs, role assignment not implemented.
-
+#### Review-06: Access Type Detection Error
+- **Problem**: User 70 (employee di branch 1, customer 1) terdeteksi sebagai `access_type => none` saat accessing branch 7 (customer 3), padahal seharusnya `access_type => customer_employee`
+- **Root Cause**: BranchModel checked if user is employee of THIS SPECIFIC BRANCH (`WHERE branch_id = %d`), not if user is employee of the CUSTOMER. Pattern berbeda dengan CustomerModel yang check customer level.
 - **Solution**:
-  1. Created 40-word name collection different from CustomerUsersData
-  2. Replaced all 30 branch user names with collection-based combinations
-  3. Added extra_branch_users array with 20 users (IDs 50-69)
-  4. Fixed all generation methods to use predefined user IDs
-  5. Added customer_branch_admin role to all branch users
-
+  1. Changed BranchModel employee check from `branch_id` to `customer_id` untuk match CustomerModel pattern
+  2. Fixed `access_type = 'staff'` to `access_type = 'customer_employee'` for consistency
+  3. Updated access_types arrays in BranchModel and CustomerEmployeeModel
 - **Files Modified**:
-  - `src/Database/Demo/Data/BranchUsersData.php` - Added 40-word collection, updated names, added extra users
-  - `src/Database/Demo/BranchDemoData.php` - Fixed ID generation, added role assignment
-
+  - `src/Models/Branch/BranchModel.php` (line 708-728 employee check, line 735 access_type value, line 939 access_types array)
+  - `src/Models/Employee/CustomerEmployeeModel.php` (line 698 access_types array)
 - **Benefits**:
-  - ✅ All 50 branch users use unique collection-based names
-  - ✅ No name overlap with CustomerUsersData
-  - ✅ User IDs follow specification: regular 12-41, extra 50-69
-  - ✅ All branch admins have both 'customer' and 'customer_branch_admin' roles
+  - ✅ BranchModel now checks `customer_id` instead of `branch_id` for employee detection
+  - ✅ access_type correctly reflects user's global role (customer_employee)
+  - ✅ has_access still correctly checks permission for specific branch
+  - ✅ Pattern matches CustomerModel for consistency
+  - ✅ Debug logs will now show correct access_type for employees
+  - ✅ Replaced all 'staff' references with 'customer_employee' for consistency with RoleManager
 
-### TODO-2135: Generate Customer Admin Names from Collection
-- **Issue**: Customer admin names hardcoded without collection system, difficult to maintain and validate.
+### TODO-2154: Fix Customer Employee Terdeteksi sebagai Admin pada Tab Employee
+- **Issue**: User dengan role `customer_employee` terdeteksi sebagai ADMIN pada Tab Employee, namun terdeteksi dengan benar sebagai `customer_employee` pada Tab Branch. Inkonsistensi dalam cache key dan permission handling.
+- **Root Cause**: Tab Employee menggunakan `CustomerEmployeeValidator::validateAccess()` yang cek capabilities DULU sebelum database. Tab Branch menggunakan `CustomerModel::getUserRelation()` yang cek database DULU.
+- **Solution**: Ganti `CustomerEmployeeModel::getDataTableData()` untuk menggunakan `CustomerModel::getUserRelation()` seperti Tab Branch
+- **Files Modified**: `src/Models/Employee/CustomerEmployeeModel.php` (line 250-256)
+- **Benefits**:
+  - ✅ Role detection konsisten
+  - ✅ Cache key sama
+  - ✅ No false positive "ADMIN"
+  - ✅ Permission akurat
 
-- **Root Cause**: No centralized name collection system.
-
-- **Solution**: Created 24-word name collection, generated all customer admin names from 2-word combinations, added helper methods for validation.
-
+### TODO-2153: Fix Flicker pada Tab Branch
+- **Issue**: Flicker visual ketika user berpindah ke tab Branch di panel kanan Customer
+- **Root Cause (Multiple)**:
+  - Review-01: Konflik antara jQuery methods (`.hide()`/`.show()`) dan CSS classes (`active`)
+  - Review-03: Branch modals missing `style="display: none;"` inline style
+  - Review-04: DataTable branch menggunakan `processing: true` dan manual `showLoading()` = double loading indicator
+- **Solution**:
+  - Review-01: Hapus jQuery `.hide()`/`.show()` methods, gunakan HANYA CSS classes
+  - Review-03: Tambahkan `style="display: none;"` pada branch modals
+  - Review-04: Disable DataTable processing indicator dan simplify refresh logic untuk match Employee pattern
 - **Files Modified**:
-  - `src/Database/Demo/Data/CustomerUsersData.php` - Added collection, updated names, added helpers
-
+  - `assets/js/customer/customer-script.js` (Review-01)
+  - `src/Views/templates/branch/forms/*.php` (Review-03)
+  - `assets/js/branch/branch-datatable.js` (Review-04)
 - **Benefits**:
-  - ✅ All names use unique 2-word combinations from collection
-  - ✅ Collection provides 276 possible combinations for future expansion
-  - ✅ Helper methods ensure validation and external access
-
-### TODO-2134: Delete Roles on Deactivation & Centralize Role Management
-- **Issue**: Roles not deleted on plugin deactivation - only 'customer' removed. Role definitions in class-activator.php not accessible for external plugins.
-
-- **Root Cause**: Deactivator hardcoded to only remove 'customer' role. WP_Customer_Activator class only loaded during activation.
-
-- **Solution**: Created centralized RoleManager accessible globally, delete ALL plugin roles on deactivation.
-
-- **Files Modified**:
-  - `includes/class-role-manager.php` - NEW centralized role management
-  - `includes/class-activator.php` - Use RoleManager
-  - `includes/class-deactivator.php` - Delete ALL roles
-  - `wp-customer.php` - Load RoleManager globally
-
-- **Benefits**:
-  - ✅ All plugin roles properly cleaned up on deactivation
-  - ✅ RoleManager accessible for external plugins
-  - ✅ Single source of truth for role definitions
-  - ✅ Backward compatible
-
-### TODO-2133: Add Read Capability to Customer Role
-- **Issue**: 'read' capability for customer role still in wp-customer.php using init hook, inconsistent with plugin architecture.
-
-- **Root Cause**: Capability management separated - should all be in PermissionModel.php.
-
-- **Solution**: Moved 'read' capability from wp-customer.php to PermissionModel::addCapabilities().
-
-- **Files Modified**:
-  - `src/Models/Settings/PermissionModel.php` - Added 'read' capability
-  - `wp-customer.php` - Removed init hook
-
-- **Benefits**:
-  - ✅ Consistent architecture - all capabilities in PermissionModel
-  - ✅ 'read' capability required for wp-admin access
-  - ✅ Persisted during plugin activation
-
-### TODO-2132: Fix User WP Creation in Customer Demo Data
-- **Issue**: WordPress user not created when generating customer demo data, `user_id` field remains NULL.
-
-- **Root Cause**: Bug in CustomerDemoData.php using wrong variable, users already existed from previous generation, cleanup mechanism needed.
-
-- **Solution**: Fixed variable bug, added comprehensive debug logging, added user cleanup mechanism, added customer_admin role.
-
-- **Files Modified**:
-  - `src/Database/Demo/CustomerDemoData.php` - Fixed variable, added cleanup, added role
-  - `src/Database/Demo/WPUserGenerator.php` - Added deleteUsers() method
-
-- **Benefits**:
-  - ✅ Demo users created with 2 roles (customer + customer_admin)
-  - ✅ Full debug logging for troubleshooting
-  - ✅ Automatic cleanup before regeneration
+  - ✅ Single repaint/reflow = zero flicker
+  - ✅ Konsisten dengan Employee pattern
+  - ✅ Better performance
 
 ## 🏗️ Architecture Improvements
 
-### Demo Data Name Generation System
+### Company Module Consistency
+**Before (v1.0.0)**: Company behavior inconsistent with Customer
+- Data hilang saat reload
+- Error handling incomplete
+- Access validation berbeda
+- Console logging minimal
+- Access type detection salah
 
-**Before**: Hardcoded names without validation
-```php
-// CustomerUsersData.php
-2 => [
-    'username' => 'customer_admin_1',
-    'display_name' => 'Hardcoded Name',  // No validation
-]
-```
+**After (v1.0.10)**: Company 100% match Customer pattern
+- ✅ Data persists on reload (window.history.pushState)
+- ✅ Error handling complete (throw on response.success = false)
+- ✅ Access validation consistent (validateAccess before load)
+- ✅ Console logging comprehensive (trace execution flow)
+- ✅ Access type detection correct (customer level check)
+- ✅ Terminology consistent ('customer_employee' not 'staff')
 
-**After**: Collection-based with validation
-```php
-// CustomerUsersData.php
-private static $name_collection = [
-    'Andi', 'Budi', 'Citra', 'Dewi', ... // 24 words
-];
-
-2 => [
-    'username' => 'andi_budi',
-    'display_name' => 'Andi Budi',  // From collection
-]
-
-public static function isValidName($name) {
-    // Validation ensures name from collection only
+### Error Handling Pattern
+```javascript
+// BEFORE (Wrong - Silent Failure)
+if (response.success && response.data) {
+    this.displayData(response.data);
 }
+// No else clause - function completes silently on error
+
+// AFTER (Correct - Throws Error)
+if (response.success && response.data) {
+    this.displayData(response.data);
+} else {
+    throw new Error(response.data?.message || 'Failed to load data');
+}
+// Catch block handles error properly
 ```
 
-**Benefits**:
-- ✅ Centralized name management
-- ✅ Validation ensures consistency
-- ✅ NO overlap between user type collections
-- ✅ Easy to maintain and expand
+### Access Type Detection Pattern
+```php
+// BEFORE (Wrong - Branch Level)
+$is_customer_employee = (bool) $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees
+    WHERE branch_id = %d AND user_id = %d",  // Checks specific branch
+    $branch_id, $user_id
+));
 
-### Role Management Architecture
-
-**Before**: Scattered role definitions
-```
-Activator.php          Deactivator.php
-  ├─ defines roles       ├─ removes 'customer' only ✗
-  └─ not accessible      └─ incomplete cleanup ✗
-```
-
-**After**: Centralized RoleManager
-```
-RoleManager.php (Always Loaded)
-  ├─ getRoles() - All role definitions
-  ├─ getRoleSlugs() - For cleanup
-  ├─ isPluginRole() - Validation
-  └─ roleExists() - Check existence
-
-Activator.php          Deactivator.php
-  └─ uses RoleManager    └─ removes ALL roles ✓
-```
-
-**Benefits**:
-- ✅ Single source of truth
-- ✅ Accessible globally
-- ✅ Complete cleanup on deactivation
-- ✅ External plugin integration ready
-
-### User ID Allocation Strategy
-
-**Before**: Broken sequence with gaps
-```
-Customer Admins:  2-11    ✓
-Branch Admins:    12-41   ✓
-Extra Branches:   50-69   ✓
-Employees:        42-61, 72-101  ✗ (gaps and conflicts)
-```
-
-**After**: Clean sequential allocation
-```
-Customer Admins:  2-11    ✓
-Branch Admins:    12-41   ✓
-Extra Branches:   50-69   ✓
-Employees:        70-129  ✓ (sequential, no gaps)
+// AFTER (Correct - Customer Level)
+$is_customer_employee = (bool) $wpdb->get_var($wpdb->prepare(
+    "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees
+    WHERE customer_id = %d AND user_id = %d",  // Checks customer level
+    $customer_id, $user_id
+));
 ```
 
 ## 🧪 Testing
 
 All fixes have been tested to ensure:
-1. **Customer Admin Generation**: All 10 users with unique collection names
-2. **Branch Admin Generation**: All 50 users (30 regular + 20 extra) with unique names
-3. **Employee Generation**: All 60 users with unique collection names, proper roles
-4. **User ID Sequence**: Clean allocation 70-129, no gaps or conflicts
-5. **Role Assignment**: All users have correct primary + secondary roles
-6. **Cleanup Mechanism**: Old users properly deleted before regeneration
-7. **Force Delete**: Handles legacy users without demo meta safely
-8. **Name Validation**: All names use collection words only, no overlap
-9. **Role Deactivation**: All plugin roles removed on plugin deactivation
-10. **Capability Management**: 'read' capability properly assigned
+1. **Page Reload**: Data persists on reload ✅
+2. **Tab Membership**: Accessible for all roles ✅
+3. **Company Invoice**: No method errors ✅
+4. **Direct URL Access**: Validates then redirects ✅
+5. **Error Handling**: Throws and catches properly ✅
+6. **Access Type**: Detects correctly as customer_employee ✅
+7. **Console Logging**: Complete trace available ✅
+8. **Employee Tab**: No false admin detection ✅
+9. **Branch Tab**: No visual flicker ✅
 
-## 📊 Demo Data Summary
+## 📊 Technical Details
 
-### Name Collection System
-- **Customer Admins**: 24-word collection → 10 unique names
-- **Branch Admins**: 40-word collection → 50 unique names
-- **Employees**: 60-word collection → 60 unique names
-- **Total**: 124 unique words with ZERO overlap
-- **Possible Combinations**: Customer (276), Branch (780), Employee (1770)
+### Code Quality Improvements
+- Comprehensive console logging with `[Module] method - message` pattern
+- Debug logging to WordPress debug.log for server-side tracing
+- Consistent error handling across Customer and Company modules
+- Pattern matching between BranchModel and CustomerModel
+- Terminology consistency: 'customer_employee' (not 'staff')
 
-### User ID Allocation
-```
-ID Range    | User Type           | Count | Status
-------------|---------------------|-------|--------
-1           | Main Admin          | 1     | ✓ Protected
-2-11        | Customer Admins     | 10    | ✓ Complete
-12-41       | Branch Admins       | 30    | ✓ Complete
-42-49       | Reserved            | -     | ✓ Available
-50-69       | Extra Branch Admins | 20    | ✓ Complete
-70-129      | Employees           | 60    | ✓ Complete
-Total Users: 121 (1 admin + 10 customers + 50 branches + 60 employees)
-```
+### Performance Optimization
+- Single repaint/reflow cycle (CSS classes only, no jQuery hide/show)
+- DataTable processing disabled when custom state management exists
+- Cache keys use correct access_type for better hit rates
 
-### Role Distribution
-- **Customer Admins**: customer + customer_admin (10 users)
-- **Branch Admins**: customer + customer_branch_admin (50 users)
-- **Employees**: customer + customer_employee (60 users)
+### User Experience
+- User feedback: "rupanya debugging dengan log sangat efektif, kita sudah 3 hari membahas ini"
+- Clear access denied messages with visual feedback
+- Consistent behavior between Customer and Company modules
+- Better error messages for troubleshooting
 
-## 📝 Technical Details
+## 📝 Breaking Changes
 
-- All fixes maintain backward compatibility
-- No breaking changes to existing functionality
-- Comprehensive debug logging for troubleshooting
-- Safe cleanup mechanisms with user ID 1 protection
-- Collection-based validation ensures data integrity
-- Centralized role management for better maintainability
+None - all changes are backward compatible bug fixes.
 
 ## 📚 Documentation
 
 Detailed implementation documentation available in:
-- `docs/TODO-2138-update-employee-username-from-display-name.md`
-- `docs/TODO-2137-generate-employee-names-from-collection.md`
-- `docs/TODO-2136-generate-branch-names-from-collection.md`
-- `docs/TODO-2135-generate-names-from-collection.md`
-- `docs/TODO-2134-role-cleanup-on-deactivation.md`
-- `docs/TODO-2133-add-read-capability.md`
-- `docs/TODO-2132-customer-demo-data-fix.md`
+- `docs/TODO-2155-fix-company-reload-data-loss.md`
+- `docs/TODO-2154-fix-employee-admin-detection.md`
+- `docs/TODO-2153-fix-branch-tab-flicker.md`
 
 ---
 
-**Released on**: 2025-01-14
-**WP Customer v1.0.9**
+**Released on**: 2025-01-17
+**WP Customer v1.0.10**
