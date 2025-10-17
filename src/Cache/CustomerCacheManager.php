@@ -24,12 +24,12 @@
  * - customer_{id}: Data single customer
  * - customer_list: Daftar semua customer
  * - customer_stats: Statistik customer
- * - branch_{id}: Data single branch
- * - branch_list: Daftar semua branch
- * - branch_stats: Statistik branch
- * - employee_{id}: Data single employee
- * - employee_list: Daftar semua employee
- * - employee_stats: Statistik employee
+ * - customer_branch_{id}: Data single branch
+ * - customer_branch_list: Daftar semua branch
+ * - customer_branch_stats: Statistik branch
+ * - customer_employee_{id}: Data single employee
+ * - customer_employee_list: Daftar semua employee
+ * - customer_employee_stats: Statistik employee
  * - user_customers_{user_id}: Relasi user-customer
  * 
  * Dependencies:
@@ -81,11 +81,10 @@ class CustomerCacheManager {
     private const KEY_USER_CUSTOMER_BRANCHES = 'user_customer_branches';
 
     // Cache keys for employees
-    private const KEY_EMPLOYEE = 'employee';
-    private const KEY_EMPLOYEE_LIST = 'employee_list';
+    private const KEY_CUSTOMER_EMPLOYEE = 'customer_employee';
     private const KEY_CUSTOMER_EMPLOYEE_LIST = 'customer_employee_list';
-    private const KEY_EMPLOYEE_STATS = 'employee_stats';
-    private const KEY_USER_EMPLOYEES = 'user_employees';
+    private const KEY_CUSTOMER_EMPLOYEE_STATS = 'customer_employee_stats';
+    private const KEY_USER_CUSTOMER_EMPLOYEES = 'user_customer_employees';
 
     // Getter methods for external access to constants
     public static function getCacheGroup(): string {
@@ -106,10 +105,10 @@ class CustomerCacheManager {
             'customer_branch_list' => self::KEY_CUSTOMER_BRANCH_LIST,
             'customer_branch_stats' => self::KEY_CUSTOMER_BRANCH_STATS,
             'user_customer_branches' => self::KEY_USER_CUSTOMER_BRANCHES,
-            'employee' => self::KEY_EMPLOYEE,
-            'employee_list' => self::KEY_EMPLOYEE_LIST,
-            'employee_stats' => self::KEY_EMPLOYEE_STATS,
-            'user_employees' => self::KEY_USER_EMPLOYEES,
+            'customer_employee' => self::KEY_CUSTOMER_EMPLOYEE,
+            'customer_employee_list' => self::KEY_CUSTOMER_EMPLOYEE_LIST,
+            'customer_employee_stats' => self::KEY_CUSTOMER_EMPLOYEE_STATS,
+            'user_customer_employees' => self::KEY_USER_CUSTOMER_EMPLOYEES,
         ];
 
         return $constants[$type] ?? '';
@@ -496,8 +495,8 @@ private function clearCache(): bool {
             'membership',
             'customer_branch',
             'customer_branch_list',
-            'employee',
-            'employee_list',
+            'customer_employee',
+            'customer_employee_list',
             'datatable'
         ];
 

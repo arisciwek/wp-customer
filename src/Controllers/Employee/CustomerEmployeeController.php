@@ -376,11 +376,11 @@ class CustomerEmployeeController {
            }
 
            // Check cache
-           $employee = $this->cache->get("employee_{$id}");
+           $employee = $this->cache->get("customer_employee_{$id}");
            if (!$employee) {
                $employee = $this->model->find($id);
                if (!$employee) throw new \Exception('Employee not found');
-               $this->cache->set("employee_{$id}", $employee);
+               $this->cache->set("customer_employee_{$id}", $employee);
            }
 
            error_log('WP Customer Employee Debug - show success for employee ID: ' . $id);
@@ -626,16 +626,16 @@ class CustomerEmployeeController {
             }
 
             // Clear semua cache yang terkait
-            $this->cache->delete('employee', $employee_id);
-            $this->cache->delete('employee_total_count', get_current_user_id());
-            
+            $this->cache->delete('customer_employee', $employee_id);
+            $this->cache->delete('customer_employee_total_count', get_current_user_id());
+
             // Cache untuk relasi dengan customer
             $this->cache->delete('customer_employee', $data['customer_id']);
             $this->cache->delete('customer_employee_list', $data['customer_id']);
-            
+
             // Cache untuk relasi dengan branch
-            $this->cache->delete('branch_employee', $data['branch_id']);
-            $this->cache->delete('branch_employee_list', $data['branch_id']);
+            $this->cache->delete('customer_branch_employee', $data['branch_id']);
+            $this->cache->delete('customer_branch_employee_list', $data['branch_id']);
             
             // Invalidate DataTable cache
             $this->cache->invalidateDataTableCache('customer_employee_list', [

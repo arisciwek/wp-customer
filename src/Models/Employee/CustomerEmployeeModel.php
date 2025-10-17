@@ -94,7 +94,7 @@ public function create(array $data): ?int {
 
     // Comprehensive cache invalidation for new employee
     if ($employee_id && isset($data['customer_id'])) {
-        $this->cache->delete('customer_active_employee_count', (string)$data['customer_id']);
+        $this->cache->delete('active_customer_employee_count', (string)$data['customer_id']);
 
         // Invalidate DataTable cache for all access types
         $this->invalidateAllDataTableCache('customer_employee_list', (int)$data['customer_id']);
@@ -190,9 +190,8 @@ public function create(array $data): ?int {
 	    if ($employee && $employee->customer_id) {
 		// ✓ FIXED: Invalidate ALL employee cache keys
 		$this->cache->delete('customer_employee', $id);
-		$this->cache->delete('employee', $id);  // ← ADD THIS LINE
 		$this->cache->delete('customer_employee_count', (string)$employee->customer_id);
-		$this->cache->delete('customer_active_employee_count', (string)$employee->customer_id);
+		$this->cache->delete('active_customer_employee_count', (string)$employee->customer_id);
 
 		// Invalidate DataTable cache for all access types
 		$this->invalidateAllDataTableCache('customer_employee_list', (int)$employee->customer_id);
@@ -221,9 +220,8 @@ public function create(array $data): ?int {
 	    if ($result !== false) {
 		// ✓ FIXED: Invalidate ALL employee cache keys
 		$this->cache->delete('customer_employee', $id);
-		$this->cache->delete('employee', $id);  // ← ADD THIS LINE
 		$this->cache->delete('customer_employee_count', (string)$customer_id);
-		$this->cache->delete('customer_active_employee_count', (string)$customer_id);
+		$this->cache->delete('active_customer_employee_count', (string)$customer_id);
 
 		// Invalidate DataTable cache for all access types
 		$this->invalidateAllDataTableCache('customer_employee_list', (int)$customer_id);
@@ -592,9 +590,8 @@ public function create(array $data): ?int {
 	    if ($result !== false) {
 		// ✓ FIXED: Invalidate ALL employee cache keys
 		$this->cache->delete('customer_employee', $id);
-		$this->cache->delete('employee', $id);  // ← ADD THIS LINE
 		$this->cache->delete('customer_employee_count', (string)$customer_id);
-		$this->cache->delete('customer_active_employee_count', (string)$customer_id);
+		$this->cache->delete('active_customer_employee_count', (string)$customer_id);
 
 		// Invalidate DataTable cache for all access types
 		$this->invalidateAllDataTableCache('customer_employee_list', (int)$customer_id);

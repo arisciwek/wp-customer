@@ -1,5 +1,24 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2152: Replace "employee" Cache Keys with "customer_employee"
+- Issue: Cache keys masih menggunakan "employee" yang berisiko konflik dengan plugin lain
+- Root Cause: Beberapa cache key dan type belum diganti - masih menggunakan "employee", "employee_list", "employee_{id}", dll
+- Target: Ganti semua cache key dan type yang mengandung "employee" menjadi "customer_employee", termasuk employee-related cache keys
+- Files Modified:
+  - src/Cache/CustomerCacheManager.php (4 edits: constants KEY_EMPLOYEE → KEY_CUSTOMER_EMPLOYEE, KEY_EMPLOYEE_LIST → KEY_CUSTOMER_EMPLOYEE_LIST, KEY_EMPLOYEE_STATS → KEY_CUSTOMER_EMPLOYEE_STATS, KEY_USER_EMPLOYEES → KEY_USER_CUSTOMER_EMPLOYEES, array mapping, known_types, documentation comments)
+  - src/Models/Employee/CustomerEmployeeModel.php (4 replacements: customer_active_employee_count → active_customer_employee_count, removed redundant delete('employee', $id) calls)
+  - src/Models/Company/CompanyMembershipModel.php (2 replacements: customer_active_employee_count → active_customer_employee_count)
+  - src/Controllers/Employee/CustomerEmployeeController.php (6 replacements: employee → customer_employee, employee_total_count → customer_employee_total_count, branch_employee → customer_branch_employee, branch_employee_list → customer_branch_employee_list, employee_{$id} → customer_employee_{$id})
+- Status: ✅ **COMPLETED**
+- Notes:
+  - Kategori yang diganti: HANYA Cache Keys & Types (global scope, berisiko konflik)
+  - Kategori yang TIDAK diganti: Database columns, object properties, function parameters, variable names, HTML ID/class, comments
+  - Cache keys sekarang: customer_employee_{id}, customer_employee_list_{access_type}, customer_employee_stats, user_customer_employees_{user_id}, active_customer_employee_count_{customer_id}, customer_employee_total_count_{user_id}, customer_branch_employee_{branch_id}, customer_branch_employee_list_{branch_id}
+  - Constant names: KEY_CUSTOMER_EMPLOYEE, KEY_CUSTOMER_EMPLOYEE_LIST, KEY_CUSTOMER_EMPLOYEE_STATS, KEY_USER_CUSTOMER_EMPLOYEES
+  - Backward compatibility terjaga (cache lama akan expired otomatis)
+  - Untuk clear cache manual: `$cache->clearAll()`
+  - (see docs/TODO-2152-employee-cache-key-replacement.md)
+
 ## TODO-2151: Replace "branch" Cache Keys with "customer_branch"
 - Issue: Cache keys masih menggunakan "branch" yang berisiko konflik dengan plugin lain
 - Root Cause: Beberapa cache key dan type belum diganti dari TODO-2149 (branch_relation, branch_membership, branch_list, dll)

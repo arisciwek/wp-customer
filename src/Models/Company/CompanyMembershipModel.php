@@ -533,7 +533,7 @@ class CompanyMembershipModel {
      */
     public function getActiveEmployeeCount(int $company_id): int {
         // Check cache first
-        $cached_count = $this->cache->get('customer_active_employee_count', $company_id);
+        $cached_count = $this->cache->get('active_customer_employee_count', $company_id);
         if ($cached_count !== null) {
             return (int) $cached_count;
         }
@@ -547,7 +547,7 @@ class CompanyMembershipModel {
         ", $company_id));
 
         // Cache for 5 minutes since employee count can change frequently
-        $this->cache->set('customer_active_employee_count', $count, 300, $company_id);
+        $this->cache->set('active_customer_employee_count', $count, 300, $company_id);
 
         return $count;
     }
