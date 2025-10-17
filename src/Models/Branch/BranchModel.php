@@ -655,7 +655,8 @@ class BranchModel {
             $branch_id = is_numeric($branch_id) ? (int)$branch_id : 0;
 
             // Determine access type - need to check database FIRST for correct access_type
-            $is_admin = current_user_can('edit_all_customer_branches');
+            // Use edit_all_customers to check for admin (not edit_all_customer_branches which customer_admin also has)
+            $is_admin = current_user_can('edit_all_customers');
             $is_customer_admin = false;
             $is_customer_branch_admin = false;
             $is_customer_employee = false;
@@ -862,9 +863,9 @@ class BranchModel {
                 error_log("Error in BranchModel::getUserRelation: " . $e->getMessage());
                 error_log($e->getTraceAsString());
             }
-            
+
             return [
-                'is_admin' => current_user_can('edit_all_customer_branches'),
+                'is_admin' => current_user_can('edit_all_customers'),
                 'is_customer_admin' => false,
                 'is_customer_branch_admin' => false,
                 'is_customer_employee' => false,

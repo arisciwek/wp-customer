@@ -82,11 +82,11 @@ class BranchValidator {
         // Handle special case for branch_id 0 (general validation)
         if ($branch_id === 0) {
             $relation = [
-                'is_admin' => current_user_can('edit_all_customer_branches'),
+                'is_admin' => current_user_can('edit_all_customers'),
                 'is_customer_admin' => false,
-                'is_customer_branch_admin' => false, 
+                'is_customer_branch_admin' => false,
                 'is_customer_employee' => false,
-                'access_type' => current_user_can('edit_all_customer_branches') ? 'admin' : 'none'
+                'access_type' => current_user_can('edit_all_customers') ? 'admin' : 'none'
             ];
             
             // Cache the result
@@ -114,11 +114,11 @@ class BranchValidator {
         if ($branch_id === 0) {
             // Untuk validasi umum, kita tidak perlu data spesifik branch
             $relation = [
-                'is_admin' => current_user_can('edit_all_customer_branches'),
+                'is_admin' => current_user_can('edit_all_customers'),
                 'is_customer_admin' => false,
                 'is_customer_branch_admin' => false,
                 'is_customer_employee' => false,
-                'access_type' => current_user_can('edit_all_customer_branches') ? 'admin' : 'none'
+                'access_type' => current_user_can('edit_all_customers') ? 'admin' : 'none'
             ];
 
             return [

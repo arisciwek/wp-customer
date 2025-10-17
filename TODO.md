@@ -1,5 +1,24 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2150: Fix customer_admin Access Type Detection
+- Issue: User dengan role `customer_admin` terdeteksi sebagai `admin` di BranchModel::getUserRelation(), menyebabkan mereka memiliki akses penuh ke semua branch
+- Root Cause: BranchModel menggunakan `current_user_can('edit_all_customer_branches')` untuk detect admin, padahal capability ini juga dimiliki oleh customer_admin role. PermissionModel line 238 memberikan `edit_all_customer_branches` = true untuk customer_admin (design yang benar - customer_admin SHOULD edit all branches under their customer). Yang salah adalah BranchModel menggunakan capability ini untuk detect "system administrator"
+- Target: Ganti capability check dari `edit_all_customer_branches` ke `edit_all_customers` agar hanya administrator sejati yang terdeteksi sebagai admin
+- Files Modified:
+  - src/Models/Branch/BranchModel.php (changed capability check line 658 from `edit_all_customer_branches` to `edit_all_customers`, updated error handler line 868)
+  - src/Validators/Branch/BranchValidator.php (updated getUserRelation() lines 85 & 89, updated validateAccess() lines 117 & 121)
+- Status: ✅ **COMPLETED**
+- Notes:
+  - customer_admin sekarang terdeteksi sebagai `customer_admin` access_type (CORRECT)
+  - Real administrator tetap terdeteksi sebagai `admin` access_type
+  - `edit_all_customer_branches` capability tetap dimiliki customer_admin (ini correct business logic)
+  - `edit_all_customers` hanya dimiliki administrator (line 230 PermissionModel)
+  - Sekarang konsisten dengan CustomerModel yang juga menggunakan `edit_all_customers` (line 256)
+  - Cache keys sekarang generate dengan access_type yang benar
+  - Total changes: 6 capability checks di 2 files
+  - Semantic difference: `edit_all_customer_branches` = "edit branches under MY customer", `edit_all_customers` = "system admin only"
+  - (see docs/TODO-2150-fix-customer-admin-access-type-detection.md)
+
 ## TODO-2149: Replace "branch_admin" by "customer_branch_admin"
 - Issue: Beberapa file masih menggunakan "branch_admin" (variable names, keys, dan comments) yang bisa konflik dengan plugin lain yang juga memiliki branch dan admin
 - Root Cause: Naming tidak konsisten - WordPress role sudah "customer_branch_admin" tapi variable/key names masih "branch_admin"
