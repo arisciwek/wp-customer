@@ -364,7 +364,7 @@
         error_log('Access type: ' . $access_type);
         error_log('Is admin: ' . ($relation['is_admin'] ? 'yes' : 'no'));
         error_log('Is customer admin: ' . ($relation['is_customer_admin'] ? 'yes' : 'no'));
-        error_log('Is branch admin: ' . ($relation['is_branch_admin'] ? 'yes' : 'no'));
+        error_log('Is branch admin: ' . ($relation['is_customer_branch_admin'] ? 'yes' : 'no'));
         error_log('Is employee: ' . ($relation['is_customer_employee'] ? 'yes' : 'no'));
 
         // Apply filtering based on access type
@@ -377,9 +377,9 @@
             $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
             error_log('Added customer admin restriction: ' . $where);
         }
-        elseif ($relation['is_branch_admin']) {
+        elseif ($relation['is_customer_branch_admin']) {
             // Branch Admin - only see customer where they manage a branch
-            $customer_id = $relation['branch_admin_of_customer_id'];
+            $customer_id = $relation['customer_branch_admin_of_customer_id'];
             if ($customer_id) {
                 $where .= $wpdb->prepare(" AND p.id = %d", $customer_id);
                 error_log('Added branch admin restriction for customer: ' . $customer_id);
@@ -463,9 +463,9 @@
             // Customer Admin - only see their own customer
             $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
         }
-        elseif ($relation['is_branch_admin']) {
+        elseif ($relation['is_customer_branch_admin']) {
             // Branch Admin - only see customer where they manage a branch
-            $customer_id = $relation['branch_admin_of_customer_id'];
+            $customer_id = $relation['customer_branch_admin_of_customer_id'];
             if ($customer_id) {
                 $where .= $wpdb->prepare(" AND p.id = %d", $customer_id);
             } else {
@@ -854,7 +854,7 @@
             // Determine access type - need to check database FIRST for correct access_type
             $is_admin = current_user_can('edit_all_customers');
             $is_customer_admin = false;
-            $is_branch_admin = false;
+            $is_customer_branch_admin = false;
             $is_customer_employee = false;
 
             if (!$is_admin) {
@@ -877,14 +877,14 @@
                 if (!$is_customer_admin) {
                     if ($customer_id > 0) {
                         // Check if user is admin of any branch of this customer
-                        $is_branch_admin = (bool) $wpdb->get_var($wpdb->prepare(
+                        $is_customer_branch_admin = (bool) $wpdb->get_var($wpdb->prepare(
                             "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches
                             WHERE customer_id = %d AND user_id = %d",
                             $customer_id, $user_id
                         ));
                     } else {
                         // General check - is user admin of any branch
-                        $is_branch_admin = (bool) $wpdb->get_var($wpdb->prepare(
+                        $is_customer_branch_admin = (bool) $wpdb->get_var($wpdb->prepare(
                             "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches
                             WHERE user_id = %d LIMIT 1",
                             $user_id
@@ -893,7 +893,7 @@
                 }
 
                 // Check if user is employee - only if not owner and not branch admin
-                if (!$is_customer_admin && !$is_branch_admin) {
+                if (!$is_customer_admin && !$is_customer_branch_admin) {
                     if ($customer_id > 0) {
                         $is_customer_employee = (bool) $wpdb->get_var($wpdb->prepare(
                             "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees
@@ -914,14 +914,14 @@
             $access_type = 'none';
             if ($is_admin) $access_type = 'admin';
             else if ($is_customer_admin) $access_type = 'customer_admin';
-            else if ($is_branch_admin) $access_type = 'customer_branch_admin';
+            else if ($is_customer_branch_admin) $access_type = 'customer_branch_admin';
             else if ($is_customer_employee) $access_type = 'customer_employee';
 
             // Apply access_type filter - allow plugins to modify access type
             $access_type = apply_filters('wp_customer_access_type', $access_type, [
                 'is_admin' => $is_admin,
                 'is_customer_admin' => $is_customer_admin,
-                'is_branch_admin' => $is_branch_admin,
+                'is_customer_branch_admin' => $is_customer_branch_admin,
                 'is_customer_employee' => $is_customer_employee,
                 'user_id' => $user_id,
                 'customer_id' => $customer_id
@@ -953,12 +953,12 @@
             $relation = [
                 'is_admin' => $is_admin,
                 'is_customer_admin' => $is_customer_admin,
-                'is_branch_admin' => $is_branch_admin,
+                'is_customer_branch_admin' => $is_customer_branch_admin,
                 'is_customer_employee' => $is_customer_employee,
                 'owner_of_customer_id' => null,
                 'owner_of_customer_name' => null,
-                'branch_admin_of_customer_id' => null,
-                'branch_admin_of_branch_name' => null,
+                'customer_branch_admin_of_customer_id' => null,
+                'customer_branch_admin_of_branch_name' => null,
                 'employee_of_customer_id' => null,
                 'employee_of_customer_name' => null
             ];
@@ -989,7 +989,7 @@
             }
 
             // Get additional details if user is branch admin (already know from lightweight query above)
-            if ($is_branch_admin) {
+            if ($is_customer_branch_admin) {
                 if ($customer_id > 0) {
                     // Specific customer check - get branch details
                     $branch_row = $wpdb->get_row($wpdb->prepare(
@@ -1001,8 +1001,8 @@
                     ));
 
                     if ($branch_row) {
-                        $relation['branch_admin_of_customer_id'] = (int)$branch_row->customer_id;
-                        $relation['branch_admin_of_branch_name'] = $branch_row->branch_name;
+                        $relation['customer_branch_admin_of_customer_id'] = (int)$branch_row->customer_id;
+                        $relation['customer_branch_admin_of_branch_name'] = $branch_row->branch_name;
                     }
                 } else {
                     // General check - get branch admin details
@@ -1016,8 +1016,8 @@
                     ));
 
                     if ($branch_row) {
-                        $relation['branch_admin_of_customer_id'] = (int)$branch_row->customer_id;
-                        $relation['branch_admin_of_branch_name'] = $branch_row->branch_name;
+                        $relation['customer_branch_admin_of_customer_id'] = (int)$branch_row->customer_id;
+                        $relation['customer_branch_admin_of_branch_name'] = $branch_row->branch_name;
                     }
                 }
             }
@@ -1083,7 +1083,7 @@
             return [
                 'is_admin' => current_user_can('edit_all_customers'),
                 'is_customer_admin' => false,
-                'is_branch_admin' => false,
+                'is_customer_branch_admin' => false,
                 'is_customer_employee' => false,
                 'access_type' => 'none',
                 'error' => true

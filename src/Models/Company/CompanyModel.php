@@ -167,11 +167,11 @@ class CompanyModel {
             $where_params[] = get_current_user_id();
             error_log('CompanyModel DataTable: Added customer admin restriction');
         }
-        elseif ($relation['is_branch_admin']) {
-            // Branch Admin - only see their own company/branch
+        elseif ($relation['is_customer_branch_admin']) {
+            // Customer Branch Admin - only see their own company/branch
             $where .= " AND b.user_id = %d";
             $where_params[] = get_current_user_id();
-            error_log('CompanyModel DataTable: Added branch admin restriction');
+            error_log('CompanyModel DataTable: Added customer branch admin restriction');
         }
         elseif ($relation['is_customer_employee']) {
             // Employee - only see the company/branch they work in
@@ -350,7 +350,7 @@ class CompanyModel {
         error_log('Access type: ' . $access_type);
         error_log('Is admin: ' . ($relation['is_admin'] ? 'yes' : 'no'));
         error_log('Is customer admin: ' . ($relation['is_customer_admin'] ? 'yes' : 'no'));
-        error_log('Is branch admin: ' . ($relation['is_branch_admin'] ? 'yes' : 'no'));
+        error_log('Is customer branch admin: ' . ($relation['is_customer_branch_admin'] ? 'yes' : 'no'));
         error_log('Is employee: ' . ($relation['is_customer_employee'] ? 'yes' : 'no'));
 
         // Base query parts
@@ -377,11 +377,11 @@ class CompanyModel {
             $params[] = get_current_user_id();
             error_log('Added customer admin restriction: ' . $where);
         }
-        elseif ($relation['is_branch_admin']) {
-            // Branch Admin - only see their own company/branch
+        elseif ($relation['is_customer_branch_admin']) {
+            // Customer Branch Admin - only see their own company/branch
             $where .= " AND r.user_id = %d";
             $params[] = get_current_user_id();
-            error_log('Added branch admin restriction - only own branch');
+            error_log('Added customer branch admin restriction - only own branch');
         }
         elseif ($relation['is_customer_employee']) {
             // Employee - only see the company/branch they work in

@@ -415,8 +415,8 @@ class CompanyInvoiceValidator {
             }
         }
 
-        // Branch Admin: can only access invoices for their branch
-        if ($relation['is_branch_admin']) {
+        // Customer Branch Admin: can only access invoices for their branch
+        if ($relation['is_customer_branch_admin']) {
             if ($branch->user_id == $user_id) {
                 return true;
             }
@@ -549,8 +549,8 @@ class CompanyInvoiceValidator {
             }
         }
 
-        // Branch Admin: can edit invoices for their branch
-        if ($relation['is_branch_admin'] && current_user_can('edit_own_customer_membership_invoice')) {
+        // Customer Branch Admin: can edit invoices for their branch
+        if ($relation['is_customer_branch_admin'] && current_user_can('edit_own_customer_membership_invoice')) {
             if ($branch->user_id == $user_id) {
                 return true;
             }

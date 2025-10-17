@@ -204,9 +204,9 @@ class WP_Customer_Admin_Bar_Info {
             }
         }
 
-        // Check if user is a branch admin (only if not already found as customer owner)
+        // Check if user is a customer branch admin (only if not already found as customer owner)
         if (!$result) {
-            $branch_admin = $wpdb->get_row($wpdb->prepare(
+            $customer_branch_admin = $wpdb->get_row($wpdb->prepare(
                 "SELECT b.id, b.name, b.type, b.customer_id,
                         c.name as customer_name, c.code as customer_code
                  FROM {$wpdb->prefix}app_customer_branches b
@@ -215,15 +215,15 @@ class WP_Customer_Admin_Bar_Info {
                 $user_id
             ));
 
-            if ($branch_admin) {
+            if ($customer_branch_admin) {
                 $result = [
-                    'branch_id' => $branch_admin->id,
-                    'branch_name' => $branch_admin->name,
-                    'branch_type' => $branch_admin->type,
-                    'customer_id' => $branch_admin->customer_id,
-                    'customer_name' => $branch_admin->customer_name,
-                    'customer_code' => $branch_admin->customer_code,
-                    'relation_type' => 'branch_admin'
+                    'branch_id' => $customer_branch_admin->id,
+                    'branch_name' => $customer_branch_admin->name,
+                    'branch_type' => $customer_branch_admin->type,
+                    'customer_id' => $customer_branch_admin->customer_id,
+                    'customer_name' => $customer_branch_admin->customer_name,
+                    'customer_code' => $customer_branch_admin->customer_code,
+                    'relation_type' => 'customer_branch_admin'
                 ];
             }
         }

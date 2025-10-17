@@ -478,7 +478,7 @@ class BranchModel {
         error_log('Access type: ' . $access_type);
         error_log('Is admin: ' . ($relation['is_admin'] ? 'yes' : 'no'));
         error_log('Is customer admin: ' . ($relation['is_customer_admin'] ? 'yes' : 'no'));
-        error_log('Is branch admin: ' . ($relation['is_branch_admin'] ? 'yes' : 'no'));
+        error_log('Is branch admin: ' . ($relation['is_customer_branch_admin'] ? 'yes' : 'no'));
         error_log('Is employee: ' . ($relation['is_customer_employee'] ? 'yes' : 'no'));
 
         // Base query parts
@@ -505,7 +505,7 @@ class BranchModel {
             $params[] = get_current_user_id();
             error_log('Added customer admin restriction: ' . $where);
         }
-        elseif ($relation['is_branch_admin']) {
+        elseif ($relation['is_customer_branch_admin']) {
             // Branch Admin - only see their own branch
             $where .= " AND r.user_id = %d";
             $params[] = get_current_user_id();
@@ -638,7 +638,7 @@ class BranchModel {
      * Determines the relationship between a user and a branch:
      * - is_admin: User has admin privileges for all branches
      * - is_customer_admin: User is the owner of the parent customer
-     * - is_branch_admin: User is the admin of this specific branch
+     * - is_customer_branch_admin: User is the admin of this specific branch
      * - is_customer_employee: User is a staff member of this branch
      * 
      * @param int $branch_id Branch ID
@@ -657,7 +657,7 @@ class BranchModel {
             // Determine access type - need to check database FIRST for correct access_type
             $is_admin = current_user_can('edit_all_customer_branches');
             $is_customer_admin = false;
-            $is_branch_admin = false;
+            $is_customer_branch_admin = false;
             $is_customer_employee = false;
 
             if (!$is_admin) {
@@ -691,14 +691,14 @@ class BranchModel {
                 if (!$is_customer_admin) {
                     if ($branch_id > 0) {
                         // Check if user is admin of this specific branch
-                        $is_branch_admin = (bool) $wpdb->get_var($wpdb->prepare(
+                        $is_customer_branch_admin = (bool) $wpdb->get_var($wpdb->prepare(
                             "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches
                             WHERE id = %d AND user_id = %d",
                             $branch_id, $user_id
                         ));
                     } else {
                         // General check - is user admin of any branch
-                        $is_branch_admin = (bool) $wpdb->get_var($wpdb->prepare(
+                        $is_customer_branch_admin = (bool) $wpdb->get_var($wpdb->prepare(
                             "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches
                             WHERE user_id = %d LIMIT 1",
                             $user_id
@@ -707,7 +707,7 @@ class BranchModel {
                 }
 
                 // Check if user is employee - only if not owner and not branch admin
-                if (!$is_customer_admin && !$is_branch_admin) {
+                if (!$is_customer_admin && !$is_customer_branch_admin) {
                     if ($branch_id > 0) {
                         $is_customer_employee = (bool) $wpdb->get_var($wpdb->prepare(
                             "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees
@@ -728,14 +728,14 @@ class BranchModel {
             $access_type = 'none';
             if ($is_admin) $access_type = 'admin';
             else if ($is_customer_admin) $access_type = 'customer_admin';
-            else if ($is_branch_admin) $access_type = 'branch_admin';
+            else if ($is_customer_branch_admin) $access_type = 'customer_branch_admin';
             else if ($is_customer_employee) $access_type = 'staff';
 
             // Apply access_type filter - allow plugins to modify access type
             $access_type = apply_filters('wp_branch_access_type', $access_type, [
                 'is_admin' => $is_admin,
                 'is_customer_admin' => $is_customer_admin,
-                'is_branch_admin' => $is_branch_admin,
+                'is_customer_branch_admin' => $is_customer_branch_admin,
                 'is_customer_employee' => $is_customer_employee,
                 'user_id' => $user_id,
                 'branch_id' => $branch_id
@@ -767,7 +767,7 @@ class BranchModel {
             $relation = [
                 'is_admin' => $is_admin,
                 'is_customer_admin' => $is_customer_admin,
-                'is_branch_admin' => $is_branch_admin,
+                'is_customer_branch_admin' => $is_customer_branch_admin,
                 'is_customer_employee' => $is_customer_employee,
                 'branch_id' => $branch_id,
                 'customer_id' => null,
@@ -796,7 +796,7 @@ class BranchModel {
                         $relation['customer_id'] = (int)$customer->id;
                         $relation['customer_name'] = $customer->name;
                     }
-                } else if ($is_branch_admin) {
+                } else if ($is_customer_branch_admin) {
                     // Get branch details for branch admin
                     $branch_data = $wpdb->get_row($wpdb->prepare(
                         "SELECT b.id, b.name as branch_name, b.customer_id, c.name as customer_name
@@ -866,7 +866,7 @@ class BranchModel {
             return [
                 'is_admin' => current_user_can('edit_all_customer_branches'),
                 'is_customer_admin' => false,
-                'is_branch_admin' => false,
+                'is_customer_branch_admin' => false,
                 'is_customer_employee' => false,
                 'access_type' => 'none',
                 'error' => true
@@ -933,7 +933,7 @@ class BranchModel {
             $customer_hash = md5(serialize($customer_id));
 
             // List of all possible access types
-            $access_types = ['admin', 'customer_admin', 'branch_admin', 'staff', 'none'];
+            $access_types = ['admin', 'customer_admin', 'customer_branch_admin', 'staff', 'none'];
 
             // Possible pagination/ordering variations to try
             $starts = [0, 10, 20, 30, 40, 50];

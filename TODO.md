@@ -1,5 +1,33 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2149: Replace "branch_admin" by "customer_branch_admin"
+- Issue: Beberapa file masih menggunakan "branch_admin" (variable names, keys, dan comments) yang bisa konflik dengan plugin lain yang juga memiliki branch dan admin
+- Root Cause: Naming tidak konsisten - WordPress role sudah "customer_branch_admin" tapi variable/key names masih "branch_admin"
+- Target: Ganti semua frasa "branch_admin" (underscore) dan "branch admin" (spasi) dengan "customer_branch_admin" dan "customer branch admin"
+- Files Modified:
+  - src/Models/Branch/BranchModel.php (replaced is_branch_admin → is_customer_branch_admin, access_type 'branch_admin' → 'customer_branch_admin', comments updated)
+  - src/Models/Customer/CustomerModel.php (replaced is_branch_admin → is_customer_branch_admin, branch_admin_of_customer_id → customer_branch_admin_of_customer_id, branch_admin_of_branch_name → customer_branch_admin_of_branch_name, access_type value updated, comments updated)
+  - src/Validators/Employee/CustomerEmployeeValidator.php (replaced is_branch_admin → is_customer_branch_admin in getAccessType(), all relation arrays updated, comments "Branch Admin Check" → "Customer Branch Admin Check")
+  - src/Validators/Branch/BranchValidator.php (replaced is_branch_admin → is_customer_branch_admin in two locations)
+  - includes/class-admin-bar-info.php (variable $branch_admin → $customer_branch_admin, relation_type 'branch_admin' → 'customer_branch_admin', comment updated)
+  - src/Validators/Company/CompanyInvoiceValidator.php (comments "Branch Admin:" → "Customer Branch Admin:", is_branch_admin → is_customer_branch_admin)
+  - src/Models/Company/CompanyModel.php (is_branch_admin → is_customer_branch_admin, comments "Branch Admin" → "Customer Branch Admin", error_log messages updated)
+  - src/Models/Company/CompanyInvoiceModel.php (is_branch_admin → is_customer_branch_admin, comments updated, error_log messages updated)
+  - src/Models/Employee/CustomerEmployeeModel.php (is_branch_admin → is_customer_branch_admin, $branch_admin_info → $customer_branch_admin_info, comments updated, access_types array updated)
+  - src/Validators/CustomerValidator.php (is_branch_admin → is_customer_branch_admin in canView())
+  - src/Controllers/Branch/BranchController.php (BUG FIX line 597: 'role' => 'branch_admin' → 'role' => 'customer_branch_admin')
+  - src/Validators/Employee/CustomerEmployeeValidator.php (Review-03: method isBranchAdmin() → isCustomerBranchAdmin(), all 6 method calls updated)
+- Status: ✅ **COMPLETED** (All Reviews including Review-03)
+- Notes:
+  - WordPress role name "customer_branch_admin" sudah benar sejak awal, tidak perlu diganti
+  - Semua variable names, array keys, dan comments dengan "branch_admin" atau "branch admin" telah diganti
+  - Cache keys dengan access_type 'branch_admin' telah diubah ke 'customer_branch_admin'
+  - BUG CRITICAL: BranchController role assignment saat user creation menggunakan 'branch_admin' bukan 'customer_branch_admin' (FIXED)
+  - Review-03: Method name isBranchAdmin() → isCustomerBranchAdmin() untuk konsistensi PascalCase naming
+  - Documentation files (TODO.md, docs/*) dan test files tidak diganti
+  - Cache akan di-clear manual oleh user
+  - (see docs/TODO-2149-replace-branch-admin-with-customer-branch-admin.md)
+
 ## TODO-2148: Fix invalidateUserRelationCache in BranchModel
 - Issue: Method invalidateUserRelationCache() di BranchModel tidak konsisten dengan CustomerModel - menggunakan parameter $access_type instead of $user_id, logic berbeda dengan CustomerModel pattern
 - Root Cause: BranchModel implementation diverged dari CustomerModel pattern. Cache key pattern di getUserRelation() uses access_type, tapi saat invalidate kita tidak tahu access_type user yang memiliki relasi dengan branch

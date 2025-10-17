@@ -45,8 +45,8 @@ class CustomerEmployeeValidator {
            return true;
        }
 
-       // Branch Admin Check
-       if ($this->isBranchAdmin($current_user_id, $employee->branch_id)) {
+       // Customer Branch Admin Check
+       if ($this->isCustomerBranchAdmin($current_user_id, $employee->branch_id)) {
            return true;
        }
 
@@ -72,8 +72,8 @@ class CustomerEmployeeValidator {
            return true;
        }
 
-       // Branch Admin Check dengan add_customer_employee capability
-       if ($this->isBranchAdmin($current_user_id, $branch_id) && current_user_can('add_customer_employee')) {
+       // Customer Branch Admin Check dengan add_customer_employee capability
+       if ($this->isCustomerBranchAdmin($current_user_id, $branch_id) && current_user_can('add_customer_employee')) {
            return true;
        }
 
@@ -93,8 +93,8 @@ class CustomerEmployeeValidator {
            return true;
        }
 
-       // Branch Admin Check
-       if ($this->isBranchAdmin($current_user_id, $employee->branch_id) &&
+       // Customer Branch Admin Check
+       if ($this->isCustomerBranchAdmin($current_user_id, $employee->branch_id) &&
            current_user_can('edit_own_customer_employee')) {
            return true;
        }
@@ -121,8 +121,8 @@ class CustomerEmployeeValidator {
            return true;
        }
 
-       // Branch Admin Check
-       if ($this->isBranchAdmin($current_user_id, $employee->branch_id) &&
+       // Customer Branch Admin Check
+       if ($this->isCustomerBranchAdmin($current_user_id, $employee->branch_id) &&
            current_user_can('delete_customer_employee')) {
            return true;
        }
@@ -314,29 +314,29 @@ class CustomerEmployeeValidator {
      * Get access type from relation
      * 
      * Determines the user's access level based on their relationship with the employee/customer.
-     * Priority order: admin > customer_admin > branch_admin > staff > none
-     * 
+     * Priority order: admin > customer_admin > customer_branch_admin > staff > none
+     *
      * @param array $relation User relation array with boolean flags
-     * @return string Access type (admin, customer_admin, branch_admin, staff, or none)
+     * @return string Access type (admin, customer_admin, customer_branch_admin, staff, or none)
      */
     private function getAccessType(array $relation): string {
         // Check in priority order
         if ($relation['is_admin'] ?? false) {
             return 'admin';
         }
-        
+
         if ($relation['is_customer_admin'] ?? false) {
             return 'customer_admin';
         }
-        
-        if ($relation['is_branch_admin'] ?? false) {
-            return 'branch_admin';
+
+        if ($relation['is_customer_branch_admin'] ?? false) {
+            return 'customer_branch_admin';
         }
-        
+
         if ($relation['is_customer_employee'] ?? false) {
             return 'staff';
         }
-        
+
         return 'none';
     }
 
@@ -528,7 +528,7 @@ class CustomerEmployeeValidator {
             $relation = [
                 'is_admin' => $is_admin,
                 'is_customer_admin' => false,
-                'is_branch_admin' => false,
+                'is_customer_branch_admin' => false,
                 'is_customer_employee' => false,
                 'access_type' => $is_admin ? 'admin' : 'none'
             ];
@@ -547,7 +547,7 @@ class CustomerEmployeeValidator {
             $relation = [
                 'is_admin' => true,
                 'is_customer_admin' => false,
-                'is_branch_admin' => false,
+                'is_customer_branch_admin' => false,
                 'is_customer_employee' => false,
                 'access_type' => 'admin'
             ];
@@ -574,7 +574,7 @@ class CustomerEmployeeValidator {
                 'relation' => [
                     'is_admin' => false,
                     'is_customer_admin' => false,
-                    'is_branch_admin' => false,
+                    'is_customer_branch_admin' => false,
                     'is_customer_employee' => false,
                     'access_type' => 'none'
                 ],
@@ -586,14 +586,14 @@ class CustomerEmployeeValidator {
 
         // Check other relations only if not admin
         $is_customer_admin = (int)$customer->user_id === (int)$current_user_id;
-        $is_branch_admin = $branch_id > 0 ? $this->isBranchAdmin($current_user_id, $branch_id) : false;
+        $is_customer_branch_admin = $branch_id > 0 ? $this->isCustomerBranchAdmin($current_user_id, $branch_id) : false;
         $is_customer_employee = $this->isStaffMemberOfCustomer($current_user_id, $customer_id);
 
         // Build relation array
         $relation = [
             'is_admin' => false, // Already checked above
             'is_customer_admin' => $is_customer_admin,
-            'is_branch_admin' => $is_branch_admin,
+            'is_customer_branch_admin' => $is_customer_branch_admin,
             'is_customer_employee' => $is_customer_employee
         ];
 
@@ -621,7 +621,7 @@ class CustomerEmployeeValidator {
               ($data['purchase'] ?? false);
    }
 
-   private function isBranchAdmin($user_id, $branch_id): bool {
+   private function isCustomerBranchAdmin($user_id, $branch_id): bool {
        global $wpdb;
        return (bool)$wpdb->get_var($wpdb->prepare(
            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches 

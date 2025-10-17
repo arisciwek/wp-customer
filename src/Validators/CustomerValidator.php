@@ -200,7 +200,7 @@ class CustomerValidator {
     public function canView(array $relation): bool {
         if ($relation['is_admin']) return true;
         if ($relation['is_customer_admin'] && current_user_can('view_own_customer')) return true;
-        if ($relation['is_branch_admin'] && current_user_can('view_own_customer')) return true;
+        if ($relation['is_customer_branch_admin'] && current_user_can('view_own_customer')) return true;
         if ($relation['is_customer_employee'] && current_user_can('view_own_customer')) return true;
 
         // Beri kesempatan plugin lain menambahkan custom view rules

@@ -594,7 +594,7 @@ class BranchController {
                         'first_name' => sanitize_text_field($_POST['admin_firstname']),
                         'last_name' => sanitize_text_field($_POST['admin_lastname'] ?? ''),
                         'user_pass' => wp_generate_password(),
-                        'role' => 'branch_admin'
+                        'role' => 'customer_branch_admin'
                     ];
 
                     $user_id = wp_insert_user($user_data);

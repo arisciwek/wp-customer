@@ -519,8 +519,8 @@ class CompanyInvoiceModel {
             $where_params[] = get_current_user_id();
             error_log('Added customer admin restriction');
         }
-        elseif ($relation['is_branch_admin']) {
-            // Branch Admin - only see invoices for their branch
+        elseif ($relation['is_customer_branch_admin']) {
+            // Customer Branch Admin - only see invoices for their branch
             $branch_id = $wpdb->get_var($wpdb->prepare(
                 "SELECT id FROM {$branches_table}
                  WHERE user_id = %d LIMIT 1",
@@ -530,10 +530,10 @@ class CompanyInvoiceModel {
             if ($branch_id) {
                 $where .= " AND ci.branch_id = %d";
                 $where_params[] = $branch_id;
-                error_log('Added branch admin restriction for branch: ' . $branch_id);
+                error_log('Added customer branch admin restriction for branch: ' . $branch_id);
             } else {
                 $where .= " AND 1=0"; // No branch found
-                error_log('Branch admin has no branch - blocking access');
+                error_log('Customer branch admin has no branch - blocking access');
             }
         }
         elseif ($relation['is_customer_employee']) {
@@ -664,7 +664,7 @@ class CompanyInvoiceModel {
         error_log('Access type: ' . $access_type);
         error_log('Is admin: ' . ($relation['is_admin'] ? 'yes' : 'no'));
         error_log('Is customer admin: ' . ($relation['is_customer_admin'] ? 'yes' : 'no'));
-        error_log('Is branch admin: ' . ($relation['is_branch_admin'] ? 'yes' : 'no'));
+        error_log('Is customer branch admin: ' . ($relation['is_customer_branch_admin'] ? 'yes' : 'no'));
         error_log('Is employee: ' . ($relation['is_customer_employee'] ? 'yes' : 'no'));
 
         // Base query parts
@@ -692,8 +692,8 @@ class CompanyInvoiceModel {
             $params[] = get_current_user_id();
             error_log('Added customer admin restriction: ' . $where);
         }
-        elseif ($relation['is_branch_admin']) {
-            // Branch Admin - only see invoices for their branch
+        elseif ($relation['is_customer_branch_admin']) {
+            // Customer Branch Admin - only see invoices for their branch
             $branch_id = $wpdb->get_var($wpdb->prepare(
                 "SELECT id FROM {$wpdb->prefix}app_customer_branches
                  WHERE user_id = %d LIMIT 1",
@@ -703,10 +703,10 @@ class CompanyInvoiceModel {
             if ($branch_id) {
                 $where .= " AND ci.branch_id = %d";
                 $params[] = $branch_id;
-                error_log('Added branch admin restriction for branch: ' . $branch_id);
+                error_log('Added customer branch admin restriction for branch: ' . $branch_id);
             } else {
                 $where .= " AND 1=0"; // No branch found
-                error_log('Branch admin has no branch - blocking access');
+                error_log('Customer branch admin has no branch - blocking access');
             }
         }
         elseif ($relation['is_customer_employee']) {

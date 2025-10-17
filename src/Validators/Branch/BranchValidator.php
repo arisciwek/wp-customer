@@ -84,7 +84,7 @@ class BranchValidator {
             $relation = [
                 'is_admin' => current_user_can('edit_all_customer_branches'),
                 'is_customer_admin' => false,
-                'is_branch_admin' => false, 
+                'is_customer_branch_admin' => false, 
                 'is_customer_employee' => false,
                 'access_type' => current_user_can('edit_all_customer_branches') ? 'admin' : 'none'
             ];
@@ -116,7 +116,7 @@ class BranchValidator {
             $relation = [
                 'is_admin' => current_user_can('edit_all_customer_branches'),
                 'is_customer_admin' => false,
-                'is_branch_admin' => false,
+                'is_customer_branch_admin' => false,
                 'is_customer_employee' => false,
                 'access_type' => current_user_can('edit_all_customer_branches') ? 'admin' : 'none'
             ];
@@ -184,7 +184,7 @@ class BranchValidator {
 
         if ($relation['is_admin']) return true;
         if ($relation['is_customer_admin']) return true;
-        if ($relation['is_branch_admin']) return true;
+        if ($relation['is_customer_branch_admin']) return true;
         if ($relation['is_customer_employee'] && current_user_can('view_own_customer_branch')) return true;
 
         return false;
@@ -209,7 +209,7 @@ class BranchValidator {
 
         if ($relation['is_admin']) return true;
         if ($relation['is_customer_admin']) return true;
-        if ($relation['is_branch_admin'] && current_user_can('edit_own_customer_branch')) return true;
+        if ($relation['is_customer_branch_admin'] && current_user_can('edit_own_customer_branch')) return true;
 
         return false;
     }

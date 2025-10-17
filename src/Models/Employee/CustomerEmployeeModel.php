@@ -311,7 +311,7 @@ public function create(array $data): ?int {
             $current_user_id
         ));
 
-        $branch_admin_info = $wpdb->get_row($wpdb->prepare(
+        $customer_branch_admin_info = $wpdb->get_row($wpdb->prepare(
             "SELECT id FROM {$this->branch_table}
              WHERE user_id = %d",
             $current_user_id
@@ -324,11 +324,11 @@ public function create(array $data): ?int {
                 $where .= " AND e.branch_id = %d";
                 $params[] = $employee_info->branch_id;
                 error_log("Applied employee branch filter: branch_id = {$employee_info->branch_id}");
-            } elseif ($branch_admin_info && $branch_admin_info->id) {
-                // Branch Admin - only see employees in their managed branch
+            } elseif ($customer_branch_admin_info && $customer_branch_admin_info->id) {
+                // Customer Branch Admin - only see employees in their managed branch
                 $where .= " AND e.branch_id = %d";
-                $params[] = $branch_admin_info->id;
-                error_log("Applied branch admin filter: branch_id = {$branch_admin_info->id}");
+                $params[] = $customer_branch_admin_info->id;
+                error_log("Applied customer branch admin filter: branch_id = {$customer_branch_admin_info->id}");
             }
         }
 
@@ -454,7 +454,7 @@ public function create(array $data): ?int {
         error_log('Access type: ' . $access_type);
         error_log('Is admin: ' . ($relation['is_admin'] ? 'yes' : 'no'));
         error_log('Is customer admin: ' . ($relation['is_customer_admin'] ? 'yes' : 'no'));
-        error_log('Is branch admin: ' . ($relation['is_branch_admin'] ? 'yes' : 'no'));
+        error_log('Is customer branch admin: ' . ($relation['is_customer_branch_admin'] ? 'yes' : 'no'));
         error_log('Is employee: ' . ($relation['is_customer_employee'] ? 'yes' : 'no'));
 
         // Base query parts
@@ -485,8 +485,8 @@ public function create(array $data): ?int {
             $params[] = get_current_user_id();
             error_log('Added customer admin restriction');
         }
-        elseif ($relation['is_branch_admin']) {
-            // Branch Admin - only see employees in their managed branch
+        elseif ($relation['is_customer_branch_admin']) {
+            // Customer Branch Admin - only see employees in their managed branch
             $branch_id = $wpdb->get_var($wpdb->prepare(
                 "SELECT id FROM {$this->branch_table}
                  WHERE user_id = %d LIMIT 1",
@@ -496,10 +496,10 @@ public function create(array $data): ?int {
             if ($branch_id) {
                 $where .= " AND e.branch_id = %d";
                 $params[] = $branch_id;
-                error_log('Added branch admin restriction for branch: ' . $branch_id);
+                error_log('Added customer branch admin restriction for branch: ' . $branch_id);
             } else {
                 $where .= " AND 1=0"; // No branch found
-                error_log('Branch admin has no branch - blocking access');
+                error_log('Customer branch admin has no branch - blocking access');
             }
         }
         elseif ($relation['is_customer_employee']) {
@@ -700,7 +700,7 @@ public function create(array $data): ?int {
             $access_types = [
                 'admin',
                 'customer_admin',
-                'branch_admin',
+                'customer_branch_admin',
                 'staff',
                 'none'
             ];
