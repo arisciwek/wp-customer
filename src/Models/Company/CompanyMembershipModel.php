@@ -591,7 +591,7 @@ class CompanyMembershipModel {
         $customer_id = $branch->customer_id;
 
         // Check cache first
-        $cached_count = $this->cache->get('customer_active_branch_count', $customer_id);
+        $cached_count = $this->cache->get('customer_active_customer_branch_count', $customer_id);
         if ($cached_count !== null) {
             return (int) $cached_count;
         }
@@ -605,7 +605,7 @@ class CompanyMembershipModel {
         ", $customer_id));
 
         // Cache for 5 minutes since branch count can change
-        $this->cache->set('customer_active_branch_count', $count, 300, $customer_id);
+        $this->cache->set('customer_active_customer_branch_count', $count, 300, $customer_id);
 
         return $count;
     }

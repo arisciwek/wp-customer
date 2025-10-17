@@ -49,7 +49,7 @@ class CompanyModel {
      */
     public function getBranchWithLatestMembership($id) {
         // Check cache first
-        $cached_result = $this->cache->get('branch_membership', $id);
+        $cached_result = $this->cache->get('customer_branch_membership', $id);
         if ($cached_result !== null) {
             return $cached_result;
         }
@@ -86,7 +86,7 @@ class CompanyModel {
 
         // Cache the result for 2 minutes
         if ($result) {
-            $this->cache->set('branch_membership', $result, 120, $id);
+            $this->cache->set('customer_branch_membership', $result, 120, $id);
         }
 
         return $result;

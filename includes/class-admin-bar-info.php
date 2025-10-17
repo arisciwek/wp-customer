@@ -159,7 +159,7 @@ class WP_Customer_Admin_Bar_Info {
     private static function get_user_branch_info($user_id) {
         // Try to get from cache first
         $cache_manager = self::get_cache_manager();
-        $cache_key = 'user_branch_info';
+        $cache_key = 'user_customer_branch_info';
         $cached_data = $cache_manager->get($cache_key, $user_id);
 
         if ($cached_data !== null) {

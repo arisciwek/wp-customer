@@ -1,5 +1,33 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2151: Replace "branch" Cache Keys with "customer_branch"
+- Issue: Cache keys masih menggunakan "branch" yang berisiko konflik dengan plugin lain
+- Root Cause: Beberapa cache key dan type belum diganti dari TODO-2149 (branch_relation, branch_membership, branch_list, dll)
+- Target: Ganti semua cache key dan type yang mengandung "branch" menjadi "customer_branch", termasuk BRANCH capital constants
+- Files Modified:
+  - src/Models/Branch/BranchModel.php (11+ replacements: KEY_BRANCH, KEY_BRANCH_LIST, cache keys, debug messages)
+  - src/Models/Company/CompanyModel.php (2 replacements: branch_membership → customer_branch_membership)
+  - src/Cache/CustomerCacheManager.php (4 edits: constants, array mapping, invalidateCustomerCache, clearCache known_types)
+  - src/Models/Company/CompanyMembershipModel.php (2 replacements: customer_active_branch_count → customer_active_customer_branch_count)
+  - **Review-01**: src/Cache/CustomerCacheManager.php (2 edits: KEY_BRANCH → KEY_CUSTOMER_BRANCH, KEY_BRANCH_LIST → KEY_CUSTOMER_BRANCH_LIST, KEY_BRANCH_STATS → KEY_CUSTOMER_BRANCH_STATS, KEY_USER_BRANCHES → KEY_USER_CUSTOMER_BRANCHES)
+  - **Review-01**: src/Models/Branch/BranchModel.php (4 edits: removed duplicate constants, updated all self::KEY_BRANCH → self::KEY_CUSTOMER_BRANCH, WP_BRANCH_RELATION_CACHE_DURATION → WP_CUSTOMER_BRANCH_RELATION_CACHE_DURATION)
+  - **Review-02**: src/Cache/CustomerCacheManager.php (2 edits: 'user_branches' → 'user_customer_branches' in constant value and array mapping)
+  - **Review-02**: includes/class-admin-bar-info.php (1 edit: 'user_branch_info' → 'user_customer_branch_info')
+  - **Review-03**: Verification - NO additional "branches" found that need replacement (only variable names, comments, DB table refs, i18n text, HTML IDs)
+- Status: ✅ **COMPLETED** (Including Review-01, Review-02 & Review-03)
+- Notes:
+  - Kategori yang diganti: HANYA Cache Keys & Types (global scope, berisiko konflik)
+  - Kategori yang TIDAK diganti: Database columns, object properties, function parameters, HTML ID/class
+  - Cache keys sekarang: customer_branch_{id}, customer_branch_list_{access_type}, customer_branch_relation_{id}_{access_type}, customer_branch_membership_{id}, customer_branch_stats, customer_active_customer_branch_count_{customer_id}
+  - **Review-01**: Semua nama konstanta BRANCH capital diganti dengan CUSTOMER_BRANCH (nilai tetap sama, yang diganti nama konstantan)
+  - Constant names: KEY_CUSTOMER_BRANCH, KEY_CUSTOMER_BRANCH_LIST, KEY_CUSTOMER_BRANCH_STATS, KEY_USER_CUSTOMER_BRANCHES, WP_CUSTOMER_BRANCH_RELATION_CACHE_DURATION
+  - **Review-02**: Plural form "branches" diganti dengan "customer_branches" (user_branches → user_customer_branches, user_branch_info → user_customer_branch_info)
+  - **Review-03**: Verified no other "branches" need replacement - all occurrences are in safe categories (variables, comments, DB refs, i18n, HTML)
+  - File Tambahan diperiksa: CompanyInvoiceController, CompanyMembershipController, CompanyController, CompanyInvoiceModel, CompanyInvoiceValidator, CompanyMembershipValidator, CompanyValidator
+  - Backward compatibility terjaga (cache lama akan expired otomatis)
+  - Untuk clear cache manual: `$cache->clearAll()`
+  - (see docs/TODO-2151-cache-key-replacement.md)
+
 ## TODO-2150: Fix customer_admin Access Type Detection
 - Issue: User dengan role `customer_admin` terdeteksi sebagai `admin` di BranchModel::getUserRelation(), menyebabkan mereka memiliki akses penuh ke semua branch
 - Root Cause: BranchModel menggunakan `current_user_can('edit_all_customer_branches')` untuk detect admin, padahal capability ini juga dimiliki oleh customer_admin role. PermissionModel line 238 memberikan `edit_all_customer_branches` = true untuk customer_admin (design yang benar - customer_admin SHOULD edit all branches under their customer). Yang salah adalah BranchModel menggunakan capability ini untuk detect "system administrator"

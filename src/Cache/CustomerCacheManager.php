@@ -77,10 +77,8 @@ class CustomerCacheManager {
     // Cache keys for branches
     private const KEY_CUSTOMER_BRANCH_LIST = 'customer_branch_list';
     private const KEY_CUSTOMER_BRANCH = 'customer_branch';
-    private const KEY_BRANCH = 'branch';
-    private const KEY_BRANCH_LIST = 'branch_list';
-    private const KEY_BRANCH_STATS = 'branch_stats';
-    private const KEY_USER_BRANCHES = 'user_branches';
+    private const KEY_CUSTOMER_BRANCH_STATS = 'customer_branch_stats';
+    private const KEY_USER_CUSTOMER_BRANCHES = 'user_customer_branches';
 
     // Cache keys for employees
     private const KEY_EMPLOYEE = 'employee';
@@ -104,10 +102,10 @@ class CustomerCacheManager {
             'customer_list' => self::KEY_CUSTOMER_LIST,
             'customer_stats' => self::KEY_CUSTOMER_STATS,
             'user_customers' => self::KEY_USER_CUSTOMERS,
-            'branch' => self::KEY_BRANCH,
-            'branch_list' => self::KEY_BRANCH_LIST,
-            'branch_stats' => self::KEY_BRANCH_STATS,
-            'user_branches' => self::KEY_USER_BRANCHES,
+            'customer_branch' => self::KEY_CUSTOMER_BRANCH,
+            'customer_branch_list' => self::KEY_CUSTOMER_BRANCH_LIST,
+            'customer_branch_stats' => self::KEY_CUSTOMER_BRANCH_STATS,
+            'user_customer_branches' => self::KEY_USER_CUSTOMER_BRANCHES,
             'employee' => self::KEY_EMPLOYEE,
             'employee_list' => self::KEY_EMPLOYEE_LIST,
             'employee_stats' => self::KEY_EMPLOYEE_STATS,
@@ -447,7 +445,7 @@ class CustomerCacheManager {
     // Method untuk invalidate cache saat ada update
     public function invalidateCustomerCache(int $id): void {
         $this->delete('customer_detail', $id);
-        $this->delete('branch_count', $id);
+        $this->delete('customer_branch_count', $id);
         $this->delete('customer', $id);
         // Clear customer list cache
         $this->delete('customer_total_count', get_current_user_id());
@@ -496,8 +494,8 @@ private function clearCache(): bool {
             'customer_total_count',
             'customer_membership',
             'membership',
-            'branch',
-            'branch_list',
+            'customer_branch',
+            'customer_branch_list',
             'employee',
             'employee_list',
             'datatable'

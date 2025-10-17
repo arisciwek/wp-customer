@@ -30,10 +30,8 @@ use WPCustomer\Models\Customer\CustomerModel;
 class BranchModel {
 
     // Cache keys - pindahkan dari CustomerCacheManager ke sini untuk akses langsung
-    private const KEY_BRANCH = 'branch';
-    private const KEY_CUSTOMER_BRANCH_LIST = 'customer_branch_list';
     private const KEY_CUSTOMER_BRANCH = 'customer_branch';
-    private const KEY_BRANCH_LIST = 'branch_list';
+    private const KEY_CUSTOMER_BRANCH_LIST = 'customer_branch_list';
     private const CACHE_EXPIRY = 7200; // 2 hours in seconds
 
     private $table;
@@ -192,7 +190,7 @@ class BranchModel {
         // Comprehensive cache invalidation for new branch
         if ($branch_id && isset($data['customer_id'])) {
             // Invalidate DataTable cache for all access types
-            $this->invalidateAllDataTableCache('branch_list', (int)$data['customer_id']);
+            $this->invalidateAllDataTableCache('customer_branch_list', (int)$data['customer_id']);
         }
 
         return $branch_id;
@@ -202,11 +200,11 @@ class BranchModel {
         global $wpdb;
 
         // Cek cache dulu
-        $cached = $this->cache->get(self::KEY_BRANCH, $id);
+        $cached = $this->cache->get(self::KEY_CUSTOMER_BRANCH, $id);
         if ($cached !== null) {
             return $cached;
         }
-        
+
         // Jika tidak ada di cache, ambil dari database
         $result  = $wpdb->get_row($wpdb->prepare("
             SELECT r.*, p.name as customer_name
@@ -217,9 +215,9 @@ class BranchModel {
 
         // Simpan ke cache
         if ($result) {
-            $this->cache->set(self::KEY_BRANCH, $result, self::CACHE_EXPIRY, $id);
+            $this->cache->set(self::KEY_CUSTOMER_BRANCH, $result, self::CACHE_EXPIRY, $id);
         }
-        
+
         return $result;
     }
 
@@ -285,11 +283,11 @@ class BranchModel {
             $this->invalidateUserRelationCache($id);
 
             // Comprehensive cache invalidation
-            $this->cache->delete(self::KEY_BRANCH, $id);
+            $this->cache->delete(self::KEY_CUSTOMER_BRANCH, $id);
 
             // Invalidate DataTable cache for all access types
             // Since we use access_type in cache key, we need to invalidate all possible access types
-            $this->invalidateAllDataTableCache('branch_list', (int)$branch->customer_id);
+            $this->invalidateAllDataTableCache('customer_branch_list', (int)$branch->customer_id);
         }
 
         return true;
@@ -309,10 +307,10 @@ class BranchModel {
 
         if ($result !== false && $branch && $branch->customer_id) {
             // Comprehensive cache invalidation
-            $this->cache->delete(self::KEY_BRANCH, $id);
+            $this->cache->delete(self::KEY_CUSTOMER_BRANCH, $id);
 
             // Invalidate DataTable cache for all access types
-            $this->invalidateAllDataTableCache('branch_list', (int)$branch->customer_id);
+            $this->invalidateAllDataTableCache('customer_branch_list', (int)$branch->customer_id);
 
             // Invalidate user relation cache
             $this->invalidateUserRelationCache($id);
@@ -359,9 +357,9 @@ class BranchModel {
         
         // Check cache first
         $cached_result = $this->cache->getDataTableCache(
-            'branch_list',
+            'customer_branch_list',
             $access_type,
-            $start, 
+            $start,
             $length,
             $search,
             $orderColumn,
@@ -371,13 +369,13 @@ class BranchModel {
 
         if ($cached_result) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("BranchModel cache hit for DataTable - Key: branch_list_{$access_type}");
+                error_log("BranchModel cache hit for DataTable - Key: customer_branch_list_{$access_type}");
             }
             return $cached_result;
         }
 
         if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("BranchModel cache miss for DataTable - Key: branch_list_{$access_type}");
+            error_log("BranchModel cache miss for DataTable - Key: customer_branch_list_{$access_type}");
         }
         
         global $wpdb;
@@ -442,7 +440,7 @@ class BranchModel {
         
         // Set cache dengan durasi 2 menit - gunakan orderDir yang sama (lowercase)
         $this->cache->setDataTableCache(
-            'branch_list',
+            'customer_branch_list',
             $access_type,
             $start,
             $length,
@@ -745,14 +743,14 @@ class BranchModel {
             // Generate appropriate cache key based on access_type
             if ($branch_id === 0) {
                 // Special case for general access check - group by access_type
-                $cache_key = "branch_relation_general_{$access_type}";
+                $cache_key = "customer_branch_relation_general_{$access_type}";
             } else {
                 // Specific branch check - group by branch and access_type
-                $cache_key = "branch_relation_{$branch_id}_{$access_type}";
+                $cache_key = "customer_branch_relation_{$branch_id}_{$access_type}";
             }
 
             // Check cache with correct access_type
-            $cached_relation = $this->cache->get('branch_relation', $cache_key);
+            $cached_relation = $this->cache->get('customer_branch_relation', $cache_key);
             if ($cached_relation !== null) {
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     error_log("BranchModel::getUserRelation - Cache hit for access_type {$access_type} and branch {$branch_id}");
@@ -849,11 +847,11 @@ class BranchModel {
             }
 
             // Get cache duration (configurable or default 2 minutes)
-            $cache_duration = defined('WP_BRANCH_RELATION_CACHE_DURATION') ?
-                             WP_BRANCH_RELATION_CACHE_DURATION : 120;
+            $cache_duration = defined('WP_CUSTOMER_BRANCH_RELATION_CACHE_DURATION') ?
+                             WP_CUSTOMER_BRANCH_RELATION_CACHE_DURATION : 120;
 
             // Cache result
-            $this->cache->set('branch_relation', $relation, $cache_duration, $cache_key);
+            $this->cache->set('customer_branch_relation', $relation, $cache_duration, $cache_key);
 
             return $relation;
             
@@ -878,7 +876,7 @@ class BranchModel {
     /**
      * Invalidate user relation cache
      *
-     * NOTE: Cache keys use pattern: branch_relation_{$branch_id}_{$access_type}
+     * NOTE: Cache keys use pattern: customer_branch_relation_{$branch_id}_{$access_type}
      *       Since we don't always know the access_type when invalidating,
      *       we use clearCache() to clear all branch relation cache entries.
      *       This is the same approach as CustomerModel.
@@ -891,25 +889,25 @@ class BranchModel {
         try {
             if ($branch_id && $user_id) {
                 // Invalidate specific relation
-                // Since cache key pattern is branch_relation_{$branch_id}_{$access_type},
+                // Since cache key pattern is customer_branch_relation_{$branch_id}_{$access_type},
                 // and we don't know access_type here, we clear all branch relation cache
-                $this->cache->clearCache('branch_relation');
+                $this->cache->clearCache('customer_branch_relation');
             } else if ($branch_id) {
                 // We need to invalidate all relations for this branch
                 // This is a bit tricky without key pattern matching
                 // For now, let's just clear all branch relation cache
-                $this->cache->clearCache('branch_relation');
+                $this->cache->clearCache('customer_branch_relation');
             } else if ($user_id) {
                 // Invalidate general relation for this user
                 // Since we don't know access_type, clear all
-                $this->cache->clearCache('branch_relation');
+                $this->cache->clearCache('customer_branch_relation');
             } else {
                 // Clear all relation cache
-                $this->cache->clearCache('branch_relation');
+                $this->cache->clearCache('customer_branch_relation');
             }
 
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Invalidated branch relation cache: branch_id=$branch_id, user_id=$user_id");
+                error_log("Invalidated customer branch relation cache: branch_id=$branch_id, user_id=$user_id");
             }
         } catch (\Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {

@@ -161,5 +161,3 @@ This change affects the following file types:
 ## Implementation Date
 2025-01-11
 
-## Implemented By
-Claude Code AI Assistant
