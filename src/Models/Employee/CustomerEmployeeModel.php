@@ -250,13 +250,10 @@ public function create(array $data): ?int {
     public function getDataTableData(int $customer_id, int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
         global $wpdb;
 
-        // Get access_type from validator
-        global $wp_employee_validator;
-        if (!$wp_employee_validator) {
-            $wp_employee_validator = new \WPCustomer\Validators\Employee\CustomerEmployeeValidator();
-        }
-        $access = $wp_employee_validator->validateAccess($customer_id, 0);
-        $access_type = $access['access_type'];
+        // Get access_type from CustomerModel::getUserRelation (same as Branch tab)
+        $customerModel = new \WPCustomer\Models\Customer\CustomerModel();
+        $relation = $customerModel->getUserRelation($customer_id);
+        $access_type = $relation['access_type'];
 
         // Ensure orderDir lowercase for cache key consistency
         $orderDir = strtolower($orderDir);

@@ -1,5 +1,21 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2154: Fix Customer Employee Terdeteksi sebagai Admin pada Tab Employee
+- Issue: User dengan role `customer_employee` terdeteksi sebagai ADMIN pada Tab Employee, namun terdeteksi dengan benar sebagai `customer_employee` pada Tab Branch. Ini menyebabkan inkonsistensi dalam cache key dan permission handling.
+- Root Cause: Tab Employee menggunakan `CustomerEmployeeValidator::validateAccess()` yang cek capabilities DULU sebelum database (user_id 70 punya `view_customer_employee_list` capability jadi langsung return 'admin'). Tab Branch menggunakan `CustomerModel::getUserRelation()` yang cek database DULU untuk menentukan relasi sebenarnya baru set access_type.
+- Target: Ganti `CustomerEmployeeModel::getDataTableData()` untuk menggunakan `CustomerModel::getUserRelation()` seperti Tab Branch, agar role detection konsisten
+- Files Modified:
+  - src/Models/Employee/CustomerEmployeeModel.php (line 250-256: replaced CustomerEmployeeValidator::validateAccess() with CustomerModel::getUserRelation() for consistent access_type detection)
+- Status: ✅ **COMPLETED**
+- Notes:
+  - Perbedaan metode: CustomerEmployeeValidator check capabilities → detect admin. CustomerModel check database → detect actual role
+  - Bug: CustomerEmployeeValidator line 524 `$is_admin = current_user_can('view_customer_employee_list')` - employee punya cap ini!
+  - Fix: Kedua tab sekarang menggunakan metode yang sama (CustomerModel::getUserRelation)
+  - Cache key sekarang konsisten: `customer_relation_customer_relation_1_customer_employee` (bukan `_admin`)
+  - Access Result sekarang sama di kedua tab untuk user yang sama
+  - Benefit: ✅ Role detection konsisten ✅ Cache key sama ✅ No false positive "ADMIN" ✅ Permission akurat
+  - (see docs/TODO-2154-fix-employee-admin-detection.md)
+
 ## TODO-2153: Fix Flicker pada Tab Branch
 - Issue: Terdapat flicker visual ketika user berpindah ke tab Branch di panel kanan Customer. Flicker tidak terjadi pada tab Employee.
 - Root Cause (Review-01): Di function `switchTab()` dan `loadCustomerData()`, terdapat konflik antara jQuery methods (`.hide()`/`.show()`) dan CSS classes (`active`). jQuery inline styles (`display:none/block`) memiliki specificity lebih tinggi dari CSS classes, menyebabkan double repaint/reflow = flicker
