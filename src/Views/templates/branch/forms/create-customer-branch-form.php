@@ -24,7 +24,7 @@
 defined('ABSPATH') || exit;
 ?>
 
-<div id="create-branch-modal" class="modal-overlay wp-customer-modal">
+<div id="create-branch-modal" class="modal-overlay wp-customer-modal" style="display: none;">
     <div class="modal-container">
         <div class="modal-header">
             <h3><?php _e('Tambah Cabang', 'wp-customer'); ?></h3>

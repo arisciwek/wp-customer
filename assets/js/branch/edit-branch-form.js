@@ -374,7 +374,6 @@
 
     // Initialize when document is ready
     $(document).ready(() => {
-        console.log('Edit modal visibility:', $('#edit-branch-modal').is(':visible'));
         window.EditBranchForm = EditBranchForm;
         EditBranchForm.init();
     });

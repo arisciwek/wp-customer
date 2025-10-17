@@ -1,5 +1,31 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2153: Fix Flicker pada Tab Branch
+- Issue: Terdapat flicker visual ketika user berpindah ke tab Branch di panel kanan Customer. Flicker tidak terjadi pada tab Employee.
+- Root Cause (Review-01): Di function `switchTab()` dan `loadCustomerData()`, terdapat konflik antara jQuery methods (`.hide()`/`.show()`) dan CSS classes (`active`). jQuery inline styles (`display:none/block`) memiliki specificity lebih tinggi dari CSS classes, menyebabkan double repaint/reflow = flicker
+- Root Cause (Review-03): Branch modals missing `style="display: none;"` inline style pada initial render, menyebabkan modal flash visible sebelum JavaScript hide them
+- Root Cause (Review-04): DataTable branch menggunakan `processing: true` dan manual `showLoading()` dalam `refresh()`, menyebabkan double loading indicator = visual flicker. Employee DataTable menggunakan `processing: false` tanpa manual loading state
+- Target: (1) Hapus jQuery `.hide()`/`.show()` methods, gunakan HANYA CSS classes. (2) Tambahkan `style="display: none;"` pada branch modals. (3) Disable DataTable processing indicator dan simplify refresh logic untuk match Employee pattern
+- Files Modified:
+  - assets/js/customer/customer-script.js (Review-01: switchTab() lines 443-445, loadCustomerData() lines 218-221 - removed `.hide()`/`.show()`)
+  - src/Views/templates/branch/forms/create-customer-branch-form.php (Review-03: added `style="display: none;"` line 27)
+  - src/Views/templates/branch/forms/edit-customer-branch-form.php (Review-03: added `style="display: none;"` line 27)
+  - assets/js/branch/branch-datatable.js (Review-04: changed `processing: true` → `processing: false` line 160, simplified refresh() method lines 272-276 to match Employee pattern)
+- Status: ✅ **COMPLETED** (All Reviews 01-04)
+- Notes:
+  - Review-01: jQuery `.hide()` adds inline styles that override CSS classes - use only `removeClass('active')` and `addClass('active')`
+  - Review-02: Employee forms already have console.log, not the cause of flicker
+  - Review-03: Branch modals now have `style="display: none;"` like Employee modals - prevents initial flash
+  - Review-04: DataTable branch now 100% match Employee pattern:
+    - `processing: false` - no default processing indicator
+    - `refresh()` uses `this.table.ajax.reload(null, false)` - no manual loading state
+    - State handled ONLY by `dataSrc` callback - single update cycle
+  - Performance: Single repaint/reflow (class only) + single DataTable update = zero flicker
+  - Testing: All scenarios ✓ - utama→branch, utama→employee, employee→branch, branch→employee, DataTable reload
+  - Console logs: Both Employee and Branch have debug logs (Raw status, Raw type) for debugging
+  - Best Practice: Use CSS classes for visibility, disable DataTable default processing when custom state management exists
+  - (see docs/TODO-2153-fix-branch-tab-flicker.md)
+
 ## TODO-2152: Replace "employee" Cache Keys with "customer_employee"
 - Issue: Cache keys masih menggunakan "employee" yang berisiko konflik dengan plugin lain
 - Root Cause: Beberapa cache key dan type belum diganti - masih menggunakan "employee", "employee_list", "employee_{id}", dll

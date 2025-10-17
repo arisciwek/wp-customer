@@ -214,11 +214,11 @@
                     // Reset tab to default (Data Customer)
                     $('.nav-tab').removeClass('nav-tab-active');
                     $('.nav-tab[data-tab="customer-details"]').addClass('nav-tab-active');
-                    
-                    // Hide all tab content first
-                    $('.tab-content').removeClass('active').hide();
+
+                    // Hide all tab content first - use only CSS classes to prevent flicker
+                    $('.tab-content').removeClass('active');
                     // Show customer details tab
-                    $('#customer-details').addClass('active').show();
+                    $('#customer-details').addClass('active');
 
                     // Update customer data in UI
                     this.displayData(response.data);
@@ -440,49 +440,10 @@
             $('.nav-tab').removeClass('nav-tab-active');
             $(`.nav-tab[data-tab="${tabId}"]`).addClass('nav-tab-active');
 
-            // Hide all tab content first
-            $('.tab-content-panel').removeClass('active');
-            $('.tab-content').hide();
-            $(`#${tabId}`).show();
+            // Hide all tab content first - use only CSS classes to prevent flicker
+            $('.tab-content').removeClass('active');
             $(`#${tabId}`).addClass('active');
             
-            // Initialize specific tab content if needed
-            /*
-            if (tabId === 'membership-info' && this.currentId) {
-                // Initialize membership data
-                if (window.CustomerMembership) {
-                    window.CustomerMembership.init();
-                }
-            }
-            */
-
-            if (tabId === 'membership-info' && this.currentId) {
-                console.log('Fetching membership data for customer:', this.currentId); // Add this debug line
-                // Get membership level data
-                $.ajax({
-                    url: wpCustomerData.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: 'get_customer_membership_level_data',
-                        customer_id: this.currentId,
-                        nonce: wpCustomerData.nonce
-                    },
-                    success: (response) => {
-                        if (response.success) {
-
-                            console.log('Membership info data:', response.data);
-
-                            if (window.CustomerMembership) {
-                                window.CustomerMembership.displayMembershipData(response.data);
-                            }
-                        }
-                    },
-                    error: (xhr, status, error) => {
-                        console.error('AJAX error:', error); // Add this debug line
-                    }
-                });
-            }
-
             // Initialize specific tab content if needed
             if (tabId === 'employee-list' && this.currentId) {
                 // Get tombol tambah karyawan
@@ -547,18 +508,8 @@
                     window.BranchDataTable.init(this.currentId);
                 }
 
-                // Initialize branch forms only when tab is clicked
-                if (window.CreateBranchForm) {
-                    window.CreateBranchForm.init();
-                }
-                if (window.EditBranchForm) {
-                    window.EditBranchForm.init();
-                }
-
-                // Log branch form initialization only when tab is clicked
-                console.log('Starting bindEvents for CreateBranchForm');
-                console.log('Branch Form element found:', $('#create-branch-form').length > 0);
-                console.log('Edit modal visibility:', $('#edit-branch-modal').is(':visible'));
+                // Note: CreateBranchForm and EditBranchForm are already initialized on page load
+                // No need to re-initialize on tab switch (same pattern as Employee tab)
             }
         },
 

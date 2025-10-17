@@ -395,6 +395,7 @@
 
     // Initialize when document is ready
     $(document).ready(() => {
+        console.log('[EXPERIMENT] Edit Employee modal visibility:', $('#edit-employee-modal').is(':visible'));
         window.EditEmployeeForm = EditEmployeeForm;
         EditEmployeeForm.init();
     });

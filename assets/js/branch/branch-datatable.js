@@ -157,7 +157,7 @@
 
             const self = this;
             this.table = $('#branch-table').DataTable({
-                processing: true,
+                processing: false,  // Disable default processing indicator
                 serverSide: true,
                 ajax: {
                     url: wpCustomerData.ajaxUrl,
@@ -193,11 +193,14 @@
                         className: 'column-admin',
                         render: (data) => data || '-'
                     },
-                    { 
-                        data: 'type', 
+                    {
+                        data: 'type',
                         width: '15%',
                         className: 'column-type',
-                        render: (data) => data === 'pusat' ? 'Pusat' : 'Cabang'
+                        render: (data) => {
+                            console.log('Raw type:', data);
+                            return data === 'pusat' ? 'Pusat' : 'Cabang';
+                        }
                     },
                     {
                         data: 'actions',
@@ -268,15 +271,8 @@
 
          refresh() {
              if (this.table) {
-                 this.showLoading();
-                 this.table.ajax.reload(() => {
-                     const info = this.table.page.info();
-                     if (info.recordsTotal === 0) {
-                         this.showEmpty();
-                     } else {
-                         this.showTable();
-                     }
-                 }, false);
+                 // Don't show loading on refresh, DataTable will handle it via dataSrc callback
+                 this.table.ajax.reload(null, false);
              }
          }
      };

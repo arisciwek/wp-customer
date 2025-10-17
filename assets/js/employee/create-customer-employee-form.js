@@ -39,6 +39,7 @@
 
 
         bindEvents() {
+            console.log('[EXPERIMENT] Starting bindEvents for CreateEmployeeForm');
             // Form events
             this.form.on('submit', (e) => this.handleCreate(e));
 
@@ -47,6 +48,7 @@
                 this.validateField(e.target);
             });
 
+            console.log('[EXPERIMENT] Employee Form element found:', this.form.length > 0);
             // Add button handler
             $('#add-employee-btn').on('click', () => {
                 const customerId = window.Customer?.currentId;
