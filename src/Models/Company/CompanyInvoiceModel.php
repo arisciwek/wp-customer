@@ -461,7 +461,8 @@ class CompanyInvoiceModel {
      * @return object|null Branch data or null
      */
     public function getBranchData(int $branch_id) {
-        return $this->company_model->find($branch_id);
+        // CompanyModel doesn't have find() method, use getBranchWithLatestMembership() instead
+        return $this->company_model->getBranchWithLatestMembership($branch_id);
     }
 
     /**

@@ -31,18 +31,21 @@ use WPCustomer\Models\Company\CompanyMembershipModel;
 use WPCustomer\Models\Membership\MembershipLevelModel;
 use WPCustomer\Cache\CustomerCacheManager;
 use WPCustomer\Validators\Company\CompanyMembershipValidator;
+use WPCustomer\Validators\Branch\BranchValidator;
 
 class CompanyMembershipController {
     private $membership_model;
     private $level_model;
     private $cache;
     private $validator;
+    private $branchValidator;
 
     public function __construct() {
         $this->membership_model = new CompanyMembershipModel();
         $this->level_model = new MembershipLevelModel();
         $this->cache = new CustomerCacheManager();
         $this->validator = new CompanyMembershipValidator();
+        $this->branchValidator = new BranchValidator();
 
         // Register company-facing AJAX endpoints
         add_action('wp_ajax_get_company_membership_status', [$this, 'getMembershipStatus']);
@@ -85,30 +88,21 @@ class CompanyMembershipController {
     }
     
     /**
-     * Check if current user can access customer data
-     * 
-     * @param int $company_id The customer ID to check
+     * Check if current user can access customer data using BranchValidator
+     *
+     * @param int $company_id The branch ID (company_id is actually branch_id)
      * @return bool True if user can access, false otherwise
      */
     private function userCanAccessCustomer($company_id) {
-        // Admin can access any customer
-        if (current_user_can('manage_options')) {
-            return true;
+        // Use BranchValidator for consistent access checking (same as CompanyController)
+        $access = $this->branchValidator->validateAccess($company_id);
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("CompanyMembershipController::userCanAccessCustomer - Validating access for company_id: " . $company_id);
+            error_log("Access Result: " . print_r($access, true));
         }
-        
-        // Get current user ID
-        $current_user_id = get_current_user_id();
-        if (!$current_user_id) {
-            return false;
-        }
-        
-        // Check if user is owner of the customer
-        $customer = $this->membership_model->getCustomerOwner($company_id);
-        if ($customer && $customer->user_id == $current_user_id) {
-            return true;
-        }
-        
-        return false;
+
+        return $access['has_access'];
     }
 
     /**

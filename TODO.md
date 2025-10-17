@@ -1,5 +1,28 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2155: Fix Company Tab Utama Hilang Saat Reload
+- Issue: Data pada tab utama menu Perusahaan hilang saat halaman di-reload dengan URL hash tertentu (misal `page=perusahaan#1`). Berbeda dengan menu Customer yang tetap menampilkan data saat di-reload. Review-01: Tab Membership error "Call to undefined method getCustomerOwner()". Review-02: User dengan role customer_employee dan customer_branch_admin mendapat access_denied saat akses tab Membership, padahal seharusnya punya akses. Review-03: Company Invoice error "Call to undefined method CompanyModel::find()". Review-04: Access denied message tidak muncul saat akses URL non-related company langsung
+- Root Cause: `loadCompanyData()` TIDAK update URL hash via `window.history.pushState()` seperti `loadCustomerData()`. Saat reload, `window.location.hash` kosong sehingga `handleInitialState()` tidak load data. Customer selalu update hash → hash tersimpan di browser → reload tetap load data. Review-01: CompanyMembershipController menggunakan method `getCustomerOwner()` yang tidak ada, method yang benar adalah `getCompanyData()`. Review-02: `userCanAccessCustomer()` hanya cek admin dan owner, TIDAK cek branch admin atau employee. Pattern berbeda dengan CompanyController yang sudah benar. Review-03: CompanyInvoiceModel menggunakan `CompanyModel::find()` yang tidak ada, method yang benar adalah `getBranchWithLatestMembership()`. Review-04: Company `handleInitialState()` langsung load data tanpa validasi, berbeda dengan Customer yang validate FIRST lalu redirect on error
+- Target: Tambahkan update URL hash dan reset tab di `loadCompanyData()` untuk match Customer pattern. Review-01: Ganti method call ke `getCompanyData()` yang tersedia di Model. Review-02: Ganti `userCanAccessCustomer()` untuk menggunakan BranchValidator::validateAccess() seperti CompanyController, tambahkan debug logging seperti task-2154. Review-03: Ganti `find()` call ke `getBranchWithLatestMembership()` yang tersedia di CompanyModel. Review-04: Tambahkan validateCompanyAccess() call di handleInitialState() dengan redirect on error, match Customer pattern
+- Files Modified:
+  - assets/js/company/company-script.js (Base fix: line 108-141 added window.history.pushState() to update URL hash, added tab reset to company-details, matched Customer pattern. Review-04: line 282-298 updated handleInitialState() to validate FIRST then redirect on error, line 150-167 cleaned up catch block by removing panel opening code. Updated changelog to v1.0.2)
+  - **Review-01**: src/Controllers/Company/CompanyMembershipController.php (line 105-112: changed `getCustomerOwner()` to `getCompanyData()`, added comment explaining company_id is branch_id)
+  - **Review-02**: src/Controllers/Company/CompanyMembershipController.php (line 28-48: added BranchValidator dependency, line 90-106: replaced entire `userCanAccessCustomer()` to use BranchValidator::validateAccess() with debug logging matching task-2154 pattern)
+  - **Review-03**: src/Models/Company/CompanyInvoiceModel.php (line 463-466: changed `$this->company_model->find()` to `$this->company_model->getBranchWithLatestMembership()`, added comment explaining method difference)
+  - **Review-04**: assets/js/company/company-script.js (handleInitialState() now validates access FIRST via validateCompanyAccess(), redirects to main page on access denied, removed panel opening code from catch block)
+- Status: ✅ **COMPLETED** (All Reviews including Review-04 Fixed)
+- Notes:
+  - Customer pattern: Update hash → Reset tab → Display data (3 steps)
+  - Company sebelumnya: Display data only (1 step - INCOMPLETE!)
+  - Fix: Company sekarang sama dengan Customer (3 steps lengkap)
+  - Benefit: ✅ Data tetap tampil saat reload ✅ Tab reset ke default ✅ URL hash sinkron ✅ Konsisten dengan Customer
+  - Flow: User buka #1 → load data → update hash → reload → hash masih #1 → load lagi ✓
+  - **Review-01**: Tab Membership sekarang dapat diakses tanpa error, ownership validation berfungsi dengan benar
+  - **Review-02**: customer_employee dan customer_branch_admin sekarang dapat akses tab Membership ✅ Debug logging muncul seperti task-2154 ✅ Konsisten dengan CompanyController pattern ✅
+  - **Review-03**: Company Invoice dapat diakses tanpa error ✅ CompanyModel method usage sekarang correct ✅ Branch data includes membership info untuk invoice processing ✅
+  - **Review-04**: Direct URL access FIXED ✅ Now validates FIRST then redirects on access denied ✅ Matches Customer pattern: validate → redirect on error → load on success ✅ Consistent UX across Customer and Company menus ✅
+  - (see docs/TODO-2155-fix-company-reload-data-loss.md)
+
 ## TODO-2154: Fix Customer Employee Terdeteksi sebagai Admin pada Tab Employee
 - Issue: User dengan role `customer_employee` terdeteksi sebagai ADMIN pada Tab Employee, namun terdeteksi dengan benar sebagai `customer_employee` pada Tab Branch. Ini menyebabkan inkonsistensi dalam cache key dan permission handling.
 - Root Cause: Tab Employee menggunakan `CustomerEmployeeValidator::validateAccess()` yang cek capabilities DULU sebelum database (user_id 70 punya `view_customer_employee_list` capability jadi langsung return 'admin'). Tab Branch menggunakan `CustomerModel::getUserRelation()` yang cek database DULU untuk menentukan relasi sebenarnya baru set access_type.
