@@ -706,14 +706,18 @@ class BranchModel {
                 }
 
                 // Check if user is employee - only if not owner and not branch admin
+                // For access_type determination, we check if user is employee of the CUSTOMER (not specific branch)
+                // This matches CustomerModel pattern for consistent access_type detection
                 if (!$is_customer_admin && !$is_customer_branch_admin) {
-                    if ($branch_id > 0) {
+                    if ($customer_id > 0) {
+                        // Check if user is employee of this customer
                         $is_customer_employee = (bool) $wpdb->get_var($wpdb->prepare(
                             "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees
-                            WHERE branch_id = %d AND user_id = %d AND status = 'active'",
-                            $branch_id, $user_id
+                            WHERE customer_id = %d AND user_id = %d AND status = 'active'",
+                            $customer_id, $user_id
                         ));
                     } else {
+                        // General check - is user employee of any customer
                         $is_customer_employee = (bool) $wpdb->get_var($wpdb->prepare(
                             "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees
                             WHERE user_id = %d AND status = 'active' LIMIT 1",
@@ -728,7 +732,7 @@ class BranchModel {
             if ($is_admin) $access_type = 'admin';
             else if ($is_customer_admin) $access_type = 'customer_admin';
             else if ($is_customer_branch_admin) $access_type = 'customer_branch_admin';
-            else if ($is_customer_employee) $access_type = 'staff';
+            else if ($is_customer_employee) $access_type = 'customer_employee';
 
             // Apply access_type filter - allow plugins to modify access type
             $access_type = apply_filters('wp_branch_access_type', $access_type, [
@@ -932,7 +936,7 @@ class BranchModel {
             $customer_hash = md5(serialize($customer_id));
 
             // List of all possible access types
-            $access_types = ['admin', 'customer_admin', 'customer_branch_admin', 'staff', 'none'];
+            $access_types = ['admin', 'customer_admin', 'customer_branch_admin', 'customer_employee', 'none'];
 
             // Possible pagination/ordering variations to try
             $starts = [0, 10, 20, 30, 40, 50];

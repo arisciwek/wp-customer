@@ -695,7 +695,7 @@ public function create(array $data): ?int {
                 'admin',
                 'customer_admin',
                 'customer_branch_admin',
-                'staff',
+                'customer_employee',
                 'none'
             ];
 

@@ -49,6 +49,8 @@
          },
 
         init() {
+            console.log('[Customer] init - Initializing Customer module');
+
             this.components = {
                 container: $('.wp-customer-container'),
                 rightPanel: $('.wp-customer-right-panel'),
@@ -58,6 +60,8 @@
                     totalBranches: $('#total-branches')
                 }
             };
+
+            console.log('[Customer] init - Components initialized:', this.components);
 
             // Tambahkan load tombol tambah customer
             $.ajax({
@@ -83,8 +87,13 @@
             });
 
             this.bindEvents();
+
+            console.log('[Customer] init - Calling handleInitialState');
             this.handleInitialState();
+
             this.loadStats();
+
+            console.log('[Customer] init - Initialization complete');
             
             // Update stats setelah operasi CRUD
             $(document)
@@ -121,6 +130,8 @@
          },
 
             validateCustomerAccess(customerId, onSuccess, onError) {
+                console.log('[Customer] validateCustomerAccess - Starting validation for ID:', customerId);
+
                 $.ajax({
                     url: wpCustomerData.ajaxUrl,
                     type: 'POST',
@@ -130,13 +141,18 @@
                         nonce: wpCustomerData.nonce
                     },
                     success: (response) => {
+                        console.log('[Customer] validateCustomerAccess - AJAX response:', response);
+
                         if (response.success) {
+                            console.log('[Customer] validateCustomerAccess - Access GRANTED');
                             if (onSuccess) onSuccess(response.data);
                         } else {
+                            console.log('[Customer] validateCustomerAccess - Access DENIED:', response.data);
                             if (onError) onError(response.data);
                         }
                     },
                     error: (xhr) => {
+                        console.error('[Customer] validateCustomerAccess - AJAX ERROR:', xhr);
                         if (onError) onError({
                             message: 'Terjadi kesalahan saat validasi akses',
                             code: 'server_error'
@@ -147,13 +163,23 @@
             
         handleInitialState() {
             const hash = window.location.hash;
+            console.log('[Customer] handleInitialState - URL hash:', hash);
+
             if (hash && hash.startsWith('#')) {
                 const customerId = parseInt(hash.substring(1));
+                console.log('[Customer] handleInitialState - Parsed customer ID:', customerId);
+
                 if (customerId) {
+                    console.log('[Customer] handleInitialState - Validating access for customer ID:', customerId);
                     this.validateCustomerAccess(
                         customerId,
-                        (data) => this.loadCustomerData(customerId),
+                        (data) => {
+                            console.log('[Customer] handleInitialState - Access validation SUCCESS:', data);
+                            this.loadCustomerData(customerId);
+                        },
                         (error) => {
+                            console.log('[Customer] handleInitialState - Access validation FAILED:', error);
+                            console.log('[Customer] handleInitialState - Redirecting to main page');
                             window.location.href = 'admin.php?page=wp-customer';
                             CustomerToast.error(error.message);
                         }
@@ -184,14 +210,19 @@
          },
 
         async loadCustomerData(id) {
-            if (!id || this.isLoading) return;
+            console.log('[Customer] loadCustomerData - Called with ID:', id, 'isLoading:', this.isLoading);
+
+            if (!id || this.isLoading) {
+                console.log('[Customer] loadCustomerData - Skipped (no ID or already loading)');
+                return;
+            }
 
             this.isLoading = true;
             this.showLoading();
 
-            try {
-                console.log('Loading customer data for ID:', id);
+            console.log('[Customer] loadCustomerData - Starting AJAX call for ID:', id);
 
+            try {
                 const response = await $.ajax({
                     url: wpCustomerData.ajaxUrl,
                     type: 'POST',
@@ -202,9 +233,11 @@
                     }
                 });
 
-                console.log('Customer data response:', response);
+                console.log('[Customer] loadCustomerData - AJAX response:', response);
 
                 if (response.success && response.data) {
+                    console.log('[Customer] loadCustomerData - Success, displaying data');
+
                     // Update URL hash without triggering reload
                     const newHash = `#${id}`;
                     if (window.location.hash !== newHash) {
@@ -230,13 +263,19 @@
                     throw new Error(response.data?.message || 'Failed to load customer data');
                 }
             } catch (error) {
-                console.error('Error loading customer:', error);
+                console.error('[Customer] loadCustomerData - Error caught:', error);
+
+                // Extract error message
+                let errorMessage = error.message || 'Failed to load customer data';
+                console.log('[Customer] loadCustomerData - Error message:', errorMessage);
 
                 // Tampilkan toast error
-                CustomerToast.error(error.message || 'Failed to load customer data');
+                console.log('[Customer] loadCustomerData - Showing toast error');
+                CustomerToast.error(errorMessage);
 
                 // Update panel dengan pesan yang sesuai (access denied atau generic error)
-                this.handleLoadError(error.message);
+                console.log('[Customer] loadCustomerData - Calling handleLoadError');
+                this.handleLoadError(errorMessage);
             } finally {
                 this.isLoading = false;
                 this.hideLoading();

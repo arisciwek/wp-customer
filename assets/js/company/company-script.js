@@ -28,6 +28,13 @@
  * - WordPress AJAX
  *
  * Changelog:
+ * 1.0.3 - 2025-10-17
+ * - Fixed loadCompanyData() to throw error when response.success = false
+ * - Added else clause to throw error same as Customer pattern
+ * - Added comprehensive console logging to handleHashChange()
+ * - Now error handling works correctly when accessing via hash change
+ * - Matches Customer error throwing and logging pattern completely
+ *
  * 1.0.2 - 2025-10-17
  * - Fixed access denied handling for direct URL access
  * - Added validateCompanyAccess() call in handleInitialState()
@@ -64,6 +71,8 @@
         },
 
         init() {
+            console.log('[Company] init - Initializing Company module');
+
             this.components = {
                 container: $('.wp-company-container'),
                 rightPanel: $('.wp-company-right-panel'),
@@ -73,10 +82,17 @@
                 }
             };
 
+            console.log('[Company] init - Components initialized:', this.components);
+
             this.bindEvents();
             this.initTabs();
+
+            console.log('[Company] init - Calling handleInitialState');
             this.handleInitialState();
+
             this.loadStats();
+
+            console.log('[Company] init - Initialization complete');
         },
 
         bindEvents() {
@@ -94,6 +110,8 @@
         },
 
         validateCompanyAccess(companyId, onSuccess, onError) {
+            console.log('[Company] validateCompanyAccess - Starting validation for ID:', companyId);
+
             $.ajax({
                 url: wpCustomerData.ajaxUrl,
                 type: 'POST',
@@ -103,13 +121,18 @@
                     nonce: wpCustomerData.nonce
                 },
                 success: (response) => {
+                    console.log('[Company] validateCompanyAccess - AJAX response:', response);
+
                     if (response.success) {
+                        console.log('[Company] validateCompanyAccess - Access GRANTED');
                         if (onSuccess) onSuccess(response.data);
                     } else {
+                        console.log('[Company] validateCompanyAccess - Access DENIED:', response.data);
                         if (onError) onError(response.data);
                     }
                 },
                 error: (xhr) => {
+                    console.error('[Company] validateCompanyAccess - AJAX ERROR:', xhr);
                     if (onError) onError({
                         message: 'Terjadi kesalahan saat validasi akses',
                         code: 'server_error'
@@ -119,10 +142,19 @@
         },
 
         async loadCompanyData(id) {
-            if (!id || this.isLoading) return;
+            console.log('[Company] loadCompanyData - Called with ID:', id, 'isLoading:', this.isLoading);
+
+            if (!id || this.isLoading) {
+                console.log('[Company] loadCompanyData - Skipped (no ID or already loading)');
+                return;
+            }
+
             this.isLoading = true;
             const wasLoadingShown = !this.currentId;
             if (wasLoadingShown) this.showLoading(); // only show loading when opening first time
+
+            console.log('[Company] loadCompanyData - Starting AJAX call for ID:', id);
+
             try {
                 const response = await $.ajax({
                     url: wpCustomerData.ajaxUrl,
@@ -133,7 +165,11 @@
                         nonce: wpCustomerData.nonce
                     }
                 });
+
+                console.log('[Company] loadCompanyData - AJAX response:', response);
+
                 if (response.success && response.data) {
+                    console.log('[Company] loadCompanyData - Success, displaying data');
                     // Update URL hash without triggering reload (same as Customer pattern)
                     const newHash = `#${id}`;
                     if (window.location.hash !== newHash) {
@@ -151,23 +187,31 @@
                     // Show panel with data
                     this.displayData(response.data);
                     this.currentId = id;
+                } else {
+                    // Throw error if response not successful (same as Customer pattern)
+                    console.log('[Company] loadCompanyData - Response not successful, throwing error');
+                    throw new Error(response.data?.message || 'Failed to load company data');
                 }
             } catch (error) {
-                console.error('Error loading company:', error);
+                console.error('[Company] loadCompanyData - Error caught:', error);
 
                 // Extract error message dari response
                 let errorMessage = 'Failed to load company data';
                 if (error.responseJSON && error.responseJSON.data && error.responseJSON.data.message) {
                     errorMessage = error.responseJSON.data.message;
+                    console.log('[Company] loadCompanyData - Error message from response:', errorMessage);
                 } else if (error.message) {
                     errorMessage = error.message;
+                    console.log('[Company] loadCompanyData - Error message from exception:', errorMessage);
                 }
 
                 // Tampilkan toast error
+                console.log('[Company] loadCompanyData - Showing toast error:', errorMessage);
                 CustomerToast.error(errorMessage);
 
                 // Update panel dengan pesan yang sesuai (generic error only)
                 // Access denied is handled in handleInitialState() with redirect
+                console.log('[Company] loadCompanyData - Calling handleLoadError');
                 this.handleLoadError(errorMessage);
             } finally {
                 this.isLoading = false;
@@ -263,9 +307,15 @@
 
         handleHashChange() {
             const hash = window.location.hash;
+            console.log('[Company] handleHashChange - Hash changed to:', hash);
+
             if (hash) {
                 const id = hash.substring(1);
+                console.log('[Company] handleHashChange - Parsed ID:', id, 'currentId:', this.currentId);
+
                 if (id && id !== this.currentId) {
+                    console.log('[Company] handleHashChange - Loading company data for ID:', id);
+
                     // Reset tab ke details
                     $('.tab-content').removeClass('active').hide();
                     $('#company-details').addClass('active').show();
@@ -279,14 +329,24 @@
 
         handleInitialState() {
             const hash = window.location.hash;
+            console.log('[Company] handleInitialState - URL hash:', hash);
+
             if (hash && hash.startsWith('#')) {
                 const companyId = parseInt(hash.substring(1));
+                console.log('[Company] handleInitialState - Parsed company ID:', companyId);
+
                 if (companyId) {
+                    console.log('[Company] handleInitialState - Validating access for company ID:', companyId);
                     // Validate access first, redirect on error (same as Customer pattern)
                     this.validateCompanyAccess(
                         companyId,
-                        (data) => this.loadCompanyData(companyId),
+                        (data) => {
+                            console.log('[Company] handleInitialState - Access validation SUCCESS:', data);
+                            this.loadCompanyData(companyId);
+                        },
                         (error) => {
+                            console.log('[Company] handleInitialState - Access validation FAILED:', error);
+                            console.log('[Company] handleInitialState - Redirecting to main page');
                             window.location.href = 'admin.php?page=perusahaan';
                             CustomerToast.error(error.message);
                         }
