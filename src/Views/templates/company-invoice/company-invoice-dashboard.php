@@ -15,6 +15,10 @@
  *              Mengatur layout dan component integration.
  *
  * Changelog:
+ * 1.0.1 - 2025-01-17 (Review-07)
+ * - Added membership invoice payment modal template
+ * - Improved template organization
+ *
  * 1.0.0 - 2024-12-25
  * - Initial dashboard implementation
  * - Added statistics display
@@ -75,3 +79,6 @@ defined('ABSPATH') || exit;
         wp_customer_render_confirmation_modal();
     }
     ?>
+
+    <!-- Payment Modal Template -->
+    <?php require_once WP_CUSTOMER_PATH . 'src/Views/templates/company-invoice/forms/membership-invoice-payment-modal.php'; ?>

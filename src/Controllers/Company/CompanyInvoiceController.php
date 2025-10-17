@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Controllers/Company
- * @version     1.0.0
+ * @version     1.0.4
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Controllers/Company/CompanyInvoiceController.php
@@ -17,6 +17,32 @@
  *              Includes permission validation dan error handling.
  *
  * Changelog:
+ * 1.0.4 - 2025-10-17 (Review-08)
+ * - Fixed: payment button visibility menggunakan can_pay flag dari formatInvoiceData()
+ * - Fixed: CustomerCacheManager::flush() diganti dengan clearCache()
+ * - Updated: payment capabilities menggunakan "membership" terminology
+ * - Changed: pay_all_customer_invoices → pay_all_customer_membership_invoices
+ * - Changed: pay_own_customer_invoices → pay_own_customer_membership_invoices
+ * - Changed: pay_own_branch_invoices → pay_own_branch_membership_invoices
+ *
+ * 1.0.3 - 2025-01-17 (Review-05)
+ * - Added: Role-based payment button access menggunakan validator->canPayInvoice()
+ * - Fixed: handle_invoice_payment() sekarang menggunakan validator untuk access control
+ * - Supports: customer_admin (all branches), customer_branch_admin (own branch only)
+ * - Removed: Hardcoded manage_options check untuk payment
+ *
+ * 1.0.2 - 2025-01-17 (Review-03)
+ * - Fixed: getCompanyInvoicePayments() sekarang memformat payment data dengan benar
+ * - Fixed: Ekstrak metadata JSON untuk mendapatkan payment_date yang sebenarnya
+ * - Fixed: Map description field ke notes untuk kompatibilitas dengan JavaScript
+ * - Added: Fallback payment_date menggunakan created_at jika metadata tidak ada
+ *
+ * 1.0.1 - 2025-01-17
+ * - Fixed: getStatistics() sekarang menggunakan validator pattern (canViewInvoiceStats)
+ * - Fixed: getCompanyInvoicePayments() sekarang menggunakan validator pattern (canViewInvoicePayments)
+ * - Fixed: Statistik invoice sekarang tampil untuk semua role dengan capability yang sesuai
+ * - Removed: Hardcoded manage_options check diganti dengan validator
+ *
  * 1.0.0 - 2024-10-08
  * - Initial version
  * - Added core invoice operations
@@ -519,6 +545,13 @@ class CompanyInvoiceController {
             $is_overdue = strtotime($invoice->due_date) < time();
         }
 
+        // Check if current user can pay this invoice (for button visibility)
+        $can_pay = false;
+        $payment_check = $this->validator->canPayInvoice($invoice->id);
+        if (!is_wp_error($payment_check)) {
+            $can_pay = true;
+        }
+
         return [
             'id' => $invoice->id,
             'invoice_number' => $invoice->invoice_number ?? '',
@@ -542,7 +575,8 @@ class CompanyInvoiceController {
             'created_by_name' => $created_by_name,
             'created_at' => $invoice->created_at ?? '',
             'updated_at' => $invoice->updated_at ?? '',
-            'is_overdue' => $is_overdue
+            'is_overdue' => $is_overdue,
+            'can_pay' => $can_pay  // Add payment permission flag for JavaScript
         ];
     }
 
@@ -621,9 +655,10 @@ class CompanyInvoiceController {
                 throw new \Exception('Invalid nonce');
             }
 
-            // Check permissions
-            if (!current_user_can('manage_options')) {
-                throw new \Exception(__('Anda tidak memiliki izin untuk mengakses data ini', 'wp-customer'));
+            // Validate access using validator
+            $access_check = $this->validator->canViewInvoiceStats();
+            if (is_wp_error($access_check)) {
+                throw new \Exception($access_check->get_error_message());
             }
 
             $stats = $this->invoice_model->getStatistics();
@@ -647,22 +682,58 @@ class CompanyInvoiceController {
                 throw new \Exception('Invalid nonce');
             }
 
-            // Check permissions
-            if (!current_user_can('manage_options')) {
-                throw new \Exception(__('Anda tidak memiliki izin untuk mengakses data ini', 'wp-customer'));
-            }
-
             $invoice_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
 
             if (!$invoice_id) {
                 throw new \Exception('Invalid invoice ID');
             }
 
+            // Validate access using validator with invoice_id
+            $access_check = $this->validator->canViewInvoicePayments($invoice_id);
+            if (is_wp_error($access_check)) {
+                throw new \Exception($access_check->get_error_message());
+            }
+
             // Get payments
             $payments = $this->invoice_model->getInvoicePayments($invoice_id);
 
+            // DEBUG: Log raw payment count
+            error_log("[DEBUG Review-03] Invoice ID: {$invoice_id}, Raw payments count: " . count($payments));
+
+            // Format payments - extract metadata fields for JavaScript
+            $formatted_payments = [];
+            foreach ($payments as $payment) {
+                // DEBUG: Log raw payment object
+                error_log("[DEBUG Review-03] Raw payment ID {$payment->id}: " . json_encode($payment));
+
+                $metadata = json_decode($payment->metadata, true);
+
+                // DEBUG: Log parsed metadata
+                error_log("[DEBUG Review-03] Parsed metadata for payment {$payment->id}: " . json_encode($metadata));
+
+                $formatted_payment = [
+                    'id' => $payment->id,
+                    'payment_id' => $payment->payment_id,
+                    'amount' => floatval($payment->amount),
+                    'payment_method' => $payment->payment_method,
+                    'status' => $payment->status,
+                    'payment_date' => $metadata['payment_date'] ?? $payment->created_at, // Use metadata payment_date or created_at as fallback
+                    'notes' => $payment->description ?? null,
+                    'created_at' => $payment->created_at
+                ];
+
+                // DEBUG: Log formatted payment
+                error_log("[DEBUG Review-03] Formatted payment {$payment->id}: " . json_encode($formatted_payment));
+
+                $formatted_payments[] = $formatted_payment;
+            }
+
+            // DEBUG: Log final response
+            error_log("[DEBUG Review-03] Final formatted_payments count: " . count($formatted_payments));
+            error_log("[DEBUG Review-03] Final response: " . json_encode(['payments' => $formatted_payments]));
+
             wp_send_json_success([
-                'payments' => $payments
+                'payments' => $formatted_payments
             ]);
 
         } catch (\Exception $e) {
@@ -674,14 +745,15 @@ class CompanyInvoiceController {
 
     /**
      * Handle invoice payment
+     * Uses role-based access control:
+     * - administrator: can pay all invoices
+     * - customer_admin: can pay all invoices under their customer
+     * - customer_branch_admin: can pay only their branch invoices
+     * - customer_employee: cannot pay invoices
      */
     public function handle_invoice_payment() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
-
-            if (!current_user_can('manage_options')) {
-                throw new \Exception(__('Permission denied', 'wp-customer'));
-            }
 
             $invoice_id = isset($_POST['invoice_id']) ? intval($_POST['invoice_id']) : 0;
             $payment_method = isset($_POST['payment_method']) ? sanitize_text_field($_POST['payment_method']) : '';
@@ -690,21 +762,14 @@ class CompanyInvoiceController {
                 throw new \Exception(__('Invalid parameters', 'wp-customer'));
             }
 
-            // Get invoice
+            // Validate access using validator - implements role-based access
+            $access_check = $this->validator->canPayInvoice($invoice_id);
+            if (is_wp_error($access_check)) {
+                throw new \Exception($access_check->get_error_message());
+            }
+
+            // Get invoice (already validated in canPayInvoice)
             $invoice = $this->invoice_model->find($invoice_id);
-            if (!$invoice) {
-                throw new \Exception(__('Invoice tidak ditemukan', 'wp-customer'));
-            }
-
-            // Check if invoice is already paid
-            if ($invoice->status === 'paid') {
-                throw new \Exception(__('Invoice sudah dibayar', 'wp-customer'));
-            }
-
-            // Check if invoice is cancelled
-            if ($invoice->status === 'cancelled') {
-                throw new \Exception(__('Invoice sudah dibatalkan', 'wp-customer'));
-            }
 
             // Validate payment method
             $valid_methods = ['transfer_bank', 'virtual_account', 'kartu_kredit', 'e_wallet'];
@@ -747,9 +812,8 @@ class CompanyInvoiceController {
             // Get updated invoice
             $updated_invoice = $this->invoice_model->find($invoice_id);
 
-            // Clear cache
-            $this->cache->flush('invoice_list');
-            $this->cache->flush('invoice_stats');
+            // Clear cache - use public clearAllCaches() method
+            $this->cache->clearAllCaches();
 
             wp_send_json_success([
                 'message' => __('Payment processed successfully', 'wp-customer'),

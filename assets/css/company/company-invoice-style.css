@@ -3,14 +3,14 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/CSS
- * @version     1.1.0
+ * @version     1.2.0
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/css/company/company-invoice-style.css
  *
  * Description: Custom styles untuk halaman Company Invoice.
  *              Includes styling untuk dashboard, right panel,
- *              tabs, dan komponen lainnya.
+ *              tabs, payment modal, dan komponen lainnya.
  *              Responsive design dengan mobile support.
  *              DataTable styles moved to company-invoice-datatable-style.css
  *
@@ -20,6 +20,15 @@
  * - company-invoice-datatable-style.css (for DataTable)
  *
  * Changelog:
+ * 1.2.0 - 2025-01-17 (Review-06)
+ * - Added payment modal styles (.wp-customer-modal)
+ * - Added modal header, body, footer styles
+ * - Added payment summary styles
+ * - Added payment history table styles
+ * - Added badge styles (success, warning, danger)
+ * - Fixed modal z-index to 999999 for proper layering
+ * - Added form elements styling for modal
+ *
  * 1.1.0 - 2025-01-10
  * - Moved DataTable styles to separate file
  * - Cleaned up structure
@@ -326,6 +335,235 @@
 /* Hidden State */
 .hidden {
     display: none !important;
+}
+
+/* Payment Modal */
+.wp-customer-modal {
+    display: none;
+    position: fixed;
+    z-index: 999999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.wp-customer-modal .modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 0;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.wp-customer-modal .modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #ccd0d4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f6f7f7;
+}
+
+.wp-customer-modal .modal-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.wp-customer-modal .modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    line-height: 1;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+}
+
+.wp-customer-modal .modal-close:hover {
+    color: #d63638;
+}
+
+.wp-customer-modal .modal-body {
+    padding: 20px;
+}
+
+.wp-customer-modal .payment-details {
+    margin: 20px 0;
+}
+
+.wp-customer-modal .form-row {
+    margin-bottom: 15px;
+}
+
+.wp-customer-modal .form-row label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.wp-customer-modal .form-row select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #8c8f94;
+    border-radius: 3px;
+    font-size: 14px;
+}
+
+.wp-customer-modal .confirmation-notice {
+    background: #f0f6fc;
+    border-left: 4px solid #2271b1;
+    padding: 12px;
+    margin: 15px 0;
+    border-radius: 3px;
+}
+
+.wp-customer-modal .confirmation-notice p {
+    margin: 0;
+    font-size: 13px;
+    color: #1d2327;
+}
+
+.wp-customer-modal .modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #ccd0d4;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: #f6f7f7;
+}
+
+.wp-customer-modal .modal-footer .button {
+    margin: 0;
+}
+
+.wp-customer-modal .modal-cancel {
+    background: #f6f7f7;
+    border-color: #8c8f94;
+    color: #2c3338;
+}
+
+.wp-customer-modal .modal-cancel:hover {
+    background: #f0f0f1;
+    border-color: #8c8f94;
+    color: #2c3338;
+}
+
+.wp-customer-modal .modal-confirm {
+    background: #2271b1;
+    border-color: #2271b1;
+    color: #fff;
+}
+
+.wp-customer-modal .modal-confirm:hover {
+    background: #135e96;
+    border-color: #135e96;
+    color: #fff;
+}
+
+.wp-customer-modal .modal-confirm:disabled {
+    background: #f0f0f1 !important;
+    border-color: #dcdcde !important;
+    color: #a7aaad !important;
+    cursor: not-allowed;
+}
+
+/* Payment Summary */
+.payment-summary {
+    background: #f6f7f7;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.payment-summary p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.payment-summary strong {
+    color: #1d2327;
+}
+
+/* Payment History Table */
+#payment-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+#payment-history-table thead th {
+    background: #f6f7f7;
+    border-bottom: 2px solid #ccd0d4;
+    padding: 10px;
+    text-align: left;
+    font-weight: 600;
+    color: #1d2327;
+    font-size: 13px;
+}
+
+#payment-history-table tbody td {
+    padding: 10px;
+    border-bottom: 1px solid #e5e5e5;
+    font-size: 13px;
+    color: #50575e;
+}
+
+#payment-history-table tbody tr:hover {
+    background: #f6f7f7;
+}
+
+#payment-history-table .text-center {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
+
+/* Badge Styles */
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.badge-warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.badge-danger {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* No Payments Message */
+.no-payments {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 20px;
 }
 
 /* Responsive Design */

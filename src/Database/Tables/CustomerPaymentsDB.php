@@ -18,7 +18,7 @@
  * - payment_id     : Unique payment ID
  * - company_id     : ID customer/company
  * - amount         : Jumlah pembayaran
- * - payment_method : Metode pembayaran (transfer_bank, virtual_account, credit_card)
+ * - payment_method : Metode pembayaran (transfer_bank, virtual_account, kartu_kredit, e_wallet)
  * - description    : Deskripsi pembayaran
  * - metadata       : JSON data tambahan
  * - status         : Status pembayaran (pending, completed, failed, cancelled)
@@ -29,6 +29,10 @@
  * - app_customers table
  *
  * Changelog:
+ * 1.0.1 - 2025-01-17 (Review-05)
+ * - Changed payment_method enum: credit_card → kartu_kredit, cash → e_wallet
+ * - Matches payment modal options
+ *
  * 1.0.0 - 2024-10-07
  * - Initial version
  */
@@ -48,7 +52,7 @@ class CustomerPaymentsDB {
             payment_id varchar(50) NOT NULL,
             company_id bigint(20) UNSIGNED NOT NULL,
             amount decimal(10,2) NOT NULL,
-            payment_method enum('transfer_bank','virtual_account','credit_card','cash') NOT NULL,
+            payment_method enum('transfer_bank','virtual_account','kartu_kredit','e_wallet') NOT NULL,
             description text NULL,
             metadata longtext NULL,
             status enum('pending','completed','failed','cancelled','refunded') NOT NULL DEFAULT 'pending',

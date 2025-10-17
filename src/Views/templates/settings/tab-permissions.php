@@ -63,8 +63,13 @@ $permission_labels = $permission_model->getAllCapabilities();
 $capability_groups = $permission_model->getCapabilityGroups();
 $all_roles = get_editable_roles();
 
-// Get current active tab
+// Get current active tab with validation
 $current_tab = isset($_GET['permission_tab']) ? sanitize_key($_GET['permission_tab']) : 'customer';
+
+// Validate that the tab exists in capability_groups, fallback to 'customer' if not
+if (!isset($capability_groups[$current_tab])) {
+    $current_tab = 'customer';
+}
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_role_permissions') {

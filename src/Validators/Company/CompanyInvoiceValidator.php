@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Validators/Company
- * @version     1.0.0
+ * @version     1.0.3
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Validators/Company/CompanyInvoiceValidator.php
@@ -18,6 +18,23 @@
  * Dependencies:
  * - CompanyInvoiceModel untuk check data
  * - CustomerModel untuk validasi customer
+ *
+ * Changelog:
+ * 1.0.3 - 2025-10-17 (Review-08)
+ * - Updated payment capabilities to use "membership" terminology
+ * - Changed: pay_all_customer_invoices → pay_all_customer_membership_invoices
+ * - Changed: pay_own_customer_invoices → pay_own_customer_membership_invoices
+ * - Changed: pay_own_branch_invoices → pay_own_branch_membership_invoices
+ *
+ * 1.0.2 - 2025-01-17 (Review-05)
+ * - Added canPayInvoice() method untuk validasi akses pembayaran invoice
+ * - Supports role-based payment access: customer_admin, customer_branch_admin
+ * - customer_employee tidak dapat melakukan pembayaran
+ *
+ * 1.0.1 - 2025-01-17
+ * - Added canViewInvoiceStats() method untuk validasi akses statistik
+ * - Added canViewInvoicePayments() method untuk validasi akses pembayaran
+ * - Fixed: Statistics dan payments sekarang accessible untuk semua role dengan capability yang sesuai
  */
 
 namespace WPCustomer\Validators\Company;
@@ -443,6 +460,66 @@ class CompanyInvoiceValidator {
     }
 
     /**
+     * Validate user access to view invoice statistics
+     *
+     * @return bool|WP_Error True if valid or WP_Error with reason
+     */
+    public function canViewInvoiceStats() {
+        $user_id = get_current_user_id();
+
+        // Check if user is logged in
+        if (!$user_id) {
+            return new \WP_Error(
+                'not_logged_in',
+                __('Anda harus login terlebih dahulu', 'wp-customer')
+            );
+        }
+
+        // Check basic capability - same as invoice list
+        if (!current_user_can('view_customer_membership_invoice_list')) {
+            return new \WP_Error(
+                'no_permission',
+                __('Anda tidak memiliki akses untuk melihat statistik invoice', 'wp-customer')
+            );
+        }
+
+        return true;
+    }
+
+    /**
+     * Validate user access to view invoice payments
+     *
+     * @param int $invoice_id Invoice ID (optional, for specific invoice)
+     * @return bool|WP_Error True if valid or WP_Error with reason
+     */
+    public function canViewInvoicePayments($invoice_id = 0) {
+        $user_id = get_current_user_id();
+
+        // Check if user is logged in
+        if (!$user_id) {
+            return new \WP_Error(
+                'not_logged_in',
+                __('Anda harus login terlebih dahulu', 'wp-customer')
+            );
+        }
+
+        // Check basic capability
+        if (!current_user_can('view_customer_membership_invoice_detail')) {
+            return new \WP_Error(
+                'no_permission',
+                __('Anda tidak memiliki akses untuk melihat pembayaran invoice', 'wp-customer')
+            );
+        }
+
+        // If specific invoice ID is provided, validate access to that invoice
+        if ($invoice_id > 0) {
+            return $this->canViewInvoice($invoice_id);
+        }
+
+        return true;
+    }
+
+    /**
      * Validate user access to create invoice
      *
      * @param int $branch_id Branch ID for the invoice
@@ -608,6 +685,98 @@ class CompanyInvoiceValidator {
         }
 
         return true;
+    }
+
+    /**
+     * Validate user access to pay invoice
+     * Implements role-based payment access:
+     * - administrator: can pay all invoices
+     * - customer_admin: can pay invoices for all branches under their customer
+     * - customer_branch_admin: can pay invoices only for their branch
+     * - customer_employee: cannot pay invoices
+     *
+     * @param int $invoice_id Invoice ID
+     * @return bool|WP_Error True if valid or WP_Error with reason
+     */
+    public function canPayInvoice($invoice_id) {
+        $user_id = get_current_user_id();
+
+        // Check if user is logged in
+        if (!$user_id) {
+            return new \WP_Error(
+                'not_logged_in',
+                __('Anda harus login terlebih dahulu', 'wp-customer')
+            );
+        }
+
+        // Get invoice
+        $invoice = $this->invoice_model->find($invoice_id);
+        if (!$invoice) {
+            return new \WP_Error(
+                'invoice_not_found',
+                __('Invoice tidak ditemukan', 'wp-customer')
+            );
+        }
+
+        // Check if invoice can be paid (not already paid or cancelled)
+        if ($invoice->status === 'paid') {
+            return new \WP_Error(
+                'already_paid',
+                __('Invoice sudah dibayar', 'wp-customer')
+            );
+        }
+
+        if ($invoice->status === 'cancelled') {
+            return new \WP_Error(
+                'invoice_cancelled',
+                __('Invoice sudah dibatalkan', 'wp-customer')
+            );
+        }
+
+        // Get user relation to determine access
+        $relation = $this->customer_model->getUserRelation(0);
+
+        // Get branch data to validate access
+        $branch = $this->invoice_model->getBranchData($invoice->branch_id);
+        if (!$branch) {
+            return new \WP_Error(
+                'invalid_invoice',
+                __('Data invoice tidak valid', 'wp-customer')
+            );
+        }
+
+        // Administrator: can pay all invoices
+        if ($relation['is_admin'] && current_user_can('pay_all_customer_membership_invoices')) {
+            return true;
+        }
+
+        // Customer Admin: can pay all invoices under their customer (all branches)
+        if ($relation['is_customer_admin'] && current_user_can('pay_own_customer_membership_invoices')) {
+            $customer = $this->customer_model->find($branch->customer_id);
+            if ($customer && $customer->user_id == $user_id) {
+                return true;
+            }
+        }
+
+        // Customer Branch Admin: can pay only invoices for their branch
+        if ($relation['is_customer_branch_admin'] && current_user_can('pay_own_branch_membership_invoices')) {
+            if ($branch->user_id == $user_id) {
+                return true;
+            }
+        }
+
+        // Customer Employee: cannot pay invoices
+        if ($relation['is_customer_employee']) {
+            return new \WP_Error(
+                'access_denied',
+                __('Karyawan tidak memiliki akses untuk melakukan pembayaran invoice', 'wp-customer')
+            );
+        }
+
+        return new \WP_Error(
+            'access_denied',
+            __('Anda tidak memiliki akses untuk membayar invoice ini', 'wp-customer')
+        );
     }
 }
 

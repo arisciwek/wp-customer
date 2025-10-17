@@ -35,11 +35,4 @@
             </table>
         </div>
     </div>
-
-    <div class="payment-actions-section">
-        <h3>Aksi Pembayaran</h3>
-        <div id="payment-action-buttons">
-            <!-- Payment action buttons will be populated by JavaScript -->
-        </div>
-    </div>
 </div>

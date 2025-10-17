@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS
- * @version     1.0.0
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/company/company-invoice-payment-modal.js
@@ -13,13 +13,22 @@
  *              untuk invoice payment flow.
  *              Menangani tampilan modal, validasi input, dan
  *              submit pembayaran via AJAX.
+ *              Now uses PHP template instead of JavaScript HTML string.
  *
  * Dependencies:
  * - jQuery
  * - WordPress AJAX
  * - wpCustomerData (nonce, ajaxUrl)
+ * - Template: membership-invoice-payment-modal.php (server-side rendered)
  *
  * Changelog:
+ * 1.1.0 - 2025-01-17 (Review-07)
+ * - Refactored to use PHP template instead of JavaScript HTML string
+ * - Improved separation of concerns (HTML in template, logic in JS)
+ * - Better internationalization support
+ * - Easier to maintain and modify
+ * - Modal is now pre-rendered on page load, just populated with data
+ *
  * 1.0.0 - 2024-01-10
  * - Initial version
  * - Payment modal for invoice
@@ -33,60 +42,25 @@
     const InvoicePaymentModal = {
         /**
          * Show payment modal for invoice
+         * Now uses pre-rendered PHP template, just populates data
          *
          * @param {number} invoiceId Invoice ID
          * @param {string} invoiceNumber Invoice number
          * @param {number} amount Invoice amount
          */
         showPaymentModal(invoiceId, invoiceNumber, amount) {
-            const modalHtml = `
-                <div class="wp-customer-modal" id="invoice-payment-modal">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h3 class="modal-title">Pembayaran Invoice</h3>
-                            <button type="button" class="modal-close dashicons dashicons-no-alt"></button>
-                        </div>
+            // Populate modal with invoice data
+            $('#payment-invoice-number').text(invoiceNumber);
+            $('#payment-invoice-amount').text('Rp ' + this.formatCurrency(amount));
 
-                        <div class="modal-body">
-                            <p>Pembayaran untuk invoice <strong>${invoiceNumber}</strong></p>
-                            <p>Total: <strong>Rp ${this.formatCurrency(amount)}</strong></p>
+            // Set data attributes on confirm button
+            $('#payment-confirm-btn')
+                .attr('data-invoice-id', invoiceId)
+                .attr('data-invoice-number', invoiceNumber)
+                .attr('data-amount', amount);
 
-                            <div class="payment-details">
-                                <div class="form-row">
-                                    <label for="payment-method">Metode Pembayaran</label>
-                                    <select id="payment-method" name="payment_method">
-                                        <option value="transfer_bank">Transfer Bank</option>
-                                        <option value="virtual_account">Virtual Account</option>
-                                        <option value="kartu_kredit">Kartu Kredit</option>
-                                        <option value="e_wallet">E-Wallet</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="confirmation-notice">
-                                <p>Dengan melanjutkan, Anda setuju untuk melakukan pembayaran invoice ini.</p>
-                            </div>
-                        </div>
-
-                        <div class="modal-footer">
-                            <button type="button" class="button modal-cancel">Batal</button>
-                            <button type="button" class="button button-primary modal-confirm"
-                                    data-invoice-id="${invoiceId}"
-                                    data-invoice-number="${invoiceNumber}"
-                                    data-amount="${amount}">
-                                Bayar Sekarang
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Append modal to body if not exists
-            if ($('#invoice-payment-modal').length === 0) {
-                $('body').append(modalHtml);
-            } else {
-                $('#invoice-payment-modal').replaceWith(modalHtml);
-            }
+            // Reset payment method to first option
+            $('#payment-method').val('transfer_bank');
 
             // Show modal
             $('#invoice-payment-modal').show();
@@ -171,44 +145,17 @@
 
         /**
          * Show cancel invoice confirmation
+         * Now uses pre-rendered PHP template, just populates data
          *
          * @param {number} invoiceId Invoice ID
          * @param {string} invoiceNumber Invoice number
          */
         showCancelConfirmation(invoiceId, invoiceNumber) {
-            const modalHtml = `
-                <div class="wp-customer-modal" id="invoice-cancel-modal">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h3 class="modal-title">Batalkan Invoice</h3>
-                            <button type="button" class="modal-close dashicons dashicons-no-alt"></button>
-                        </div>
+            // Populate modal with invoice data
+            $('#cancel-invoice-number').text(invoiceNumber);
 
-                        <div class="modal-body">
-                            <p>Apakah Anda yakin ingin membatalkan invoice <strong>${invoiceNumber}</strong>?</p>
-                            <div class="confirmation-notice" style="color: #d63638;">
-                                <p>Invoice yang dibatalkan tidak dapat dikembalikan.</p>
-                            </div>
-                        </div>
-
-                        <div class="modal-footer">
-                            <button type="button" class="button modal-cancel">Batal</button>
-                            <button type="button" class="button button-primary modal-confirm"
-                                    data-invoice-id="${invoiceId}"
-                                    style="background-color: #d63638; border-color: #d63638;">
-                                Ya, Batalkan
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Append modal to body
-            if ($('#invoice-cancel-modal').length === 0) {
-                $('body').append(modalHtml);
-            } else {
-                $('#invoice-cancel-modal').replaceWith(modalHtml);
-            }
+            // Set data attribute on confirm button
+            $('#cancel-confirm-btn').attr('data-invoice-id', invoiceId);
 
             // Show modal
             $('#invoice-cancel-modal').show();

@@ -69,7 +69,12 @@ class PermissionModel {
         'edit_all_customer_membership_invoices' => 'Edit Semua Invoice Membership',
         'edit_own_customer_membership_invoice' => 'Edit Invoice Membership Sendiri',
         'delete_customer_membership_invoice' => 'Hapus Invoice Membership',
-        'approve_customer_membership_invoice' => 'Approve Invoice Membership'
+        'approve_customer_membership_invoice' => 'Approve Invoice Membership',
+
+        // Membership Invoice Payment capabilities
+        'pay_all_customer_membership_invoices' => 'Bayar Semua Invoice Membership Customer',
+        'pay_own_customer_membership_invoices' => 'Bayar Invoice Membership Customer Sendiri',
+        'pay_own_branch_membership_invoices' => 'Bayar Invoice Membership Cabang Sendiri'
     ];
 
     // Define base capabilities untuk setiap role beserta nilai default-nya
@@ -121,6 +126,14 @@ class PermissionModel {
                 'delete_customer_membership_invoice',
                 'approve_customer_membership_invoice'
             ]
+        ],
+        'membership_invoice_payment' => [
+            'title' => 'Membership Invoice Payment Permissions',
+            'caps' => [
+                'pay_all_customer_membership_invoices',
+                'pay_own_customer_membership_invoices',
+                'pay_own_branch_membership_invoices'
+            ]
         ]
     ];
 
@@ -129,7 +142,8 @@ class PermissionModel {
             $this->displayed_capabilities_in_tabs['customer']['caps'],
             $this->displayed_capabilities_in_tabs['branch']['caps'],
             $this->displayed_capabilities_in_tabs['employee']['caps'],
-            $this->displayed_capabilities_in_tabs['membership_invoice']['caps']
+            $this->displayed_capabilities_in_tabs['membership_invoice']['caps'],
+            $this->displayed_capabilities_in_tabs['membership_invoice_payment']['caps']
         );
     } 
 
@@ -256,7 +270,12 @@ class PermissionModel {
                 'edit_all_customer_membership_invoices' => true, // Can edit all invoices under their customer
                 'edit_own_customer_membership_invoice' => true,
                 'delete_customer_membership_invoice' => false,   // Cannot delete invoices
-                'approve_customer_membership_invoice' => false   // Cannot approve (needs higher authority)
+                'approve_customer_membership_invoice' => false,  // Cannot approve (needs higher authority)
+
+                // Membership Invoice Payment capabilities - can pay all invoices under their customer
+                'pay_all_customer_membership_invoices' => false,            // Cannot pay invoices from other customers
+                'pay_own_customer_membership_invoices' => true,             // Can pay all invoices under their customer (all branches)
+                'pay_own_branch_membership_invoices' => false               // This is for branch admin
             ];
 
             foreach ($default_capabilities as $cap => $enabled) {
@@ -311,7 +330,12 @@ class PermissionModel {
                 'edit_all_customer_membership_invoices' => false, // Cannot edit all invoices
                 'edit_own_customer_membership_invoice' => true,   // Can edit invoices for their branch
                 'delete_customer_membership_invoice' => false,    // Cannot delete invoices
-                'approve_customer_membership_invoice' => false    // Cannot approve invoices
+                'approve_customer_membership_invoice' => false,   // Cannot approve invoices
+
+                // Membership Invoice Payment capabilities - can pay only for their branch
+                'pay_all_customer_membership_invoices' => false,             // Cannot pay all customer invoices
+                'pay_own_customer_membership_invoices' => false,             // Cannot pay all branch invoices under customer
+                'pay_own_branch_membership_invoices' => true                 // Can pay only invoices for their branch
             ];
 
             foreach ($default_capabilities as $cap => $enabled) {
@@ -366,7 +390,12 @@ class PermissionModel {
                 'edit_all_customer_membership_invoices' => false,
                 'edit_own_customer_membership_invoice' => false,  // Cannot edit invoices
                 'delete_customer_membership_invoice' => false,
-                'approve_customer_membership_invoice' => false
+                'approve_customer_membership_invoice' => false,
+
+                // Membership Invoice Payment capabilities - cannot pay
+                'pay_all_customer_membership_invoices' => false,             // Cannot pay invoices
+                'pay_own_customer_membership_invoices' => false,             // Cannot pay invoices
+                'pay_own_branch_membership_invoices' => false                // Cannot pay invoices
             ];
 
             foreach ($default_capabilities as $cap => $enabled) {

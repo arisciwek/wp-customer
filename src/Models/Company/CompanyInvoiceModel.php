@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Company
- * @version     1.0.0
+ * @version     1.0.2
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Company/CompanyInvoiceModel.php
@@ -25,6 +25,19 @@
  * - WordPress $wpdb
  *
  * Changelog:
+ * 1.0.2 - 2025-01-17 (Review-02)
+ * - Fixed: getInvoicePayments() query error - column invoice_id tidak ada di tabel
+ * - Changed: Query menggunakan metadata LIKE search karena invoice_id tersimpan di JSON metadata
+ * - Invoice ID stored as: {"invoice_id":4,...} dalam metadata field
+ *
+ * 1.0.1 - 2025-01-17 (Review-01)
+ * - Fixed: getStatistics() sekarang menggunakan access-based filtering
+ * - Added: Access filtering untuk admin, customer_admin, customer_branch_admin, customer_employee
+ * - Admin: lihat statistik invoice semua customer
+ * - Customer Admin: lihat statistik invoice customer miliknya dan cabang dibawahnya
+ * - Customer Branch Admin: lihat statistik invoice untuk cabangnya saja
+ * - Customer Employee: lihat statistik invoice untuk cabangnya saja
+ *
  * 1.0.0 - 2024-10-08
  * - Initial version
  * - Added core invoice operations
@@ -627,17 +640,104 @@ class CompanyInvoiceModel {
     }
 
     /**
-     * Get invoice statistics for dashboard
+     * Get invoice statistics for dashboard with access-based filtering
      *
      * @return array Statistics data
      */
     public function getStatistics(): array {
         global $wpdb;
 
-        $total_invoices = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table}");
-        $pending_invoices = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table} WHERE status = 'pending'");
-        $paid_invoices = $wpdb->get_var("SELECT COUNT(*) FROM {$this->table} WHERE status = 'paid'");
-        $total_paid_amount = $wpdb->get_var("SELECT SUM(amount) FROM {$this->table} WHERE status = 'paid'");
+        error_log('=== Debug CompanyInvoiceModel getStatistics ===');
+        error_log('User ID: ' . get_current_user_id());
+
+        // Get user relation from CustomerModel to determine access
+        $relation = $this->customer_model->getUserRelation(0);
+        $access_type = $relation['access_type'];
+
+        error_log('Access type: ' . $access_type);
+
+        // Build base query with JOIN for access filtering
+        $branches_table = $wpdb->prefix . 'app_customer_branches';
+        $customers_table = $wpdb->prefix . 'app_customers';
+
+        $from = " FROM {$this->table} ci
+                  LEFT JOIN {$branches_table} b ON ci.branch_id = b.id
+                  LEFT JOIN {$customers_table} c ON b.customer_id = c.id";
+
+        $where = " WHERE 1=1";
+        $where_params = [];
+
+        // Apply access filtering (same as getTotalCount and getDataTableData)
+        if ($relation['is_admin']) {
+            // Administrator - see all invoices
+            error_log('User is admin - no additional restrictions');
+        }
+        elseif ($relation['is_customer_admin']) {
+            // Customer Admin - see all invoices for branches under their customer
+            $where .= " AND c.user_id = %d";
+            $where_params[] = get_current_user_id();
+            error_log('Added customer admin restriction');
+        }
+        elseif ($relation['is_customer_branch_admin']) {
+            // Customer Branch Admin - only see invoices for their branch
+            $branch_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$branches_table}
+                 WHERE user_id = %d LIMIT 1",
+                get_current_user_id()
+            ));
+
+            if ($branch_id) {
+                $where .= " AND ci.branch_id = %d";
+                $where_params[] = $branch_id;
+                error_log('Added customer branch admin restriction for branch: ' . $branch_id);
+            } else {
+                $where .= " AND 1=0"; // No branch found
+                error_log('Customer branch admin has no branch - blocking access');
+            }
+        }
+        elseif ($relation['is_customer_employee']) {
+            // Employee - only see invoices for the branch they work in
+            $employee_branch = $wpdb->get_var($wpdb->prepare(
+                "SELECT branch_id FROM {$wpdb->prefix}app_customer_employees
+                 WHERE user_id = %d AND status = 'active' LIMIT 1",
+                get_current_user_id()
+            ));
+
+            if ($employee_branch) {
+                $where .= " AND ci.branch_id = %d";
+                $where_params[] = $employee_branch;
+                error_log('Added employee restriction for branch: ' . $employee_branch);
+            } else {
+                $where .= " AND 1=0"; // No branch found
+                error_log('Employee has no branch - blocking access');
+            }
+        }
+        else {
+            // No access
+            $where .= " AND 1=0";
+            error_log('User has no access - blocking all');
+        }
+
+        // Prepare WHERE clause with params
+        if (!empty($where_params)) {
+            $where_prepared = $wpdb->prepare($where, $where_params);
+        } else {
+            $where_prepared = $where;
+        }
+
+        error_log('Final WHERE: ' . $where_prepared);
+
+        // Get statistics with access filtering
+        $total_invoices = $wpdb->get_var("SELECT COUNT(*) {$from} {$where_prepared}");
+        $pending_invoices = $wpdb->get_var("SELECT COUNT(*) {$from} {$where_prepared} AND ci.status = 'pending'");
+        $paid_invoices = $wpdb->get_var("SELECT COUNT(*) {$from} {$where_prepared} AND ci.status = 'paid'");
+        $total_paid_amount = $wpdb->get_var("SELECT SUM(ci.amount) {$from} {$where_prepared} AND ci.status = 'paid'");
+
+        error_log('Total invoices: ' . $total_invoices);
+        error_log('Pending: ' . $pending_invoices);
+        error_log('Paid: ' . $paid_invoices);
+        error_log('Total paid amount: ' . $total_paid_amount);
+        error_log('=== End Debug ===');
 
         return [
             'total_invoices' => (int) $total_invoices,
@@ -763,11 +863,40 @@ class CompanyInvoiceModel {
         global $wpdb;
         $payments_table = $wpdb->prefix . 'app_customer_payments';
 
-        return $wpdb->get_results($wpdb->prepare("
+        // Invoice ID is stored in metadata JSON field, not as separate column
+        // Use specific pattern with comma or closing brace to avoid partial matches
+        // Pattern: "invoice_id":123, or "invoice_id":123}
+        $pattern1 = '%"invoice_id":' . $invoice_id . ',%';
+        $pattern2 = '%"invoice_id":' . $invoice_id . '}%';
+
+        // DEBUG: Log query details
+        error_log("[DEBUG Review-03 Model] Invoice ID: {$invoice_id}");
+        error_log("[DEBUG Review-03 Model] Pattern 1: {$pattern1}");
+        error_log("[DEBUG Review-03 Model] Pattern 2: {$pattern2}");
+        error_log("[DEBUG Review-03 Model] Payments table: {$payments_table}");
+
+        $query = $wpdb->prepare("
             SELECT * FROM {$payments_table}
-            WHERE invoice_id = %d
-            ORDER BY payment_date DESC
-        ", $invoice_id));
+            WHERE metadata LIKE %s OR metadata LIKE %s
+            ORDER BY created_at DESC
+        ", $pattern1, $pattern2);
+
+        // DEBUG: Log prepared query
+        error_log("[DEBUG Review-03 Model] Prepared Query: {$query}");
+
+        $results = $wpdb->get_results($query);
+
+        // DEBUG: Log results
+        error_log("[DEBUG Review-03 Model] Results count: " . count($results));
+        if ($results) {
+            foreach ($results as $index => $result) {
+                error_log("[DEBUG Review-03 Model] Result {$index}: " . json_encode($result));
+            }
+        } else {
+            error_log("[DEBUG Review-03 Model] No results found");
+        }
+
+        return $results;
     }
 
     /**

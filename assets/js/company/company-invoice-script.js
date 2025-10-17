@@ -197,6 +197,8 @@
         loadPaymentInfo(invoiceId) {
             const self = this;
 
+            console.log('[DEBUG Review-03 JS] Loading payment info for invoice:', invoiceId);
+
             $.ajax({
                 url: wpCustomerData.ajaxUrl,
                 type: 'POST',
@@ -206,19 +208,29 @@
                     nonce: wpCustomerData.nonce
                 },
                 beforeSend: function() {
+                    console.log('[DEBUG Review-03 JS] AJAX request started');
                     self.showLoading('payment-info');
                 },
                 success: function(response) {
+                    console.log('[DEBUG Review-03 JS] AJAX response received:', response);
+                    console.log('[DEBUG Review-03 JS] Response.success:', response.success);
+                    console.log('[DEBUG Review-03 JS] Response.data:', response.data);
+
                     if (response.success) {
+                        console.log('[DEBUG Review-03 JS] Payments array:', response.data.payments);
+                        console.log('[DEBUG Review-03 JS] Payments count:', response.data.payments ? response.data.payments.length : 0);
                         self.renderPaymentInfo(response.data);
                     } else {
+                        console.error('[DEBUG Review-03 JS] Error in response:', response.data.message);
                         self.showToast('error', response.data.message || 'Failed to load payment info');
                     }
                 },
-                error: function() {
+                error: function(xhr, status, error) {
+                    console.error('[DEBUG Review-03 JS] AJAX error:', {xhr, status, error});
                     self.showToast('error', 'Failed to load payment info');
                 },
                 complete: function() {
+                    console.log('[DEBUG Review-03 JS] AJAX request completed');
                     self.hideLoading('payment-info');
                 }
             });
@@ -242,31 +254,81 @@
             $('#invoice-created-at').text(this.formatDate(data.created_at));
             $('#invoice-created-by').text(data.created_by_name || '-');
 
-            // Render action buttons based on status
-            this.renderActionButtons(data.status, data.id, data.invoice_number, data.amount);
+            // Render action buttons based on status and payment permission
+            this.renderActionButtons(data.status, data.id, data.invoice_number, data.amount, data.can_pay);
 
             // Show invoice details tab (pass false to prevent re-loading)
             this.switchTab('invoice-details', false);
         },
 
         renderPaymentInfo(data) {
-            let html = '';
+            console.log('[DEBUG Review-03 JS] renderPaymentInfo called with data:', data);
+
+            // Clear existing content first
+            $('#payment-history-table tbody').empty();
+            $('#payment-details').empty();
 
             if (data.payments && data.payments.length > 0) {
-                data.payments.forEach(payment => {
-                    html += `
-                        <div class="payment-record">
-                            <div class="payment-amount">Rp ${this.formatCurrency(payment.amount)}</div>
-                            <div class="payment-date">${this.formatDate(payment.payment_date)}</div>
-                            ${payment.notes ? `<div class="payment-notes">${payment.notes}</div>` : ''}
-                        </div>
+                console.log('[DEBUG Review-03 JS] Rendering', data.payments.length, 'payment records');
+
+                // Populate payment history table
+                let tableRows = '';
+                data.payments.forEach((payment, index) => {
+                    console.log(`[DEBUG Review-03 JS] Payment ${index}:`, payment);
+                    console.log(`[DEBUG Review-03 JS] - amount:`, payment.amount);
+                    console.log(`[DEBUG Review-03 JS] - payment_date:`, payment.payment_date);
+                    console.log(`[DEBUG Review-03 JS] - notes:`, payment.notes);
+
+                    tableRows += `
+                        <tr>
+                            <td>${this.formatDate(payment.payment_date)}</td>
+                            <td>Rp ${this.formatCurrency(payment.amount)}</td>
+                            <td>${this.getPaymentMethodLabel(payment.payment_method)}</td>
+                            <td>${this.getPaymentStatusBadge(payment.status)}</td>
+                            <td>${payment.notes || '-'}</td>
+                        </tr>
                     `;
                 });
+
+                $('#payment-history-table tbody').html(tableRows);
+
+                // Show summary in payment details
+                const totalAmount = data.payments.reduce((sum, p) => sum + parseFloat(p.amount), 0);
+                const summaryHtml = `
+                    <div class="payment-summary">
+                        <p><strong>Total Pembayaran:</strong> Rp ${this.formatCurrency(totalAmount)}</p>
+                        <p><strong>Jumlah Transaksi:</strong> ${data.payments.length}</p>
+                    </div>
+                `;
+                $('#payment-details').html(summaryHtml);
+
+                console.log('[DEBUG Review-03 JS] Table rows rendered');
             } else {
-                html = '<p class="no-payments">No payments recorded for this invoice.</p>';
+                console.log('[DEBUG Review-03 JS] No payments found, showing empty state');
+                $('#payment-history-table tbody').html('<tr><td colspan="5" class="text-center">Belum ada pembayaran untuk invoice ini</td></tr>');
+                $('#payment-details').html('<p class="no-payments">Belum ada pembayaran untuk invoice ini.</p>');
             }
 
-            $('#payment-info-content').html(html);
+            console.log('[DEBUG Review-03 JS] Payment info rendered successfully');
+        },
+
+        getPaymentMethodLabel(method) {
+            const labels = {
+                'transfer_bank': 'Transfer Bank',
+                'virtual_account': 'Virtual Account',
+                'kartu_kredit': 'Kartu Kredit',
+                'e_wallet': 'E-Wallet'
+            };
+            return labels[method] || method;
+        },
+
+        getPaymentStatusBadge(status) {
+            const badges = {
+                'completed': '<span class="badge badge-success">Completed</span>',
+                'pending': '<span class="badge badge-warning">Pending</span>',
+                'failed': '<span class="badge badge-danger">Failed</span>'
+            };
+            return badges[status] || status;
         },
 
         loadStats() {
@@ -374,23 +436,28 @@
             `;
         },
 
-        renderActionButtons(status, invoiceId, invoiceNumber, amount) {
+        renderActionButtons(status, invoiceId, invoiceNumber, amount, canPay) {
             let buttons = '';
 
             if (status === 'pending' || status === 'overdue') {
-                buttons = `
-                    <button class="button button-primary btn-pay-invoice"
-                            data-id="${invoiceId}"
-                            data-number="${invoiceNumber}"
-                            data-amount="${amount}"
-                            style="margin-right: 10px;">
-                        Bayar Sekarang
-                    </button>
-                    <button class="button btn-cancel-invoice"
-                            data-id="${invoiceId}">
-                        Batalkan Invoice
-                    </button>
-                `;
+                // Only show payment button if user has permission
+                if (canPay) {
+                    buttons = `
+                        <button class="button button-primary btn-pay-invoice"
+                                data-id="${invoiceId}"
+                                data-number="${invoiceNumber}"
+                                data-amount="${amount}"
+                                style="margin-right: 10px;">
+                            Bayar Sekarang
+                        </button>
+                        <button class="button btn-cancel-invoice"
+                                data-id="${invoiceId}">
+                            Batalkan Invoice
+                        </button>
+                    `;
+                } else {
+                    buttons = '<p class="description">Status: Menunggu Pembayaran</p>';
+                }
             } else if (status === 'paid') {
                 buttons = `
                     <button class="button button-primary btn-view-payment"
