@@ -28,6 +28,19 @@
  * - WordPress AJAX
  *
  * Changelog:
+ * 1.0.2 - 2025-10-17
+ * - Fixed access denied handling for direct URL access
+ * - Added validateCompanyAccess() call in handleInitialState()
+ * - Now redirects to main page when accessing non-related company
+ * - Matches Customer pattern: validate → redirect on error → load on success
+ * - Removed panel opening code from catch block (access denied handled separately)
+ *
+ * 1.0.1 - 2025-01-17
+ * - Fixed page reload issue - data now persists on reload
+ * - Added URL hash update via history.pushState() in loadCompanyData()
+ * - Added tab reset to company-details on data load
+ * - Matched Customer pattern for consistent behavior
+ *
  * 1.0.0 - 2024-02-09
  * - Initial version
  * - Added DataTable integration
@@ -121,6 +134,20 @@
                     }
                 });
                 if (response.success && response.data) {
+                    // Update URL hash without triggering reload (same as Customer pattern)
+                    const newHash = `#${id}`;
+                    if (window.location.hash !== newHash) {
+                        window.history.pushState(null, '', newHash);
+                    }
+
+                    // Reset tab to default (Data Company)
+                    $('.nav-tab').removeClass('nav-tab-active');
+                    $('.nav-tab[data-tab="company-details"]').addClass('nav-tab-active');
+
+                    // Show company details tab
+                    $('.tab-content').removeClass('active').hide();
+                    $('#company-details').addClass('active').show();
+
                     // Show panel with data
                     this.displayData(response.data);
                     this.currentId = id;
@@ -139,16 +166,9 @@
                 // Tampilkan toast error
                 CustomerToast.error(errorMessage);
 
-                // Update panel dengan pesan yang sesuai (access denied atau generic error)
+                // Update panel dengan pesan yang sesuai (generic error only)
+                // Access denied is handled in handleInitialState() with redirect
                 this.handleLoadError(errorMessage);
-
-                // Pastikan panel tetap terbuka untuk menampilkan error
-                this.components.container.addClass('with-right-panel');
-                this.components.rightPanel.addClass('visible');
-
-                // Update currentId ke ID yang sedang dicoba diakses
-                // agar tidak stuck di ID lama
-                this.currentId = id;
             } finally {
                 this.isLoading = false;
                 if (wasLoadingShown) this.hideLoading();
@@ -262,10 +282,15 @@
             if (hash && hash.startsWith('#')) {
                 const companyId = parseInt(hash.substring(1));
                 if (companyId) {
-                    // Langsung load data tanpa validasi terpisah
-                    // Validasi akan dilakukan di loadCompanyData() dan CompanyController::show()
-                    // Jika access denied, error akan di-handle dan tampilkan pesan di panel
-                    this.loadCompanyData(companyId);
+                    // Validate access first, redirect on error (same as Customer pattern)
+                    this.validateCompanyAccess(
+                        companyId,
+                        (data) => this.loadCompanyData(companyId),
+                        (error) => {
+                            window.location.href = 'admin.php?page=perusahaan';
+                            CustomerToast.error(error.message);
+                        }
+                    );
                 }
             }
         },
