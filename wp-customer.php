@@ -80,8 +80,6 @@ class WPCustomer {
         require_once WP_CUSTOMER_PATH . 'includes/class-deactivator.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-dependencies.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-init-hooks.php';
-        require_once WP_CUSTOMER_PATH . 'includes/class-admin-bar-info.php';
-        require_once WP_CUSTOMER_PATH . 'includes/class-app-core-integration.php';
 
         $this->loader = new WP_Customer_Loader();
 
@@ -119,11 +117,13 @@ class WPCustomer {
         $init_hooks = new WP_Customer_Init_Hooks();
         $init_hooks->init();
 
-        // Initialize admin bar info display after WordPress is loaded
-        $this->loader->add_action('init', 'WP_Customer_Admin_Bar_Info', 'init');
+        // NEW: Simplified WP App Core integration (v2.0)
+        // wp-app-core handles ALL WordPress queries (user, role, permission)
+        // wp-customer ONLY provides entity data from its tables
+        add_filter('wp_app_core_user_entity_data', [$this, 'provide_entity_data'], 10, 3);
 
-        // Initialize WP App Core integration
-        $this->loader->add_action('init', 'WP_Customer_App_Core_Integration', 'init');
+        // Custom role names for wp-customer roles
+        add_filter('wp_app_core_role_display_name', [$this, 'get_role_display_name'], 10, 2);
     }
 
     /**
@@ -158,6 +158,56 @@ class WPCustomer {
             }
         });
 
+    }
+
+    /**
+     * Provide entity data for wp-app-core admin bar (v2.0 simplified integration)
+     *
+     * wp-app-core queries WordPress user, roles, and permissions
+     * wp-customer only provides customer/branch entity data
+     *
+     * @param array|null $entity_data Existing entity data (from other plugins)
+     * @param int $user_id WordPress user ID
+     * @param WP_User $user WordPress user object
+     * @return array|null Entity data or null if not found
+     */
+    public function provide_entity_data($entity_data, $user_id, $user) {
+        // Skip if another plugin already provided data
+        if ($entity_data) {
+            return $entity_data;
+        }
+
+        // Query customer entity data from Model
+        $employee_model = new \WPCustomer\Models\Employee\CustomerEmployeeModel();
+        $user_info = $employee_model->getUserInfo($user_id);
+
+        if (!$user_info) {
+            return null;
+        }
+
+        // Return ONLY entity data (customer/branch info)
+        // wp-app-core will merge this with WordPress user/role/permission data
+        return [
+            'entity_name' => $user_info['customer_name'] ?? '',
+            'entity_code' => $user_info['customer_code'] ?? '',
+            'branch_name' => $user_info['branch_name'] ?? '',
+            'branch_type' => $user_info['branch_type'] ?? '',
+            'department' => $user_info['department'] ?? '',
+            'position' => $user_info['position'] ?? '',
+            'icon' => '🏢',
+            'relation_type' => 'customer'
+        ];
+    }
+
+    /**
+     * Get custom role display name for wp-customer roles
+     *
+     * @param string $name Current display name
+     * @param string $slug Role slug
+     * @return string Role display name
+     */
+    public function get_role_display_name($name, $slug) {
+        return WP_Customer_Role_Manager::getRoleName($slug) ?? $name;
     }
 
     /**

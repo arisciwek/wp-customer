@@ -1,5 +1,30 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2159: Admin Bar Support
+- Issue: Plugin wp-customer belum memiliki method getUserInfo() di CustomerEmployeeModel seperti yang ada di wp-agency, sehingga integrasi dengan wp-app-core admin bar belum optimal. Admin bar info belum menampilkan data lengkap employee, customer, branch, dan membership. Review-01: File class-admin-bar-info.php masih ada dan ter-load, padahal sudah tidak digunakan karena digantikan oleh centralized admin bar di wp-app-core.
+- Root Cause: Method getUserInfo() belum diimplementasikan di CustomerEmployeeModel. Integration class masih melakukan query langsung di class-app-core-integration.php tanpa memanfaatkan model layer untuk reusability dan caching. Review-01: Code lama admin bar belum dihapus setelah migrasi ke wp-app-core.
+- Target: (1) Implementasikan method getUserInfo() di CustomerEmployeeModel yang mengembalikan data komprehensif (employee, customer, branch, membership, user, role names, permission names). (2) Update class-app-core-integration.php untuk delegate employee data retrieval ke model. (3) Pastikan data ter-cache dengan baik untuk performance. (4) Ikuti pattern yang sama dengan wp-agency untuk konsistensi. Review-01: Hapus kode lama admin bar yang sudah tidak digunakan.
+- Files Modified:
+  - src/Models/Employee/CustomerEmployeeModel.php (added getUserInfo() method lines 786-954 with comprehensive query joining employees, customers, branches, memberships, users, and usermeta tables. Returns full data including customer details (code, name, npwp, nib, status), branch details (code, name, type, nitku, address, phone, email, postal_code, latitude, longitude), membership details (level_id, status, period_months, dates, payment info), user credentials (email, capabilities), role names (via AdminBarModel), and permission names (via AdminBarModel). Includes caching with CustomerCacheManager for 5 minutes.)
+  - includes/class-app-core-integration.php (v1.0.0 → v1.1.0: refactored get_user_info() to delegate employee data retrieval to CustomerEmployeeModel::getUserInfo(), removed local cache manager (now handled by model), added comprehensive debug logging, added fallback handling for users with roles but no entity link, maintains backward compatibility for customer owner and branch admin lookups)
+  - **Review-01**: wp-customer.php (removed require_once for deprecated class-admin-bar-info.php line 83, removed add_action init for WP_Customer_Admin_Bar_Info line 123, updated comment for App Core Integration)
+  - **Review-01**: includes/class-admin-bar-info.php (**DELETED** - replaced by centralized wp-app-core admin bar)
+  - **Review-01**: includes/class-dependencies.php (removed add_action wp_head for enqueue_admin_bar_styles line 37 - method no longer exists, fixed undefined variable $screen warning in enqueue_styles() - added get_current_screen() and null checks)
+- Status: ✅ **COMPLETED** (Including Review-01)
+- Notes:
+  - Pattern mengikuti wp-agency plugin untuk konsistensi
+  - Role names dan permission names di-generate dinamis menggunakan AdminBarModel dari wp-app-core
+  - Cache duration: 5 menit (300 detik) dengan cache key 'customer_user_info'
+  - Query optimization menggunakan MAX() aggregation dan subquery untuk menghindari duplikasi
+  - Single comprehensive query vs multiple queries untuk performance
+  - Dependencies: WPAppCore\Models\AdminBarModel, WPCustomer\Models\Settings\PermissionModel, WP_Customer_Role_Manager
+  - Data structure returned: entity_name, entity_code, customer_id, customer_npwp, customer_nib, customer_status, branch_id, branch_code, branch_name, branch_type, branch_nitku, branch_address, branch_phone, branch_email, branch_postal_code, branch_latitude, branch_longitude, membership_level_id, membership_status, membership_period_months, membership_start_date, membership_end_date, membership_price_paid, membership_payment_status, membership_payment_method, membership_payment_date, position, user_email, capabilities, relation_type, icon, role_names (array), permission_names (array)
+  - Benefits: Cleaner separation of concerns, reusable query logic, cached data reduces DB load, consistent with wp-agency pattern
+  - **Review-01**: Removed deprecated class-admin-bar-info.php and its loader from wp-customer.php, consistent with wp-agency plugin, clean codebase without unused code
+  - (see TODO/TODO-2159-admin-bar-support.md)
+
+---
+
 ## TODO-2158: Invoice & Payment Settings
 - Issue: Tidak ada pengaturan terpusat untuk konfigurasi invoice (due date, prefix, format, currency, tax, sender email) dan payment methods (methods, confirmation, auto-approve, reminders). Settings yang dibutuhkan untuk membership invoice tersebar dan tidak mudah dikustomisasi oleh user melalui UI.
 - Root Cause: Belum ada interface dan data model untuk menyimpan default values invoice dan payment settings. Plugin menggunakan hardcoded values untuk generate invoice dan payment processing.

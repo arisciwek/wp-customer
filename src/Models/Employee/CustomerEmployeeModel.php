@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Employee
- * @version     1.0.0
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Employee/CustomerEmployeeModel.php
@@ -15,6 +15,17 @@
  *              Menyediakan metode untuk DataTables server-side.
  *
  * Changelog:
+ * 1.1.0 - 2025-01-18
+ * - REFACTOR: getUserInfo() now handles ALL user types (employee, owner, branch admin, fallback)
+ * - Added: getEmployeeInfo() private method (extracted from getUserInfo)
+ * - Added: getCustomerOwnerInfo() private method (moved from Integration class)
+ * - Added: getBranchAdminInfo() private method (moved from Integration class)
+ * - Added: getFallbackInfo() private method (moved from Integration class)
+ * - Improved: All business logic now in Model (separation of concerns)
+ * - Improved: Consistent with wp-agency pattern (single delegation point)
+ * - Added: Cache invalidation for customer_user_info in update/delete/changeStatus
+ * - Benefits: Cleaner architecture, more maintainable, testable
+ *
  * 1.0.0 - 2024-01-12
  * - Initial implementation
  * - Added core CRUD operations
@@ -193,6 +204,11 @@ public function create(array $data): ?int {
 		$this->cache->delete('customer_employee_count', (string)$employee->customer_id);
 		$this->cache->delete('active_customer_employee_count', (string)$employee->customer_id);
 
+		// Invalidate getUserInfo cache (for admin bar)
+		if ($employee->user_id) {
+		    $this->cache->delete('customer_user_info', $employee->user_id);
+		}
+
 		// Invalidate DataTable cache for all access types
 		$this->invalidateAllDataTableCache('customer_employee_list', (int)$employee->customer_id);
 	    }
@@ -222,6 +238,11 @@ public function create(array $data): ?int {
 		$this->cache->delete('customer_employee', $id);
 		$this->cache->delete('customer_employee_count', (string)$customer_id);
 		$this->cache->delete('active_customer_employee_count', (string)$customer_id);
+
+		// Invalidate getUserInfo cache (for admin bar)
+		if ($employee->user_id) {
+		    $this->cache->delete('customer_user_info', $employee->user_id);
+		}
 
 		// Invalidate DataTable cache for all access types
 		$this->invalidateAllDataTableCache('customer_employee_list', (int)$customer_id);
@@ -590,6 +611,11 @@ public function create(array $data): ?int {
 		$this->cache->delete('customer_employee_count', (string)$customer_id);
 		$this->cache->delete('active_customer_employee_count', (string)$customer_id);
 
+		// Invalidate getUserInfo cache (for admin bar)
+		if ($employee->user_id) {
+		    $this->cache->delete('customer_user_info', $employee->user_id);
+		}
+
 		// Invalidate DataTable cache for all access types
 		$this->invalidateAllDataTableCache('customer_employee_list', (int)$customer_id);
 	    }
@@ -787,18 +813,24 @@ public function create(array $data): ?int {
      * Get comprehensive user information for admin bar integration
      *
      * This method retrieves complete user data including:
-     * - Employee information
+     * - Customer Employee information
      * - Customer details (code, name, npwp, nib, status)
      * - Branch details (code, name, type, nitku, address, phone, email, postal_code, latitude, longitude)
      * - Membership details (level_id, status, period_months, start_date, end_date, price_paid, payment_status, payment_method, payment_date)
      * - User email and capabilities
      *
+     * Tries multiple user types in order:
+     * 1. Employee (most common)
+     * 2. Customer owner
+     * 3. Branch admin
+     * 4. Fallback (user with role but no entity)
+     *
      * @param int $user_id WordPress user ID
      * @return array|null Array of user info or null if not found
+     *
+     * @version 1.1.0 - Refactored to handle all user types (employee, owner, branch admin)
      */
     public function getUserInfo(int $user_id): ?array {
-        global $wpdb;
-
         // Try to get from cache first
         $cache_key = 'customer_user_info';
         $cached_data = $this->cache->get($cache_key, $user_id);
@@ -806,6 +838,48 @@ public function create(array $data): ?int {
         if ($cached_data !== null) {
             return $cached_data;
         }
+
+        // Try employee first (most common case)
+        $result = $this->getEmployeeInfo($user_id);
+        if ($result) {
+            $this->cache->set($cache_key, $result, 5 * MINUTE_IN_SECONDS, $user_id);
+            return $result;
+        }
+
+        // Try customer owner
+        $result = $this->getCustomerOwnerInfo($user_id);
+        if ($result) {
+            $this->cache->set($cache_key, $result, 5 * MINUTE_IN_SECONDS, $user_id);
+            return $result;
+        }
+
+        // Try branch admin
+        $result = $this->getBranchAdminInfo($user_id);
+        if ($result) {
+            $this->cache->set($cache_key, $result, 5 * MINUTE_IN_SECONDS, $user_id);
+            return $result;
+        }
+
+        // Fallback for users with role but no entity link
+        $result = $this->getFallbackInfo($user_id);
+        if ($result) {
+            $this->cache->set($cache_key, $result, 5 * MINUTE_IN_SECONDS, $user_id);
+        } else {
+            // Cache null result for short time to prevent repeated queries
+            $this->cache->set($cache_key, null, 5 * MINUTE_IN_SECONDS, $user_id);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get employee user information
+     *
+     * @param int $user_id WordPress user ID
+     * @return array|null Employee info or null if not an employee
+     */
+    private function getEmployeeInfo(int $user_id): ?array {
+        global $wpdb;
 
         // Single comprehensive query to get ALL user data
         // This query JOINs employees, customers, branches, memberships, users, and usermeta
@@ -887,8 +961,6 @@ public function create(array $data): ?int {
         ));
 
         if (!$user_data || !$user_data->branch_name) {
-            // Cache null result for short time to prevent repeated queries
-            $this->cache->set($cache_key, null, 5 * MINUTE_IN_SECONDS, $user_id);
             return null;
         }
 
@@ -947,10 +1019,131 @@ public function create(array $data): ?int {
             $permission_model->getAllCapabilities()
         );
 
-        // Cache the result for 5 minutes
-        $this->cache->set($cache_key, $result, 5 * MINUTE_IN_SECONDS, $user_id);
-
         return $result;
+    }
+
+    /**
+     * Get customer owner user information
+     *
+     * @param int $user_id WordPress user ID
+     * @return array|null Customer owner info or null if not a customer owner
+     */
+    private function getCustomerOwnerInfo(int $user_id): ?array {
+        global $wpdb;
+
+        $customer = $wpdb->get_row($wpdb->prepare(
+            "SELECT c.id, c.name as customer_name, c.code as customer_code
+             FROM {$wpdb->prefix}app_customers c
+             WHERE c.user_id = %d",
+            $user_id
+        ));
+
+        if (!$customer) {
+            return null;
+        }
+
+        // User is a customer owner, get their main branch
+        $branch = $wpdb->get_row($wpdb->prepare(
+            "SELECT b.id, b.name, b.type
+             FROM {$wpdb->prefix}app_customer_branches b
+             WHERE b.customer_id = %d
+             AND b.type = 'pusat'
+             ORDER BY b.id ASC
+             LIMIT 1",
+            $customer->id
+        ));
+
+        if (!$branch) {
+            return null;
+        }
+
+        return [
+            'branch_id' => $branch->id,
+            'branch_name' => $branch->name,
+            'branch_type' => $branch->type,
+            'entity_name' => $customer->customer_name,
+            'entity_code' => $customer->customer_code,
+            'relation_type' => 'owner',
+            'icon' => '🏢'
+        ];
+    }
+
+    /**
+     * Get branch admin user information
+     *
+     * @param int $user_id WordPress user ID
+     * @return array|null Branch admin info or null if not a branch admin
+     */
+    private function getBranchAdminInfo(int $user_id): ?array {
+        global $wpdb;
+
+        $customer_branch_admin = $wpdb->get_row($wpdb->prepare(
+            "SELECT b.id, b.name, b.type, b.customer_id,
+                    c.name as customer_name, c.code as customer_code
+             FROM {$wpdb->prefix}app_customer_branches b
+             LEFT JOIN {$wpdb->prefix}app_customers c ON b.customer_id = c.id
+             WHERE b.user_id = %d",
+            $user_id
+        ));
+
+        if (!$customer_branch_admin) {
+            return null;
+        }
+
+        return [
+            'branch_id' => $customer_branch_admin->id,
+            'branch_name' => $customer_branch_admin->name,
+            'branch_type' => $customer_branch_admin->type,
+            'entity_name' => $customer_branch_admin->customer_name,
+            'entity_code' => $customer_branch_admin->customer_code,
+            'relation_type' => 'branch_admin',
+            'icon' => '🏢'
+        ];
+    }
+
+    /**
+     * Get fallback user information for users with customer role but no entity link
+     *
+     * @param int $user_id WordPress user ID
+     * @return array|null Fallback info or null if user has no customer role
+     */
+    private function getFallbackInfo(int $user_id): ?array {
+        $user = get_user_by('ID', $user_id);
+
+        if (!$user) {
+            return null;
+        }
+
+        $customer_roles = call_user_func(['WP_Customer_Role_Manager', 'getRoleSlugs']);
+        $user_roles = (array) $user->roles;
+
+        // Check if user has any customer role
+        $has_customer_role = !empty(array_intersect($user_roles, $customer_roles));
+
+        if (!$has_customer_role) {
+            return null;
+        }
+
+        // Get first customer role for display
+        $first_customer_role = null;
+        foreach ($customer_roles as $role_slug) {
+            if (in_array($role_slug, $user_roles)) {
+                $first_customer_role = $role_slug;
+                break;
+            }
+        }
+
+        $role_name = call_user_func(['WP_Customer_Role_Manager', 'getRoleName'], $first_customer_role);
+
+        return [
+            'entity_name' => 'Customer System',
+            'entity_code' => 'CUSTOMER',
+            'branch_id' => null,
+            'branch_name' => $role_name ?? 'Staff',
+            'branch_type' => 'admin',
+            'relation_type' => 'role_only',
+            'icon' => '🏢'
+        ];
     }
 
 }

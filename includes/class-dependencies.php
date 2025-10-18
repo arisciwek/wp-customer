@@ -34,7 +34,7 @@ class WP_Customer_Dependencies {
         $this->version = $version;
         add_action('wp_enqueue_scripts', [$this, 'enqueue_frontend_assets']);
         add_action('admin_enqueue_scripts', [$this, 'leaflet_enqueue_scripts']); // Add this line
-        add_action('wp_head', [$this, 'enqueue_admin_bar_styles']); // Add for frontend admin bar
+        // Note: Admin bar styles now handled by wp-app-core centralized admin bar
     }
 
     public function enqueue_frontend_assets() {
@@ -117,18 +117,6 @@ class WP_Customer_Dependencies {
 
     public function enqueue_styles() {
 
-        $screen = get_current_screen();
-        if (!$screen) return;
-
-        // Admin bar styles - load on all admin pages
-        if (is_admin()) {
-            wp_enqueue_style(
-                'wp-customer-admin-bar',
-                WP_CUSTOMER_URL . 'assets/css/customer/customer-admin-bar.css',
-                [],
-                $this->version
-            );
-        }
         // Check if we're on the registration page
         if (get_query_var('wp_customer_register')) {
             // Enqueue registration-specific styles
@@ -137,8 +125,11 @@ class WP_Customer_Dependencies {
             return;
         }
 
-        // Settings page styles// Settings page styles
-        if ($screen->id === 'wp-customer_page_wp-customer-settings') {
+        // Get current screen
+        $screen = get_current_screen();
+
+        // Settings page styles
+        if ($screen && $screen->id === 'wp-customer_page_wp-customer-settings') {
            // Common styles for settings page
            wp_enqueue_style('wp-customer-common', WP_CUSTOMER_URL . 'assets/css/settings/common-style.css', [], $this->version);
            wp_enqueue_style('wp-customer-settings', WP_CUSTOMER_URL . 'assets/css/settings/settings-style.css', ['wp-customer-common'], $this->version);
@@ -206,7 +197,7 @@ class WP_Customer_Dependencies {
         }
 
         // Customer and Branch pages styles
-        if ($screen->id === 'toplevel_page_wp-customer') {
+        if ($screen && $screen->id === 'toplevel_page_wp-customer') {
             // Core styles
             wp_enqueue_style('wp-customer-toast', WP_CUSTOMER_URL . 'assets/css/customer/toast.css', [], $this->version);
             wp_enqueue_style('wp-customer-modal', WP_CUSTOMER_URL . 'assets/css/customer/confirmation-modal.css', [], $this->version);
@@ -230,7 +221,7 @@ class WP_Customer_Dependencies {
         }
 
         // Style section di method enqueue_styles()
-        if ($screen->id === 'toplevel_page_perusahaan') {
+        if ($screen && $screen->id === 'toplevel_page_perusahaan') {
             // Core styles
             wp_enqueue_style('wp-customer-toast', WP_CUSTOMER_URL . 'assets/css/customer/toast.css', [], $this->version);
 
@@ -246,7 +237,7 @@ class WP_Customer_Dependencies {
         }
 
         // Company Invoice page styles
-        if ($screen->id === 'toplevel_page_invoice_perusahaan') {
+        if ($screen && $screen->id === 'toplevel_page_invoice_perusahaan') {
             // Core styles
             wp_enqueue_style('wp-customer-toast', WP_CUSTOMER_URL . 'assets/css/customer/toast.css', [], $this->version);
             wp_enqueue_style('wp-customer-modal', WP_CUSTOMER_URL . 'assets/css/customer/confirmation-modal.css', [], $this->version);
@@ -555,18 +546,6 @@ class WP_Customer_Dependencies {
                 'error' => __('Gagal memuat data', 'wp-customer')
             ]
         ]);
-    }
-
-    public function enqueue_admin_bar_styles() {
-        // Only load if admin bar is showing and user is logged in
-        if (is_admin_bar_showing() && is_user_logged_in()) {
-            wp_enqueue_style(
-                'wp-customer-admin-bar',
-                WP_CUSTOMER_URL . 'assets/css/customer/customer-admin-bar.css',
-                [],
-                $this->version
-            );
-        }
     }
 
     public function leaflet_enqueue_scripts() {

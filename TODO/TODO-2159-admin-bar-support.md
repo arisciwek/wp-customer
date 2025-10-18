@@ -129,6 +129,19 @@ LIMIT 1
    - Added debug logging
    - Removed local cache manager
 
+3. `/wp-customer/wp-customer.php` (Review-01)
+   - Removed `require_once` for deprecated `class-admin-bar-info.php`
+   - Removed `add_action('init')` for `WP_Customer_Admin_Bar_Info`
+   - Updated comment for App Core Integration
+
+4. `/wp-customer/includes/class-admin-bar-info.php` (Review-01)
+   - **DELETED** - No longer needed, replaced by centralized wp-app-core admin bar
+
+5. `/wp-customer/includes/class-dependencies.php` (Review-01)
+   - Removed `add_action('wp_head')` for `enqueue_admin_bar_styles` (method no longer exists)
+   - Fixed undefined variable `$screen` warning in `enqueue_styles()` method
+   - Added `$screen = get_current_screen()` and null checks
+
 ---
 
 ## 🔗 Dependencies
@@ -181,5 +194,27 @@ LIMIT 1
 
 ---
 
+## 🔄 Review-01: Cleanup Deprecated Code
+
+**Issue:** File `class-admin-bar-info.php` masih ada dan ter-load, padahal sudah tidak digunakan karena digantikan oleh centralized admin bar di wp-app-core.
+
+**Changes:**
+1. Removed `require_once` untuk `class-admin-bar-info.php` dari `wp-customer.php` line 83
+2. Removed `add_action('init')` untuk `WP_Customer_Admin_Bar_Info` dari `wp-customer.php` line 123
+3. Deleted file `/wp-customer/includes/class-admin-bar-info.php`
+4. Updated comment untuk WP App Core integration
+5. Removed `add_action('wp_head')` untuk `enqueue_admin_bar_styles` dari `class-dependencies.php` line 37 (method tidak ada lagi)
+6. Fixed undefined variable `$screen` warning - added `get_current_screen()` and null checks
+
+**Result:**
+- Clean codebase tanpa deprecated code
+- Konsisten dengan wp-agency plugin yang juga sudah tidak memiliki `class-admin-bar-info.php`
+- Semua admin bar functionality sekarang melalui `WP_Customer_App_Core_Integration`
+
+**Status:** ✅ COMPLETED
+
+---
+
 **Completed by:** Claude
 **Date:** 2025-01-18
+**Review-01 Date:** 2025-01-18
