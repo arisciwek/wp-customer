@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS
- * @version     1.0.2
+ * @version     1.0.3
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/company/company-invoice-script.js
@@ -21,6 +21,12 @@
  * - Custom toast notifications
  *
  * Changelog:
+ * 1.0.3 - 2025-10-18 (Task-2162 Review-02)
+ * - Fixed: Added "Lihat Bukti Pembayaran" button for 'pending_payment' status
+ * - User can now view uploaded payment proof even before validation
+ * - Issue: Button was missing for users after uploading payment proof
+ * - Button now shows for both 'pending_payment' and 'paid' status
+ *
  * 1.0.2 - 2025-10-18 (Debug Support)
  * - Added console log when "Bayar Invoice" button clicked (line 111)
  * - Logs invoice ID and number for debugging sequential payments
@@ -476,9 +482,13 @@
                     <p class="description" style="color: #d4a42b; font-weight: 600;">
                         ⏳ Menunggu Validasi Pembayaran
                     </p>
-                    <p class="description" style="font-size: 12px; color: #666;">
+                    <p class="description" style="font-size: 12px; color: #666; margin-bottom: 10px;">
                         Bukti pembayaran sudah diupload, menunggu verifikasi
                     </p>
+                    <button class="button btn-view-payment"
+                            data-id="${invoiceId}">
+                        Lihat Bukti Pembayaran
+                    </button>
                 `;
             } else if (status === 'paid') {
                 buttons = `

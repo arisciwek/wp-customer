@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Validators/Company
- * @version     1.0.4
+ * @version     1.0.5
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Validators/Company/CompanyInvoiceValidator.php
@@ -20,6 +20,11 @@
  * - CustomerModel untuk validasi customer
  *
  * Changelog:
+ * 1.0.5 - 2025-10-18 (Task-2162 Payment Proof Upload)
+ * - Added: validateProofFileUpload() method untuk validasi file upload bukti pembayaran
+ * - Delegates file validation to FileUploadHelper::validateProofFile()
+ * - Validates file type (JPG, PNG, PDF), size (max 5MB), and security
+ *
  * 1.0.4 - 2025-10-18 (Task-2161 Review-03 Double Payment Fix)
  * - Fixed: canPayInvoice() now blocks payment for 'pending_payment' status invoices
  * - Added: Status validation to prevent double payment vulnerability
@@ -48,6 +53,7 @@ namespace WPCustomer\Validators\Company;
 
 use WPCustomer\Models\Company\CompanyInvoiceModel;
 use WPCustomer\Models\Customer\CustomerModel;
+use WPAppCore\Helpers\FileUploadHelper;
 use WPCustomer\Models\Company\CompanyModel;
 
 class CompanyInvoiceValidator {
@@ -791,6 +797,33 @@ class CompanyInvoiceValidator {
             'access_denied',
             __('Anda tidak memiliki akses untuk membayar invoice ini', 'wp-customer')
         );
+    }
+
+    /**
+     * Validate payment proof file upload
+     *
+     * Validates uploaded file for payment proof:
+     * - File uploaded via HTTP POST
+     * - File size within limit (max 5MB)
+     * - MIME type allowed (JPG, PNG, PDF)
+     * - Extension matches MIME type
+     * - No upload errors
+     *
+     * @param array $file $_FILES array element (e.g., $_FILES['proof_file'])
+     * @return true|WP_Error True on success, WP_Error on validation failure
+     */
+    public function validateProofFileUpload($file) {
+        // Check if file is provided
+        if (empty($file) || !isset($file['tmp_name'])) {
+            // File upload is optional, return true if no file provided
+            return true;
+        }
+
+        // Delegate validation to FileUploadHelper
+        $validation = FileUploadHelper::validateProofFile($file);
+
+        // Return validation result (true or WP_Error)
+        return $validation;
     }
 }
 

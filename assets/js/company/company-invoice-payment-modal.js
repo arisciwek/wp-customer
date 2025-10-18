@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS
- * @version     1.1.3
+ * @version     1.2.0
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/company/company-invoice-payment-modal.js
@@ -22,6 +22,15 @@
  * - Template: membership-invoice-payment-modal.php (server-side rendered)
  *
  * Changelog:
+ * 1.2.0 - 2025-10-18 (Task-2162: Payment Proof Upload)
+ * - Added: File upload handling for payment proof
+ * - Added: File preview functionality (image/PDF)
+ * - Added: File size validation (max 5MB) in frontend
+ * - Added: File input reset in showPaymentModal()
+ * - Updated: processPayment() to use FormData for file upload
+ * - Changed: AJAX contentType and processData settings for multipart/form-data
+ * - Supports: JPG, PNG, PDF files up to 5MB
+ *
  * 1.1.3 - 2025-10-18 (Critical Fix: jQuery Data Cache Issue)
  * - Fixed: Changed .attr() to .data() in showPaymentModal() (lines 76-79)
  * - Fixed: Changed .attr() to .data() in showCancelConfirmation() (line 185)
@@ -89,6 +98,15 @@
             // Reset payment method to first option
             $('#payment-method').val('transfer_bank');
 
+            // Reset file input and preview
+            $('#proof-file').val('');
+            $('#file-preview').hide().empty();
+
+            // Bind file change event
+            $('#proof-file').off('change').on('change', (e) => {
+                this.handleFileSelect(e);
+            });
+
             // Show modal
             $('#invoice-payment-modal').show();
 
@@ -128,6 +146,64 @@
         },
 
         /**
+         * Handle file selection and preview
+         *
+         * @param {Event} e File input change event
+         */
+        handleFileSelect(e) {
+            const file = e.target.files[0];
+            const $preview = $('#file-preview');
+
+            // Clear preview
+            $preview.empty().hide();
+
+            if (!file) {
+                return;
+            }
+
+            // Validate file size (5MB max)
+            const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+            if (file.size > maxSize) {
+                this.showToast('error', 'Ukuran file maksimal 5MB');
+                $('#proof-file').val(''); // Clear invalid file
+                return;
+            }
+
+            // Validate file type
+            const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+            if (!validTypes.includes(file.type)) {
+                this.showToast('error', 'Hanya file JPG, PNG, atau PDF yang diperbolehkan');
+                $('#proof-file').val(''); // Clear invalid file
+                return;
+            }
+
+            // Show file info
+            const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            let previewHTML = `<div class="file-info">
+                <p><strong>File dipilih:</strong> ${file.name}</p>
+                <p><strong>Ukuran:</strong> ${fileSizeMB} MB</p>
+            </div>`;
+
+            // Show image preview for images
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    previewHTML += `<div class="image-preview">
+                        <img src="${event.target.result}" alt="Preview" style="max-width: 100%; max-height: 200px; margin-top: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>`;
+                    $preview.html(previewHTML).show();
+                };
+                reader.readAsDataURL(file);
+            } else {
+                // PDF file - just show info
+                previewHTML += `<p style="color: #666; font-size: 12px; margin-top: 5px;">
+                    <span class="dashicons dashicons-media-document"></span> File PDF akan diupload
+                </p>`;
+                $preview.html(previewHTML).show();
+            }
+        },
+
+        /**
          * Process payment via AJAX
          *
          * @param {number} invoiceId Invoice ID
@@ -139,15 +215,26 @@
 
             console.log('[DEBUG] processPayment called - Invoice ID:', invoiceId, 'Invoice Number:', invoiceNumber, 'Payment Method:', paymentMethod);
 
+            // Create FormData for file upload
+            const formData = new FormData();
+            formData.append('action', 'handle_invoice_payment');
+            formData.append('invoice_id', invoiceId);
+            formData.append('payment_method', paymentMethod);
+            formData.append('nonce', wpCustomerData.nonce);
+
+            // Add file if selected
+            const fileInput = document.getElementById('proof-file');
+            if (fileInput && fileInput.files && fileInput.files[0]) {
+                formData.append('proof_file', fileInput.files[0]);
+                console.log('[DEBUG] File attached:', fileInput.files[0].name, fileInput.files[0].size, 'bytes');
+            }
+
             $.ajax({
                 url: wpCustomerData.ajaxUrl,
                 type: 'POST',
-                data: {
-                    action: 'handle_invoice_payment',
-                    invoice_id: invoiceId,
-                    payment_method: paymentMethod,
-                    nonce: wpCustomerData.nonce
-                },
+                data: formData,
+                processData: false,  // Important: Don't process data
+                contentType: false,  // Important: Don't set content type (multipart/form-data will be set automatically)
                 beforeSend: function() {
                     console.log('[DEBUG] AJAX beforeSend - Sending invoice_id:', invoiceId);
                     $('.modal-confirm').prop('disabled', true).text('Processing...');

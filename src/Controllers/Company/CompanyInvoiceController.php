@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Controllers/Company
- * @version     1.0.5
+ * @version     1.0.8
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Controllers/Company/CompanyInvoiceController.php
@@ -17,6 +17,29 @@
  *              Includes permission validation dan error handling.
  *
  * Changelog:
+ * 1.0.8 - 2025-10-18 (Task-2162 Review-03)
+ * - Added branch_name to payment proof response
+ * - Query branch name from wp_app_customer_branches table
+ * - Displays "Perusahaan" field (Branch Name) in payment proof modal
+ * - Positioned above Nomor Invoice
+ *
+ * 1.0.7 - 2025-10-18 (Task-2162 Review-02)
+ * - Fixed: getInvoicePaymentProof() now allows 'pending_payment' status
+ * - Changed: Status check from 'paid' only to ['paid', 'pending_payment']
+ * - Fixed: proof_file_url and proof_file_type now from database columns (not metadata)
+ * - User can now view uploaded payment proof before validation
+ * - Issue: Users couldn't see payment proof button after uploading (status=pending_payment)
+ *
+ * 1.0.6 - 2025-10-18 (Task-2162 Payment Proof Upload)
+ * - Added: handleProofFileUpload() private method untuk process file upload
+ * - Updated: handle_invoice_payment() to handle file upload from $_FILES
+ * - Added: File validation using CompanyInvoiceValidator::validateProofFileUpload()
+ * - Added: File info stored in payment record (proof_file_path, proof_file_url, proof_file_type, proof_file_size)
+ * - Added: Additional file metadata in payment metadata JSON (original_name, uploaded_by, uploaded_at)
+ * - Files stored in: /wp-content/uploads/wp-customer/membership-invoices/{year}/{month}/
+ * - Filename pattern: inv-{invoice_number}-{timestamp}.{ext} (lowercase)
+ * - Graceful degradation: Payment proceeds even if file upload fails
+ *
  * 1.0.5 - 2025-10-18 (Task-2161 Review-03 Status Flow Fix)
  * - Fixed: handle_invoice_payment() now uses markAsPendingPayment() instead of markAsPaid()
  * - Changed: Payment status flow - after payment, invoice status → 'pending_payment' (not 'paid')
@@ -64,6 +87,7 @@ namespace WPCustomer\Controllers\Company;
 use WPCustomer\Models\Company\CompanyInvoiceModel;
 use WPCustomer\Cache\CustomerCacheManager;
 use WPCustomer\Validators\Company\CompanyInvoiceValidator;
+use WPAppCore\Helpers\FileUploadHelper;
 
 class CompanyInvoiceController {
     private $invoice_model;
@@ -583,6 +607,73 @@ class CompanyInvoiceController {
     }
 
     /**
+     * Handle payment proof file upload
+     *
+     * Processes uploaded payment proof file:
+     * - Creates year/month directory structure
+     * - Generates safe filename with invoice number
+     * - Moves file to destination
+     * - Returns file info for database storage
+     *
+     * @param string $invoice_number Invoice number for filename generation
+     * @return array|WP_Error File info array or WP_Error on failure
+     */
+    private function handleProofFileUpload($invoice_number) {
+        // Check if file uploaded
+        if (!isset($_FILES['proof_file']) || empty($_FILES['proof_file']['tmp_name'])) {
+            // No file uploaded - this is optional
+            return null;
+        }
+
+        $file = $_FILES['proof_file'];
+
+        // Get current year and month for directory structure
+        $year = date('Y');
+        $month = date('m');
+
+        // Create directory structure
+        $directory = FileUploadHelper::createMembershipInvoiceDirectory($year, $month);
+        if (is_wp_error($directory)) {
+            error_log('[WP Customer] Directory creation failed: ' . $directory->get_error_message());
+            return $directory;
+        }
+
+        // Get file extension
+        $file_parts = pathinfo($file['name']);
+        $extension = isset($file_parts['extension']) ? strtolower($file_parts['extension']) : '';
+
+        // Generate safe filename
+        $filename = FileUploadHelper::generateProofFileName($invoice_number, $extension);
+        $file_path = $directory['path'] . '/' . $filename;
+        $file_url = $directory['url'] . '/' . $filename;
+
+        // Move uploaded file to destination
+        if (!move_uploaded_file($file['tmp_name'], $file_path)) {
+            error_log('[WP Customer] Failed to move uploaded file to: ' . $file_path);
+            return new \WP_Error(
+                'file_move_failed',
+                __('Gagal menyimpan file', 'wp-customer')
+            );
+        }
+
+        // Get MIME type
+        $mime_type = FileUploadHelper::getMimeType($file_path);
+
+        // Get upload directory for relative path
+        $upload_dir = wp_upload_dir();
+        $relative_path = str_replace($upload_dir['basedir'] . '/', '', $file_path);
+
+        // Return file info
+        return [
+            'path' => $relative_path,
+            'url' => $file_url,
+            'type' => $mime_type,
+            'size' => filesize($file_path),
+            'original_name' => $file['name']
+        ];
+    }
+
+    /**
      * Render main page template
      */
     public function render_page() {
@@ -789,6 +880,12 @@ class CompanyInvoiceController {
                 throw new \Exception(__('Metode pembayaran tidak valid', 'wp-customer'));
             }
 
+            // Validate file upload (if provided)
+            $file_validation = $this->validator->validateProofFileUpload($_FILES['proof_file'] ?? []);
+            if (is_wp_error($file_validation)) {
+                throw new \Exception($file_validation->get_error_message());
+            }
+
             // Mark invoice as pending payment (waiting for validation)
             $payment_date = current_time('mysql');
             $result = $this->invoice_model->markAsPendingPayment($invoice_id);
@@ -797,27 +894,67 @@ class CompanyInvoiceController {
                 throw new \Exception(__('Gagal memproses pembayaran', 'wp-customer'));
             }
 
+            // Handle file upload (graceful degradation if upload fails)
+            $file_info = null;
+            $file_upload_error = null;
+            try {
+                $file_info = $this->handleProofFileUpload($invoice->invoice_number);
+                if (is_wp_error($file_info)) {
+                    $file_upload_error = $file_info->get_error_message();
+                    error_log('[WP Customer] File upload failed: ' . $file_upload_error);
+                    $file_info = null;
+                }
+            } catch (\Exception $e) {
+                $file_upload_error = $e->getMessage();
+                error_log('[WP Customer] File upload exception: ' . $file_upload_error);
+                $file_info = null;
+            }
+
             // Create payment record (status: pending, waiting for validator approval)
             global $wpdb;
             $payment_table = $wpdb->prefix . 'app_customer_payments';
 
             $payment_id = 'PAY-' . date('Ymd') . '-' . sprintf('%05d', rand(10000, 99999));
+
+            // Build metadata
+            $metadata = [
+                'invoice_id' => $invoice_id,
+                'invoice_number' => $invoice->invoice_number,
+                'payment_method' => $payment_method,
+                'payment_date' => $payment_date
+            ];
+
+            // Add file upload info to metadata if available
+            if ($file_info) {
+                $metadata['proof_upload'] = [
+                    'original_name' => $file_info['original_name'],
+                    'uploaded_by' => get_current_user_id(),
+                    'uploaded_at' => $payment_date,
+                    'file_size' => $file_info['size'],
+                    'mime_type' => $file_info['type']
+                ];
+            }
+
             $payment_data = [
                 'payment_id' => $payment_id,
-                'company_id' => $invoice->customer_id,
+                'company_id' => $invoice->branch_id,  // company is alias for branch
+                'customer_id' => $invoice->customer_id,
                 'amount' => $invoice->amount,
                 'payment_method' => $payment_method,
                 'description' => sprintf(__('Payment for invoice %s', 'wp-customer'), $invoice->invoice_number),
-                'metadata' => json_encode([
-                    'invoice_id' => $invoice_id,
-                    'invoice_number' => $invoice->invoice_number,
-                    'payment_method' => $payment_method,
-                    'payment_date' => $payment_date
-                ]),
+                'metadata' => json_encode($metadata),
                 'status' => 'pending',  // Waiting for validation
                 'created_at' => $payment_date,
                 'updated_at' => $payment_date
             ];
+
+            // Add file info columns if file uploaded successfully
+            if ($file_info) {
+                $payment_data['proof_file_path'] = $file_info['path'];
+                $payment_data['proof_file_url'] = $file_info['url'];
+                $payment_data['proof_file_type'] = $file_info['type'];
+                $payment_data['proof_file_size'] = $file_info['size'];
+            }
 
             $wpdb->insert($payment_table, $payment_data);
 
@@ -872,9 +1009,9 @@ class CompanyInvoiceController {
                 throw new \Exception('Invoice not found');
             }
 
-            // Check if invoice is paid
-            if ($invoice->status !== 'paid') {
-                throw new \Exception('Invoice belum dibayar');
+            // Check if invoice has payment (paid or pending_payment)
+            if (!in_array($invoice->status, ['paid', 'pending_payment'])) {
+                throw new \Exception('Invoice belum memiliki bukti pembayaran');
             }
 
             // Get payment records for this invoice
@@ -895,16 +1032,31 @@ class CompanyInvoiceController {
             // Get payment date from metadata or created_at
             $payment_date = !empty($metadata['payment_date']) ? $metadata['payment_date'] : $payment->created_at;
 
+            // Get branch name for Perusahaan field
+            $branch_name = '-';
+            if (!empty($invoice->branch_id)) {
+                global $wpdb;
+                $branch = $wpdb->get_row($wpdb->prepare(
+                    "SELECT name FROM {$wpdb->prefix}app_customer_branches WHERE id = %d",
+                    $invoice->branch_id
+                ));
+                if ($branch) {
+                    $branch_name = $branch->name;
+                }
+            }
+
             // Prepare response data
             $response_data = [
+                'branch_name' => $branch_name,
                 'invoice_number' => $invoice->invoice_number,
                 'payment_date' => $payment_date,
                 'amount' => $payment->amount,
                 'payment_method' => !empty($metadata['payment_method']) ? $metadata['payment_method'] : 'unknown',
                 'status' => $payment->status,
                 'notes' => !empty($payment->description) ? $payment->description : '',
-                'proof_file_url' => !empty($metadata['proof_file_url']) ? $metadata['proof_file_url'] : '',
-                'proof_file_type' => !empty($metadata['proof_file_type']) ? $metadata['proof_file_type'] : ''
+                // Get proof file from database columns (not metadata)
+                'proof_file_url' => !empty($payment->proof_file_url) ? $payment->proof_file_url : '',
+                'proof_file_type' => !empty($payment->proof_file_type) ? $payment->proof_file_type : ''
             ];
 
             wp_send_json_success($response_data);

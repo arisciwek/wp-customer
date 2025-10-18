@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Templates/Company/Partials
- * @version     1.0.0
+ * @version     1.0.1
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Views/templates/company-invoice/partials/membership-invoice-payment-proof-modal.php
@@ -14,6 +14,10 @@
  *              Compatible dengan berbagai format file (jpg, png, pdf).
  *
  * Changelog:
+ * 1.0.1 - 2025-10-18 (Task-2162 Review-03)
+ * - Added Perusahaan field (Branch Name)
+ * - Positioned above Nomor Invoice
+ *
  * 1.0.0 - 2025-10-18
  * - Initial creation
  * - Added payment proof display
@@ -38,6 +42,10 @@ defined('ABSPATH') || exit;
             <!-- Payment Information -->
             <div class="payment-proof-info">
                 <table class="form-table">
+                    <tr>
+                        <th>Perusahaan:</th>
+                        <td><strong id="proof-branch-name">-</strong></td>
+                    </tr>
                     <tr>
                         <th>Nomor Invoice:</th>
                         <td><strong id="proof-invoice-number">-</strong></td>

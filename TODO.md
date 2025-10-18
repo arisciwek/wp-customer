@@ -40,6 +40,39 @@
 
 ---
 
+## TODO-2162: Payment Proof Upload Functionality
+- Issue: Tidak ada cara untuk upload bukti pembayaran saat user membayar invoice. Saat tombol "Bayar Invoice" diklik di panel kanan, modal payment tidak memiliki field upload file. User tidak bisa menyertakan bukti pembayaran (foto transfer, scan bukti, PDF) saat melakukan pembayaran. Sistem hanya merubah status menjadi 'pending_payment' tanpa menyimpan file bukti.
+- Root Cause: Payment modal (membership-invoice-payment-modal.php) belum ada input field untuk file upload. JavaScript (company-invoice-payment-modal.js) belum handle file upload dengan FormData. Backend CompanyInvoiceController::handle_invoice_payment() belum ada logic untuk handle file upload. Database table wp_app_customer_payments belum ada columns untuk simpan file information. Belum ada helper class untuk manage file upload (validation, storage, naming).
+- Target: (1) Update payment modal template dengan file input field untuk upload bukti pembayaran. (2) Update JavaScript untuk handle file selection, preview, dan validation (file size, type). (3) Create FileUploadHelper class untuk handle upload logic, validation, directory creation, filename generation. (4) Update CompanyInvoiceValidator dengan file upload validation method. (5) Update CompanyInvoiceController untuk process file upload dan simpan file info ke database. (6) Update database schema CustomerPaymentsDB dengan columns: proof_file_path, proof_file_url, proof_file_type, proof_file_size. (7) Store additional metadata dalam payment metadata JSON (original_name, uploaded_by, uploaded_at).
+- Files Modified:
+  - src/Database/Tables/CustomerPaymentsDB.php (v1.0.1 → v1.0.2: added 4 columns for payment proof file storage - proof_file_path varchar(255) NULL relative path, proof_file_url varchar(500) NULL full URL, proof_file_type varchar(50) NULL mime type, proof_file_size int(11) NULL file size in bytes. Updated documentation with changelog. Files stored in /wp-content/uploads/wp-customer/membership-invoices/{year}/{month}/)
+- Files to Modify:
+  - src/Views/templates/company-invoice/forms/membership-invoice-payment-modal.php (add file input field after payment method dropdown, accept attribute for JPG/PNG/PDF, file size indicator, preview area for selected file)
+  - assets/js/company/company-invoice-payment-modal.js (add file selection handler, file preview logic for images and PDF, frontend file size validation, update processPayment() to use FormData for file upload)
+  - src/Controllers/Company/CompanyInvoiceController.php (add handleProofFileUpload() private method, update handle_invoice_payment() to check file upload and add file info to payment record, graceful error handling)
+  - src/Validators/Company/CompanyInvoiceValidator.php (add validateProofFileUpload() method - validate file exists, MIME type, file size, extension match, no malicious content)
+- Files to Create:
+  - src/Helpers/FileUploadHelper.php (NEW: static methods - createMembershipInvoiceDirectory($year, $month), generateProofFileName($invoice_number, $extension), validateProofFile($file), getFileInfo($file_path), deleteProofFile($file_path))
+- Status: 📋 **PLANNING** (Database schema ✅ completed, planning document ✅ created)
+- Notes:
+  - **File Storage Structure**: /wp-content/uploads/wp-customer/membership-invoices/{year}/{month}/inv-{invoice-number}-{timestamp}.{ext}
+  - **Naming Convention**: All lowercase, pattern `inv-{invoice_number}-{unix_timestamp}.{ext}`, example: inv-20251018-90009-1737123456.jpg
+  - **File Size Limit**: 5MB maximum (configurable via constant WP_CUSTOMER_MAX_PROOF_FILE_SIZE, ready for Settings UI)
+  - **Allowed File Types**: image/jpeg (.jpg, .jpeg), image/png (.png), application/pdf (.pdf)
+  - **Validation Layers**: Frontend (HTML5 accept + JavaScript size check), Backend (MIME type validation, actual file content check)
+  - **Security**: Validate MIME type (not just extension), sanitize filename, check actual file content, no malicious content
+  - **Graceful Degradation**: Payment can proceed even if file upload fails (log error, show warning to user)
+  - **Metadata Storage**: Additional upload info in payment metadata JSON: original_name, uploaded_by, uploaded_at, file_size, mime_type
+  - **Error Handling**: File too large → "Ukuran file maksimal 5MB", Invalid type → "Hanya file JPG, PNG, atau PDF yang diperbolehkan", Upload failed → "Gagal mengupload file. Silakan coba lagi"
+  - **Database Schema**: Columns added to wp_app_customer_payments table via CustomerPaymentsDB.php v1.0.2
+  - **Future Enhancements**: Settings UI for max file size configuration, image compression, thumbnail generation, multiple file upload, file replacement, file deletion on payment cancel
+  - **Dependencies**: WordPress Upload API, PHP GD or Imagick (for image validation), Modern browser (HTML5 file API)
+  - **Related Tasks**: Task-2161 (Payment proof modal for viewing uploaded proof), Future Settings UI for file size configuration
+  - Terminology: "Membership Invoice" untuk distinguish dari invoice types lainnya
+  - (see TODO/TODO-2162-payment-proof-upload.md)
+
+---
+
 ## TODO-2160: Invoice Payment Status Filter
 - Issue: Tidak ada filter untuk menampilkan invoice berdasarkan status pembayaran. User harus melihat semua invoice (pending, paid, overdue, cancelled) sekaligus. Sulit untuk fokus pada invoice yang belum dibayar atau status tertentu. Review-03 (Task-2161): Status "overdue" tidak sesuai dengan requirement manual payment system - diganti dengan "pending_payment".
 - Root Cause: Template invoice listing tidak memiliki checkbox filter. Model getDataTableData() tidak menerima parameter status filter. Controller tidak handle parameter filter dari frontend. JavaScript DataTable tidak mengirim parameter filter status. Review-03: Status "overdue" sudah deprecated karena sistem menggunakan manual payment flow dengan validasi.

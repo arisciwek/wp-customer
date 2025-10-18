@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS/Company
- * @version     1.0.0
+ * @version     1.0.1
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/company/company-invoice-payment-proof.js
@@ -18,6 +18,11 @@
  * - CompanyInvoice object (dari company-invoice-script.js)
  *
  * Changelog:
+ * 1.0.1 - 2025-10-18 (Task-2162 Review-03)
+ * - Added Perusahaan field (Branch Name) to payment proof display
+ * - Updated renderPaymentProof() to populate proof-branch-name element
+ * - Positioned above Nomor Invoice
+ *
  * 1.0.0 - 2025-10-18
  * - Initial version
  * - Added modal show/hide functionality
@@ -123,6 +128,7 @@
 
         renderPaymentProof(data) {
             // Populate payment info
+            $('#proof-branch-name').text(data.branch_name || '-');
             $('#proof-invoice-number').text(data.invoice_number || '-');
             $('#proof-payment-date').text(this.formatDate(data.payment_date));
             $('#proof-payment-amount').text('Rp ' + this.formatCurrency(data.amount));

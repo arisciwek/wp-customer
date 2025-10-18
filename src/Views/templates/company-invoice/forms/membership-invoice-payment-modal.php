@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Templates/CompanyInvoice/Forms
- * @version     1.0.0
+ * @version     1.0.1
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Views/templates/company-invoice/forms/membership-invoice-payment-modal.php
@@ -20,6 +20,12 @@
  * - Data populated dynamically via JavaScript
  *
  * Changelog:
+ * 1.0.1 - 2025-10-18 (Task-2162)
+ * - Added file upload field for payment proof
+ * - Added file preview container
+ * - Added file size indicator (max 5MB)
+ * - Accepts JPG, PNG, PDF files
+ *
  * 1.0.0 - 2025-01-17 (Review-07)
  * - Initial template version
  * - Extracted from JavaScript string to PHP template
@@ -59,6 +65,24 @@ defined('ABSPATH') || exit;
                         <option value="kartu_kredit"><?php _e('Kartu Kredit', 'wp-customer'); ?></option>
                         <option value="e_wallet"><?php _e('E-Wallet', 'wp-customer'); ?></option>
                     </select>
+                </div>
+
+                <div class="form-row">
+                    <label for="proof-file">
+                        <?php _e('Bukti Pembayaran', 'wp-customer'); ?>
+                        <span class="optional-label"><?php _e('(Opsional)', 'wp-customer'); ?></span>
+                    </label>
+                    <input type="file"
+                           id="proof-file"
+                           name="proof_file"
+                           accept="image/jpeg,image/png,application/pdf"
+                           aria-describedby="file-help"/>
+                    <p class="description" id="file-help">
+                        <?php _e('Format: JPG, PNG, atau PDF. Maksimal 5MB.', 'wp-customer'); ?>
+                    </p>
+                    <div id="file-preview" class="file-preview" style="display: none;">
+                        <!-- Preview akan diisi oleh JavaScript -->
+                    </div>
                 </div>
             </div>
 
