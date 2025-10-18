@@ -17,6 +17,23 @@
         <div id="tombol-tambah-invoice"></div>
     </div>
 
+    <!-- Filter Status Pembayaran -->
+    <div class="wi-panel-filters" style="padding: 10px 15px; background: #f5f5f5; border-bottom: 1px solid #ddd;">
+        <strong>Filter Status:</strong>
+        <label style="margin-left: 10px;">
+            <input type="checkbox" id="filter-pending" checked> Belum Dibayar
+        </label>
+        <label style="margin-left: 10px;">
+            <input type="checkbox" id="filter-paid"> Lunas
+        </label>
+        <label style="margin-left: 10px;">
+            <input type="checkbox" id="filter-overdue"> Terlambat
+        </label>
+        <label style="margin-left: 10px;">
+            <input type="checkbox" id="filter-cancelled"> Dibatalkan
+        </label>
+    </div>
+
     <div class="wi-panel-content">
         <table id="company-invoices-table" class="display" style="width:100%">
             <thead>

@@ -61,7 +61,11 @@
                     data: function(d) {
                         return $.extend({}, d, {
                             action: 'handle_company_invoice_datatable',
-                            nonce: wpCustomerData.nonce
+                            nonce: wpCustomerData.nonce,
+                            filter_pending: $('#filter-pending').is(':checked') ? 1 : 0,
+                            filter_paid: $('#filter-paid').is(':checked') ? 1 : 0,
+                            filter_overdue: $('#filter-overdue').is(':checked') ? 1 : 0,
+                            filter_cancelled: $('#filter-cancelled').is(':checked') ? 1 : 0
                         });
                     },
                     error: function(xhr, error, thrown) {
@@ -147,6 +151,12 @@
                         self.bindActionButtons();
                     }
                 }
+            });
+
+            // Bind filter checkbox events
+            $('#filter-pending, #filter-paid, #filter-overdue, #filter-cancelled').on('change', function() {
+                console.log('Filter changed, reloading table...');
+                dataTable.ajax.reload();
             });
 
             return dataTable;

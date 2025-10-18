@@ -622,13 +622,23 @@ class CompanyInvoiceController {
             $columns = ['invoice_number', 'company_name', 'amount', 'status', 'created_at'];
             $orderColumn = $columns[$orderColumnIndex] ?? 'created_at';
 
+            // Get payment status filters
+            $filterPending = isset($_POST['filter_pending']) ? intval($_POST['filter_pending']) : 1;
+            $filterPaid = isset($_POST['filter_paid']) ? intval($_POST['filter_paid']) : 0;
+            $filterOverdue = isset($_POST['filter_overdue']) ? intval($_POST['filter_overdue']) : 0;
+            $filterCancelled = isset($_POST['filter_cancelled']) ? intval($_POST['filter_cancelled']) : 0;
+
             // Get data from model
             $result = $this->invoice_model->getDataTableData([
                 'start' => $start,
                 'length' => $length,
                 'search' => $search,
                 'order_column' => $orderColumn,
-                'order_dir' => $orderDir
+                'order_dir' => $orderDir,
+                'filter_pending' => $filterPending,
+                'filter_paid' => $filterPaid,
+                'filter_overdue' => $filterOverdue,
+                'filter_cancelled' => $filterCancelled
             ]);
 
             wp_send_json([

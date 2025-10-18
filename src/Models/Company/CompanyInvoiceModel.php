@@ -492,7 +492,11 @@ class CompanyInvoiceModel {
             'length' => 10,
             'search' => '',
             'order_column' => 'created_at',
-            'order_dir' => 'desc'
+            'order_dir' => 'desc',
+            'filter_pending' => 1,
+            'filter_paid' => 0,
+            'filter_overdue' => 0,
+            'filter_cancelled' => 0
         ];
         $params = wp_parse_args($params, $defaults);
 
@@ -590,6 +594,32 @@ class CompanyInvoiceModel {
             $where_prepared .= $search_clause;
         }
 
+        // Payment Status Filter
+        $status_filters = [];
+        if (!empty($params['filter_pending'])) {
+            $status_filters[] = 'pending';
+        }
+        if (!empty($params['filter_paid'])) {
+            $status_filters[] = 'paid';
+        }
+        if (!empty($params['filter_overdue'])) {
+            $status_filters[] = 'overdue';
+        }
+        if (!empty($params['filter_cancelled'])) {
+            $status_filters[] = 'cancelled';
+        }
+
+        // If no status selected, show nothing
+        if (empty($status_filters)) {
+            $where_prepared .= " AND 1=0";
+        } else {
+            // Build IN clause for selected statuses
+            $status_placeholders = implode(', ', array_fill(0, count($status_filters), '%s'));
+            $status_clause = $wpdb->prepare(" AND ci.status IN ($status_placeholders)", $status_filters);
+            $where_prepared .= $status_clause;
+        }
+
+        error_log('Status filters: ' . print_r($status_filters, true));
         error_log('Final WHERE: ' . $where_prepared);
 
         // Get total records

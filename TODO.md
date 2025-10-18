@@ -1,5 +1,28 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2160: Invoice Payment Status Filter
+- Issue: Tidak ada filter untuk menampilkan invoice berdasarkan status pembayaran. User harus melihat semua invoice (pending, paid, overdue, cancelled) sekaligus. Sulit untuk fokus pada invoice yang belum dibayar atau status tertentu.
+- Root Cause: Template invoice listing tidak memiliki checkbox filter. Model getDataTableData() tidak menerima parameter status filter. Controller tidak handle parameter filter dari frontend. JavaScript DataTable tidak mengirim parameter filter status.
+- Target: (1) Tambahkan checkbox filter di template untuk 4 status: pending (checked default), paid, overdue, cancelled. (2) Update CompanyInvoiceModel::getDataTableData() untuk handle parameter filter dan build WHERE IN clause. (3) Update CompanyInvoiceController::handleDataTableRequest() untuk receive dan pass filter parameters. (4) Update JavaScript DataTable untuk send filter values dan reload on checkbox change.
+- Files Modified:
+  - src/Views/templates/company-invoice/company-invoice-left-panel.php (added filter checkboxes section with 4 checkboxes: filter-pending (checked), filter-paid, filter-overdue, filter-cancelled, styled with background #f5f5f5)
+  - src/Models/Company/CompanyInvoiceModel.php (updated getDataTableData() - added 4 filter parameters to defaults with pending=1 and others=0, added payment status filter logic lines 597-623 building status array and IN clause, if no status selected returns empty result with WHERE 1=0)
+  - src/Controllers/Company/CompanyInvoiceController.php (updated handleDataTableRequest() - added 4 filter parameter handling lines 625-629 with default values, passed all filter parameters to model getDataTableData())
+  - assets/js/company/company-invoice-datatable-script.js (updated ajax.data function - added 4 filter parameters checking checkbox state lines 65-68, added checkbox change event handler lines 156-160 to reload DataTable on filter change)
+- Status: ✅ **COMPLETED**
+- Notes:
+  - Default behavior: hanya tampil invoice dengan status "pending" (Belum Dibayar)
+  - Filter logic: Build array dari checked checkboxes → WHERE ci.status IN (selected_statuses)
+  - Empty selection: Jika semua checkbox unchecked → WHERE 1=0 (no results)
+  - Real-time update: Table reload otomatis saat checkbox berubah via ajax.reload()
+  - Status mapping: pending→Belum Dibayar, paid→Lunas, overdue→Terlambat, cancelled→Dibatalkan
+  - Compatible dengan existing search, sort, dan pagination
+  - Query optimization: menggunakan IN clause dengan prepared statement untuk multiple status
+  - User experience: Immediate feedback saat filter change, console log untuk debugging
+  - (see TODO/TODO-2160-invoice-payment-status-filter.md)
+
+---
+
 ## TODO-2159: Admin Bar Support
 - Issue: Plugin wp-customer belum memiliki method getUserInfo() di CustomerEmployeeModel seperti yang ada di wp-agency, sehingga integrasi dengan wp-app-core admin bar belum optimal. Admin bar info belum menampilkan data lengkap employee, customer, branch, dan membership. Review-01: File class-admin-bar-info.php masih ada dan ter-load, padahal sudah tidak digunakan karena digantikan oleh centralized admin bar di wp-app-core.
 - Root Cause: Method getUserInfo() belum diimplementasikan di CustomerEmployeeModel. Integration class masih melakukan query langsung di class-app-core-integration.php tanpa memanfaatkan model layer untuk reusability dan caching. Review-01: Code lama admin bar belum dihapus setelah migrasi ke wp-app-core.
