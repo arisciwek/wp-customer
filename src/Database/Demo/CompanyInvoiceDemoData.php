@@ -12,7 +12,7 @@
  * Description: Generate demo invoice data untuk company invoices.
  *              Creates 1-2 random invoices per active branch with:
  *              - Link to membership and level
- *              - Random status (pending, paid, overdue, cancelled)
+ *              - Random status (pending, pending_payment, paid, cancelled)
  *              - Amount based on level price x period
  *              - 12-month discount (10 months payment)
  *              - Payment records for paid invoices
@@ -211,14 +211,14 @@ class CompanyInvoiceDemoData extends AbstractDemoData {
             $amount = $price_per_month * $period_months;
         }
 
-        // Random invoice status (40% pending, 40% paid, 15% overdue, 5% cancelled)
+        // Random invoice status (35% pending, 15% pending_payment, 45% paid, 5% cancelled)
         $rand = rand(1, 100);
-        if ($rand <= 40) {
+        if ($rand <= 35) {
             $status = 'pending';
-        } elseif ($rand <= 80) {
-            $status = 'paid';
+        } elseif ($rand <= 50) {
+            $status = 'pending_payment';
         } elseif ($rand <= 95) {
-            $status = 'overdue';
+            $status = 'paid';
         } else {
             $status = 'cancelled';
         }

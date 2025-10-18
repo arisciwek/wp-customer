@@ -1,0 +1,258 @@
+/**
+ * Company Invoice Payment Proof Modal Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Company
+ * @version     1.0.1
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/company/company-invoice-payment-proof-style.css
+ *
+ * Description: Styling untuk payment proof modal.
+ *              Separated dari company-invoice-style.css untuk better organization.
+ *              Includes modal layout, preview container, dan responsive design.
+ *
+ * Changelog:
+ * 1.0.1 - 2025-10-18 (Review-02)
+ * - Fixed modal positioning - added overlay and centering styles
+ * - Modal now properly centered on screen
+ * - Added z-index for proper layering
+ *
+ * 1.0.0 - 2025-10-18
+ * - Initial version (extracted from inline CSS)
+ * - Added payment proof modal specific styles
+ * - Added preview container styling
+ * - Added status badge styles
+ * - Added responsive breakpoints
+ */
+
+/* Modal Base Styles - Fixed positioning (Review-02) */
+.wp-customer-modal {
+    display: none;
+    position: fixed;
+    z-index: 999999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+}
+
+.wp-customer-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999998;
+}
+
+.wp-customer-modal-content {
+    position: relative;
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 0;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 999999;
+}
+
+.wp-customer-modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #ccd0d4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.wp-customer-modal-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.wp-customer-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    line-height: 1;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+}
+
+.wp-customer-modal-close:hover {
+    color: #d63638;
+}
+
+.wp-customer-modal-body {
+    padding: 20px;
+}
+
+.wp-customer-modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #ccd0d4;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* Payment Proof Modal Specific Styles */
+.payment-proof-modal-content {
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.payment-proof-info {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.payment-proof-info .form-table {
+    margin: 0;
+}
+
+.payment-proof-info .form-table th {
+    width: 200px;
+    padding: 8px 10px;
+    font-weight: 600;
+}
+
+.payment-proof-info .form-table td {
+    padding: 8px 10px;
+}
+
+.payment-proof-preview {
+    margin-bottom: 20px;
+}
+
+.payment-proof-preview h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 16px;
+}
+
+.proof-preview-container {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    background: #fff;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.proof-loading {
+    text-align: center;
+    color: #666;
+}
+
+.proof-loading .dashicons {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+}
+
+.proof-loading .spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.proof-preview-container img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.proof-preview-container .proof-error {
+    text-align: center;
+    color: #d63638;
+}
+
+.proof-preview-container .proof-error .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+}
+
+.proof-preview-container .proof-no-file {
+    text-align: center;
+    color: #999;
+}
+
+.proof-preview-container .proof-no-file .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+}
+
+.payment-proof-actions {
+    text-align: center;
+    padding: 20px 0;
+}
+
+.payment-proof-actions .button {
+    min-width: 200px;
+}
+
+.payment-proof-actions .dashicons {
+    margin-right: 5px;
+}
+
+/* Status Badge Styles */
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-badge.paid {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-badge.pending {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.failed {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .payment-proof-modal-content {
+        max-width: 95%;
+        margin: 20px auto;
+    }
+
+    .payment-proof-info .form-table th {
+        width: 140px;
+        font-size: 13px;
+    }
+
+    .payment-proof-info .form-table td {
+        font-size: 13px;
+    }
+
+    .proof-preview-container {
+        min-height: 200px;
+    }
+}

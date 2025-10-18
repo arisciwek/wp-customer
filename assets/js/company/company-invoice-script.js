@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS
- * @version     1.0.0
+ * @version     1.0.2
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/company/company-invoice-script.js
@@ -21,6 +21,11 @@
  * - Custom toast notifications
  *
  * Changelog:
+ * 1.0.2 - 2025-10-18 (Debug Support)
+ * - Added console log when "Bayar Invoice" button clicked (line 111)
+ * - Logs invoice ID and number for debugging sequential payments
+ * - Purpose: Verify invoice ID when user opens payment modal
+ *
  * 1.0.1 - 2025-10-10
  * - Added DataTable initialization error handling
  * - Added console warnings for failed initialization
@@ -108,6 +113,8 @@
                 const invoiceNumber = $(this).data('number');
                 const amount = $(this).data('amount');
 
+                console.log('[DEBUG] Bayar Invoice button clicked - Invoice ID:', invoiceId, 'Invoice Number:', invoiceNumber);
+
                 if (window.InvoicePaymentModal) {
                     window.InvoicePaymentModal.showPaymentModal(invoiceId, invoiceNumber, amount);
                 }
@@ -126,7 +133,13 @@
             $(document).on('click', '.btn-view-payment', function(e) {
                 e.preventDefault();
                 const invoiceId = $(this).data('id');
-                self.viewPaymentInfo(invoiceId);
+                // Show payment proof modal instead of payment info tab
+                if (window.PaymentProofModal) {
+                    window.PaymentProofModal.showModal(invoiceId);
+                } else {
+                    // Fallback to payment info tab if modal not available
+                    self.viewPaymentInfo(invoiceId);
+                }
             });
 
             // Outside click to close panel
@@ -407,10 +420,10 @@
 
         getStatusBadge(status) {
             const badges = {
-                'pending': '<span class="invoice-status-badge invoice-status-pending">Pending</span>',
-                'paid': '<span class="invoice-status-badge invoice-status-paid">Paid</span>',
-                'overdue': '<span class="invoice-status-badge invoice-status-overdue">Overdue</span>',
-                'cancelled': '<span class="invoice-status-badge invoice-status-cancelled">Cancelled</span>'
+                'pending': '<span class="invoice-status-badge invoice-status-pending">Belum Dibayar</span>',
+                'pending_payment': '<span class="invoice-status-badge invoice-status-pending-payment">Menunggu Validasi</span>',
+                'paid': '<span class="invoice-status-badge invoice-status-paid">Lunas</span>',
+                'cancelled': '<span class="invoice-status-badge invoice-status-cancelled">Dibatalkan</span>'
             };
             return badges[status] || status;
         },
@@ -418,8 +431,8 @@
         getStatusClass(status) {
             const classes = {
                 'pending': 'status-badge status-pending',
+                'pending_payment': 'status-badge status-pending-payment',
                 'paid': 'status-badge status-paid',
-                'overdue': 'status-badge status-overdue',
                 'cancelled': 'status-badge status-cancelled'
             };
             return classes[status] || 'status-badge';
@@ -439,25 +452,34 @@
         renderActionButtons(status, invoiceId, invoiceNumber, amount, canPay) {
             let buttons = '';
 
-            if (status === 'pending' || status === 'overdue') {
-                // Only show payment button if user has permission
+            if (status === 'pending') {
+                // Pending: show payment button
                 if (canPay) {
                     buttons = `
+                        <p class="description">Status: Belum Dibayar</p>
                         <button class="button button-primary btn-pay-invoice"
                                 data-id="${invoiceId}"
                                 data-number="${invoiceNumber}"
-                                data-amount="${amount}"
-                                style="margin-right: 10px;">
-                            Bayar Sekarang
+                                data-amount="${amount}">
+                            Bayar Invoice
                         </button>
-                        <button class="button btn-cancel-invoice"
-                                data-id="${invoiceId}">
-                            Batalkan Invoice
-                        </button>
+                        <p class="description" style="font-size: 11px; color: #666; margin-top: 10px;">
+                            <em>* Upload bukti pembayaran akan tersedia segera</em>
+                        </p>
                     `;
                 } else {
-                    buttons = '<p class="description">Status: Menunggu Pembayaran</p>';
+                    buttons = '<p class="description">Status: Belum Dibayar</p>';
                 }
+            } else if (status === 'pending_payment') {
+                // Pending payment: uploaded proof, waiting for validation
+                buttons = `
+                    <p class="description" style="color: #d4a42b; font-weight: 600;">
+                        ⏳ Menunggu Validasi Pembayaran
+                    </p>
+                    <p class="description" style="font-size: 12px; color: #666;">
+                        Bukti pembayaran sudah diupload, menunggu verifikasi
+                    </p>
+                `;
             } else if (status === 'paid') {
                 buttons = `
                     <button class="button button-primary btn-view-payment"

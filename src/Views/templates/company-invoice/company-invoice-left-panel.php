@@ -24,10 +24,10 @@
             <input type="checkbox" id="filter-pending" checked> Belum Dibayar
         </label>
         <label style="margin-left: 10px;">
-            <input type="checkbox" id="filter-paid"> Lunas
+            <input type="checkbox" id="filter-pending-payment"> Menunggu Validasi
         </label>
         <label style="margin-left: 10px;">
-            <input type="checkbox" id="filter-overdue"> Terlambat
+            <input type="checkbox" id="filter-paid"> Lunas
         </label>
         <label style="margin-left: 10px;">
             <input type="checkbox" id="filter-cancelled"> Dibatalkan

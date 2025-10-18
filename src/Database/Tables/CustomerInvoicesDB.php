@@ -24,7 +24,7 @@
  * - invoice_number : Nomor invoice unik
  * - amount         : Jumlah yang harus dibayar
  * - period_months  : Periode berlangganan dalam bulan (1, 3, 6, 12)
- * - status         : Status invoice (pending, paid, overdue, cancelled)
+ * - status         : Status invoice (pending, paid, pending_payment, cancelled)
  * - due_date       : Tanggal jatuh tempo
  * - paid_date      : Tanggal pembayaran (nullable)
  * - description    : Deskripsi invoice
@@ -78,7 +78,7 @@ class CustomerInvoicesDB {
             invoice_number varchar(20) NOT NULL,
             amount decimal(10,2) NOT NULL,
             period_months int(11) NOT NULL DEFAULT 1,
-            status enum('pending','paid','overdue','cancelled') NOT NULL DEFAULT 'pending',
+            status enum('pending','paid','pending_payment','cancelled') NOT NULL DEFAULT 'pending',
             due_date datetime NOT NULL,
             paid_date datetime NULL,
             description text NULL,

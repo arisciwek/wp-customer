@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Controllers/Company
- * @version     1.0.4
+ * @version     1.0.5
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Controllers/Company/CompanyInvoiceController.php
@@ -17,6 +17,14 @@
  *              Includes permission validation dan error handling.
  *
  * Changelog:
+ * 1.0.5 - 2025-10-18 (Task-2161 Review-03 Status Flow Fix)
+ * - Fixed: handle_invoice_payment() now uses markAsPendingPayment() instead of markAsPaid()
+ * - Changed: Payment status flow - after payment, invoice status → 'pending_payment' (not 'paid')
+ * - Changed: Payment record status → 'pending' (waiting for validation, not 'completed')
+ * - Updated: Success message - "Pembayaran berhasil diupload, menunggu validasi"
+ * - Reason: Manual payment system requires validator approval before marking as paid
+ * - Flow: pending → pending_payment (after payment) → paid (after validation by validator role)
+ *
  * 1.0.4 - 2025-10-17 (Review-08)
  * - Fixed: payment button visibility menggunakan can_pay flag dari formatInvoiceData()
  * - Fixed: CustomerCacheManager::flush() diganti dengan clearCache()
@@ -81,6 +89,7 @@ class CompanyInvoiceController {
         add_action('wp_ajax_get_company_invoice_stats', [$this, 'getStatistics']);
         add_action('wp_ajax_get_company_invoice_payments', [$this, 'getCompanyInvoicePayments']);
         add_action('wp_ajax_handle_invoice_payment', [$this, 'handle_invoice_payment']);
+        add_action('wp_ajax_get_invoice_payment_proof', [$this, 'getInvoicePaymentProof']);
     }
 
     /**
@@ -320,7 +329,7 @@ class CompanyInvoiceController {
             if ($description !== null) {
                 $update_data['description'] = $description;
             }
-            if ($status !== null && in_array($status, ['pending', 'paid', 'overdue', 'cancelled'])) {
+            if ($status !== null && in_array($status, ['pending', 'pending_payment', 'paid', 'cancelled'])) {
                 $update_data['status'] = $status;
             }
 
@@ -539,12 +548,6 @@ class CompanyInvoiceController {
             }
         }
 
-        // Calculate is_overdue directly without calling isOverdue() to avoid duplicate find()
-        $is_overdue = false;
-        if (($invoice->status ?? 'pending') === 'pending' && !empty($invoice->due_date)) {
-            $is_overdue = strtotime($invoice->due_date) < time();
-        }
-
         // Check if current user can pay this invoice (for button visibility)
         $can_pay = false;
         $payment_check = $this->validator->canPayInvoice($invoice->id);
@@ -575,7 +578,6 @@ class CompanyInvoiceController {
             'created_by_name' => $created_by_name,
             'created_at' => $invoice->created_at ?? '',
             'updated_at' => $invoice->updated_at ?? '',
-            'is_overdue' => $is_overdue,
             'can_pay' => $can_pay  // Add payment permission flag for JavaScript
         ];
     }
@@ -625,7 +627,7 @@ class CompanyInvoiceController {
             // Get payment status filters
             $filterPending = isset($_POST['filter_pending']) ? intval($_POST['filter_pending']) : 1;
             $filterPaid = isset($_POST['filter_paid']) ? intval($_POST['filter_paid']) : 0;
-            $filterOverdue = isset($_POST['filter_overdue']) ? intval($_POST['filter_overdue']) : 0;
+            $filterPendingPayment = isset($_POST['filter_pending_payment']) ? intval($_POST['filter_pending_payment']) : 0;
             $filterCancelled = isset($_POST['filter_cancelled']) ? intval($_POST['filter_cancelled']) : 0;
 
             // Get data from model
@@ -637,7 +639,7 @@ class CompanyInvoiceController {
                 'order_dir' => $orderDir,
                 'filter_pending' => $filterPending,
                 'filter_paid' => $filterPaid,
-                'filter_overdue' => $filterOverdue,
+                'filter_pending_payment' => $filterPendingPayment,
                 'filter_cancelled' => $filterCancelled
             ]);
 
@@ -787,15 +789,15 @@ class CompanyInvoiceController {
                 throw new \Exception(__('Metode pembayaran tidak valid', 'wp-customer'));
             }
 
-            // Mark invoice as paid
-            $paid_date = current_time('mysql');
-            $result = $this->invoice_model->markAsPaid($invoice_id, $paid_date);
+            // Mark invoice as pending payment (waiting for validation)
+            $payment_date = current_time('mysql');
+            $result = $this->invoice_model->markAsPendingPayment($invoice_id);
 
             if (!$result) {
                 throw new \Exception(__('Gagal memproses pembayaran', 'wp-customer'));
             }
 
-            // Create payment record
+            // Create payment record (status: pending, waiting for validator approval)
             global $wpdb;
             $payment_table = $wpdb->prefix . 'app_customer_payments';
 
@@ -810,11 +812,11 @@ class CompanyInvoiceController {
                     'invoice_id' => $invoice_id,
                     'invoice_number' => $invoice->invoice_number,
                     'payment_method' => $payment_method,
-                    'payment_date' => $paid_date
+                    'payment_date' => $payment_date
                 ]),
-                'status' => 'completed',
-                'created_at' => $paid_date,
-                'updated_at' => $paid_date
+                'status' => 'pending',  // Waiting for validation
+                'created_at' => $payment_date,
+                'updated_at' => $payment_date
             ];
 
             $wpdb->insert($payment_table, $payment_data);
@@ -826,9 +828,86 @@ class CompanyInvoiceController {
             $this->cache->clearAllCaches();
 
             wp_send_json_success([
-                'message' => __('Payment processed successfully', 'wp-customer'),
+                'message' => __('Pembayaran berhasil diupload, menunggu validasi', 'wp-customer'),
                 'invoice' => $this->formatInvoiceData($updated_invoice)
             ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Get invoice payment proof details
+     *
+     * AJAX handler untuk mengambil detail payment proof
+     * Called from PaymentProofModal JavaScript
+     *
+     * @return void (outputs JSON)
+     */
+    public function getInvoicePaymentProof() {
+        try {
+            // Verify nonce
+            if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
+                throw new \Exception('Invalid nonce');
+            }
+
+            // Get invoice ID
+            $invoice_id = isset($_POST['invoice_id']) ? intval($_POST['invoice_id']) : 0;
+            if (!$invoice_id) {
+                throw new \Exception('Invoice ID is required');
+            }
+
+            // Validate access using validator
+            $access_check = $this->validator->canViewInvoice($invoice_id);
+            if (is_wp_error($access_check)) {
+                throw new \Exception($access_check->get_error_message());
+            }
+
+            // Get invoice data
+            $invoice = $this->invoice_model->find($invoice_id);
+            if (!$invoice) {
+                throw new \Exception('Invoice not found');
+            }
+
+            // Check if invoice is paid
+            if ($invoice->status !== 'paid') {
+                throw new \Exception('Invoice belum dibayar');
+            }
+
+            // Get payment records for this invoice
+            $payments = $this->invoice_model->getInvoicePayments($invoice_id);
+            if (empty($payments)) {
+                throw new \Exception('Data pembayaran tidak ditemukan');
+            }
+
+            // Get the latest payment (assuming the one that made it paid)
+            $payment = $payments[0];
+
+            // Extract metadata if exists
+            $metadata = [];
+            if (!empty($payment->metadata)) {
+                $metadata = json_decode($payment->metadata, true);
+            }
+
+            // Get payment date from metadata or created_at
+            $payment_date = !empty($metadata['payment_date']) ? $metadata['payment_date'] : $payment->created_at;
+
+            // Prepare response data
+            $response_data = [
+                'invoice_number' => $invoice->invoice_number,
+                'payment_date' => $payment_date,
+                'amount' => $payment->amount,
+                'payment_method' => !empty($metadata['payment_method']) ? $metadata['payment_method'] : 'unknown',
+                'status' => $payment->status,
+                'notes' => !empty($payment->description) ? $payment->description : '',
+                'proof_file_url' => !empty($metadata['proof_file_url']) ? $metadata['proof_file_url'] : '',
+                'proof_file_type' => !empty($metadata['proof_file_type']) ? $metadata['proof_file_type'] : ''
+            ];
+
+            wp_send_json_success($response_data);
 
         } catch (\Exception $e) {
             wp_send_json_error([

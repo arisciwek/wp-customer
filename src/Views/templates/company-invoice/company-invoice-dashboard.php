@@ -82,3 +82,6 @@ defined('ABSPATH') || exit;
 
     <!-- Payment Modal Template -->
     <?php require_once WP_CUSTOMER_PATH . 'src/Views/templates/company-invoice/forms/membership-invoice-payment-modal.php'; ?>
+
+    <!-- Payment Proof Modal Template -->
+    <?php require_once WP_CUSTOMER_PATH . 'src/Views/templates/company-invoice/partials/membership-invoice-payment-proof-modal.php'; ?>

@@ -248,6 +248,7 @@ class WP_Customer_Dependencies {
             // Company Invoice styles
             wp_enqueue_style('wp-company-invoice', WP_CUSTOMER_URL . 'assets/css/company/company-invoice-style.css', [], $this->version);
             wp_enqueue_style('wp-company-invoice-datatable', WP_CUSTOMER_URL . 'assets/css/company/company-invoice-datatable-style.css', ['wp-company-invoice'], $this->version);
+            wp_enqueue_style('wp-company-invoice-payment-proof', WP_CUSTOMER_URL . 'assets/css/company/company-invoice-payment-proof-style.css', ['wp-company-invoice'], $this->version);
         }
 
     }
@@ -492,7 +493,8 @@ class WP_Customer_Dependencies {
             // Company Invoice scripts (load DataTable config first)
             wp_enqueue_script('company-invoice-datatable', WP_CUSTOMER_URL . 'assets/js/company/company-invoice-datatable-script.js', ['jquery', 'datatables'], $this->version, true);
             wp_enqueue_script('company-invoice-payment-modal', WP_CUSTOMER_URL . 'assets/js/company/company-invoice-payment-modal.js', ['jquery', 'customer-toast'], $this->version, true);
-            wp_enqueue_script('company-invoice-script', WP_CUSTOMER_URL . 'assets/js/company/company-invoice-script.js', ['jquery', 'datatables', 'customer-toast', 'company-invoice-datatable', 'company-invoice-payment-modal'], $this->version, true);
+            wp_enqueue_script('company-invoice-payment-proof', WP_CUSTOMER_URL . 'assets/js/company/company-invoice-payment-proof.js', ['jquery'], $this->version, true);
+            wp_enqueue_script('company-invoice-script', WP_CUSTOMER_URL . 'assets/js/company/company-invoice-script.js', ['jquery', 'datatables', 'customer-toast', 'company-invoice-datatable', 'company-invoice-payment-modal', 'company-invoice-payment-proof'], $this->version, true);
 
             // Localize script
             wp_localize_script('company-invoice-script', 'wpCustomerData', [

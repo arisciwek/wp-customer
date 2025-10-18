@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS
- * @version     1.1.0
+ * @version     1.1.3
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/company/company-invoice-payment-modal.js
@@ -22,6 +22,30 @@
  * - Template: membership-invoice-payment-modal.php (server-side rendered)
  *
  * Changelog:
+ * 1.1.3 - 2025-10-18 (Critical Fix: jQuery Data Cache Issue)
+ * - Fixed: Changed .attr() to .data() in showPaymentModal() (lines 76-79)
+ * - Fixed: Changed .attr() to .data() in showCancelConfirmation() (line 185)
+ * - Root Cause: jQuery .data() caches values - mixing .attr() set with .data() get causes stale data
+ * - Bug: Sequential payments processed wrong invoice ID (always first invoice ID)
+ * - Impact: Modal now correctly updates invoice data when opened for different invoices
+ * - Critical: Prevents payment for wrong invoice
+ *
+ * 1.1.2 - 2025-10-18 (Debug Support)
+ * - Added console log when "Bayar Sekarang" button clicked (line 99)
+ * - Added console log when processPayment method called (line 122)
+ * - Added console log in AJAX beforeSend (line 134)
+ * - Logs invoice ID, number, and payment method for debugging
+ * - Purpose: Track invoice ID through payment flow to ensure consistency
+ *
+ * 1.1.1 - 2025-10-18 (Task-2161 Sequential Payment UX Fix)
+ * - Fixed: Auto-close right panel after successful payment (lines 128-134)
+ * - Fixed: Auto-close right panel after successful cancel (lines 214-218)
+ * - Changed: processPayment success calls closeRightPanel() instead of loadInvoiceDetails()
+ * - Changed: cancelInvoice success calls closeRightPanel()
+ * - Reason: Prevents accidental interaction with stale invoice state
+ * - UX: Forces user to select invoice from list after payment, ensuring fresh data
+ * - Benefit: Enables sequential payments for multiple invoices without confusion
+ *
  * 1.1.0 - 2025-01-17 (Review-07)
  * - Refactored to use PHP template instead of JavaScript HTML string
  * - Improved separation of concerns (HTML in template, logic in JS)
@@ -53,11 +77,14 @@
             $('#payment-invoice-number').text(invoiceNumber);
             $('#payment-invoice-amount').text('Rp ' + this.formatCurrency(amount));
 
-            // Set data attributes on confirm button
+            // Set data on confirm button using .data() method
+            // IMPORTANT: Use .data() instead of .attr() to avoid jQuery cache issues
+            // .attr() sets HTML attribute, .data() sets jQuery internal data
+            // If we mix .attr() for set and .data() for get, cached values won't update
             $('#payment-confirm-btn')
-                .attr('data-invoice-id', invoiceId)
-                .attr('data-invoice-number', invoiceNumber)
-                .attr('data-amount', amount);
+                .data('invoice-id', invoiceId)
+                .data('invoice-number', invoiceNumber)
+                .data('amount', amount);
 
             // Reset payment method to first option
             $('#payment-method').val('transfer_bank');
@@ -87,6 +114,8 @@
                 const invoiceNumber = $button.data('invoice-number');
                 const paymentMethod = $('#payment-method').val();
 
+                console.log('[DEBUG] Bayar Sekarang button clicked - Invoice ID:', invoiceId, 'Invoice Number:', invoiceNumber, 'Payment Method:', paymentMethod);
+
                 self.processPayment(invoiceId, invoiceNumber, paymentMethod);
             });
 
@@ -108,6 +137,8 @@
         processPayment(invoiceId, invoiceNumber, paymentMethod) {
             const self = this;
 
+            console.log('[DEBUG] processPayment called - Invoice ID:', invoiceId, 'Invoice Number:', invoiceNumber, 'Payment Method:', paymentMethod);
+
             $.ajax({
                 url: wpCustomerData.ajaxUrl,
                 type: 'POST',
@@ -118,6 +149,7 @@
                     nonce: wpCustomerData.nonce
                 },
                 beforeSend: function() {
+                    console.log('[DEBUG] AJAX beforeSend - Sending invoice_id:', invoiceId);
                     $('.modal-confirm').prop('disabled', true).text('Processing...');
                 },
                 success: function(response) {
@@ -125,9 +157,11 @@
                         self.showToast('success', response.data.message || 'Payment processed successfully');
                         $('#invoice-payment-modal').hide();
 
-                        // Refresh invoice details and datatable
+                        // Close right panel and refresh datatable for cleaner UX
+                        // This forces user to select invoice again from list,
+                        // preventing accidental interaction with old invoice state
                         if (window.CompanyInvoice) {
-                            window.CompanyInvoice.loadInvoiceDetails(invoiceId);
+                            window.CompanyInvoice.closeRightPanel();
                             window.CompanyInvoice.refreshDataTable();
                         }
                     } else {
@@ -154,8 +188,9 @@
             // Populate modal with invoice data
             $('#cancel-invoice-number').text(invoiceNumber);
 
-            // Set data attribute on confirm button
-            $('#cancel-confirm-btn').attr('data-invoice-id', invoiceId);
+            // Set data on confirm button using .data() method
+            // IMPORTANT: Use .data() instead of .attr() to avoid jQuery cache issues
+            $('#cancel-confirm-btn').data('invoice-id', invoiceId);
 
             // Show modal
             $('#invoice-cancel-modal').show();
@@ -209,9 +244,9 @@
                         self.showToast('success', 'Invoice berhasil dibatalkan');
                         $('#invoice-cancel-modal').hide();
 
-                        // Refresh invoice details and datatable
+                        // Close right panel and refresh datatable for cleaner UX
                         if (window.CompanyInvoice) {
-                            window.CompanyInvoice.loadInvoiceDetails(invoiceId);
+                            window.CompanyInvoice.closeRightPanel();
                             window.CompanyInvoice.refreshDataTable();
                         }
                     } else {

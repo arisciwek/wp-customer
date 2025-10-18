@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Validators/Company
- * @version     1.0.3
+ * @version     1.0.4
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Validators/Company/CompanyInvoiceValidator.php
@@ -20,6 +20,13 @@
  * - CustomerModel untuk validasi customer
  *
  * Changelog:
+ * 1.0.4 - 2025-10-18 (Task-2161 Review-03 Double Payment Fix)
+ * - Fixed: canPayInvoice() now blocks payment for 'pending_payment' status invoices
+ * - Added: Status validation to prevent double payment vulnerability
+ * - Only 'pending' invoices can be paid, 'pending_payment' must wait for validation
+ * - Error message: "Pembayaran sudah diupload, menunggu validasi"
+ * - Prevents duplicate payment records for same invoice
+ *
  * 1.0.3 - 2025-10-17 (Review-08)
  * - Updated payment capabilities to use "membership" terminology
  * - Changed: pay_all_customer_invoices → pay_all_customer_membership_invoices
@@ -164,7 +171,7 @@ class CompanyInvoiceValidator {
 
         // Validate status if provided
         if (isset($update_data['status'])) {
-            $allowed_statuses = ['pending', 'paid', 'overdue', 'cancelled'];
+            $allowed_statuses = ['pending', 'pending_payment', 'paid', 'cancelled'];
             if (!in_array($update_data['status'], $allowed_statuses)) {
                 return new \WP_Error(
                     'invalid_status',
@@ -718,11 +725,18 @@ class CompanyInvoiceValidator {
             );
         }
 
-        // Check if invoice can be paid (not already paid or cancelled)
+        // Check if invoice can be paid (only pending invoices)
         if ($invoice->status === 'paid') {
             return new \WP_Error(
                 'already_paid',
                 __('Invoice sudah dibayar', 'wp-customer')
+            );
+        }
+
+        if ($invoice->status === 'pending_payment') {
+            return new \WP_Error(
+                'payment_pending_validation',
+                __('Pembayaran sudah diupload, menunggu validasi', 'wp-customer')
             );
         }
 

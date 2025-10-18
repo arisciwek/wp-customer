@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Company
- * @version     1.0.2
+ * @version     1.0.3
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Company/CompanyInvoiceModel.php
@@ -14,7 +14,7 @@
  *              Includes:
  *              - CRUD operations untuk invoice
  *              - Invoice numbering dan generation
- *              - Status management (pending, paid, overdue, cancelled)
+ *              - Status management (pending, paid, pending_payment, cancelled)
  *              - Payment tracking dan linking
  *              - Cache management untuk optimasi performa
  *
@@ -25,6 +25,16 @@
  * - WordPress $wpdb
  *
  * Changelog:
+ * 1.0.3 - 2025-10-18 (Review-03)
+ * - Changed: Removed status 'overdue', added status 'pending_payment'
+ * - Updated: getStatusLabel() - replaced 'Terlambat' with 'Menunggu Validasi'
+ * - Renamed: markAsOverdue() → markAsPendingPayment()
+ * - Renamed: isOverdue() → isPendingPayment()
+ * - Updated: getUnpaidAmount() and getTotalUnpaidAmount() - use 'pending_payment' instead of 'overdue'
+ * - Updated: getDataTableData() - filter parameter 'filter_overdue' → 'filter_pending_payment'
+ * - Reason: System tidak ada auto-payment, ada gratis membership sebagai fallback
+ * - New flow: pending → pending_payment (after upload proof) → paid (after validation)
+ *
  * 1.0.2 - 2025-01-17 (Review-02)
  * - Fixed: getInvoicePayments() query error - column invoice_id tidak ada di tabel
  * - Changed: Query menggunakan metadata LIKE search karena invoice_id tersimpan di JSON metadata
@@ -315,13 +325,13 @@ class CompanyInvoiceModel {
     }
 
     /**
-     * Mark invoice as overdue
+     * Mark invoice as pending payment (uploaded proof, waiting validation)
      *
      * @param int $id Invoice ID
      * @return bool Success status
      */
-    public function markAsOverdue(int $id): bool {
-        return $this->update($id, ['status' => 'overdue']);
+    public function markAsPendingPayment(int $id): bool {
+        return $this->update($id, ['status' => 'pending_payment']);
     }
 
     /**
@@ -388,7 +398,7 @@ class CompanyInvoiceModel {
             SELECT COUNT(*)
             FROM {$this->table}
             WHERE customer_id = %d
-            AND status IN ('pending', 'overdue')
+            AND status IN ('pending', 'pending_payment')
         ", $customer_id));
 
         // Cache for 5 minutes
@@ -410,25 +420,21 @@ class CompanyInvoiceModel {
             SELECT SUM(amount)
             FROM {$this->table}
             WHERE customer_id = %d
-            AND status IN ('pending', 'overdue')
+            AND status IN ('pending', 'pending_payment')
         ", $customer_id));
 
         return (float) $total;
     }
 
     /**
-     * Check if invoice is overdue
+     * Check if invoice is pending payment validation
      *
      * @param int $id Invoice ID
-     * @return bool True if overdue
+     * @return bool True if pending payment
      */
-    public function isOverdue(int $id): bool {
+    public function isPendingPayment(int $id): bool {
         $invoice = $this->find($id);
-        if (!$invoice || $invoice->status !== 'pending') {
-            return false;
-        }
-
-        return strtotime($invoice->due_date) < time();
+        return $invoice && $invoice->status === 'pending_payment';
     }
 
     /**
@@ -440,8 +446,8 @@ class CompanyInvoiceModel {
     public function getStatusLabel(string $status): string {
         $labels = [
             'pending' => __('Belum Dibayar', 'wp-customer'),
+            'pending_payment' => __('Menunggu Validasi', 'wp-customer'),
             'paid' => __('Lunas', 'wp-customer'),
-            'overdue' => __('Terlambat', 'wp-customer'),
             'cancelled' => __('Dibatalkan', 'wp-customer')
         ];
 
@@ -495,7 +501,7 @@ class CompanyInvoiceModel {
             'order_dir' => 'desc',
             'filter_pending' => 1,
             'filter_paid' => 0,
-            'filter_overdue' => 0,
+            'filter_pending_payment' => 0,
             'filter_cancelled' => 0
         ];
         $params = wp_parse_args($params, $defaults);
@@ -602,8 +608,8 @@ class CompanyInvoiceModel {
         if (!empty($params['filter_paid'])) {
             $status_filters[] = 'paid';
         }
-        if (!empty($params['filter_overdue'])) {
-            $status_filters[] = 'overdue';
+        if (!empty($params['filter_pending_payment'])) {
+            $status_filters[] = 'pending_payment';
         }
         if (!empty($params['filter_cancelled'])) {
             $status_filters[] = 'cancelled';
