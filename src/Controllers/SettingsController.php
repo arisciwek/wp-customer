@@ -269,12 +269,13 @@ class SettingsController {
     private function loadTabView($tab) {
         $allowed_tabs = [
             'general' => 'tab-general.php',
+            'invoice-payment' => 'tab-invoice-payment.php',
             'permissions' => 'tab-permissions.php',
             'membership-levels' => 'tab-membership-levels.php',
             'membership-features' => 'tab-membership-features.php',
             'demo-data' => 'tab-demo-data.php'
         ];
-        
+
         $tab = isset($allowed_tabs[$tab]) ? $tab : 'general';
 
         if ($tab === 'membership-features') {

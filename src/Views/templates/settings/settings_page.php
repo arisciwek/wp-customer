@@ -35,6 +35,7 @@ $current_tab = isset($_GET['tab']) ? sanitize_text_field($_GET['tab']) : 'genera
 
 $tabs = array(
     'general' => __('Pengaturan Umum', 'wp-customer'),
+    'invoice-payment' => __('Invoice & Payment', 'wp-customer'),
     'permissions' => __('Hak Akses', 'wp-customer'),
     'membership-levels' => __('Membership Levels', 'wp-customer'),
     'membership-features' => __('Membership Features', 'wp-customer'),

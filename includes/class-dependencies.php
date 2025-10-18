@@ -193,6 +193,15 @@ class WP_Customer_Dependencies {
                        $this->version
                    );
                    break;
+
+               case 'invoice-payment':
+                   wp_enqueue_style(
+                       'wp-customer-invoice-payment-tab',
+                       WP_CUSTOMER_URL . 'assets/css/settings/invoice-payment-style.css',
+                       ['wp-customer-settings'],
+                       $this->version
+                   );
+                   break;
            }
         }
 
@@ -388,6 +397,16 @@ class WP_Customer_Dependencies {
                             'generating' => __('Generating...', 'wp-customer')
                         ]
                     ]);
+                    break;
+
+                case 'invoice-payment':
+                    wp_enqueue_script(
+                        'wp-customer-invoice-payment-tab',
+                        WP_CUSTOMER_URL . 'assets/js/settings/invoice-payment-script.js',
+                        ['jquery', 'wp-customer-settings'],
+                        $this->version,
+                        true
+                    );
                     break;
             }
 

@@ -3,14 +3,27 @@
  * File: SettingsModel.php
  * Path: /wp-customer/src/Models/Settings/SettingsModel.php
  * Description: Model untuk mengelola pengaturan umum plugin
- * Version: 1.2.1
- * Last modified: 2024-12-03
- * 
+ * Version: 1.3.1
+ * Last modified: 2025-10-17
+ *
  * Changelog:
+ * v1.3.1 - 2025-10-17 (Task-2158 Review-03)
+ * - Fixed: getInvoicePaymentOptions() now always applies wp_parse_args with defaults
+ * - This ensures backward compatibility when new settings fields are added
+ * - Fixes "Undefined array key" error for invoice_sender_email on existing installations
+ *
+ * v1.3.0 - 2025-10-17 (Task-2158)
+ * - Added invoice settings (due date, prefix, currency, tax, sender email)
+ * - Added payment settings (methods, confirmation, auto-approve, reminders)
+ * - Added getInvoicePaymentOptions() method with auto-default to admin email
+ * - Added saveInvoicePaymentSettings() method with proper unchanged data handling
+ * - Added sanitizeInvoicePaymentOptions() method with email validation
+ * - Added default_invoice_payment_options property
+ *
  * v1.2.1 - 2024-12-03
  * - Changed sanitizeOptions visibility to public
  * - Added proper documentation blocks
- * 
+ *
  * v1.2.0 - 2024-11-28
  * - Mengganti semua constants menjadi properti class
  * - Perbaikan penggunaan properti di seluruh method
@@ -21,7 +34,8 @@ namespace WPCustomer\Models\Settings;
 class SettingsModel {
     private $option_group = 'wp_customer_settings';
     private $general_options = 'wp_customer_general_options';
-    
+    private $invoice_payment_options = 'wp_customer_invoice_payment_options';
+
     private $default_options = [
         'records_per_page' => 15,
         'enable_caching' => true,
@@ -31,6 +45,22 @@ class SettingsModel {
         'enable_api' => false,
         'api_key' => '',
         'log_enabled' => false
+    ];
+
+    private $default_invoice_payment_options = [
+        // Invoice Settings
+        'invoice_due_days' => 7,
+        'invoice_prefix' => 'INV',
+        'invoice_number_format' => 'YYYYMM',
+        'invoice_currency' => 'Rp',
+        'invoice_tax_percentage' => 11,
+        'invoice_sender_email' => '',  // Will default to admin email if empty
+
+        // Payment Settings
+        'payment_methods' => ['transfer_bank', 'virtual_account', 'kartu_kredit', 'e_wallet'],
+        'payment_confirmation_required' => true,
+        'payment_auto_approve_threshold' => 0,
+        'payment_reminder_days' => [7, 3, 1], // H-7, H-3, H-1
     ];
 
     /**
@@ -313,6 +343,203 @@ class SettingsModel {
      */
     public function deleteOptions(): bool {
         return delete_option($this->general_options);
+    }
+
+    /**
+     * Get invoice and payment options dengan default values
+     *
+     * @return array
+     */
+    public function getInvoicePaymentOptions(): array {
+        $cache_key = 'wp_customer_invoice_payment_options';
+        $cache_group = 'wp_customer';
+
+        // Try to get from cache first
+        $options = wp_cache_get($cache_key, $cache_group);
+
+        if (false === $options) {
+            // Not in cache, get from database
+            $options = get_option($this->invoice_payment_options, []);
+
+            // Store in cache for next time
+            wp_cache_set($cache_key, $options, $cache_group);
+        }
+
+        // Always parse with defaults to ensure all keys exist
+        // This is important for backward compatibility when new settings are added
+        $options = wp_parse_args($options, $this->default_invoice_payment_options);
+
+        // If sender email is empty, use admin email as default
+        if (empty($options['invoice_sender_email'])) {
+            $options['invoice_sender_email'] = get_option('admin_email');
+        }
+
+        return $options;
+    }
+
+    /**
+     * Save invoice payment settings dengan validasi
+     *
+     * @param array $input
+     * @return bool
+     */
+    public function saveInvoicePaymentSettings(array $input): bool {
+        // Debug logging
+        error_log('[SettingsModel] saveInvoicePaymentSettings called with input: ' . print_r($input, true));
+
+        if (empty($input)) {
+            error_log('[SettingsModel] Input is empty, returning false');
+            return false;
+        }
+
+        // Clear cache first
+        wp_cache_delete('wp_customer_invoice_payment_options', 'wp_customer');
+
+        // Sanitize input
+        $sanitized = $this->sanitizeInvoicePaymentOptions($input);
+        error_log('[SettingsModel] Sanitized data: ' . print_r($sanitized, true));
+
+        // Only update if we have valid data
+        if (!empty($sanitized)) {
+            // Get current options to compare
+            $current_options = get_option($this->invoice_payment_options, []);
+            error_log('[SettingsModel] Current options: ' . print_r($current_options, true));
+
+            // update_option returns false if value is the same, so we force update
+            $result = update_option($this->invoice_payment_options, $sanitized);
+            error_log('[SettingsModel] update_option result: ' . ($result ? 'TRUE' : 'FALSE'));
+
+            // If update_option returns false, check if data is actually saved
+            // This can happen if the value didn't change
+            $saved_options = get_option($this->invoice_payment_options, []);
+            $data_is_saved = ($saved_options == $sanitized);
+            error_log('[SettingsModel] Data is saved correctly: ' . ($data_is_saved ? 'YES' : 'NO'));
+
+            // Consider success if data is correctly saved, even if update_option returned false
+            if ($result || $data_is_saved) {
+                // Re-cache the new values
+                wp_cache_set(
+                    'wp_customer_invoice_payment_options',
+                    $sanitized,
+                    'wp_customer'
+                );
+                return true;
+            }
+
+            return false;
+        }
+
+        error_log('[SettingsModel] Sanitized data is empty, returning false');
+        return false;
+    }
+
+    /**
+     * Sanitize invoice payment options
+     *
+     * @param array|null $options
+     * @return array
+     */
+    public function sanitizeInvoicePaymentOptions(?array $options = []): array {
+        // If options is null, use empty array
+        if ($options === null) {
+            $options = [];
+        }
+
+        $sanitized = [];
+
+        // Sanitize invoice due days
+        if (isset($options['invoice_due_days'])) {
+            $sanitized['invoice_due_days'] = absint($options['invoice_due_days']);
+            if ($sanitized['invoice_due_days'] < 1) {
+                $sanitized['invoice_due_days'] = 7;
+            }
+        }
+
+        // Sanitize invoice prefix
+        if (isset($options['invoice_prefix'])) {
+            $sanitized['invoice_prefix'] = sanitize_text_field($options['invoice_prefix']);
+            if (empty($sanitized['invoice_prefix'])) {
+                $sanitized['invoice_prefix'] = 'INV';
+            }
+        }
+
+        // Sanitize invoice number format
+        if (isset($options['invoice_number_format'])) {
+            $allowed_formats = ['YYYYMM', 'YYYYMMDD', 'YYMM', 'YYMMDD'];
+            $sanitized['invoice_number_format'] = in_array($options['invoice_number_format'], $allowed_formats)
+                ? $options['invoice_number_format']
+                : 'YYYYMM';
+        }
+
+        // Sanitize currency
+        if (isset($options['invoice_currency'])) {
+            $sanitized['invoice_currency'] = sanitize_text_field($options['invoice_currency']);
+            if (empty($sanitized['invoice_currency'])) {
+                $sanitized['invoice_currency'] = 'Rp';
+            }
+        }
+
+        // Sanitize tax percentage
+        if (isset($options['invoice_tax_percentage'])) {
+            $sanitized['invoice_tax_percentage'] = floatval($options['invoice_tax_percentage']);
+            if ($sanitized['invoice_tax_percentage'] < 0) {
+                $sanitized['invoice_tax_percentage'] = 0;
+            }
+            if ($sanitized['invoice_tax_percentage'] > 100) {
+                $sanitized['invoice_tax_percentage'] = 100;
+            }
+        }
+
+        // Sanitize sender email
+        if (isset($options['invoice_sender_email'])) {
+            $sanitized['invoice_sender_email'] = sanitize_email($options['invoice_sender_email']);
+            // If empty or invalid, will default to admin email on get
+        }
+
+        // Sanitize payment methods
+        if (isset($options['payment_methods'])) {
+            $allowed_methods = ['transfer_bank', 'virtual_account', 'kartu_kredit', 'e_wallet'];
+            if (is_array($options['payment_methods'])) {
+                $sanitized['payment_methods'] = array_values(
+                    array_intersect($options['payment_methods'], $allowed_methods)
+                );
+            }
+            // Ensure at least one method is selected
+            if (empty($sanitized['payment_methods'])) {
+                $sanitized['payment_methods'] = ['transfer_bank'];
+            }
+        }
+
+        // Sanitize payment confirmation required
+        if (isset($options['payment_confirmation_required'])) {
+            $sanitized['payment_confirmation_required'] = (bool) $options['payment_confirmation_required'];
+        }
+
+        // Sanitize auto-approve threshold
+        if (isset($options['payment_auto_approve_threshold'])) {
+            $sanitized['payment_auto_approve_threshold'] = floatval($options['payment_auto_approve_threshold']);
+            if ($sanitized['payment_auto_approve_threshold'] < 0) {
+                $sanitized['payment_auto_approve_threshold'] = 0;
+            }
+        }
+
+        // Sanitize payment reminder days
+        if (isset($options['payment_reminder_days'])) {
+            if (is_array($options['payment_reminder_days'])) {
+                $sanitized['payment_reminder_days'] = array_values(
+                    array_map('absint', $options['payment_reminder_days'])
+                );
+                // Sort in descending order (H-7, H-3, H-1)
+                rsort($sanitized['payment_reminder_days']);
+            }
+            // Ensure at least one reminder day
+            if (empty($sanitized['payment_reminder_days'])) {
+                $sanitized['payment_reminder_days'] = [7, 3, 1];
+            }
+        }
+
+        // Merge with default options to ensure all required keys exist
+        return wp_parse_args($sanitized, $this->default_invoice_payment_options);
     }
 
     /**

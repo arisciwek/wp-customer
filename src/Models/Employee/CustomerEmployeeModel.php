@@ -755,7 +755,7 @@ public function create(array $data): ?int {
         $table_users     = "{$wpdb->prefix}users";
 
         $query = $wpdb->prepare("
-            SELECT 
+            SELECT
                 ce.user_id,
                 u.display_name,
                 cb.name AS branch_name,
@@ -779,6 +779,176 @@ public function create(array $data): ?int {
         if (defined('WP_DEBUG') && WP_DEBUG === true) {
             error_log('Query Result: ' . print_r($result, true));
         }
+
+        return $result;
+    }
+
+    /**
+     * Get comprehensive user information for admin bar integration
+     *
+     * This method retrieves complete user data including:
+     * - Employee information
+     * - Customer details (code, name, npwp, nib, status)
+     * - Branch details (code, name, type, nitku, address, phone, email, postal_code, latitude, longitude)
+     * - Membership details (level_id, status, period_months, start_date, end_date, price_paid, payment_status, payment_method, payment_date)
+     * - User email and capabilities
+     *
+     * @param int $user_id WordPress user ID
+     * @return array|null Array of user info or null if not found
+     */
+    public function getUserInfo(int $user_id): ?array {
+        global $wpdb;
+
+        // Try to get from cache first
+        $cache_key = 'customer_user_info';
+        $cached_data = $this->cache->get($cache_key, $user_id);
+
+        if ($cached_data !== null) {
+            return $cached_data;
+        }
+
+        // Single comprehensive query to get ALL user data
+        // This query JOINs employees, customers, branches, memberships, users, and usermeta
+        $user_data = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM (
+                SELECT
+                    e.*,
+                    MAX(c.code) AS customer_code,
+                    MAX(c.name) AS customer_name,
+                    MAX(c.npwp) AS customer_npwp,
+                    MAX(c.nib) AS customer_nib,
+                    MAX(c.status) AS customer_status,
+                    MAX(b.code) AS branch_code,
+                    MAX(b.name) AS branch_name,
+                    MAX(b.type) AS branch_type,
+                    MAX(b.nitku) AS branch_nitku,
+                    MAX(b.address) AS branch_address,
+                    MAX(b.phone) AS branch_phone,
+                    MAX(b.email) AS branch_email,
+                    MAX(b.postal_code) AS branch_postal_code,
+                    MAX(b.latitude) AS branch_latitude,
+                    MAX(b.longitude) AS branch_longitude,
+                    MAX(cm.level_id) AS membership_level_id,
+                    MAX(cm.status) AS membership_status,
+                    MAX(cm.period_months) AS membership_period_months,
+                    MAX(cm.start_date) AS membership_start_date,
+                    MAX(cm.end_date) AS membership_end_date,
+                    MAX(cm.price_paid) AS membership_price_paid,
+                    MAX(cm.payment_status) AS membership_payment_status,
+                    MAX(cm.payment_method) AS membership_payment_method,
+                    MAX(cm.payment_date) AS membership_payment_date,
+                    u.user_login,
+                    u.user_nicename,
+                    u.user_email,
+                    u.user_url,
+                    u.user_registered,
+                    u.user_status,
+                    u.display_name,
+                    MAX(um.meta_value) AS capabilities,
+                    MAX(CASE WHEN um2.meta_key = 'first_name' THEN um2.meta_value END) AS first_name,
+                    MAX(CASE WHEN um2.meta_key = 'last_name' THEN um2.meta_value END) AS last_name,
+                    MAX(CASE WHEN um2.meta_key = 'description' THEN um2.meta_value END) AS description
+                FROM
+                    {$wpdb->prefix}app_customer_employees e
+                INNER JOIN
+                    {$wpdb->prefix}app_customers c ON e.customer_id = c.id
+                INNER JOIN
+                    {$wpdb->prefix}app_customer_branches b ON e.branch_id = b.id
+                LEFT JOIN
+                    {$wpdb->prefix}app_customer_memberships cm ON cm.customer_id = e.customer_id
+                    AND cm.branch_id = e.branch_id
+                    AND cm.status = 'active'
+                INNER JOIN
+                    {$wpdb->users} u ON e.user_id = u.ID
+                INNER JOIN
+                    {$wpdb->usermeta} um ON u.ID = um.user_id AND um.meta_key = '{$wpdb->prefix}capabilities'
+                LEFT JOIN
+                    {$wpdb->usermeta} um2 ON u.ID = um2.user_id
+                    AND um2.meta_key IN ('first_name', 'last_name', 'description')
+                WHERE
+                    e.user_id = %d
+                    AND e.status = 'active'
+                GROUP BY
+                    e.id,
+                    e.user_id,
+                    u.ID,
+                    u.user_login,
+                    u.user_nicename,
+                    u.user_email,
+                    u.user_url,
+                    u.user_registered,
+                    u.user_status,
+                    u.display_name
+            ) AS subquery
+            GROUP BY
+                subquery.id
+            LIMIT 1",
+            $user_id
+        ));
+
+        if (!$user_data || !$user_data->branch_name) {
+            // Cache null result for short time to prevent repeated queries
+            $this->cache->set($cache_key, null, 5 * MINUTE_IN_SECONDS, $user_id);
+            return null;
+        }
+
+        // Build result array
+        $result = [
+            'entity_name' => $user_data->customer_name,
+            'entity_code' => $user_data->customer_code,
+            'customer_id' => $user_data->customer_id,
+            'customer_npwp' => $user_data->customer_npwp,
+            'customer_nib' => $user_data->customer_nib,
+            'customer_status' => $user_data->customer_status,
+            'branch_id' => $user_data->branch_id,
+            'branch_code' => $user_data->branch_code,
+            'branch_name' => $user_data->branch_name,
+            'branch_type' => $user_data->branch_type,
+            'branch_nitku' => $user_data->branch_nitku,
+            'branch_address' => $user_data->branch_address,
+            'branch_phone' => $user_data->branch_phone,
+            'branch_email' => $user_data->branch_email,
+            'branch_postal_code' => $user_data->branch_postal_code,
+            'branch_latitude' => $user_data->branch_latitude,
+            'branch_longitude' => $user_data->branch_longitude,
+            'membership_level_id' => $user_data->membership_level_id,
+            'membership_status' => $user_data->membership_status,
+            'membership_period_months' => $user_data->membership_period_months,
+            'membership_start_date' => $user_data->membership_start_date,
+            'membership_end_date' => $user_data->membership_end_date,
+            'membership_price_paid' => $user_data->membership_price_paid,
+            'membership_payment_status' => $user_data->membership_payment_status,
+            'membership_payment_method' => $user_data->membership_payment_method,
+            'membership_payment_date' => $user_data->membership_payment_date,
+            'position' => $user_data->position,
+            'user_email' => $user_data->user_email,
+            'capabilities' => $user_data->capabilities,
+            'relation_type' => 'customer_employee',
+            'icon' => '🏢'
+        ];
+
+        // Add role names dynamically from capabilities
+        // Use AdminBarModel for generic capability parsing
+        $admin_bar_model = new \WPAppCore\Models\AdminBarModel();
+
+        $result['role_names'] = $admin_bar_model->getRoleNamesFromCapabilities(
+            $user_data->capabilities,
+            call_user_func(['WP_Customer_Role_Manager', 'getRoleSlugs']),
+            ['WP_Customer_Role_Manager', 'getRoleName']
+        );
+
+        // Add permission names list
+        // IMPORTANT: Use WP_User->allcaps to get ACTUAL permissions (including inherited from roles)
+        // Not from wp_usermeta which only contains role assignments!
+        $permission_model = new \WPCustomer\Models\Settings\PermissionModel();
+        $result['permission_names'] = $admin_bar_model->getPermissionNamesFromUserId(
+            $user_id,
+            call_user_func(['WP_Customer_Role_Manager', 'getRoleSlugs']),
+            $permission_model->getAllCapabilities()
+        );
+
+        // Cache the result for 5 minutes
+        $this->cache->set($cache_key, $result, 5 * MINUTE_IN_SECONDS, $user_id);
 
         return $result;
     }
