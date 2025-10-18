@@ -179,9 +179,11 @@ class PermissionModel {
         $customer = get_role('customer');
         if ($customer) {
             // Add 'read' capability - required for wp-admin access
-            $customer->add_cap('read');
+            ///$customer->add_cap('read');
 
             $default_capabiities = [
+                'read' => true
+                /*
                 // Customer capabilities
                 'view_customer_list' => true,
                 'view_customer_detail' => true,
@@ -216,6 +218,7 @@ class PermissionModel {
                 'edit_own_customer_membership_invoice' => false,
                 'delete_customer_membership_invoice' => false,
                 'approve_customer_membership_invoice' => false
+                */
             ];
 
             foreach ($default_capabiities as $cap => $enabled) {
