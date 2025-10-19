@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Validators
- * @version     1.0.4
+ * @version     1.0.6
  * @author      arisciwek
  *
  * Path: src/Validators/CustomerValidator.php
@@ -19,6 +19,21 @@
  * - WordPress Capability API
  * 
  * Changelog:
+ * 1.0.6 - 2025-10-19 (TODO-2165 Refactor)
+ * - Simplified permission checks using direct capability validation (Opsi 1)
+ * - Removed hook filters (wp_customer_user_can_view_customer, etc.) - not needed
+ * - Added direct current_user_can() checks for platform role integration
+ * - More secure and maintainable approach using WordPress capability system
+ * - Breaking change: External plugins should use capability system instead of hooks
+ *
+ * 1.0.5 - 2025-10-19 (TODO-2165)
+ * - Refactored hook names for better clarity and WordPress convention compliance
+ * - Changed wp_customer_can_view → wp_customer_user_can_view_customer
+ * - Changed wp_customer_can_update → wp_customer_user_can_edit_customer
+ * - Changed wp_customer_can_delete → wp_customer_user_can_delete_customer
+ * - Fixed unreachable code bug in canDelete() method (filter was never called)
+ * - Improved extensibility for plugin integrations (wp-app-core, etc.)
+ *
  * 1.0.3 - 2024-01-20
  * - Separated form and permission validation
  * - Added role-based permission system
@@ -196,33 +211,64 @@ class CustomerValidator {
 
     /**
      * Check if user can view customer
+     *
+     * Uses direct capability checks for simplicity and security.
+     * Platform roles (from wp-app-core) are handled via WordPress capability system.
      */
     public function canView(array $relation): bool {
+        // Standard role checks
         if ($relation['is_admin']) return true;
         if ($relation['is_customer_admin'] && current_user_can('view_own_customer')) return true;
         if ($relation['is_customer_branch_admin'] && current_user_can('view_own_customer')) return true;
         if ($relation['is_customer_employee'] && current_user_can('view_own_customer')) return true;
 
-        // Beri kesempatan plugin lain menambahkan custom view rules
-        return apply_filters('wp_customer_can_view', false, $relation);
+        // Platform role check (wp-app-core integration)
+        // If user has view_customer_detail capability, grant access
+        // This covers platform_finance, platform_admin, platform_analyst, platform_viewer
+        if (current_user_can('view_customer_detail')) return true;
+
+        return false;
     }
 
     /**
      * Check if user can update customer
+     *
+     * Uses direct capability checks for simplicity and security.
+     * Platform roles (from wp-app-core) are handled via WordPress capability system.
      */
     public function canUpdate(array $relation): bool {
+        // Standard role checks
         if ($relation['is_admin']) return true;
         if ($relation['is_customer_admin'] && current_user_can('edit_own_customer')) return true;
 
-        return apply_filters('wp_customer_can_update', false, $relation);
+        // Platform role check (wp-app-core integration)
+        // If user has edit_all_customers capability, grant access
+        // This covers platform_admin, platform_super_admin
+        if (current_user_can('edit_all_customers')) return true;
+
+        return false;
     }
 
     /**
      * Check if user can delete customer
+     *
+     * Uses direct capability checks for simplicity and security.
+     * Platform roles (from wp-app-core) are handled via WordPress capability system.
      */
     public function canDelete(array $relation): bool {
-        return $relation['is_admin'] && current_user_can('delete_customer');
-        return apply_filters('wp_customer_can_delete', false, $relation);
+        // Check admin permission first
+        if ($relation['is_admin'] && current_user_can('delete_customer')) {
+            return true;
+        }
+
+        // Platform role check (wp-app-core integration)
+        // If user has delete_customer capability, grant access
+        // This covers platform_super_admin only (most restrictive)
+        if (current_user_can('delete_customer')) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

@@ -78,28 +78,13 @@ class BranchValidator {
             $cached['from_cache'] = true;
             return $cached;
         }
-        
-        // Handle special case for branch_id 0 (general validation)
-        if ($branch_id === 0) {
-            $relation = [
-                'is_admin' => current_user_can('edit_all_customers'),
-                'is_customer_admin' => false,
-                'is_customer_branch_admin' => false,
-                'is_customer_employee' => false,
-                'access_type' => current_user_can('edit_all_customers') ? 'admin' : 'none'
-            ];
-            
-            // Cache the result
-            $this->relationCache[$branch_id] = $relation;
-            return $relation;
-        }
-        
-        // Get relation from model
+
+        // Get relation from model (handles both branch_id 0 and specific IDs)
         $relation = $this->branch_model->getUserRelation($branch_id, $current_user_id);
-        
+
         // Store in class memory cache for this request
         $this->relationCache[$branch_id] = $relation;
-        
+
         return $relation;
     }
 
@@ -112,18 +97,13 @@ class BranchValidator {
     public function validateAccess(int $branch_id): array {
         // Tangani kasus khusus untuk branch_id = 0 (validasi umum)
         if ($branch_id === 0) {
-            // Untuk validasi umum, kita tidak perlu data spesifik branch
-            $relation = [
-                'is_admin' => current_user_can('edit_all_customers'),
-                'is_customer_admin' => false,
-                'is_customer_branch_admin' => false,
-                'is_customer_employee' => false,
-                'access_type' => current_user_can('edit_all_customers') ? 'admin' : 'none'
-            ];
+            // Get relation from model which includes platform access_type
+            $relation = $this->branch_model->getUserRelation(0);
+            $access_type = $relation['access_type'] ?? 'none';
 
             return [
                 'has_access' => current_user_can('view_customer_branch_list'),
-                'access_type' => $relation['is_admin'] ? 'admin' : 'none',
+                'access_type' => $access_type,
                 'relation' => $relation,
                 'branch_id' => 0,
                 'customer_id' => 0
@@ -187,6 +167,10 @@ class BranchValidator {
         if ($relation['is_customer_branch_admin']) return true;
         if ($relation['is_customer_employee'] && current_user_can('view_own_customer_branch')) return true;
 
+        // Platform role check (wp-app-core integration)
+        // If user has view_customer_branch_list capability, grant access
+        if (current_user_can('view_customer_branch_list')) return true;
+
         return false;
     }
 
@@ -211,15 +195,21 @@ class BranchValidator {
         if ($relation['is_customer_admin']) return true;
         if ($relation['is_customer_branch_admin'] && current_user_can('edit_own_customer_branch')) return true;
 
+        // Platform role check (wp-app-core integration)
+        if (current_user_can('edit_customer_branch')) return true;
+
         return false;
     }
 
     public function canDeleteBranch($branch, $customer): bool {
         // Dapatkan relasi user dengan branch
         $relation = $this->getUserRelation($branch->id);
-        
+
         if ($relation['is_admin'] && current_user_can('delete_customer_branch')) return true;
         if ($relation['is_customer_admin']) return true;
+
+        // Platform role check (wp-app-core integration)
+        if (current_user_can('delete_customer_branch')) return true;
 
         return apply_filters('wp_customer_can_delete_customer_branch', false, $relation);
     }

@@ -372,6 +372,10 @@
             // Administrator - see all customers
             error_log('User is admin - no additional restrictions');
         }
+        elseif ($access_type === 'platform') {
+            // Platform users (from wp-app-core) - see all customers
+            error_log('User is platform - no additional restrictions');
+        }
         elseif ($relation['is_customer_admin']) {
             // Customer Admin - only see their own customer
             $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
@@ -458,6 +462,11 @@
         if ($relation['is_admin']) {
             // Administrator - see all customers
             // No additional restrictions
+        }
+        elseif ($access_type === 'platform') {
+            // Platform users (from wp-app-core) - see all customers
+            // No additional restrictions (same as admin)
+            // Access controlled via WordPress capabilities (view_customer_detail)
         }
         elseif ($relation['is_customer_admin']) {
             // Customer Admin - only see their own customer

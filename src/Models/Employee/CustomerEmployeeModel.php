@@ -495,6 +495,12 @@ public function create(array $data): ?int {
             // Administrator - see all employees
             error_log('User is admin - no additional restrictions');
         }
+        elseif ($access_type === 'platform') {
+            // Platform users (from wp-app-core) - see all employees
+            // No additional restrictions (same as admin)
+            // Access controlled via WordPress capabilities (view_customer_employee_detail)
+            error_log('User is platform - no additional restrictions');
+        }
         elseif ($relation['is_customer_admin']) {
             // Customer Admin - see all employees under their customer
             $where .= " AND c.user_id = %d";

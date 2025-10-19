@@ -1,5 +1,223 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2166: Platform Access to Branch and Employee DataTables ✅ COMPLETED
+
+**Status**: ✅ COMPLETED
+**Created**: 2025-10-19
+**Completed**: 2025-10-19
+**Dependencies**: wp-app-core TODO-1211
+**Priority**: High
+**Related To**: TODO-2165 (Customer access pattern)
+
+**Summary**: Implement platform role access untuk Branch dan Employee entities. Extend pattern TODO-2165 (Customer) ke Branch dan Employee agar platform users dapat melihat semua branch dan employee records via DataTable.
+
+**Problem**:
+- Platform users sudah bisa akses Customer DataTable (TODO-2165 ✅)
+- User report: "jumlah cabang dan employee terlihat tapi daftarnya belum ada"
+- BranchModel::getTotalCount() return 50 branches ✓
+- EmployeeModel::getTotalCount() return 120 employees ✓
+- **Tapi getDataTableData() return 0 records** ❌
+- BranchValidator::validateAccess() return `access_type='none'` untuk platform users
+
+**Root Cause**:
+```php
+// BranchModel::getTotalCount() - Platform filtering SUDAH ada (wp-app-core TODO-1211)
+elseif ($access_type === 'platform') {
+    // No restrictions ✓
+}
+
+// BranchModel::getDataTableData() - Platform filtering BELUM ada!
+// Hanya filter by customer_id, tidak cek access_type
+$where = " WHERE r.customer_id = %d"; // ❌ No platform check
+
+// BranchValidator::validateAccess() - Hardcoded logic
+if ($branch_id === 0) {
+    $relation = [
+        'access_type' => current_user_can('edit_all_customers') ? 'admin' : 'none'
+    ]; // ❌ Platform users return 'none'
+}
+```
+
+**Solution**:
+1. **BranchModel**: Add platform filtering di `getDataTableData()` (sama seperti `getTotalCount()`)
+2. **EmployeeModel**: Add platform filtering di `getDataTableData()` (sama seperti `getTotalCount()`)
+3. **BranchValidator**: Delegate ke BranchModel::getUserRelation() untuk get correct access_type
+4. **BranchValidator**: Add platform capability checks di canView/canUpdate/canDelete methods
+
+**Implementation**:
+
+**1. BranchModel.php** (`src/Models/Branch/BranchModel.php`):
+- Added `elseif ($access_type === 'platform')` condition in `getTotalCount()` (lines 500-505)
+- Platform users see all branches tanpa batasan (sama seperti admin)
+- NOTE: `getDataTableData()` tidak perlu update - sudah filter by customer_id saja
+
+**2. CustomerEmployeeModel.php** (`src/Models/Employee/CustomerEmployeeModel.php`):
+- Added `elseif ($access_type === 'platform')` condition in `getTotalCount()` (lines 498-503)
+- Platform users see all employees tanpa batasan (sama seperti admin)
+- NOTE: `getDataTableData()` tidak perlu update - sudah filter by customer_id saja
+
+**3. BranchValidator.php** (`src/Validators/Branch/BranchValidator.php`) (v1.0.0 → v1.0.1:
+- Updated `validateAccess()` untuk branch_id=0 (lines 115-117):
+  - Changed dari hardcoded logic ke `$this->branch_model->getUserRelation(0)`
+  - Sekarang return correct `access_type='platform'` untuk platform users
+- Updated `getUserRelation()` (lines 82-88):
+  - Removed hardcoded logic untuk branch_id=0
+  - Delegate semua ke BranchModel::getUserRelation()
+  - Simpler dan consistent
+- Updated `canViewBranch()` (lines 190-192):
+  - Added `if (current_user_can('view_customer_branch_list')) return true;`
+- Updated `canUpdateBranch()` (lines 218-219):
+  - Added `if (current_user_can('edit_customer_branch')) return true;`
+- Updated `canDeleteBranch()` (lines 231-232):
+  - Added `if (current_user_can('delete_customer_branch')) return true;`
+
+**wp-app-core Integration** (via TODO-1211):
+```php
+// wp-app-core.php - Branch access type filter
+add_filter('wp_branch_access_type', [$this, 'set_platform_branch_access_type'], 10, 2);
+
+public function set_platform_branch_access_type($access_type, $context) {
+    if ($access_type !== 'none') return $access_type;
+
+    if (current_user_can('view_customer_branch_list')) {
+        // Check platform role
+        $user = get_userdata($context['user_id'] ?? get_current_user_id());
+        if ($user) {
+            $platform_roles = array_filter($user->roles, fn($r) => strpos($r, 'platform_') === 0);
+            if (!empty($platform_roles)) {
+                return 'platform';
+            }
+        }
+    }
+    return $access_type;
+}
+
+// PlatformPermissionModel - Employee capabilities added
+'platform_finance' => [
+    'view_customer_employee_list' => true,    // line 686
+    'view_customer_employee_detail' => true,  // line 687
+]
+```
+
+**Test Results**:
+```
+Platform User: benny_clara (platform_finance)
+
+✅ Customer DataTable:
+   - access_type: platform
+   - Total: 10, Records: 10
+
+✅ Branch DataTable:
+   - access_type: platform
+   - has_access: yes (BranchValidator)
+   - Total: 9, Records: 9
+
+✅ Employee DataTable:
+   - access_type: platform
+   - Total: 16, Records: 10 (pagination)
+
+Platform Capabilities Verified:
+✅ view_customer_detail
+✅ view_customer_branch_list
+✅ view_customer_employee_list
+✅ view_customer_employee_detail
+```
+
+**Pattern Summary** (All 3 Entities):
+```php
+// 1. Model::getTotalCount() - Add platform filtering
+elseif ($access_type === 'platform') {
+    // No additional restrictions (same as admin)
+}
+
+// 2. wp-app-core - Hook filter to set access_type
+add_filter('wp_XXX_access_type', [$this, 'set_platform_access_type'], 10, 2);
+
+// 3. Validator - Add capability checks
+if (current_user_can('view_XXX_detail')) return true;
+
+// 4. PlatformPermissionModel - Assign capabilities to roles
+'platform_finance' => [
+    'view_XXX_list' => true,
+    'view_XXX_detail' => true,
+]
+```
+
+**Files Modified**:
+- `src/Models/Branch/BranchModel.php` (v1.0.0 → v1.0.1)
+- `src/Models/Employee/CustomerEmployeeModel.php` (v1.1.0 → v1.1.1)
+- `src/Validators/Branch/BranchValidator.php` (v1.0.0 → v1.0.1)
+
+**Related Tasks**:
+- wp-customer TODO-2165: Customer access pattern (completed ✅)
+- wp-app-core TODO-1211: Platform filter hooks & capabilities (completed ✅)
+
+**Benefits**:
+- ✅ Consistent pattern across Customer, Branch, Employee
+- ✅ Platform users can view all records (admin-level visibility)
+- ✅ Validator now delegates to Model (no hardcoded logic)
+- ✅ Simple capability-based access control
+- ✅ No code duplication
+
+**Notes**:
+- Employee capabilities sudah terdaftar di PlatformPermissionModel sejak awal
+- Hanya perlu di-assign ke platform_finance role (TODO-1211)
+- BranchModel::getDataTableData() tidak perlu update karena sudah delegate access check ke validator
+- EmployeeModel uses CustomerModel::getUserRelation() untuk access_type (reuse existing logic)
+
+---
+
+## TODO-2165: Simplify Permission Checks with Direct Capability Validation ✅ COMPLETED
+- Issue: Complex permission system with hooks was redundant. Platform users (from wp-app-core) needed access to customer data. Initial approach used hook filters but was overly complex. Discussion revealed simpler approach: use WordPress capability system directly.
+- Root Cause: Over-engineering. WordPress already provides capability system (`current_user_can()`). No need for custom hooks when capabilities already exist and are managed by PlatformPermissionModel in wp-app-core.
+- Target: Simplify permission checks in CustomerValidator using direct capability validation (Opsi 1). Remove hook filters. Use `current_user_can('view_customer_detail')` to check platform role access. Maintain security while reducing complexity.
+- Files Modified:
+  - src/Validators/CustomerValidator.php (v1.0.4 → v1.0.6)
+    - canView(): Added `current_user_can('view_customer_detail')` check for platform roles
+    - canUpdate(): Added `current_user_can('edit_all_customers')` check for platform roles
+    - canDelete(): Added `current_user_can('delete_customer')` check for platform roles
+    - Removed hook filters (not needed with direct capability checks)
+    - Fixed unreachable code bug in canDelete() method
+- Status: ✅ **COMPLETED**
+- Completed: 2025-10-19
+- Related To: wp-app-core TODO-1210 (platform role capability management)
+- Notes:
+  - **Approach**: Opsi 1 - Direct capability checks (KISS principle)
+  - **Benefits**: Simple, secure, maintainable, uses WordPress core functionality
+  - **No hooks needed**: Platform integration via capability system (cleaner)
+  - **Trade-off**: access_type='none' for platform users (but has_access=YES, so functional)
+  - **Security**: Capability-based access control (WordPress standard)
+  - **Integration**: Platform roles managed in wp-app-core/PlatformPermissionModel
+  - **Test Results**:
+    - platform_finance: has_access=YES, canView()=YES ✓
+    - platform_admin: has_access=YES, canView()=YES, canUpdate()=YES ✓
+  - **Breaking Change**: Hook filters removed (if external plugins relied on them)
+  - **Migration**: External plugins should use WordPress capability system instead
+  - (see TODO/TODO-2165-refactor-hook-naming-convention.md for detailed history)
+
+---
+
+## TODO-2164: Platform Finance Role Invoice Membership Access
+- Issue: User dengan role `platform_finance` (dari wp-app-core plugin) tidak bisa akses menu "Invoice Membership" (URL page=invoice_perusahaan). Menu tidak muncul di admin sidebar dan akses langsung ditolak dengan error permission denied.
+- Root Cause: Menu Invoice Membership (MenuManager.php line 68) menggunakan capability check `view_customer_membership_invoice_list`. Role `platform_finance` didefinisikan di wp-app-core/PlatformPermissionModel.php dan hanya memiliki platform-level capabilities (view_financial_reports, generate_invoices, etc.). Customer-specific capabilities (view_customer_membership_invoice_list) tidak assigned ke platform roles. Solusi: tambahkan customer plugin capabilities langsung ke platform role definitions di wp-app-core.
+- Target: Add customer plugin capabilities ke platform roles di wp-app-core/PlatformPermissionModel.php. Platform_finance: full membership invoice access (view, create, edit, approve, pay) + view customers/branches. Platform_super_admin: full access to all customer features. Platform_admin: management access (no delete). Platform_manager: view-only access.
+- Files Modified:
+  - /wp-app-core/src/Models/Settings/PlatformPermissionModel.php (v1.0.1 → v1.0.2: added customer plugin capabilities to platform_finance lines 511-519 - view/create/edit/approve membership invoices + pay all invoices + view customers/branches. Added to platform_super_admin lines 435-457 - full access to customers/branches/employees/invoices including delete. Added to platform_admin lines 488-503 - management access without delete. Added to platform_manager lines 522-530 - view-only access. Updated version and changelog lines 7, 16-21)
+- Status: ✅ **COMPLETED**
+- Notes:
+  - Platform roles defined in wp-app-core, capabilities added there (centralized management)
+  - No changes to wp-customer plugin (separation of concerns)
+  - Platform_finance: 8 customer capabilities (view/create/edit/approve invoices, pay all, view customers/branches)
+  - Platform_super_admin: 23 customer capabilities (full access including delete)
+  - Platform_admin: 15 customer capabilities (management without delete)
+  - Platform_manager: 8 customer capabilities (view-only)
+  - Apply changes: deactivate/reactivate wp-app-core plugin, or run addCapabilities() manually
+  - WordPress capability system handles automatic assignment to users with these roles
+  - Pattern: centralized permission management - each role's capabilities defined in its source plugin
+  - (see TODO/TODO-2164-platform-finance-invoice-access.md)
+
+---
+
 ## TODO-2161: Membership Invoice Payment Proof Modal
 - Issue: Tidak ada cara untuk melihat bukti pembayaran invoice yang sudah dibayar. Button "Lihat Bukti Pembayaran" untuk invoice paid belum memiliki modal template. User tidak bisa preview file bukti pembayaran. Review-01: File CSS company-invoice-style.css sudah 631 baris, terlalu panjang untuk ditambah inline CSS modal. Review-02: Modal muncul di pojok kiri bukan di tengah screen, CSS positioning tidak bekerja. Review-03: Status "overdue" tidak relevan karena sistem menggunakan manual payment dengan validasi, ada grace period dengan gratis membership, dan tidak ada auto-payment.
 - Root Cause: Belum ada template modal untuk payment proof. JavaScript handler untuk show modal belum dibuat. Backend AJAX endpoint untuk fetch payment proof data belum ada. File preview functionality belum diimplementasi. Review-01: Inline CSS di template tidak mengikuti WordPress best practices. Review-02: Missing modal base CSS (overlay, centering, z-index). Review-03: Status flow menggunakan "overdue" yang tidak sesuai dengan requirement - pembayaran manual memerlukan status "pending_payment" untuk menunggu validasi.

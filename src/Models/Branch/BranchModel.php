@@ -497,6 +497,12 @@ class BranchModel {
             // Administrator - see all branches
             error_log('User is admin - no additional restrictions');
         }
+        elseif ($access_type === 'platform') {
+            // Platform users (from wp-app-core) - see all branches
+            // No additional restrictions (same as admin)
+            // Access controlled via WordPress capabilities (view_customer_branch_detail)
+            error_log('User is platform - no additional restrictions');
+        }
         elseif ($relation['is_customer_admin']) {
             // Customer Admin - see all branches under their customer
             $where .= " AND p.user_id = %d";
