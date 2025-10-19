@@ -376,6 +376,27 @@
             // Platform users (from wp-app-core) - see all customers
             error_log('User is platform - no additional restrictions');
         }
+        elseif ($access_type === 'agency') {
+            // Agency users (from wp-agency) - see customers with branches in their agency
+            // wp-agency TODO-2065: Agency-based filtering via branch join
+            // IMPORTANT: Show customers that have AT LEAST ONE branch in this agency
+            // Example: PT A (Jakarta) → has branch in Banten → Agency Banten can see PT A
+            if (class_exists('\\WP_Agency_WP_Customer_Integration')) {
+                $agency_id = \WP_Agency_WP_Customer_Integration::get_user_agency_id($current_user_id);
+                if ($agency_id) {
+                    // Join to branches and filter by agency_id
+                    $from .= " INNER JOIN {$this->branch_table} agency_branch ON p.id = agency_branch.customer_id";
+                    $where .= $wpdb->prepare(" AND agency_branch.agency_id = %d", $agency_id);
+                    error_log("Agency user - filtered to customers with branches in agency_id {$agency_id}");
+                } else {
+                    $where .= " AND 1=0"; // No access if no agency
+                    error_log('Agency user has no agency - blocking access');
+                }
+            } else {
+                error_log('WP_Agency_WP_Customer_Integration class not found');
+                $where .= " AND 1=0"; // Fallback: no access
+            }
+        }
         elseif ($relation['is_customer_admin']) {
             // Customer Admin - only see their own customer
             $where .= $wpdb->prepare(" AND p.user_id = %d", $current_user_id);
@@ -467,6 +488,22 @@
             // Platform users (from wp-app-core) - see all customers
             // No additional restrictions (same as admin)
             // Access controlled via WordPress capabilities (view_customer_detail)
+        }
+        elseif ($access_type === 'agency') {
+            // Agency users (from wp-agency) - see customers with branches in their agency
+            // wp-agency TODO-2065: Agency-based filtering via branch join
+            if (class_exists('\\WP_Agency_WP_Customer_Integration')) {
+                $agency_id = \WP_Agency_WP_Customer_Integration::get_user_agency_id($current_user_id);
+                if ($agency_id) {
+                    // Join to branches and filter by agency_id
+                    $from .= " INNER JOIN {$this->branch_table} agency_branch ON p.id = agency_branch.customer_id";
+                    $where .= $wpdb->prepare(" AND agency_branch.agency_id = %d", $agency_id);
+                } else {
+                    $where .= " AND 1=0"; // No access if no agency
+                }
+            } else {
+                $where .= " AND 1=0"; // Fallback: no access
+            }
         }
         elseif ($relation['is_customer_admin']) {
             // Customer Admin - only see their own customer

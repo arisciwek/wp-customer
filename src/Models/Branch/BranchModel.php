@@ -380,12 +380,66 @@ class BranchModel {
         
         global $wpdb;
 
+        // Get user relation from CustomerModel to determine access
+        $customerModel = new CustomerModel();
+        $relation = $customerModel->getUserRelation(0); // 0 for general access check
+        $user_access_type = $relation['access_type'];
+
         // Base query parts
         $select = "SELECT SQL_CALC_FOUND_ROWS r.*, p.name as customer_name";
         $from = " FROM {$this->table} r";
         $join = " LEFT JOIN {$this->customer_table} p ON r.customer_id = p.id";
-        $where = " WHERE r.customer_id = %d";
-        $params = [$customer_id];
+
+        // Handle customer_id = 0 as "all customers"
+        if ($customer_id > 0) {
+            $where = " WHERE r.customer_id = %d";
+            $params = [$customer_id];
+        } else {
+            $where = " WHERE 1=1";
+            $params = [];
+        }
+
+        // Apply agency filtering (role-based)
+        if ($user_access_type === 'agency') {
+            if (class_exists('\\WP_Agency_WP_Customer_Integration')) {
+                $user_id = get_current_user_id();
+                $access_level = \WP_Agency_WP_Customer_Integration::get_user_access_level($user_id);
+
+                if ($access_level === 'agency') {
+                    $agency_id = \WP_Agency_WP_Customer_Integration::get_user_agency_id($user_id);
+                    if ($agency_id) {
+                        $where .= " AND r.agency_id = %d";
+                        $params[] = $agency_id;
+                    } else {
+                        $where .= " AND 1=0";
+                    }
+                }
+                elseif ($access_level === 'division') {
+                    $regency_ids = \WP_Agency_WP_Customer_Integration::get_user_division_jurisdictions($user_id);
+                    if (!empty($regency_ids)) {
+                        $placeholders = implode(',', array_fill(0, count($regency_ids), '%d'));
+                        $where .= " AND r.regency_id IN ($placeholders)";
+                        $params = array_merge($params, $regency_ids);
+                    } else {
+                        $where .= " AND 1=0";
+                    }
+                }
+                elseif ($access_level === 'inspector') {
+                    $inspector_id = \WP_Agency_WP_Customer_Integration::get_user_inspector_id($user_id);
+                    if ($inspector_id) {
+                        $where .= " AND r.inspector_id = %d";
+                        $params[] = $inspector_id;
+                    } else {
+                        $where .= " AND 1=0";
+                    }
+                }
+                else {
+                    $where .= " AND 1=0";
+                }
+            } else {
+                $where .= " AND 1=0";
+            }
+        }
 
         // Add search if provided
         if (!empty($search)) {
@@ -502,6 +556,61 @@ class BranchModel {
             // No additional restrictions (same as admin)
             // Access controlled via WordPress capabilities (view_customer_branch_detail)
             error_log('User is platform - no additional restrictions');
+        }
+        elseif ($access_type === 'agency') {
+            // Agency users (from wp-agency) - role-based filtering
+            // wp-agency TODO-2065: Multi-level access control
+            if (class_exists('\\WP_Agency_WP_Customer_Integration')) {
+                $user_id = get_current_user_id();
+                $access_level = \WP_Agency_WP_Customer_Integration::get_user_access_level($user_id);
+
+                if ($access_level === 'agency') {
+                    // Level 1: Agency admin (Province level)
+                    // Roles: agency_admin_dinas, agency_kepala_dinas
+                    $agency_id = \WP_Agency_WP_Customer_Integration::get_user_agency_id($user_id);
+                    if ($agency_id) {
+                        $where .= " AND r.agency_id = %d";
+                        $params[] = $agency_id;
+                        error_log("Agency-level user - filtered to agency_id {$agency_id}");
+                    } else {
+                        $where .= " AND 1=0";
+                    }
+                }
+                elseif ($access_level === 'division') {
+                    // Level 2: Division admin (Jurisdiction/Kabupaten level)
+                    // Roles: agency_admin_unit, agency_kepala_unit, etc
+                    $regency_ids = \WP_Agency_WP_Customer_Integration::get_user_division_jurisdictions($user_id);
+                    if (!empty($regency_ids)) {
+                        $placeholders = implode(',', array_fill(0, count($regency_ids), '%d'));
+                        $where .= " AND r.regency_id IN ($placeholders)";
+                        $params = array_merge($params, $regency_ids);
+                        error_log("Division-level user - filtered to " . count($regency_ids) . " jurisdictions");
+                    } else {
+                        $where .= " AND 1=0";
+                        error_log('Division-level user has no jurisdictions - blocking access');
+                    }
+                }
+                elseif ($access_level === 'inspector') {
+                    // Level 3: Inspector (Per branch level)
+                    // Roles: agency_pengawas, agency_pengawas_spesialis
+                    $inspector_id = \WP_Agency_WP_Customer_Integration::get_user_inspector_id($user_id);
+                    if ($inspector_id) {
+                        $where .= " AND r.inspector_id = %d";
+                        $params[] = $inspector_id;
+                        error_log("Inspector-level user - filtered to inspector_id {$inspector_id}");
+                    } else {
+                        $where .= " AND 1=0";
+                        error_log('Inspector has no ID - blocking access');
+                    }
+                }
+                else {
+                    $where .= " AND 1=0";
+                    error_log('Agency user has no recognized access level - blocking access');
+                }
+            } else {
+                error_log('WP_Agency_WP_Customer_Integration class not found');
+                $where .= " AND 1=0";
+            }
         }
         elseif ($relation['is_customer_admin']) {
             // Customer Admin - see all branches under their customer
