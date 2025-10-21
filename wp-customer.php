@@ -1,15 +1,15 @@
 <?php
 /**
  * Plugin Name: WP Customer
- * Plugin URI: 
+ * Plugin URI:
  * Description: Plugin untuk mengelola data Customer dan Cabangnya
- * Version: 1.0.0
+ * Version: 1.0.10
  * Author: arisciwek
  * Author URI: 
  * License: GPL v2 or later
  * 
  * @package     WP_Customer
- * @version     1.0.0
+ * @version     1.0.10
  * @author      arisciwek
  * 
  * Path: /wp-customer/wp-customer.php
@@ -18,7 +18,7 @@
 defined('ABSPATH') || exit;
 
 // Define plugin constants first, before anything else
-define('WP_CUSTOMER_VERSION', '1.0.0');
+define('WP_CUSTOMER_VERSION', '1.0.10');
 define('WP_CUSTOMER_FILE', __FILE__);
 define('WP_CUSTOMER_PATH', plugin_dir_path(__FILE__));
 define('WP_CUSTOMER_URL', plugin_dir_url(__FILE__));
@@ -80,6 +80,7 @@ class WPCustomer {
         require_once WP_CUSTOMER_PATH . 'includes/class-deactivator.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-dependencies.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-init-hooks.php';
+        require_once WP_CUSTOMER_PATH . 'includes/class-upgrade.php';
 
         $this->loader = new WP_Customer_Loader();
 
@@ -98,6 +99,9 @@ class WPCustomer {
         // Register non-persistent cache groups to avoid conflicts with object cache plugins
         // This ensures our cache is runtime-only and doesn't persist to Memcached/Redis
         wp_cache_add_non_persistent_groups(array('wp_customer'));
+
+        // Run upgrade check on admin_init (fixes duplicate wp_capabilities, etc.)
+        $this->loader->add_action('admin_init', 'WP_Customer_Upgrade', 'check_and_upgrade');
 
         // Initialize dependencies
         $dependencies = new WP_Customer_Dependencies($this->plugin_name, $this->version);

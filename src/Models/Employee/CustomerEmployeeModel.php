@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Employee
- * @version     1.1.0
+ * @version     1.0.10
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Employee/CustomerEmployeeModel.php
@@ -910,7 +910,7 @@ public function create(array $data): ?int {
      * @param int $user_id WordPress user ID
      * @return array|null Array of user info or null if not found
      *
-     * @version 1.1.0 - Refactored to handle all user types (employee, owner, branch admin)
+     * @version     1.0.10 - Refactored to handle all user types (employee, owner, branch admin)
      */
     public function getUserInfo(int $user_id): ?array {
         // Try to get from cache first

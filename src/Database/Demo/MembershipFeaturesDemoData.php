@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Demo
- * @version     2.1.0
+ * @version     1.0.10
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Demo/MembershipFeaturesDemoData.php

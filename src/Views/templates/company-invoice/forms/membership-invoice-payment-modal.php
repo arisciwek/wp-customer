@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Templates/CompanyInvoice/Forms
- * @version     1.0.1
+ * @version     1.0.10
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Views/templates/company-invoice/forms/membership-invoice-payment-modal.php

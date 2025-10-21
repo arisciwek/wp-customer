@@ -5,7 +5,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Admin/Controllers
- * @version     1.0.1
+ * @version     1.0.10
  * @author      arisciwek
  */
 

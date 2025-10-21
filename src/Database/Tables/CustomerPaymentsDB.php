@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Tables
- * @version     1.0.3
+ * @version     1.0.10
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Tables/CustomerPaymentsDB.php

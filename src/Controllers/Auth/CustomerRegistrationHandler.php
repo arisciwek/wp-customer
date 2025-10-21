@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Controllers/Auth
- * @version     1.0.0
+ * @version     1.0.10
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Controllers/Auth/CustomerRegistrationHandler.php

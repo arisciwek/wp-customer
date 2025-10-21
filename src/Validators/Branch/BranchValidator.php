@@ -4,7 +4,7 @@
 *
 * @package     WP_Customer
 * @subpackage  Validators/Branch
-* @version     1.0.0
+* @version     1.0.10
 * @author      arisciwek
 *
 * Path: src/Validators/Branch/BranchValidator.php

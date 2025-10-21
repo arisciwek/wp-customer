@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Validators
- * @version     1.0.7
+ * @version     1.0.10
  * @author      arisciwek
  *
  * Path: src/Validators/CustomerValidator.php

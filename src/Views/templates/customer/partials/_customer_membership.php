@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Templates/Customer/Partials
- * @version     2.0.0
+ * @version     1.0.10
  * @author      arisciwek
  *
  * Path : /wp-customer/src/Views/templates/customer/partials/_customer_membership.php

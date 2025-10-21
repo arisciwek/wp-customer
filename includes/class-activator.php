@@ -6,7 +6,7 @@
  * 
  * @package     WP_Customer
  * @subpackage  Includes
- * @version     1.0.1
+ * @version     1.0.10
  * @author      arisciwek
  * 
  * Description: Menangani proses aktivasi plugin dan instalasi database.

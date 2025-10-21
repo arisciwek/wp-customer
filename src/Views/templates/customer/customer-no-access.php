@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Templates
- * @version     1.0.0
+ * @version     1.0.10
  * @author      arisciwek
  * 
  * Path: src/Views/templates/customer/customer-no-access.php

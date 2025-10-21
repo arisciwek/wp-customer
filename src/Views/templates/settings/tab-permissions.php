@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Settings
- * @version     1.0.0
+ * @version     1.0.10
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Views/templates/settings/tab-permissions.php

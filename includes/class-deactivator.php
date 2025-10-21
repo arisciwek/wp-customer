@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Includes
- * @version     1.1.0
+ * @version     1.0.10
  * @author      arisciwek
  *
  * Description: Menangani proses deaktivasi plugin:

@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Templates/Partials
- * @version     1.1.0
+ * @version     1.0.10
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Views/templates/partials/customer-form-fields.php
