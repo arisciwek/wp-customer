@@ -81,6 +81,12 @@ class AutoEntityCreator {
                 $customer_data['regency_id']
             );
 
+            // Get inspector_id from division (with fallback to province's agency)
+            $inspector_id = $this->branchModel->getInspectorId(
+                $customer_data['provinsi_id'],
+                $location_ids['division_id']
+            );
+
             // Get regency name for branch name
             global $wpdb;
             $regency = $wpdb->get_row($wpdb->prepare(
@@ -100,6 +106,7 @@ class AutoEntityCreator {
                 'regency_id' => $customer_data['regency_id'],
                 'agency_id' => $location_ids['agency_id'],
                 'division_id' => $location_ids['division_id'],
+                'inspector_id' => $inspector_id,
                 'nitku' => null,
                 'postal_code' => null,
                 'latitude' => null,
@@ -116,6 +123,7 @@ class AutoEntityCreator {
 
             if ($branch_id) {
                 $this->log("Auto-created branch pusat (ID: {$branch_id}) for customer {$customer_id}");
+                // Note: Cache invalidation handled by BranchModel::create()
             } else {
                 $this->log("Failed to auto-create branch pusat for customer {$customer_id}", 'error');
             }

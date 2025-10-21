@@ -179,7 +179,72 @@ See [TODO/TODO-2165-auto-entity-creation.md](TODO/TODO-2165-auto-entity-creation
 
 ---
 
-## TODO-2166: Platform Access to Branch and Employee DataTables ✅ COMPLETED
+## TODO-2166: Demo Generator HOOK Synchronization ✅ COMPLETED
+
+**Status**: ✅ COMPLETED
+**Created**: 2025-01-21
+**Completed**: 2025-01-21
+**Priority**: High
+**Related To**: TODO-2165 (Auto Entity Creation Hooks)
+
+**Summary**: Sinkronisasi Demo Customer Generator dengan HOOK system Task-2165. Hapus custom methods `createDemoCustomer()` dan `createDemoData()`, gunakan standard `CustomerModel::create()` yang sudah trigger HOOK. Tambahkan field `reg_type = 'generate'` untuk tracking.
+
+**Problem**:
+- Demo data bypasses HOOK system (uses custom createDemoData with raw SQL)
+- Branch pusat dan employee TIDAK auto-created via HOOK
+- Inconsistent dengan production flow (self-register & admin-create)
+- Custom methods perlu maintained separately (code duplication)
+- Missing `reg_type` field untuk tracking demo data source
+
+**Solution**:
+- ✅ Tambahkan `reg_type => 'generate'` ke demo customer data
+- ✅ Gunakan standard `CustomerModel::create()` instead of `createDemoCustomer()`
+- ✅ Hapus custom methods `createDemoCustomer()` dan `createDemoData()`
+- ✅ HOOK automatically creates branch pusat + employee
+- ✅ Use auto-increment IDs (no fixed IDs)
+- ✅ Code reduction: -99 lines total
+
+**Implementation**: See [TODO/TODO-2166-demo-generator-sync.md](TODO/TODO-2166-demo-generator-sync.md)
+
+**Files Modified**:
+- `src/Database/Demo/CustomerDemoData.php` - Add reg_type, use CustomerModel::create()
+- `src/Controllers/CustomerController.php` - Removed createDemoCustomer() (-28 lines)
+- `src/Models/Customer/CustomerModel.php` - Removed createDemoData() and getFormatArray() (-71 lines)
+
+**Flow Baru**:
+```
+CustomerDemoData
+  ↓ Call CustomerModel::create($data)
+CustomerModel::create()
+  ↓ Hook: wp_customer_created
+AutoEntityCreator::handleCustomerCreated()
+  ↓ Auto-create Branch Pusat
+  ↓ Hook: wp_customer_branch_created
+AutoEntityCreator::handleBranchCreated()
+  ↓ Auto-create Employee
+  ✅ Complete entity chain
+```
+
+**Benefits**:
+- ✅ Consistent dengan production flow
+- ✅ Single source of truth untuk customer creation
+- ✅ Simplified codebase (-99 lines)
+- ✅ Auto-increment IDs (simpler management)
+- ✅ `reg_type` tracking: self, by_admin, generate
+
+**Test Plan**:
+- [ ] Generate 10 demo customers via WP-CLI
+- [ ] Verify each has `reg_type = 'generate'`
+- [ ] Verify each auto-creates 1 branch pusat
+- [ ] Verify each auto-creates 1 employee
+- [ ] Verify HOOK debug logs show entity creation chain
+
+**Related Tasks**:
+- TODO-2165: Auto Entity Creation Hooks (prerequisite)
+
+---
+
+## TODO-2166-OLD: Platform Access to Branch and Employee DataTables ✅ COMPLETED
 
 **Status**: ✅ COMPLETED
 **Created**: 2025-10-19

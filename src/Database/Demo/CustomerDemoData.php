@@ -252,7 +252,7 @@ class CustomerDemoData extends AbstractDemoData {
                     $this->debug("Deleted existing customer with ID: {$customer['id']}");
                 }
 
-                // Prepare customer data according to schema
+                // Prepare customer data according to schema (with fixed ID)
                 $customer_data = [
                     'id' => $customer['id'],
                     'code' => $this->customerModel->generateCustomerCode(),
@@ -263,6 +263,7 @@ class CustomerDemoData extends AbstractDemoData {
                     'provinsi_id' => $provinsi_id ?: null,
                     'regency_id' => $regency_id ?: null,
                     'user_id' => $user_id,
+                    'reg_type' => 'generate',
                     'created_by' => 1,
                     'created_at' => current_time('mysql'),
                     'updated_at' => current_time('mysql')
@@ -273,16 +274,18 @@ class CustomerDemoData extends AbstractDemoData {
                     'name' => $customer_data['name'],
                     'user_id' => $customer_data['user_id'],
                     'provinsi_id' => $customer_data['provinsi_id'],
-                    'regency_id' => $customer_data['regency_id']
+                    'regency_id' => $customer_data['regency_id'],
+                    'reg_type' => $customer_data['reg_type']
                 ]));
 
-                // Use createDemoCustomer instead of create
+                // Use createDemoCustomer (fixed ID + triggers wp_customer_created hook)
                 if (!$this->customerController->createDemoCustomer($customer_data)) {
                     error_log("[CustomerDemoData] ERROR: Failed to create customer with fixed ID");
                     throw new \Exception("Failed to create customer with fixed ID");
                 }
 
                 error_log("[CustomerDemoData] Successfully created customer ID {$customer['id']}");
+                error_log("[CustomerDemoData] HOOK wp_customer_created triggered - will auto-create branch pusat and employee");
 
                 // Track customer ID
                 self::$customer_ids[] = $customer['id'];
@@ -295,12 +298,8 @@ class CustomerDemoData extends AbstractDemoData {
             }
         }
 
-        // Add cache handling after bulk generation
-        foreach (self::$customer_ids as $customer_id) {
-            $this->cache->invalidateCustomerCache($customer_id);
-            $this->cache->delete('customer_total_count', get_current_user_id());
-            $this->cache->invalidateDataTableCache('customer_list');
-        }
+        // Cache invalidation handled by respective models during create()
+        // No need to invalidate here - each model handles its own cache
 
         // Reset auto_increment
         $this->wpdb->query(

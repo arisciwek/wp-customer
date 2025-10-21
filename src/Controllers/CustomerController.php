@@ -1042,19 +1042,22 @@ public function createPdfButton() {
             wp_send_json_error(['message' => $e->getMessage()]);
         }
     }
-    
+
     /**
-     * Khusus untuk membuat demo data customer
-     * Mendukung ID yang fixed dan override existing data
+     * Create demo customer with fixed ID
+     * Supports fixed ID and override existing data
+     *
+     * @param array $data Customer data with fixed ID
+     * @return bool Success status
      */
     public function createDemoCustomer(array $data): bool {
         try {
             // Debug log input
             $this->debug_log('Creating demo customer with data: ' . print_r($data, true));
 
-            // Create via model
+            // Create via model (will trigger wp_customer_created hook)
             $created = $this->model->createDemoData($data);
-            
+
             if (!$created) {
                 throw new \Exception('Failed to create demo customer');
             }
@@ -1070,7 +1073,8 @@ public function createPdfButton() {
             $this->debug_log('Error creating demo customer: ' . $e->getMessage());
             throw $e;
         }
-    }    
+    }
+
     public function getStats() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');

@@ -146,6 +146,7 @@ class BranchModel {
             'regency_id' => $data['regency_id'] ?? null,
             'division_id' => $data['division_id'] ?? null,
             'user_id' => $data['user_id'] ?? null,
+            'inspector_id' => $data['inspector_id'] ?? null,
             'created_by' => $data['created_by'],
             'created_at' => current_time('mysql'),
             'updated_at' => current_time('mysql'),
@@ -172,6 +173,7 @@ class BranchModel {
                 '%d', // regency_id
                 '%d', // division_id
                 '%d', // user_id
+                '%d', // inspector_id
                 '%d', // created_by
                 '%s', // created_at
                 '%s', // updated_at
@@ -191,6 +193,9 @@ class BranchModel {
         if ($branch_id && isset($data['customer_id'])) {
             // Invalidate DataTable cache for all access types
             $this->invalidateAllDataTableCache('customer_branch_list', (int)$data['customer_id']);
+
+            // Also invalidate company_list (menu Perusahaan - global branch list)
+            $this->invalidateAllDataTableCache('company_list', (int)$data['customer_id']);
         }
 
         // Task-2165: Fire hook for auto-create employee
@@ -701,55 +706,129 @@ class BranchModel {
     public function getAgencyAndDivisionIds(int $provinsi_id, int $regency_id): array {
         global $wpdb;
 
-        // Get province code
-        $province_table = $wpdb->prefix . 'wi_provinces';
-        $province = $wpdb->get_row($wpdb->prepare(
-            "SELECT code FROM {$province_table} WHERE id = %d",
+        // Get agency_id using logic from BranchDemoData::generateAgencyID()
+        $province_code = $wpdb->get_var($wpdb->prepare(
+            "SELECT code FROM {$wpdb->prefix}wi_provinces WHERE id = %d",
             $provinsi_id
         ));
 
-        if (!$province) {
-            throw new \Exception('Province not found');
+        if (!$province_code) {
+            throw new \Exception("Province not found for ID: {$provinsi_id}");
         }
 
-        // Get agency for this province
-        $agency_table = $wpdb->prefix . 'app_agencies';
-        $agency = $wpdb->get_row($wpdb->prepare(
-            "SELECT id FROM {$agency_table} WHERE provinsi_code = %s AND status = 'active'",
-            $province->code
+        $agency_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}app_agencies WHERE provinsi_code = %s LIMIT 1",
+            $province_code
         ));
 
-        if (!$agency) {
-            throw new \Exception('Agency not found for province: ' . $province->code);
+        if (!$agency_id) {
+            throw new \Exception("Agency not found for province code: {$province_code}");
         }
 
-        // Get regency code
-        $regency_table = $wpdb->prefix . 'wi_regencies';
-        $regency = $wpdb->get_row($wpdb->prepare(
-            "SELECT code FROM {$regency_table} WHERE id = %d",
+        // Get division_id using logic from BranchDemoData::generateDivisionID() with fallback
+        $regency_code = $wpdb->get_var($wpdb->prepare(
+            "SELECT code FROM {$wpdb->prefix}wi_regencies WHERE id = %d",
             $regency_id
         ));
 
-        if (!$regency) {
-            throw new \Exception('Regency not found');
+        $division_id = null;
+
+        if ($regency_code) {
+            // Find division with matching regency_code
+            $division_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}app_agency_divisions WHERE regency_code = %s LIMIT 1",
+                $regency_code
+            ));
+
+            // Fallback: find any division from the same province's agency
+            if (!$division_id) {
+                $division_id = $wpdb->get_var($wpdb->prepare(
+                    "SELECT id FROM {$wpdb->prefix}app_agency_divisions WHERE agency_id = %d LIMIT 1",
+                    $agency_id
+                ));
+            }
         }
 
-        // Get division for this agency and regency via jurisdiction table
-        $jurisdiction_table = $wpdb->prefix . 'app_agency_jurisdictions';
-        $division_table = $wpdb->prefix . 'app_agency_divisions';
-        $division = $wpdb->get_row($wpdb->prepare(
-            "SELECT d.id FROM {$division_table} d
-             INNER JOIN {$jurisdiction_table} j ON d.id = j.division_id
-             WHERE d.agency_id = %d AND j.jurisdiction_code = %s AND d.status = 'active'",
-            $agency->id, $regency->code
-        ));
-
         return [
-            'agency_id' => $agency->id,
-            'division_id' => $division ? $division->id : null
+            'agency_id' => (int)$agency_id,
+            'division_id' => $division_id ? (int)$division_id : null
         ];
     }
-    
+
+    /**
+     * Get inspector (pengawas) user ID for a division
+     *
+     * Finds an active pengawas from the division that covers the branch location.
+     * If division_id provided, finds pengawas from that specific division.
+     * Otherwise falls back to any pengawas from the province's agency.
+     *
+     * @param int $provinsi_id Province ID from wilayah-indonesia plugin
+     * @param int|null $division_id Division ID from wp-agency plugin
+     * @return int|null Inspector user ID or null if not found
+     */
+    public function getInspectorId(int $provinsi_id, ?int $division_id = null): ?int {
+        global $wpdb;
+
+        // If division_id provided, find pengawas from that division first
+        if ($division_id) {
+            $inspector_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT ae.user_id
+                 FROM {$wpdb->prefix}app_agency_employees ae
+                 JOIN {$wpdb->prefix}usermeta um ON ae.user_id = um.user_id
+                 WHERE ae.division_id = %d
+                 AND ae.status = 'active'
+                 AND um.meta_key = %s
+                 AND (um.meta_value LIKE %s OR um.meta_value LIKE %s)
+                 LIMIT 1",
+                $division_id,
+                $wpdb->prefix . 'capabilities',
+                '%"agency_pengawas"%',
+                '%"agency_pengawas_spesialis"%'
+            ));
+
+            if ($inspector_id) {
+                return (int)$inspector_id;
+            }
+        }
+
+        // Fallback: Get pengawas from province's agency
+        $province_code = $wpdb->get_var($wpdb->prepare(
+            "SELECT code FROM {$wpdb->prefix}wi_provinces WHERE id = %d",
+            $provinsi_id
+        ));
+
+        if (!$province_code) {
+            return null;
+        }
+
+        $agency_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}app_agencies WHERE provinsi_code = %s LIMIT 1",
+            $province_code
+        ));
+
+        if (!$agency_id) {
+            return null;
+        }
+
+        // Get any pengawas from the agency
+        $inspector_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT ae.user_id
+             FROM {$wpdb->prefix}app_agency_employees ae
+             JOIN {$wpdb->prefix}usermeta um ON ae.user_id = um.user_id
+             WHERE ae.agency_id = %d
+             AND ae.status = 'active'
+             AND um.meta_key = %s
+             AND (um.meta_value LIKE %s OR um.meta_value LIKE %s)
+             LIMIT 1",
+            $agency_id,
+            $wpdb->prefix . 'capabilities',
+            '%"agency_pengawas"%',
+            '%"agency_pengawas_spesialis"%'
+        ));
+
+        return $inspector_id ? (int)$inspector_id : null;
+    }
+
     /**
      * Get user relation with branch
      * 

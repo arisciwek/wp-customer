@@ -268,12 +268,12 @@ class CompanyModel {
             $where_params[] = $search_term;
         }
 
-        // Add filter conditions
+        // Add filter conditions (filter by branch status, not membership status)
         $filter_conditions = [];
         if ($filterAktif && !$filterTidakAktif) {
-            $filter_conditions[] = "m.status = 'active'";
+            $filter_conditions[] = "b.status = 'active'";
         } elseif (!$filterAktif && $filterTidakAktif) {
-            $filter_conditions[] = "(m.status != 'active' OR m.status IS NULL)";
+            $filter_conditions[] = "b.status != 'active'";
         } elseif (!$filterAktif && !$filterTidakAktif) {
             $filter_conditions[] = "1=0"; // No results if no filter selected
         }
