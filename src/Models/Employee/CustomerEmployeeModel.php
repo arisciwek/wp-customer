@@ -111,6 +111,13 @@ public function create(array $data): ?int {
         $this->invalidateAllDataTableCache('customer_employee_list', (int)$data['customer_id']);
     }
 
+    // Fire HOOK: wp_customer_employee_created (Task-2170)
+    // Allows external plugins to react to employee creation
+    // Example: Send welcome email, create default permissions, notify managers
+    if ($employee_id) {
+        do_action('wp_customer_employee_created', $employee_id, $data);
+    }
+
     return $employee_id;
 }
 
@@ -211,33 +218,100 @@ public function create(array $data): ?int {
 
 		// Invalidate DataTable cache for all access types
 		$this->invalidateAllDataTableCache('customer_employee_list', (int)$employee->customer_id);
+
+		// Fire HOOK: wp_customer_employee_updated (Task-2170)
+		// Allows external plugins to react to employee updates
+		// Example: Sync changes to external systems, update permissions
+		do_action('wp_customer_employee_updated', $id, $data, $employee);
 	    }
-	    
+
         return true;
     }
 
+	/**
+	 * Delete employee with HOOK support
+	 *
+	 * Task-2170: Added soft/hard delete logic + HOOKs
+	 * - Fires wp_customer_employee_before_delete HOOK
+	 * - Performs soft delete (status='inactive') or hard delete (actual DELETE)
+	 * - Fires wp_customer_employee_deleted HOOK
+	 * - EmployeeCleanupHandler handles cache invalidation via HOOK
+	 *
+	 * @param int $id Employee ID to delete
+	 * @return bool True on success, false on failure
+	 *
+	 * @since 1.1.0 Added HOOK support (Task-2170)
+	 */
 	public function delete(int $id): bool {
 	    global $wpdb;
 
-	    // Get employee data BEFORE deletion for cache invalidation
+	    // 1. Get employee data BEFORE deletion for HOOK
 	    $employee = $this->find($id);
 	    if (!$employee) {
 		return false;
 	    }
 
-	    $customer_id = $employee->customer_id;
+	    // 2. Convert to array for HOOK
+	    $employee_data = [
+		'id' => $employee->id,
+		'customer_id' => $employee->customer_id,
+		'branch_id' => $employee->branch_id,
+		'user_id' => $employee->user_id,
+		'name' => $employee->name,
+		'position' => $employee->position,
+		'email' => $employee->email,
+		'phone' => $employee->phone,
+		'finance' => $employee->finance,
+		'operation' => $employee->operation,
+		'legal' => $employee->legal,
+		'purchase' => $employee->purchase,
+		'keterangan' => $employee->keterangan,
+		'status' => $employee->status,
+		'created_by' => $employee->created_by,
+		'created_at' => $employee->created_at,
+		'updated_at' => $employee->updated_at
+	    ];
 
-	    $result = $wpdb->delete(
-		$this->table,
-		['id' => $id],
-		['%d']
-	    );
+	    // 3. Fire before delete HOOK (Task-2170)
+	    // For validation, logging, pre-deletion notifications
+	    do_action('wp_customer_employee_before_delete', $id, $employee_data);
 
+	    // 4. Check hard delete setting (same setting as Branch/Customer for consistency)
+	    $settings = get_option('wp_customer_general_options', []);
+	    $is_hard_delete = isset($settings['enable_hard_delete_branch']) &&
+			     $settings['enable_hard_delete_branch'] === true;
+
+	    // 5. Perform delete (soft or hard)
+	    if ($is_hard_delete) {
+		// Hard delete - actual DELETE from database
+		$result = $wpdb->delete(
+		    $this->table,
+		    ['id' => $id],
+		    ['%d']
+		);
+	    } else {
+		// Soft delete - status = 'inactive'
+		$result = $wpdb->update(
+		    $this->table,
+		    [
+			'status' => 'inactive',
+			'updated_at' => current_time('mysql')
+		    ],
+		    ['id' => $id],
+		    ['%s', '%s'],
+		    ['%d']
+		);
+	    }
+
+	    // 6. Fire after delete HOOK and handle cleanup (Task-2170)
 	    if ($result !== false) {
-		// ✓ FIXED: Invalidate ALL employee cache keys
+		// Fire HOOK - EmployeeCleanupHandler handles cache invalidation
+		do_action('wp_customer_employee_deleted', $id, $employee_data, $is_hard_delete);
+
+		// Direct cache invalidation (in addition to HOOK handler)
 		$this->cache->delete('customer_employee', $id);
-		$this->cache->delete('customer_employee_count', (string)$customer_id);
-		$this->cache->delete('active_customer_employee_count', (string)$customer_id);
+		$this->cache->delete('customer_employee_count', (string)$employee_data['customer_id']);
+		$this->cache->delete('active_customer_employee_count', (string)$employee_data['customer_id']);
 
 		// Invalidate getUserInfo cache (for admin bar)
 		if ($employee->user_id) {
@@ -245,10 +319,12 @@ public function create(array $data): ?int {
 		}
 
 		// Invalidate DataTable cache for all access types
-		$this->invalidateAllDataTableCache('customer_employee_list', (int)$customer_id);
+		$this->invalidateAllDataTableCache('customer_employee_list', (int)$employee_data['customer_id']);
+
+		return true;
 	    }
 
-	    return $result !== false;
+	    return false;
 	}
 
 

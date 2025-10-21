@@ -139,6 +139,11 @@ class WPCustomer {
         $customer_cleanup_handler = new \WPCustomer\Handlers\CustomerCleanupHandler();
         add_action('wp_customer_before_delete', [$customer_cleanup_handler, 'handleBeforeDelete'], 10, 2);
         add_action('wp_customer_deleted', [$customer_cleanup_handler, 'handleAfterDelete'], 10, 3);
+
+        // Task-2170: Employee lifecycle hooks (created, updated, before_delete, deleted)
+        $employee_cleanup_handler = new \WPCustomer\Handlers\EmployeeCleanupHandler();
+        add_action('wp_customer_employee_before_delete', [$employee_cleanup_handler, 'handleBeforeDelete'], 10, 2);
+        add_action('wp_customer_employee_deleted', [$employee_cleanup_handler, 'handleAfterDelete'], 10, 3);
     }
 
     /**
