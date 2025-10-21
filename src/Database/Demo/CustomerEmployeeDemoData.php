@@ -246,7 +246,24 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
     }
 
     private function generateNewEmployees(): void {
+        // Task-2171: Build dynamic ID mapping (static data ID → actual database ID)
+        // Static data uses customer_id 1-10, but actual IDs may be 231-240 (auto-increment)
+        $customer_id_map = $this->buildCustomerIdMap();
+        $branch_id_map = $this->buildBranchIdMap();
+
         foreach (self::$employee_users as $user_data) {
+            // Map static data IDs to actual database IDs
+            $static_customer_id = $user_data['customer_id'];
+            $static_branch_id = $user_data['branch_id'];
+
+            $actual_customer_id = $customer_id_map[$static_customer_id] ?? null;
+            $actual_branch_id = $branch_id_map[$static_branch_id] ?? null;
+
+            if (!$actual_customer_id || !$actual_branch_id) {
+                $this->debug("Skipping user {$user_data['id']}: customer/branch mapping not found (static: customer={$static_customer_id}, branch={$static_branch_id})");
+                continue;
+            }
+
             // Generate WordPress user first
             $user_id = $this->wpUserGenerator->generateUser([
                 'id' => $user_data['id'],
@@ -284,14 +301,68 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
 
             $this->debug("Updated roles for user {$user_id} ({$user_data['display_name']}): customer + customer_employee");
 
-            // Create employee record with department assignments
+            // Create employee record with ACTUAL database IDs (not static data IDs)
             $this->createEmployeeRecord(
-                $user_data['customer_id'],
-                $user_data['branch_id'],
+                $actual_customer_id,
+                $actual_branch_id,
                 $user_id,
                 $user_data['departments']
             );
         }
+    }
+
+    /**
+     * Build customer ID mapping from static data to actual database
+     *
+     * Task-2171: Static data uses customer_id 1-10, but actual database IDs
+     * may be 231-240 (due to auto-increment). This method creates mapping.
+     *
+     * @return array Map of [static_id => actual_id]
+     */
+    private function buildCustomerIdMap(): array {
+        // Get demo customers ordered by user_id (which maps to static sequence)
+        $demo_customers = $this->wpdb->get_results(
+            "SELECT id, user_id FROM {$this->wpdb->prefix}app_customers
+             WHERE reg_type = 'generate'
+             ORDER BY user_id ASC"
+        );
+
+        $map = [];
+        foreach ($demo_customers as $index => $customer) {
+            // user_id 2-11 maps to static customer_id 1-10
+            $static_customer_id = $customer->user_id - 1;
+            $map[$static_customer_id] = $customer->id;
+        }
+
+        return $map;
+    }
+
+    /**
+     * Build branch ID mapping from static data to actual database
+     *
+     * Task-2171: Static data uses branch_id based on sequence, but actual
+     * database IDs may differ. This method creates mapping.
+     *
+     * @return array Map of [static_id => actual_id]
+     */
+    private function buildBranchIdMap(): array {
+        // Get demo branches (type='pusat') ordered by customer_id
+        $demo_branches = $this->wpdb->get_results(
+            "SELECT b.id, b.customer_id, c.user_id
+             FROM {$this->wpdb->prefix}app_customer_branches b
+             INNER JOIN {$this->wpdb->prefix}app_customers c ON b.customer_id = c.id
+             WHERE c.reg_type = 'generate' AND b.type = 'pusat'
+             ORDER BY c.user_id ASC"
+        );
+
+        $map = [];
+        foreach ($demo_branches as $index => $branch) {
+            // Static branch_id 1-10 maps to pusat branches in sequence
+            $static_branch_id = $index + 1;
+            $map[$static_branch_id] = $branch->id;
+        }
+
+        return $map;
     }
 
 /**
