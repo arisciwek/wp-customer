@@ -232,11 +232,9 @@ class PermissionModel {
 
         // Set customer_admin role capabilities
         // Customer Admin adalah owner dari customer, manages semua yang ada di bawah customer mereka
+        // Note: 'read' capability inherited from base 'customer' role (dual-role pattern)
         $customer_admin = get_role('customer_admin');
         if ($customer_admin) {
-            // Add 'read' capability - required for wp-admin access
-            $customer_admin->add_cap('read');
-
             $default_capabilities = [
                 // Customer capabilities - owner manages their customer
                 'view_customer_list' => true,
@@ -292,11 +290,9 @@ class PermissionModel {
 
         // Set customer_branch_admin role capabilities
         // Branch Admin manages satu branch dan employee di branch tersebut
+        // Note: 'read' capability inherited from base 'customer' role (dual-role pattern)
         $customer_branch_admin = get_role('customer_branch_admin');
         if ($customer_branch_admin) {
-            // Add 'read' capability - required for wp-admin access
-            $customer_branch_admin->add_cap('read');
-
             $default_capabilities = [
                 // Customer capabilities - can view parent customer
                 'view_customer_list' => true,      // Can see customer list (filtered to their customer)
@@ -352,11 +348,9 @@ class PermissionModel {
 
         // Set customer_employee role capabilities
         // Employee hanya bisa melihat informasi yang relevan dengan pekerjaan mereka
+        // Note: 'read' capability inherited from base 'customer' role (dual-role pattern)
         $customer_employee = get_role('customer_employee');
         if ($customer_employee) {
-            // Add 'read' capability - required for wp-admin access
-            $customer_employee->add_cap('read');
-
             $default_capabilities = [
                 // Customer capabilities - view only
                 'view_customer_list' => true,      // Can see customer (their employer)

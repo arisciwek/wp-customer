@@ -438,8 +438,32 @@ class CustomerEmployeeController {
            $user_id = wp_insert_user($user_data);
            if (is_wp_error($user_id)) throw new \Exception($user_id->get_error_message());
 
+           // Task-2170 Review-01: Assign multiple roles via direct wp_capabilities update
+           // This prevents duplicate wp_capabilities entries that occur with add_role()
+           // Dual-role pattern: base 'customer' + specific 'customer_employee'
+           global $wpdb;
+
+           // Ensure customer_employee role exists
+           if (!get_role('customer_employee')) {
+               add_role('customer_employee', __('Customer Employee', 'wp-customer'), []);
+           }
+
+           // Update wp_capabilities with both roles in a single entry
+           $wpdb->update(
+               $wpdb->usermeta,
+               ['meta_value' => serialize(['customer' => true, 'customer_employee' => true])],
+               ['user_id' => $user_id, 'meta_key' => 'wp_capabilities'],
+               ['%s'],
+               ['%d', '%s']
+           );
+
+           // Clear user cache to ensure roles are loaded fresh
+           wp_cache_delete($user_id, 'user_meta');
+           clean_user_cache($user_id);
+
            $data['user_id'] = $user_id;
            $id = $this->model->create($data);
+
            if (!$id) {
                wp_delete_user($user_id);
                throw new \Exception('Failed to create employee');
@@ -609,53 +633,6 @@ class CustomerEmployeeController {
            wp_send_json_error(['message' => $e->getMessage()]);
        }
     }
-    
-    /**
-     * Khusus untuk membuat demo data employee
-     */
-    public function createDemoEmployee(array $data): ?int {
-        try {
-            // Debug log
-            $this->debug_log('Creating demo employee: ' . print_r($data, true));
-
-            // Buat employee via model
-            $employee_id = $this->model->create($data);
-            
-            if (!$employee_id) {
-                throw new \Exception('Gagal membuat demo employee');
-            }
-
-            // Clear semua cache yang terkait
-            $this->cache->delete('customer_employee', $employee_id);
-            $this->cache->delete('customer_employee_total_count', get_current_user_id());
-
-            // Cache untuk relasi dengan customer
-            $this->cache->delete('customer_employee', $data['customer_id']);
-            $this->cache->delete('customer_employee_list', $data['customer_id']);
-
-            // Cache untuk relasi dengan branch
-            $this->cache->delete('customer_branch_employee', $data['branch_id']);
-            $this->cache->delete('customer_branch_employee_list', $data['branch_id']);
-            
-            // Invalidate DataTable cache
-            $this->cache->invalidateDataTableCache('customer_employee_list', [
-                'customer_id' => $data['customer_id']
-            ]);
-
-            // Invalidate cache customer dan branch
-            $this->cache->invalidateCustomerCache($data['customer_id']);
-            $this->cache->invalidateDataTableCache('branch_list', [
-                'customer_id' => $data['customer_id']
-            ]);
-
-            return $employee_id;
-
-        } catch (\Exception $e) {
-            $this->debug_log('Error creating demo employee: ' . $e->getMessage());
-            throw $e;
-        }
-    }
-
 
 
     public function showProfileExtras($user) {
