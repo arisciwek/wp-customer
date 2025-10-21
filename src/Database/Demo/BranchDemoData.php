@@ -214,14 +214,36 @@ class BranchDemoData extends AbstractDemoData {
         if ($this->shouldClearData()) {
             error_log("[BranchDemoData] === Cleanup mode enabled - Deleting existing demo users ===");
 
+            // Enable hard delete temporarily untuk demo cleanup
+            $original_settings = get_option('wp_customer_general_options', []);
+            $cleanup_settings = array_merge($original_settings, ['enable_hard_delete_branch' => true]);
+            update_option('wp_customer_general_options', $cleanup_settings);
+            error_log("[BranchDemoData] Enabled hard delete mode for cleanup");
+
+            // Delete cabang branches via Model (triggers HOOK for cascade cleanup)
+            $cabang_branches = $this->wpdb->get_results(
+                "SELECT id FROM {$this->wpdb->prefix}app_customer_branches WHERE type = 'cabang'",
+                ARRAY_A
+            );
+
+            $deleted_branches = 0;
+            foreach ($cabang_branches as $branch) {
+                if ($this->branchModel->delete($branch['id'])) {
+                    $deleted_branches++;
+                }
+            }
+            error_log("[BranchDemoData] Deleted {$deleted_branches} cabang branches (HOOK handles employees)");
+
+            // Restore original settings
+            update_option('wp_customer_general_options', $original_settings);
+            error_log("[BranchDemoData] Restored original delete mode");
+
             // Collect all branch admin user IDs from BranchUsersData
             $user_ids_to_delete = [];
 
             // Regular branch users (pusat + cabang for each customer)
             foreach ($this->branch_users as $customer_id => $branches) {
-                if (isset($branches['pusat'])) {
-                    $user_ids_to_delete[] = $branches['pusat']['id'];
-                }
+                // Skip pusat deletion - only delete cabang users
                 if (isset($branches['cabang1'])) {
                     $user_ids_to_delete[] = $branches['cabang1']['id'];
                 }
@@ -238,17 +260,9 @@ class BranchDemoData extends AbstractDemoData {
 
             error_log("[BranchDemoData] User IDs to clean: " . json_encode($user_ids_to_delete));
 
-            $deleted = $userGenerator->deleteUsers($user_ids_to_delete);
-            error_log("[BranchDemoData] Cleaned up {$deleted} existing demo users");
-            $this->debug("Cleaned up {$deleted} existing demo users before generation");
-
-            // Delete existing branches
-            $this->wpdb->query("DELETE FROM {$this->wpdb->prefix}app_customer_branches WHERE id > 0");
-
-            // Reset auto increment
-            $this->wpdb->query("ALTER TABLE {$this->wpdb->prefix}app_customer_branches AUTO_INCREMENT = 1");
-
-            $this->debug("Cleared existing branch data");
+            $deleted_users = $userGenerator->deleteUsers($user_ids_to_delete);
+            error_log("[BranchDemoData] Cleaned up {$deleted_users} existing demo users");
+            $this->debug("Cleaned up {$deleted_users} users and {$deleted_branches} branches before generation");
         }
 
         // TAMBAHKAN DI SINI
@@ -272,26 +286,13 @@ class BranchDemoData extends AbstractDemoData {
                     continue;
                 }
 
-                // Check for existing pusat branch
-                $existing_pusat = $this->wpdb->get_row($this->wpdb->prepare(
-                    "SELECT * FROM {$this->wpdb->prefix}app_customer_branches 
-                     WHERE customer_id = %d AND type = 'pusat'",
-                    $customer_id
-                ));
-
-                if ($existing_pusat) {
-                    $this->debug("Pusat branch exists for customer {$customer_id}, skipping...");
-                } else {
-                    // Get pusat admin user ID
-                    $pusat_user = $this->branch_users[$customer_id]['pusat'];
-                    $this->debug("Using pusat admin user ID: {$pusat_user['id']} for customer {$customer_id}");
-                    $this->generatePusatBranch($customer, $pusat_user['id']);
-                    $generated_count++;
-                }
+                // Skip pusat branch generation - now auto-created via wp_customer_created HOOK
+                // Pusat branch is created by AutoEntityCreator when customer is created
+                $this->debug("Pusat branch for customer {$customer_id} should be auto-created via HOOK");
 
                 // Check for existing cabang branches
                 $existing_cabang_count = $this->wpdb->get_var($this->wpdb->prepare(
-                    "SELECT COUNT(*) FROM {$this->wpdb->prefix}app_customer_branches 
+                    "SELECT COUNT(*) FROM {$this->wpdb->prefix}app_customer_branches
                      WHERE customer_id = %d AND type = 'cabang'",
                     $customer_id
                 ));
@@ -416,48 +417,169 @@ class BranchDemoData extends AbstractDemoData {
     }
 
     /**
+     * Create branch via runtime flow simulation
+     * Replicates EXACT logic from BranchController::store() without AJAX/nonce
+     *
+     * @param int $customer_id Customer ID
+     * @param array $branch_data Branch fields (name, type, nitku, etc)
+     * @param array $admin_data Admin user fields (username, email, firstname, lastname)
+     * @param int $current_user_id User ID who creates the branch (for created_by)
+     * @param bool $auto_assign_inspector Auto-assign inspector (regular branches) or leave NULL (extra branches)
+     * @return int Branch ID
+     * @throws \Exception If validation fails or creation fails
+     */
+    private function createBranchViaRuntimeFlow(
+        int $customer_id,
+        array $branch_data,
+        array $admin_data,
+        int $current_user_id,
+        bool $auto_assign_inspector = true
+    ): int {
+        // Initialize validator and model (same as Controller)
+        $validator = new \WPCustomer\Validators\Branch\BranchValidator();
+        $model = new \WPCustomer\Models\Branch\BranchModel();
+
+        // Step 1: Check customer_id (line 538-541 from store())
+        if (!$customer_id) {
+            throw new \Exception('ID Customer tidak valid');
+        }
+
+        // Step 2: Check permission (line 544-546 from store())
+        if (!$validator->canCreateBranch($customer_id)) {
+            throw new \Exception('Anda tidak memiliki izin untuk menambah cabang');
+        }
+
+        // Step 3: Sanitize input (line 549-564 from store())
+        $data = [
+            'customer_id' => $customer_id,
+            'name' => sanitize_text_field($branch_data['name'] ?? ''),
+            'type' => sanitize_text_field($branch_data['type'] ?? ''),
+            'nitku' => sanitize_text_field($branch_data['nitku'] ?? ''),
+            'postal_code' => sanitize_text_field($branch_data['postal_code'] ?? ''),
+            'latitude' => (float)($branch_data['latitude'] ?? 0),
+            'longitude' => (float)($branch_data['longitude'] ?? 0),
+            'address' => sanitize_text_field($branch_data['address'] ?? ''),
+            'phone' => sanitize_text_field($branch_data['phone'] ?? ''),
+            'email' => sanitize_email($branch_data['email'] ?? ''),
+            'provinsi_id' => isset($branch_data['provinsi_id']) ? (int)$branch_data['provinsi_id'] : null,
+            'regency_id' => isset($branch_data['regency_id']) ? (int)$branch_data['regency_id'] : null,
+            'created_by' => $current_user_id,
+            'status' => 'active'
+        ];
+
+        // Step 4: Assign agency and division (line 567-575 from store())
+        if ($data['provinsi_id'] && $data['regency_id']) {
+            try {
+                $agencyDivision = $model->getAgencyAndDivisionIds($data['provinsi_id'], $data['regency_id']);
+                $data['agency_id'] = $agencyDivision['agency_id'];
+                $data['division_id'] = $agencyDivision['division_id'];
+            } catch (\Exception $e) {
+                throw new \Exception('Gagal menentukan agency dan division: ' . $e->getMessage());
+            }
+        }
+
+        // Step 4b: Auto-assign inspector for regular branches (simulate assign inspector action)
+        // For extra branches, skip this step to leave inspector_id NULL for testing
+        if ($auto_assign_inspector && $data['provinsi_id']) {
+            try {
+                $inspector_id = $model->getInspectorId(
+                    $data['provinsi_id'],
+                    $data['division_id'] ?? null
+                );
+                if ($inspector_id) {
+                    $data['inspector_id'] = $inspector_id;
+                    $this->debug("Auto-assigned inspector_id {$inspector_id} for branch in provinsi {$data['provinsi_id']}, division {$data['division_id']}");
+                } else {
+                    $this->debug("No inspector found for provinsi {$data['provinsi_id']}, division {$data['division_id']}, leaving NULL");
+                }
+            } catch (\Exception $e) {
+                // Log but don't fail - inspector assignment is not critical
+                $this->debug("Warning: Failed to auto-assign inspector: " . $e->getMessage());
+            }
+        }
+
+        // Step 5: Validate branch creation data (line 578-581 from store())
+        $create_errors = $validator->validateCreate($data);
+        if (!empty($create_errors)) {
+            throw new \Exception(reset($create_errors));
+        }
+
+        // Step 6: Validate branch type (line 584-587 from store())
+        $type_validation = $validator->validateBranchTypeCreate($data['type'], $customer_id);
+        if (!$type_validation['valid']) {
+            throw new \Exception($type_validation['message']);
+        }
+
+        // Step 7: Use existing user_id or create new user (line 590-615 from store())
+        if (!empty($admin_data['user_id'])) {
+            // User already created (demo data dengan WPUserGenerator)
+            $data['user_id'] = $admin_data['user_id'];
+            $this->debug("Using existing user ID {$data['user_id']} for branch");
+
+        } elseif (!empty($admin_data['email'])) {
+            // Create new user (runtime flow untuk production simulation)
+            $user_data = [
+                'user_login' => sanitize_user($admin_data['username']),
+                'user_email' => sanitize_email($admin_data['email']),
+                'first_name' => sanitize_text_field($admin_data['firstname']),
+                'last_name' => sanitize_text_field($admin_data['lastname'] ?? ''),
+                'user_pass' => wp_generate_password(),
+                'role' => 'customer'  // Base role for all plugin users
+            ];
+
+            $user_id = wp_insert_user($user_data);
+            if (is_wp_error($user_id)) {
+                throw new \Exception($user_id->get_error_message());
+            }
+
+            // Add customer_branch_admin role (dual-role pattern)
+            $user = get_user_by('ID', $user_id);
+            if ($user) {
+                $user->add_role('customer_branch_admin');
+            }
+
+            $data['user_id'] = $user_id;
+
+            // Skip email notification for demo data
+            // wp_new_user_notification($user_id, null, 'user');
+        }
+
+        // Step 8: Save branch (line 612-618 from store())
+        $branch_id = $model->create($data);
+        if (!$branch_id) {
+            if (!empty($user_id)) {
+                wp_delete_user($user_id); // Rollback user creation jika gagal
+            }
+            throw new \Exception('Gagal menambah cabang');
+        }
+
+        // Cache invalidation handled by Model
+
+        $this->debug("Created branch via runtime flow (ID: {$branch_id}) for customer {$customer_id}");
+
+        return $branch_id;
+    }
+
+    /**
      * Generate cabang branches
+     * Uses runtime flow simulation for full validation
      */
     private function generateCabangBranches($customer): void {
-        // Generate 1-2 cabang per customer
-        //$cabang_count = rand(1, 2);
-
         $cabang_count = 2; // Selalu buat 2 cabang karena sudah ada 2 user cabang
-
         $used_provinces = [$customer->provinsi_id];
+
+        // Initialize WPUserGenerator untuk create users dengan static ID
         $userGenerator = new WPUserGenerator();
-        
+
         for ($i = 0; $i < $cabang_count; $i++) {
-            // Get cabang admin user ID
+            // Get cabang admin user data
             $cabang_key = 'cabang' . ($i + 1);
             if (!isset($this->branch_users[$customer->id][$cabang_key])) {
                 $this->debug("No admin user found for {$cabang_key} of customer {$customer->id}, skipping...");
                 continue;
             }
 
-            // Generate WordPress user untuk cabang
             $user_data = $this->branch_users[$customer->id][$cabang_key];
-            $wp_user_id = $userGenerator->generateUser([
-                'id' => $user_data['id'],
-                'username' => $user_data['username'],
-                'display_name' => $user_data['display_name'],
-                'role' => 'customer'
-            ]);
-
-            if (!$wp_user_id) {
-                throw new \Exception("Failed to create WordPress user for branch admin: {$user_data['display_name']}");
-            }
-
-            // Add customer_branch_admin role to user
-            $user = get_user_by('ID', $wp_user_id);
-            if ($user) {
-                $role_exists = get_role('customer_branch_admin');
-                if (!$role_exists) {
-                    add_role('customer_branch_admin', __('Customer Branch Admin', 'wp-customer'), []);
-                }
-                $user->add_role('customer_branch_admin');
-                $this->debug("Added customer_branch_admin role to user {$wp_user_id} ({$user_data['display_name']})");
-            }
 
             // Get random province that has agency (different from used provinces)
             $provinsi_id = $this->getRandomProvinceWithAgencyExcept($customer->provinsi_id);
@@ -465,28 +587,40 @@ class BranchDemoData extends AbstractDemoData {
                 $provinsi_id = $this->getRandomProvinceWithAgencyExcept($customer->provinsi_id);
             }
             $used_provinces[] = $provinsi_id;
-            
+
             // Get random regency from selected province
             $regency_id = $this->getRandomRegencyId($provinsi_id);
             $regency_name = $this->getRegencyName($regency_id);
             $location = $this->generateValidLocation();
 
-            $agency_id = $this->generateAgencyID($provinsi_id);
-            $division_id = $this->generateDivisionID($regency_id);
-            $inspector_id = $this->generateInspectorID($provinsi_id);
+            // Step 1: Create user first using WPUserGenerator (static ID guarantee)
+            $user_create_data = [
+                'id' => $user_data['id'],
+                'username' => $user_data['username'],
+                'display_name' => $user_data['display_name'],
+                'role' => 'customer'  // Base role
+            ];
 
-            $this->debug("Generated for cabang branch - agency_id: {$agency_id}, division_id: {$division_id}, inspector_id: {$inspector_id} for provinsi_id: {$provinsi_id}, regency_id: {$regency_id}");
+            try {
+                $user_id = $userGenerator->generateUser($user_create_data);
+                error_log("[BranchDemoData] Created user '{$user_data['username']}' (ID: {$user_id}) for cabang branch");
 
-            // Generate branch code: customer_code + cabang number + random 2 digits
-            $cabang_num = str_replace('cabang', '', $cabang_key);
-            $branch_code = $customer->code . ' ' . $cabang_num . str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
+                // Add customer_branch_admin role (dual-role pattern)
+                $user = get_user_by('ID', $user_id);
+                if ($user) {
+                    $user->add_role('customer_branch_admin');
+                    error_log("[BranchDemoData] Added customer_branch_admin role to user ID {$user_id}");
+                }
 
+            } catch (\Exception $e) {
+                error_log("[BranchDemoData] Failed to create user '{$user_data['username']}' (ID: {$user_data['id']}): " . $e->getMessage());
+                $this->debug("Failed to create user for cabang branch: " . $e->getMessage());
+                throw $e;
+            }
+
+            // Prepare branch data for runtime flow simulation
             $branch_data = [
-                'customer_id' => $customer->id,
-                'code' => $branch_code,
-                'name' => sprintf('%s Cabang %s',
-                                $customer->name,
-                                $regency_name),
+                'name' => sprintf('%s Cabang %s', $customer->name, $regency_name),
                 'type' => 'cabang',
                 'nitku' => $this->generateNITKU(),
                 'postal_code' => $this->generatePostalCode(),
@@ -496,35 +630,52 @@ class BranchDemoData extends AbstractDemoData {
                 'phone' => $this->generatePhone(),
                 'email' => $this->generateEmail($customer->name, $cabang_key),
                 'provinsi_id' => $provinsi_id,
-                'agency_id' => $agency_id,
                 'regency_id' => $regency_id,
-                'division_id' => $division_id,
-                'user_id' => $wp_user_id,  // Gunakan WP user yang baru dibuat
-                'inspector_id' => $inspector_id,
-                'created_by' => $customer->user_id,        // Customer owner user
-                'status' => 'active'
             ];
 
-            $result = $this->wpdb->insert(
-                $this->wpdb->prefix . 'app_customer_branches',
-                $branch_data,
-                ['%d', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%d', '%d', '%s']
-            );
+            // Prepare admin data dengan user_id yang sudah dibuat
+            $admin_data = [
+                'user_id' => $user_id,  // Pass existing user_id
+                'username' => $user_data['username'],
+                'email' => $user_data['username'] . '@example.com',
+                'firstname' => $user_data['display_name'],
+                'lastname' => ''
+            ];
 
-            if ($result === false) {
-                throw new \Exception("Failed to create cabang branch for customer: {$customer->id} - " . $this->wpdb->last_error);
+            // Create branch via runtime flow (simulates BranchController::store())
+            // Set current user to customer owner for permission check
+            wp_set_current_user($customer->user_id);
+
+            try {
+                $branch_id = $this->createBranchViaRuntimeFlow(
+                    $customer->id,
+                    $branch_data,
+                    $admin_data,
+                    $customer->user_id  // created_by = customer owner
+                );
+
+                $this->branch_ids[] = $branch_id;
+                $this->debug("Created cabang branch via runtime flow (ID: {$branch_id}) for customer {$customer->name} in {$regency_name}");
+
+            } catch (\Exception $e) {
+                error_log("[BranchDemoData] Failed to create cabang branch for customer {$customer->id}: " . $e->getMessage());
+                $this->debug("Failed to create cabang branch: " . $e->getMessage());
+                // Rollback: delete created user
+                wp_delete_user($user_id);
+                throw $e;
+            } finally {
+                // Restore no current user
+                wp_set_current_user(0);
             }
-
-            $branch_id = $this->wpdb->insert_id;
-
-            $this->branch_ids[] = $branch_id;
-            $this->debug("Created cabang branch for customer {$customer->name} in {$regency_name}");
         }
     }
 
     /**
      * Generate extra branches for testing assign inspector functionality
      * These branches will have inspector_id = NULL so they appear in New Company tab
+     *
+     * Uses runtime flow (createBranchViaRuntimeFlow) to test full validation chain.
+     * Runtime flow does NOT auto-assign inspector_id, so it stays NULL naturally.
      */
     private function generateExtraBranches(): void {
         $this->debug("Generating extra branches for testing assign inspector...");
@@ -550,37 +701,12 @@ class BranchDemoData extends AbstractDemoData {
             return;
         }
 
-        $userGenerator = new WPUserGenerator();
         $generated_extra = 0;
 
         // Generate extra branches using predefined users
         foreach ($extra_users as $user_data) {
             // Pick random customer
             $customer = $customers[array_rand($customers)];
-
-            // Generate WP User with predefined data
-            $wp_user_id = $userGenerator->generateUser([
-                'id' => $user_data['id'],
-                'username' => $user_data['username'],
-                'display_name' => $user_data['display_name'],
-                'role' => 'customer'
-            ]);
-
-            if (!$wp_user_id) {
-                $this->debug("Failed to create user for extra branch: {$user_data['display_name']}, skipping...");
-                continue;
-            }
-
-            // Add customer_branch_admin role to user
-            $user = get_user_by('ID', $wp_user_id);
-            if ($user) {
-                $role_exists = get_role('customer_branch_admin');
-                if (!$role_exists) {
-                    add_role('customer_branch_admin', __('Customer Branch Admin', 'wp-customer'), []);
-                }
-                $user->add_role('customer_branch_admin');
-                $this->debug("Added customer_branch_admin role to extra branch user {$wp_user_id} ({$user_data['display_name']})");
-            }
 
             // Get a random division that has jurisdictions
             $division_data = $this->getRandomDivisionWithJurisdictions();
@@ -590,7 +716,6 @@ class BranchDemoData extends AbstractDemoData {
             }
 
             $division_id = $division_data['id'];
-            $agency_id = $division_data['agency_id'];
             $provinsi_id = $division_data['provinsi_id'];
 
             // Get a random regency from this division's jurisdictions that doesn't already have a branch for this customer
@@ -628,20 +753,11 @@ class BranchDemoData extends AbstractDemoData {
             $regency_name = $this->getRegencyName($regency_id);
             $location = $this->generateValidLocation();
 
-            // Explicitly set inspector_id to NULL for testing
-            $inspector_id = null;
-
-            $this->debug("Generated extra branch - agency_id: {$agency_id}, division_id: {$division_id}, inspector_id: NULL for provinsi_id: {$provinsi_id}, regency_id: {$regency_id}");
-
-            // Generate unique branch code for testing
-            $branch_code = $customer->code . ' ' . str_pad($generated_extra + 1, 2, '0', STR_PAD_LEFT);
-
+            // Prepare branch data for runtime flow simulation
+            // Note: agency_id and division_id will be set by runtime flow via getAgencyAndDivisionIds()
+            // Note: inspector_id will NOT be set by runtime flow (stays NULL for testing)
             $branch_data = [
-                'customer_id' => $customer->id,
-                'code' => $branch_code,
-                'name' => sprintf('%s Cabang %s',
-                                  $customer->name,
-                                  $regency_name),
+                'name' => sprintf('%s Cabang %s', $customer->name, $regency_name),
                 'type' => 'cabang',
                 'nitku' => $this->generateNITKU(),
                 'postal_code' => $this->generatePostalCode(),
@@ -651,31 +767,51 @@ class BranchDemoData extends AbstractDemoData {
                 'phone' => $this->generatePhone(),
                 'email' => $this->generateEmail($customer->name, 'extra' . ($generated_extra + 1)),
                 'provinsi_id' => $provinsi_id,
-                'agency_id' => $agency_id,
                 'regency_id' => $regency_id,
-                'division_id' => $division_id,
-                'user_id' => $wp_user_id,
-                'inspector_id' => $inspector_id,  // NULL for testing assign inspector
-                'created_by' => $customer->user_id,
-                'status' => 'active'
             ];
 
-            $result = $this->wpdb->insert(
-                $this->wpdb->prefix . 'app_customer_branches',
-                $branch_data,
-                ['%d', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%d', null, '%s']  // inspector_id is null
-            );
+            // Prepare admin data for runtime user creation
+            $admin_data = [
+                'username' => $user_data['username'],
+                'email' => $user_data['username'] . '@example.com',
+                'firstname' => $user_data['display_name'],
+                'lastname' => ''
+            ];
 
-            if ($result === false) {
-                $this->debug("Failed to create extra branch: " . $this->wpdb->last_error);
+            // Create branch via runtime flow (simulates BranchController::store())
+            // Set current user to customer owner for permission check
+            wp_set_current_user($customer->user_id);
+
+            // This will:
+            // 1. Validate permissions
+            // 2. Sanitize input
+            // 3. Call getAgencyAndDivisionIds() to set agency_id and division_id
+            // 4. Skip auto-assign inspector (pass false to keep inspector_id NULL)
+            // 5. Validate data
+            // 6. Create user with wp_insert_user() (role='customer')
+            // 7. Add role customer_branch_admin
+            // 8. Create branch via BranchModel::create()
+            try {
+                $branch_id = $this->createBranchViaRuntimeFlow(
+                    $customer->id,
+                    $branch_data,
+                    $admin_data,
+                    $customer->user_id,  // created_by = customer owner
+                    false  // auto_assign_inspector = false for extra branches
+                );
+
+                $this->branch_ids[] = $branch_id;
+                $generated_extra++;
+
+                $this->debug("Created extra branch via runtime flow (ID: {$branch_id}) for customer {$customer->name} in {$regency_name} (inspector_id = NULL)");
+
+            } catch (\Exception $e) {
+                $this->debug("Failed to create extra branch: " . $e->getMessage());
                 continue;
+            } finally {
+                // Restore no current user
+                wp_set_current_user(0);
             }
-
-            $branch_id = $this->wpdb->insert_id;
-            $this->branch_ids[] = $branch_id;
-            $generated_extra++;
-
-            $this->debug("Created extra branch {$branch_code} for customer {$customer->name} (inspector_id = NULL)");
         }
 
         $this->debug("Extra branch generation completed. Generated {$generated_extra} branches with inspector_id = NULL");

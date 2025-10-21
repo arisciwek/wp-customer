@@ -306,16 +306,51 @@ class BranchModel {
     public function delete(int $id): bool {
         global $wpdb;
 
-        // Get branch data before deletion untuk cache invalidation
+        // Get branch data before deletion
         $branch = $this->find($id);
+        if (!$branch) {
+            return false;
+        }
 
-        $result = $wpdb->delete(
-            $this->table,
-            ['id' => $id],
-            ['%d']
-        );
+        // Convert object to array untuk HOOK parameters
+        $branch_data = [
+            'id' => $branch->id,
+            'customer_id' => $branch->customer_id,
+            'name' => $branch->name,
+            'type' => $branch->type,
+            'code' => $branch->code,
+            'user_id' => $branch->user_id
+        ];
 
-        if ($result !== false && $branch && $branch->customer_id) {
+        // Fire before delete HOOK
+        do_action('wp_customer_branch_before_delete', $id, $branch_data);
+
+        // Check if hard delete is enabled
+        $settings = get_option('wp_customer_general_options', []);
+        $is_hard_delete = isset($settings['enable_hard_delete_branch']) && $settings['enable_hard_delete_branch'] === true;
+
+        if ($is_hard_delete) {
+            // Hard delete: Actual DELETE from database
+            $result = $wpdb->delete(
+                $this->table,
+                ['id' => $id],
+                ['%d']
+            );
+        } else {
+            // Soft delete: Set status='inactive'
+            $result = $wpdb->update(
+                $this->table,
+                [
+                    'status' => 'inactive',
+                    'updated_at' => current_time('mysql')
+                ],
+                ['id' => $id],
+                ['%s', '%s'],
+                ['%d']
+            );
+        }
+
+        if ($result !== false) {
             // Comprehensive cache invalidation
             $this->cache->delete(self::KEY_CUSTOMER_BRANCH, $id);
 
@@ -324,6 +359,9 @@ class BranchModel {
 
             // Invalidate user relation cache
             $this->invalidateUserRelationCache($id);
+
+            // Fire after delete HOOK for cascade cleanup
+            do_action('wp_customer_branch_deleted', $id, $branch_data, $is_hard_delete);
         }
 
         return $result !== false;

@@ -465,33 +465,44 @@ class CustomerCacheManager {
         return $this->clearAll();
     }
 
-private function clearCache(): bool {
-    try {
-        global $wp_object_cache;
+/**
+     * Clear cache - now public untuk support BranchModel cleanup
+     *
+     * @param string|null $type Optional cache type to clear specific pattern
+     * @return bool
+     */
+    public function clearCache(string $type = null): bool {
+        try {
+            global $wp_object_cache;
 
-        // Check if using default WordPress object cache
-        if (isset($wp_object_cache->cache[self::CACHE_GROUP])) {
-            if (is_array($wp_object_cache->cache[self::CACHE_GROUP])) {
-                foreach (array_keys($wp_object_cache->cache[self::CACHE_GROUP]) as $key) {
-                    wp_cache_delete($key, self::CACHE_GROUP);
+            // Check if using default WordPress object cache
+            if (isset($wp_object_cache->cache[self::CACHE_GROUP])) {
+                if (is_array($wp_object_cache->cache[self::CACHE_GROUP])) {
+                    foreach (array_keys($wp_object_cache->cache[self::CACHE_GROUP]) as $key) {
+                        // If type specified, only clear keys matching that type
+                        if ($type === null || strpos($key, $type) === 0) {
+                            wp_cache_delete($key, self::CACHE_GROUP);
+                        }
+                    }
                 }
+                if ($type === null) {
+                    unset($wp_object_cache->cache[self::CACHE_GROUP]);
+                }
+                return true;
             }
-            unset($wp_object_cache->cache[self::CACHE_GROUP]);
-            return true;
-        }
 
-        // Alternative approach for external cache plugins
-        if (function_exists('wp_cache_flush_group')) {
-            // Some caching plugins provide group-level flush
-            return wp_cache_flush_group(self::CACHE_GROUP);
-        }
+            // Alternative approach for external cache plugins
+            if (function_exists('wp_cache_flush_group')) {
+                // Some caching plugins provide group-level flush
+                return wp_cache_flush_group(self::CACHE_GROUP);
+            }
 
-        // Fallback method - iteratively clear known cache keys
-        $known_types = [
-            'customer',
-            'customer_list',
-            'customer_total_count',
-            'customer_membership',
+            // Fallback method - iteratively clear known cache keys
+            $known_types = [
+                'customer',
+                'customer_list',
+                'customer_total_count',
+                'customer_membership',
             'membership',
             'customer_branch',
             'customer_branch_list',

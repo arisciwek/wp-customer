@@ -3,10 +3,16 @@
  * File: SettingsModel.php
  * Path: /wp-customer/src/Models/Settings/SettingsModel.php
  * Description: Model untuk mengelola pengaturan umum plugin
- * Version: 1.3.1
- * Last modified: 2025-10-17
+ * Version: 1.3.2
+ * Last modified: 2025-10-21
  *
  * Changelog:
+ * v1.3.2 - 2025-10-21 (Task-2167 Review-01: Branch Delete HOOK)
+ * - Added: enable_hard_delete_branch setting (default: false)
+ * - Production: soft delete (status='inactive')
+ * - Demo/Development: hard delete (actual DELETE)
+ * - Used by BranchCleanupHandler untuk control delete behavior
+ *
  * v1.3.1 - 2025-10-17 (Task-2158 Review-03)
  * - Fixed: getInvoicePaymentOptions() now always applies wp_parse_args with defaults
  * - This ensures backward compatibility when new settings fields are added
@@ -44,7 +50,8 @@ class SettingsModel {
         'display_format' => 'hierarchical',
         'enable_api' => false,
         'api_key' => '',
-        'log_enabled' => false
+        'log_enabled' => false,
+        'enable_hard_delete_branch' => false  // Production: soft delete, Demo: hard delete
     ];
 
     private $default_invoice_payment_options = [

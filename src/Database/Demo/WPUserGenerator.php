@@ -82,95 +82,92 @@ class WPUserGenerator {
         $username_exists = username_exists($username);
         error_log("[WPUserGenerator] Username '{$username}' exists check: " . ($username_exists ? "YES (ID: {$username_exists})" : 'NO'));
 
-        // 3. Insert new user into database
+        // If username exists with DIFFERENT ID, delete it and re-create with correct static ID
+        if ($username_exists && $username_exists != $data['id']) {
+            error_log("[WPUserGenerator] WARNING: Username '{$username}' exists with ID {$username_exists}, but we need ID {$data['id']}");
+            error_log("[WPUserGenerator] Deleting existing user ID {$username_exists} to re-create with static ID {$data['id']}");
+
+            // Delete existing user to make room for static ID
+            require_once(ABSPATH . 'wp-admin/includes/user.php');
+            $delete_result = wp_delete_user($username_exists);
+
+            if ($delete_result) {
+                error_log("[WPUserGenerator] Successfully deleted user ID {$username_exists}");
+            } else {
+                error_log("[WPUserGenerator] Failed to delete user ID {$username_exists}");
+                throw new \Exception("Cannot delete existing user with username '{$username}' (ID: {$username_exists})");
+            }
+        }
+
+        // 3. Insert new user into database menggunakan wp_insert_user()
+        // Use wp_insert_user() for proper WordPress integration (hooks, validation, sanitization)
         $user_data_to_insert = [
-            'ID' => $data['id'],
             'user_login' => $username,
-            'user_pass' => wp_hash_password('Demo_Data-2025'),
+            'user_pass' => 'Demo_Data-2025',  // Will be hashed by wp_insert_user()
             'user_email' => $username . '@example.com',
             'display_name' => $data['display_name'],
-            'user_registered' => current_time('mysql')
+            'role' => $data['role']
         ];
-        error_log("[WPUserGenerator] Attempting to insert user into {$wpdb->users}: " . json_encode([
-            'ID' => $user_data_to_insert['ID'],
+
+        error_log("[WPUserGenerator] Attempting to create user via wp_insert_user(): " . json_encode([
             'user_login' => $user_data_to_insert['user_login'],
             'user_email' => $user_data_to_insert['user_email'],
-            'display_name' => $user_data_to_insert['display_name']
+            'display_name' => $user_data_to_insert['display_name'],
+            'role' => $user_data_to_insert['role']
         ]));
 
-        $result = $wpdb->insert(
+        // Create user with wp_insert_user() (auto-generates ID)
+        $user_id = wp_insert_user($user_data_to_insert);
+
+        if (is_wp_error($user_id)) {
+            $error_message = $user_id->get_error_message();
+            error_log("[WPUserGenerator] ERROR: wp_insert_user failed: {$error_message}");
+            throw new \Exception($error_message);
+        }
+
+        error_log("[WPUserGenerator] User created successfully with auto ID: {$user_id}");
+
+        // Now update the ID to match static ID from data
+        // This requires raw SQL because wp_update_user() doesn't allow ID change
+        error_log("[WPUserGenerator] Updating user ID from {$user_id} to static ID: {$data['id']}");
+
+        $wpdb->query('SET FOREIGN_KEY_CHECKS=0');
+
+        // Update wp_users ID
+        $result_users = $wpdb->update(
             $wpdb->users,
-            $user_data_to_insert,
-            [
-                '%d',
-                '%s',
-                '%s',
-                '%s',
-                '%s',
-                '%s'
-            ]
+            ['ID' => $data['id']],
+            ['ID' => $user_id],
+            ['%d'],
+            ['%d']
         );
 
-        error_log("[WPUserGenerator] wpdb->insert result: " . ($result === false ? 'FALSE' : $result));
-        if ($result === false) {
-            error_log("[WPUserGenerator] ERROR: wpdb->last_error: " . $wpdb->last_error);
-            throw new \Exception($wpdb->last_error);
+        // Update wp_usermeta user_id references
+        $result_meta = $wpdb->update(
+            $wpdb->usermeta,
+            ['user_id' => $data['id']],
+            ['user_id' => $user_id],
+            ['%d'],
+            ['%d']
+        );
+
+        $wpdb->query('SET FOREIGN_KEY_CHECKS=1');
+
+        error_log("[WPUserGenerator] ID update results - users: {$result_users}, usermeta: {$result_meta}");
+
+        if ($result_users === false || $result_meta === false) {
+            error_log("[WPUserGenerator] ERROR: Failed to update user ID - " . $wpdb->last_error);
+            // Delete the created user
+            wp_delete_user($user_id);
+            throw new \Exception("Failed to set static user ID: " . $wpdb->last_error);
         }
 
         $user_id = $data['id'];
-        error_log("[WPUserGenerator] User inserted successfully with ID: {$user_id}");
+        error_log("[WPUserGenerator] User ID successfully changed to static ID: {$user_id}");
 
-        // Insert user meta directly
-        error_log("[WPUserGenerator] Inserting user meta 'wp_customer_demo_user'");
-        $meta_result_1 = $wpdb->insert(
-            $wpdb->usermeta,
-            [
-                'user_id' => $user_id,
-                'meta_key' => 'wp_customer_demo_user',
-                'meta_value' => '1'
-            ],
-            [
-                '%d',
-                '%s',
-                '%s'
-            ]
-        );
-        error_log("[WPUserGenerator] Meta insert result (demo_user): " . ($meta_result_1 === false ? 'FALSE - ' . $wpdb->last_error : $meta_result_1));
-
-        // Add role capability
-        $capabilities = serialize(array($data['role'] => true));
-        error_log("[WPUserGenerator] Inserting capabilities: {$capabilities}");
-        $meta_result_2 = $wpdb->insert(
-            $wpdb->usermeta,
-            [
-                'user_id' => $user_id,
-                'meta_key' => $wpdb->prefix . 'capabilities',
-                'meta_value' => $capabilities
-            ],
-            [
-                '%d',
-                '%s',
-                '%s'
-            ]
-        );
-        error_log("[WPUserGenerator] Meta insert result (capabilities): " . ($meta_result_2 === false ? 'FALSE - ' . $wpdb->last_error : $meta_result_2));
-
-        // Update user level for backward compatibility
-        error_log("[WPUserGenerator] Inserting user_level");
-        $meta_result_3 = $wpdb->insert(
-            $wpdb->usermeta,
-            [
-                'user_id' => $user_id,
-                'meta_key' => $wpdb->prefix . 'user_level',
-                'meta_value' => '0'
-            ],
-            [
-                '%d',
-                '%s',
-                '%s'
-            ]
-        );
-        error_log("[WPUserGenerator] Meta insert result (user_level): " . ($meta_result_3 === false ? 'FALSE - ' . $wpdb->last_error : $meta_result_3));
+        // Add demo user meta
+        update_user_meta($user_id, 'wp_customer_demo_user', '1');
+        error_log("[WPUserGenerator] Added demo user meta");
 
         error_log("[WPUserGenerator] === User creation completed successfully ===");
         error_log("[WPUserGenerator] Created user: {$data['display_name']} with ID: {$user_id}");

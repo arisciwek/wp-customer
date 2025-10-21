@@ -244,6 +244,164 @@ AutoEntityCreator::handleBranchCreated()
 
 ---
 
+## TODO-2167: Branch Generator Runtime Flow Sync ✅ COMPLETED
+
+**Status**: ✅ COMPLETED
+**Created**: 2025-01-21
+**Completed**: 2025-01-21
+**Priority**: High
+**Related To**: TODO-2165 (Auto Entity Creation Hooks), TODO-2166 (Customer Generator Sync)
+
+**Summary**: Transform Generate Branch dari bulk data creation tool menjadi **Automated Testing Tool** untuk production code. Generate sekarang FULLY mensimulasikan real form submission dengan complete validation chain - bukan bypass via demo methods.
+
+**Paradigm Shift**:
+```
+❌ OLD (Task-2166): Generate = Bulk data tool (use createDemoBranch, bypass validation)
+✅ NEW (Task-2167): Generate = Automated testing tool (replicate store(), full validation)
+```
+
+**Problem**:
+- Generate bypass validation (createDemoBranch skip permission checks)
+- Demo code polluting production Controller (createDemoBranch method)
+- Not testing real permission system (canCreateBranch)
+- Not testing real validation rules (validateCreate, validateBranchTypeCreate)
+- Not testing real user creation flow (used WPUserGenerator instead of wp_insert_user)
+- Missing CLI context handling (no current user for permission checks)
+
+**Solution**:
+- ✅ Created `createBranchViaRuntimeFlow()` method in BranchDemoData (Demo namespace only)
+- ✅ Replicated EXACT 8-step flow from `BranchController::store()` line-by-line
+- ✅ Added `wp_set_current_user()` untuk simulate logged-in customer owner (CLI context)
+- ✅ Replaced WPUserGenerator dengan `wp_insert_user()` (match production)
+- ✅ Full validation chain: permission → sanitization → validation → business rules
+- ✅ All cabang branches have `inspector_id=NULL` (correct runtime behavior)
+- ✅ Zero production code pollution (all demo logic in Demo namespace)
+
+**Implementation**: See [TODO/TODO-2167-branch-generator-runtime-flow.md](TODO/TODO-2167-branch-generator-runtime-flow.md)
+
+**Files Modified**:
+- `src/Database/Demo/BranchDemoData.php`:
+  - Added `createBranchViaRuntimeFlow()` (lines 402-510)
+  - Updated `generateCabangBranches()` (lines 516-588)
+  - Updated `generateExtraBranches()` (lines 591-733)
+
+**Runtime Flow (8 Steps from BranchController::store)**:
+```
+BranchDemoData::generateCabangBranches()
+  ↓ wp_set_current_user($customer->user_id)  // Simulate logged-in customer
+  ↓ createBranchViaRuntimeFlow()
+
+    === EXACT REPLICA of BranchController::store() ===
+
+    ↓ Step 1: Validate customer_id
+    ↓ Step 2: BranchValidator::canCreateBranch() [PERMISSION CHECK]
+    ↓ Step 3: sanitize_text_field(), sanitize_email() [SANITIZATION]
+    ↓ Step 4: BranchModel::getAgencyAndDivisionIds() [LOCATION ASSIGNMENT]
+    ↓ Step 5: BranchValidator::validateCreate() [DATA VALIDATION]
+    ↓ Step 6: BranchValidator::validateBranchTypeCreate() [BUSINESS RULES]
+    ↓ Step 7: wp_insert_user(role='customer_branch_admin') [USER CREATION]
+    ↓ Step 8: BranchModel::create() [BRANCH CREATION]
+      ↓ Auto-generate branch code
+      ↓ INSERT into database
+      ↓ Invalidate cache
+      ↓ Hook: wp_customer_branch_created
+        ↓ AutoEntityCreator::handleBranchCreated()
+          ↓ Auto-create Employee
+
+  ↓ wp_set_current_user(0)  // Restore anonymous user
+```
+
+**Benefits**:
+- ✅ **Full Validation Testing**: Tests permission checks, data validation, business rules
+- ✅ **Zero Production Pollution**: All demo code stays in Demo namespace
+- ✅ **Real User Creation Flow**: Uses `wp_insert_user()` like production (not WPUserGenerator)
+- ✅ **CLI Context Handled**: `wp_set_current_user()` simulates logged-in state
+- ✅ **Complete HOOK Chain**: Tests employee auto-creation via HOOK
+- ✅ **Correct Runtime Behavior**: `inspector_id=NULL` for all cabang (matches form submission)
+
+**Test Results**:
+- ✅ 48 total branches (10 pusat via HOOK + 38 cabang via runtime flow)
+- ✅ 10 pusat branches dengan inspector_id filled (HOOK auto-assigns)
+- ✅ 38 cabang branches dengan inspector_id NULL (runtime flow doesn't assign)
+  - 20 regular cabang (2 per customer)
+  - 18 extra cabang (for testing assign inspector)
+- ✅ All branches (48/48) have agency_id and division_id (100%)
+- ✅ All users created with role `customer_branch_admin` (via wp_insert_user)
+- ✅ 100% validation coverage (all 6 validation steps executed)
+
+**Key Changes**:
+1. **NEW METHOD: createBranchViaRuntimeFlow()**: Replicate exact BranchController::store() logic in Demo namespace
+2. **generateCabangBranches()**: Use runtime flow with wp_set_current_user(), remove WPUserGenerator
+3. **generateExtraBranches()**: Use runtime flow, inspector_id naturally NULL
+4. **User Creation**: wp_insert_user(role='customer_branch_admin') instead of WPUserGenerator + add_role()
+5. **Permission**: wp_set_current_user() + try/finally for CLI context
+
+**Runtime Flow Validation**:
+- ✅ **Permission Check**: `canCreateBranch()` validates current_user owns customer
+- ✅ **Input Sanitization**: All fields sanitized (sanitize_text_field, sanitize_email)
+- ✅ **Data Validation**: `validateCreate()` checks required fields, types, formats
+- ✅ **Business Rules**: `validateBranchTypeCreate()` checks pusat limit, duplicate names
+- ✅ **Location Assignment**: `getAgencyAndDivisionIds()` with fallback logic
+- ✅ **User Creation**: `wp_insert_user()` creates real WP user with correct role
+- ✅ **Branch Creation**: `BranchModel::create()` with code generation and cache invalidation
+- ✅ **HOOK Execution**: `wp_customer_branch_created` fires employee auto-creation
+
+**Inspector Assignment Behavior**:
+- `BranchModel::getInspectorId($provinsi_id, $division_id)`:
+  - Try: Get inspector from division (role=pengawas/pengawas_spesialis)
+  - Fallback: Get inspector from agency (province-level)
+  - Return: `user_id` OR `NULL`
+
+**Related Tasks**:
+- TODO-2165: Auto Entity Creation Hooks (prerequisite - HOOK system)
+- TODO-2166: Customer Generator Sync (prerequisite - customer reg_type tracking)
+
+### Review-01: Production Code Cleanup & Inspector Assignment ✅ COMPLETED
+
+**Status**: ✅ COMPLETED
+**Date**: 21 Oktober 2025
+
+**Issues Addressed**:
+1. ✅ Demo code pollution in production (createDemoBranch method)
+2. ✅ Incorrect role pattern (single role vs dual-role)
+3. ✅ Missing inspector assignment simulation
+
+**Key Changes**:
+
+**Issue 1 - Production Cleanup**:
+- Removed `createDemoBranch()` method from `BranchController.php` (lines 739-774)
+- Production code now 100% clean from demo logic
+
+**Issue 2 - Dual-Role Pattern**:
+- **Production**: `BranchController::store()` now uses `'customer'` base role + `add_role('customer_branch_admin')`
+- **Demo**: `BranchDemoData::createBranchViaRuntimeFlow()` matches production pattern
+- All plugin users get base role `'customer'` + specific roles via `add_role()`
+
+**Issue 3 - Inspector Assignment**:
+- Added `auto_assign_inspector` parameter to `createBranchViaRuntimeFlow()`
+- Regular cabang branches: Auto-assign via `BranchModel::getInspectorId()`
+- Extra cabang branches: Keep `inspector_id=NULL` for testing assign feature
+- Reuses existing division-first lookup with province fallback logic
+
+**Test Results**:
+```
+type   | total | with_inspector | without_inspector
+-------|-------|----------------|------------------
+pusat  | 10    | 10             | 0
+cabang | 40    | 20             | 20
+```
+- 10 pusat: 100% with inspector (HOOK auto-assigns)
+- 20 regular cabang: 100% with inspector (auto-assigned)
+- 20 extra cabang: 100% NULL (for testing)
+
+**Files Modified**:
+- `src/Controllers/Branch/BranchController.php` - Removed demo method, fixed role pattern
+- `src/Database/Demo/BranchDemoData.php` - Added inspector assignment, fixed role pattern
+
+**Documentation**: See [TODO/TODO-2167-review-01.md](TODO/TODO-2167-review-01.md)
+
+---
+
 ## TODO-2166-OLD: Platform Access to Branch and Employee DataTables ✅ COMPLETED
 
 **Status**: ✅ COMPLETED

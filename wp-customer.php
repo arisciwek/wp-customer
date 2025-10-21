@@ -129,6 +129,11 @@ class WPCustomer {
         $auto_entity_creator = new \WPCustomer\Handlers\AutoEntityCreator();
         add_action('wp_customer_created', [$auto_entity_creator, 'handleCustomerCreated'], 10, 2);
         add_action('wp_customer_branch_created', [$auto_entity_creator, 'handleBranchCreated'], 10, 2);
+
+        // Task-2167 Review-01: Branch deletion cleanup hooks
+        $branch_cleanup_handler = new \WPCustomer\Handlers\BranchCleanupHandler();
+        add_action('wp_customer_branch_before_delete', [$branch_cleanup_handler, 'handleBeforeDelete'], 10, 2);
+        add_action('wp_customer_branch_deleted', [$branch_cleanup_handler, 'handleAfterDelete'], 10, 3);
     }
 
     /**
