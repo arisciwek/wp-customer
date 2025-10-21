@@ -1043,38 +1043,6 @@ public function createPdfButton() {
         }
     }
 
-    /**
-     * Create demo customer with fixed ID
-     * Supports fixed ID and override existing data
-     *
-     * @param array $data Customer data with fixed ID
-     * @return bool Success status
-     */
-    public function createDemoCustomer(array $data): bool {
-        try {
-            // Debug log input
-            $this->debug_log('Creating demo customer with data: ' . print_r($data, true));
-
-            // Create via model (will trigger wp_customer_created hook)
-            $created = $this->model->createDemoData($data);
-
-            if (!$created) {
-                throw new \Exception('Failed to create demo customer');
-            }
-
-            // Clear relevant caches
-            $this->cache->invalidateCustomerCache($data['id']);
-            $this->cache->delete('customer_total_count', get_current_user_id());
-            $this->cache->invalidateDataTableCache('customer_list');
-
-            return true;
-
-        } catch (\Exception $e) {
-            $this->debug_log('Error creating demo customer: ' . $e->getMessage());
-            throw $e;
-        }
-    }
-
     public function getStats() {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');

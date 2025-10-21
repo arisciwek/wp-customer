@@ -134,6 +134,11 @@ class WPCustomer {
         $branch_cleanup_handler = new \WPCustomer\Handlers\BranchCleanupHandler();
         add_action('wp_customer_branch_before_delete', [$branch_cleanup_handler, 'handleBeforeDelete'], 10, 2);
         add_action('wp_customer_branch_deleted', [$branch_cleanup_handler, 'handleAfterDelete'], 10, 3);
+
+        // Task-2168: Customer deletion cleanup hooks
+        $customer_cleanup_handler = new \WPCustomer\Handlers\CustomerCleanupHandler();
+        add_action('wp_customer_before_delete', [$customer_cleanup_handler, 'handleBeforeDelete'], 10, 2);
+        add_action('wp_customer_deleted', [$customer_cleanup_handler, 'handleAfterDelete'], 10, 3);
     }
 
     /**

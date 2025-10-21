@@ -598,33 +598,99 @@
         return $result;
     }
 
+    /**
+     * Delete customer with soft/hard delete logic and HOOKs
+     *
+     * Production: Soft delete (status='inactive')
+     * Demo: Hard delete (actual DELETE from database)
+     *
+     * HOOKs fired:
+     * - wp_customer_before_delete: Before deletion for validation
+     * - wp_customer_deleted: After deletion for cascade cleanup
+     *
+     * @param int $id Customer ID to delete
+     * @return bool Success status
+     */
     public function delete(int $id): bool {
         global $wpdb;
-        
-        // Store the current customer data before deletion (for cache invalidation)
+
+        // 1. Get customer data before deletion
         $customer = $this->find($id);
         if (!$customer) {
             return false; // Customer not found
         }
 
-        $result = $wpdb->delete(
-            $this->table,
-            ['id' => $id],
-            ['%d']
-        );
+        // 2. Convert customer object to array for HOOK
+        $customer_data = [
+            'id' => $customer->id,
+            'code' => $customer->code,
+            'name' => $customer->name,
+            'npwp' => $customer->npwp ?? null,
+            'nib' => $customer->nib ?? null,
+            'status' => $customer->status,
+            'user_id' => $customer->user_id,
+            'provinsi_id' => $customer->provinsi_id ?? null,
+            'regency_id' => $customer->regency_id ?? null,
+            'reg_type' => $customer->reg_type ?? 'self',
+            'created_by' => $customer->created_by ?? null,
+            'created_at' => $customer->created_at ?? null,
+            'updated_at' => $customer->updated_at ?? null
+        ];
 
+        // 3. Fire before delete HOOK (for validation)
+        do_action('wp_customer_before_delete', $id, $customer_data);
+
+        // 4. Check if hard delete is enabled (reuse branch setting for consistency)
+        $settings = get_option('wp_customer_general_options', []);
+        $is_hard_delete = isset($settings['enable_hard_delete_branch']) &&
+                         $settings['enable_hard_delete_branch'] === true;
+
+        // 5. Perform delete (soft or hard)
+        if ($is_hard_delete) {
+            // Hard delete - actual DELETE from database (for demo data)
+            error_log("[CustomerModel] Hard deleting customer {$id} ({$customer_data['name']})");
+
+            $result = $wpdb->delete(
+                $this->table,
+                ['id' => $id],
+                ['%d']
+            );
+        } else {
+            // Soft delete - set status to 'inactive' (for production)
+            error_log("[CustomerModel] Soft deleting customer {$id} ({$customer_data['name']})");
+
+            $result = $wpdb->update(
+                $this->table,
+                [
+                    'status' => 'inactive',
+                    'updated_at' => current_time('mysql')
+                ],
+                ['id' => $id],
+                ['%s', '%s'],
+                ['%d']
+            );
+        }
+
+        // 6. If successful, fire after delete HOOK and invalidate cache
         if ($result !== false) {
+            // Fire after delete HOOK (for cascade cleanup)
+            do_action('wp_customer_deleted', $id, $customer_data, $is_hard_delete);
+
             // Clear all related cache
             $this->cache->invalidateCustomerCache($id);
-            
+
             // If customer had a user_id, clear that user's cache too
             if (!empty($customer->user_id)) {
                 $this->cache->delete('user_customers', $customer->user_id);
             }
 
+            error_log("[CustomerModel] Customer {$id} deleted successfully (hard_delete: " .
+                     ($is_hard_delete ? 'YES' : 'NO') . ")");
+
             return true;
         }
 
+        error_log("[CustomerModel] Failed to delete customer {$id}");
         return false;
     }
 
