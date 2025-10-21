@@ -1,246 +1,205 @@
 # TODO List for WP Customer Plugin
 
-## TODO-2165: Auto Entity Creation Hooks ✅ COMPLETED
 
-**Status**: ✅ COMPLETED (Including Form Sync & jQuery Validation Fix)
-**Created**: 2025-01-20
-**Hook Completed**: 2025-01-20
-**Form Sync Started**: 2025-01-21
-**Form Sync Completed**: 2025-01-21
+## TODO-2169: WP Customer HOOK Documentation Planning 📋 PLANNING
+
+**Status**: 📋 PLANNING (Will execute after TODO-2170)
+**Created**: 2025-10-21
 **Priority**: High
-**Related To**: Demo Data Generators
+**Related To**: TODO-2165, TODO-2166, TODO-2167, TODO-2168 (All HOOK implementations)
 
-**Summary**: Implement hook system untuk otomatis membuat entity terkait saat customer/branch dibuat. Menjamin konsistensi user_id antara customer, branch, dan employee.
+**Summary**: Design comprehensive HOOK documentation untuk wp-customer plugin. Membantu external developers memahami available HOOKs, parameters, use cases, dan integration patterns tanpa harus grep codebase.
 
-**Problem**:
-- Customer/branch bisa dibuat tanpa employee (manual process)
-- user_id tidak terjamin konsisten antara customer → branch → employee
-- Demo data generators melakukan ini manual
+**Current Issues**:
+- **Naming Ambiguity**: `wp_customer_before_delete` (delete what?) vs `wp_customer_branch_deleted` (clear)
+- **No Central Documentation**: Developers must grep codebase to find HOOKs
+- **Inconsistent Patterns**: Customer (short) vs Branch (explicit entity) vs Employee (TBD)
+- **No Extension Guide**: Missing examples, parameters, use cases
 
-**Solution**:
-- Hook 1: `wp_customer_created` → Auto-create branch pusat ✅
-- Hook 2: `wp_customer_branch_created` → Auto-create employee ✅
-- Handler: `AutoEntityCreator` class ✅
-- 2 Registration Scenarios: Self Register + Register by Admin ✅
+**Goals**:
+1. Create Naming Convention Standard - Consistent, unambiguous HOOK names
+2. Document All Existing HOOKs - Complete reference dengan parameters
+3. Provide Integration Examples - Real-world use cases
+4. Establish Deprecation Strategy - Handle breaking changes gracefully
+5. Design for Future Growth - Employee, Invoice, dll
 
-**Implementation**: See [TODO/TODO-2165-auto-entity-creation.md](TODO/TODO-2165-auto-entity-creation.md)
+**Final Decisions** ✅:
 
-**Files Modified** (HOOK Implementation):
-- `src/Models/Customer/CustomerModel.php` - Add hook ✅
-- `src/Models/Branch/BranchModel.php` - Add hook ✅
-- `src/Handlers/AutoEntityCreator.php` - New handler class ✅
-- `wp-customer.php` - Register hooks ✅
+**1. HOOK Naming Convention**: ✅ **Option A Selected**
+- Pattern: `wp_customer_{entity}_{action}`
+- Example: `wp_customer_customer_created`, `wp_customer_branch_created`, `wp_customer_employee_created`
+- Rationale: 100% konsisten, tidak ambigu, scalable untuk entities baru
 
-**Self Register Scenario**:
-- `src/Views/templates/auth/register.php` - Add location fields ✅
-- `src/Controllers/Auth/CustomerRegistrationHandler.php` - Use CustomerModel ✅
-- Flow: user_id = created_by (self-created) ✅
+**2. Backward Compatibility**: ✅ **Graceful Deprecation**
+- Fire both old + new HOOKs with `_deprecated_hook()` notice
+- Migration timeline: v1.1.0 (dual), v1.2.0 (warnings), v2.0.0 (remove old)
 
-**Register by Admin Scenario**:
-- `src/Views/templates/forms/create-customer-form.php` - Add email field ✅
-- `src/Controllers/CustomerController.php` - Create WP user from email ✅
-- Flow: user_id ≠ created_by (admin creates for customer) ✅
+**3. Employee HOOKs**: ✅ **YES - Add for Consistency**
+- Includes: `wp_customer_employee_created`, `_updated`, `_before_delete`, `_deleted`
+- Reason: Consistency, extensibility, audit trail, future-proof
 
-**Test Results**: ✅ HOOK verified with customer ID 212 - all entities created successfully
+**4. Documentation Timing**: ✅ **After TODO-2170**
+- Complete employee implementation first
+- Then write comprehensive docs (30+ hooks: 13 actions + 21+ filters)
 
-**Post-Implementation Issues** (Form Synchronization):
-1. ❌ **Database Schema**: Field `reg_type` missing (comment only)
-2. ❌ **Field Name Bug**: CustomerRegistrationHandler uses `'register'` instead of `'reg_type'`
-3. ❌ **Validator Duplication**: NPWP/NIB formatting logic scattered (CustomerValidator + CustomerRegistrationHandler)
-4. ⚠️ **Form Duplication**: register.php vs create-customer-form.php (consider single form component)
-
-**Form Sync Action Items**:
-- [ ] Add `reg_type` field to CustomersDB schema
-- [ ] Update CustomerModel `create()` to handle `reg_type`
-- [ ] Update CustomerController `createCustomerWithUser()` to set `reg_type`
-- [ ] Fix CustomerRegistrationHandler field name (`'register'` → `'reg_type'`)
-- [ ] Move `format_npwp()` & `validate_npwp()` to CustomerValidator
-- [ ] Add `formatNib()` & `validateNibFormat()` to CustomerValidator
-- [ ] Update CustomerRegistrationHandler to use validator methods
-- [ ] Update CustomerController to use validator methods
-- [ ] Test NPWP formatting consistency
-- [ ] Test `reg_type` tracking (self vs by_admin)
-
-**Files to Modify** (Form Sync):
-- `src/Database/Tables/CustomersDB.php` - Add `reg_type` field
-- `src/Models/Customer/CustomerModel.php` - Handle `reg_type` in create()
-- `src/Controllers/CustomerController.php` - Set `reg_type = 'by_admin'`
-- `src/Controllers/Auth/CustomerRegistrationHandler.php` - Fix field name, use validator
-- `src/Validators/CustomerValidator.php` - Add NPWP/NIB formatter methods
-
-**Impact**:
-- **Functional**: HOOK system works ✅, data tracking complete with `reg_type` ✅
-- **Consistency**: NPWP formatting GUARANTEED sama (single component) ✅
-- **Audit Trail**: Can distinguish self-register vs admin-created customers ✅
-
-### Single Form Component Refactoring (2025-01-21)
-
-**Problem**: Dua form (`register.php` vs `create-customer-form.php`) dengan fields yang HARUS sama tapi defined terpisah → risk inkonsistensi
-
-**Solution**: Shared component pattern dengan single source of truth
-
-**Files Created**:
-- `src/Views/templates/partials/customer-form-fields.php` - Shared component
-- `assets/js/customer-form-auto-format.js` - Unified NPWP/NIB auto-format
-
-**Files Updated**:
-- `register.php` (v1.0.0 → v1.1.0) - Use shared component dengan mode 'self-register'
-- `create-customer-form.php` (v1.0.0 → v1.1.0) - Use shared component dengan mode 'admin-create'
-- `class-dependencies.php` - Register auto-format JS
-
-**Benefits**:
-- ✅ Zero duplication - fields defined 1x, used 2x
-- ✅ Guaranteed consistency - update 1 file affects all forms
-- ✅ NPWP/NIB auto-format unified (XX.XXX.XXX.X-XXX.XXX untuk NPWP, 13 digits untuk NIB)
-- ✅ Real-time validation feedback
-- ✅ ~290 lines eliminated from templates
-- ✅ Future-proof - no risk ketinggalan update
-
-**Architecture**:
+**Documentation Structure**:
 ```
-partials/customer-form-fields.php (shared component)
-├─ Mode: 'self-register' → register.php
-└─ Mode: 'admin-create' → create-customer-form.php
+/docs/hooks/
+  ├── README.md                  # Overview + Index
+  ├── naming-convention.md       # HOOK naming rules
+  ├── customer-hooks.md          # Customer entity HOOKs
+  ├── branch-hooks.md            # Branch entity HOOKs
+  ├── employee-hooks.md          # Employee entity HOOKs
+  ├── migration-guide.md         # Upgrading from old HOOKs
+  └── examples/
+      ├── 01-extend-customer-creation.md
+      ├── 02-extend-branch-deletion.md
+      ├── 03-custom-validation.md
+      ├── 04-audit-logging.md
+      └── 05-cascade-operations.md
 ```
 
-### jQuery Validation Fix (2025-01-21)
+**4. Employee HOOKs Decision**:
+- **Recommendation**: YES, add for consistency and extensibility
+- Proposed: `wp_customer_employee_created`, `_updated`, `_before_delete`, `_deleted`
+- Reason: Consistency, audit trail, external sync, future-proof
 
-**Problem**: Admin create form error - "Uncaught TypeError: Cannot read properties of undefined (reading 'call'). Exception occurred when checking element customer-npwp, check the 'pattern' method"
+**HOOK Inventory**:
 
-**Root Cause**: jQuery Validate doesn't have built-in `pattern` method - it requires additional-methods plugin
+**Actions (Event Triggers)**:
+- Customer: `wp_customer_created`, `_before_delete`, `_deleted`, `_cleanup_completed` (existing)
+- Branch: `wp_customer_branch_created`, `_before_delete`, `_deleted`, `_cleanup_completed` (existing)
+- Employee: `wp_customer_employee_created`, `_updated`, `_before_delete`, `_deleted` (planned)
 
-**Solution**: Created custom `npwpFormat` validator method
+**Filters (Data Modification)** - 21+ discovered:
+- Access Control (4): `wp_customer_access_type`, `wp_branch_access_type`, etc (CRITICAL for wp-app-core)
+- Permissions (6): `wp_customer_can_view_employee`, `can_create_branch`, etc
+- Query Modification (4): `wp_company_datatable_where`, etc
+- UI/UX (4): `wp_company_detail_tabs`, `wp_customer_enable_export`, etc
+- Integration (2): `wilayah_indonesia_get_province_options`, etc
+- System (1): `wp_customer_debug_mode`
 
-**Files Modified**:
-- `assets/js/customer/create-customer-form.js` (v1.0.0 → v1.1.0)
-  - Added `addCustomValidators()` method with custom `npwpFormat` validator
-  - Updated validation rules: `pattern` → `npwpFormat`
-  - Added `required: true` for NPWP and NIB fields
-  - Removed duplicate rules/messages objects (lines 369-388)
-  - Updated version and changelog
+**Implementation Plan**:
+- Phase 1: Planning (TODO-2169) ✅ CURRENT
+- Phase 2: Employee Implementation (TODO-2170)
+- Phase 3: Write Documentation (After TODO-2170)
+- Phase 4: Code Migration (If renaming HOOKs)
 
-**Benefits**:
-- ✅ No dependency on additional-methods plugin
-- ✅ Full control over validation logic
-- ✅ Consistent error messages
-- ✅ Both forms (public & admin) now working correctly
+**Documentation Templates**:
 
-**Test Results**:
-- ✅ Public register form: Working (HOOK verified)
-- ✅ Admin create form: jQuery validation error FIXED
+**For Actions**:
+- Fired When / Location / Version
+- Parameters (with data structure table)
+- Use Cases (4-5 real scenarios)
+- Example Code (copy-paste ready)
+- Related Hooks / Debugging / Security / Performance
 
-### Username Field Addition (2025-01-21)
-
-**Problem**: Admin create form auto-generates username from email, producing unfriendly usernames (e.g., `test_02` from `test_02@mail.com`)
-
-**Root Cause**: Form doesn't have username field - relies on auto-generation from email prefix
-
-**Solution**: Added "Nama Admin" field to admin create form (consistent with public register)
-
-**Files Modified**:
-- `src/Views/templates/partials/customer-form-fields.php` (v1.0.0 → v1.1.0)
-  - Added username field for admin-create mode (before email field)
-  - Label: "Nama Admin", allows letters, numbers, spaces
-  - Max length: 60 characters
-
-- `assets/js/customer/create-customer-form.js` (v1.1.0 → v1.2.0)
-  - Added username to formData
-  - Added username validation rules (required, min 3, max 60)
-  - Added username validation messages in Indonesian
-
-- `src/Controllers/CustomerController.php` (v1.0.1 → v1.0.2)
-  - Updated `store()` to accept username from POST
-  - Updated `createCustomerWithUser()` to validate provided username
-  - Removed auto-generation logic from email prefix
-  - Password still auto-generated (Option B)
+**For Filters**:
+- Purpose / Location / Version / Hook Type
+- Parameters & Return Value (with types)
+- Use Cases & Integration Examples
+- Common Mistakes (must return value!)
+- Security / Performance / wp-app-core Integration
 
 **Benefits**:
-- ✅ Consistent form fields between public & admin create
-- ✅ Admin has full control over username
-- ✅ Friendly usernames (e.g., "john doe", "test dua")
-- ✅ No more underscores/special chars from email
-- ✅ Better UX for admin users
+- ✅ External developers can integrate without asking
+- ✅ API contract documentation
+- ✅ Easier onboarding
+- ✅ Claude/AI quick reference
+- ✅ Prevent accidental breaking changes
 
-**Form Comparison After Fix**:
-| Field | Public Register | Admin Create (Before) | Admin Create (After) |
-|-------|----------------|----------------------|---------------------|
-| Username | ✓ (user input) | ✗ (auto-generated) | ✓ (admin input) |
-| Password | ✓ (user input) | ✗ (auto-generated) | ✗ (auto-generated) |
-| Email | ✓ | ✓ | ✓ |
-| Result | Fully controlled | Unfriendly username | Fully controlled |
+**Next Step**: Finalize naming convention decision, then proceed to TODO-2170 (Employee Implementation)
 
-**Test Results**:
-- ✅ Both forms now have username field
-- ✅ Admin can create friendly usernames
-- ✅ Password still auto-generated and displayed (Option B)
-- ✅ HOOK system works with both forms
-
-See [TODO/TODO-2165-auto-entity-creation.md](TODO/TODO-2165-auto-entity-creation.md) for complete details
+See [TODO/TODO-2169-hook-documentation-planning.md](TODO/TODO-2169-hook-documentation-planning.md) for complete planning document
 
 ---
 
-## TODO-2166: Demo Generator HOOK Synchronization ✅ COMPLETED
+## TODO-2168: Customer Generator Runtime Flow Synchronization ✅ COMPLETED
 
 **Status**: ✅ COMPLETED
-**Created**: 2025-01-21
-**Completed**: 2025-01-21
+**Created**: 2025-10-21
+**Completed**: 2025-10-21
 **Priority**: High
-**Related To**: TODO-2165 (Auto Entity Creation Hooks)
+**Related To**: TODO-2167 (Branch Runtime Flow), TODO-2165 (Auto Entity Creation Hooks)
 
-**Summary**: Sinkronisasi Demo Customer Generator dengan HOOK system Task-2165. Hapus custom methods `createDemoCustomer()` dan `createDemoData()`, gunakan standard `CustomerModel::create()` yang sudah trigger HOOK. Tambahkan field `reg_type = 'generate'` untuk tracking.
+**Summary**: Revisi Generate Customer agar sinkron dengan runtime flow pattern dari Task-2167. Transform dari bulk data tool menjadi **automated testing tool** yang mensimulasikan exact production flow: CustomerValidator → CustomerModel → HOOK → cascade entity creation.
 
 **Problem**:
-- Demo data bypasses HOOK system (uses custom createDemoData with raw SQL)
-- Branch pusat dan employee TIDAK auto-created via HOOK
-- Inconsistent dengan production flow (self-register & admin-create)
-- Custom methods perlu maintained separately (code duplication)
-- Missing `reg_type` field untuk tracking demo data source
+- Production code pollution: `createDemoCustomer()` method in CustomerController
+- Bypassed validation: Uses `CustomerModel::createDemoData()` instead of standard `create()`
+- Raw SQL cleanup: Direct DELETE queries instead of Model-based deletion
+- No cascade testing: Cleanup doesn't test HOOK-based cascade delete
+- Fixed IDs: Uses static IDs instead of auto-increment
 
 **Solution**:
-- ✅ Tambahkan `reg_type => 'generate'` ke demo customer data
-- ✅ Gunakan standard `CustomerModel::create()` instead of `createDemoCustomer()`
-- ✅ Hapus custom methods `createDemoCustomer()` dan `createDemoData()`
-- ✅ HOOK automatically creates branch pusat + employee
-- ✅ Use auto-increment IDs (no fixed IDs)
-- ✅ Code reduction: -99 lines total
+- ✅ Created CustomerCleanupHandler for cascade delete (branches → employees)
+- ✅ Updated CustomerModel::delete() with soft/hard delete logic + HOOKs
+- ✅ Registered customer delete HOOKs in wp-customer.php
+- ✅ Created createCustomerViaRuntimeFlow() method in CustomerDemoData
+- ✅ Removed createDemoCustomer() from CustomerController (production cleanup)
+- ✅ HOOK-based cleanup with temporary hard delete mode
+- ✅ Auto-increment IDs (no conflicts)
 
-**Implementation**: See [TODO/TODO-2166-demo-generator-sync.md](TODO/TODO-2166-demo-generator-sync.md)
+**Implementation**: See [TODO/TODO-2168-runtime-flow-customer-generator.md](TODO/TODO-2168-runtime-flow-customer-generator.md)
 
 **Files Modified**:
-- `src/Database/Demo/CustomerDemoData.php` - Add reg_type, use CustomerModel::create()
-- `src/Controllers/CustomerController.php` - Removed createDemoCustomer() (-28 lines)
-- `src/Models/Customer/CustomerModel.php` - Removed createDemoData() and getFormatArray() (-71 lines)
+- `src/Handlers/CustomerCleanupHandler.php` (NEW)
+- `src/Models/Customer/CustomerModel.php` - Updated delete() method
+- `src/Controllers/CustomerController.php` - Removed createDemoCustomer()
+- `src/Database/Demo/CustomerDemoData.php` - Runtime flow + HOOK cleanup
+- `wp-customer.php` - Registered customer delete HOOKs
 
-**Flow Baru**:
+**Runtime Flow**:
 ```
-CustomerDemoData
-  ↓ Call CustomerModel::create($data)
-CustomerModel::create()
-  ↓ Hook: wp_customer_created
-AutoEntityCreator::handleCustomerCreated()
-  ↓ Auto-create Branch Pusat
-  ↓ Hook: wp_customer_branch_created
-AutoEntityCreator::handleBranchCreated()
-  ↓ Auto-create Employee
-  ✅ Complete entity chain
+CustomerDemoData::createCustomerViaRuntimeFlow()
+  ↓ CustomerValidator::validateForm()
+  ↓ CustomerModel::create()
+    ↓ Hook: wp_customer_created
+      ↓ AutoEntityCreator::handleCustomerCreated()
+        ↓ Auto-create Branch Pusat
+          ↓ Hook: wp_customer_branch_created
+            ↓ AutoEntityCreator::handleBranchCreated()
+              ↓ Auto-create Employee
+              ✅ Complete entity chain
+```
+
+**Cascade Delete Chain**:
+```
+CustomerModel::delete($id)
+  ↓ Hook: wp_customer_deleted
+    ↓ CustomerCleanupHandler::handleAfterDelete()
+      ↓ BranchModel::delete() (for each branch)
+        ↓ Hook: wp_customer_branch_deleted
+          ↓ BranchCleanupHandler::handleAfterDelete()
+            ↓ Delete/deactivate employees
+            ✅ Complete cascade
+```
+
+**Test Results**:
+```
+✓ 10 customers created via runtime flow
+✓ 10 branches (pusat) auto-created via HOOK
+✓ 10 employees auto-created via HOOK
+✓ All branches have inspector_id assigned (from Task-2167)
+✓ Cascade delete working correctly (HOOK-based)
 ```
 
 **Benefits**:
-- ✅ Consistent dengan production flow
-- ✅ Single source of truth untuk customer creation
-- ✅ Simplified codebase (-99 lines)
-- ✅ Auto-increment IDs (simpler management)
-- ✅ `reg_type` tracking: self, by_admin, generate
+- ✅ Zero production code pollution
+- ✅ Full validation coverage (name, NPWP, NIB, location)
+- ✅ Complete HOOK testing (create + delete)
+- ✅ Production-grade flow (exact same as runtime)
+- ✅ Simplified management (Model-based, no raw SQL)
 
-**Test Plan**:
-- [ ] Generate 10 demo customers via WP-CLI
-- [ ] Verify each has `reg_type = 'generate'`
-- [ ] Verify each auto-creates 1 branch pusat
-- [ ] Verify each auto-creates 1 employee
-- [ ] Verify HOOK debug logs show entity creation chain
+**HOOK System**:
+- Customer Creation: `wp_customer_created` → triggers branch pusat creation
+- Customer Deletion: `wp_customer_before_delete`, `wp_customer_deleted` → cascade cleanup
+- Setting: `enable_hard_delete_branch` (soft delete production, hard delete demo)
 
 **Related Tasks**:
 - TODO-2165: Auto Entity Creation Hooks (prerequisite)
+- TODO-2166: Customer Generator Sync (initial cleanup)
+- TODO-2167: Branch Generator Runtime Flow (pattern reference)
 
 ---
 
@@ -399,6 +358,71 @@ cabang | 40    | 20             | 20
 - `src/Database/Demo/BranchDemoData.php` - Added inspector assignment, fixed role pattern
 
 **Documentation**: See [TODO/TODO-2167-review-01.md](TODO/TODO-2167-review-01.md)
+
+---
+
+## TODO-2166: Demo Generator HOOK Synchronization ✅ COMPLETED
+
+**Status**: ✅ COMPLETED
+**Created**: 2025-01-21
+**Completed**: 2025-01-21
+**Priority**: High
+**Related To**: TODO-2165 (Auto Entity Creation Hooks)
+
+**Summary**: Sinkronisasi Demo Customer Generator dengan HOOK system Task-2165. Hapus custom methods `createDemoCustomer()` dan `createDemoData()`, gunakan standard `CustomerModel::create()` yang sudah trigger HOOK. Tambahkan field `reg_type = 'generate'` untuk tracking.
+
+**Problem**:
+- Demo data bypasses HOOK system (uses custom createDemoData with raw SQL)
+- Branch pusat dan employee TIDAK auto-created via HOOK
+- Inconsistent dengan production flow (self-register & admin-create)
+- Custom methods perlu maintained separately (code duplication)
+- Missing `reg_type` field untuk tracking demo data source
+
+**Solution**:
+- ✅ Tambahkan `reg_type => 'generate'` ke demo customer data
+- ✅ Gunakan standard `CustomerModel::create()` instead of `createDemoCustomer()`
+- ✅ Hapus custom methods `createDemoCustomer()` dan `createDemoData()`
+- ✅ HOOK automatically creates branch pusat + employee
+- ✅ Use auto-increment IDs (no fixed IDs)
+- ✅ Code reduction: -99 lines total
+
+**Implementation**: See [TODO/TODO-2166-demo-generator-sync.md](TODO/TODO-2166-demo-generator-sync.md)
+
+**Files Modified**:
+- `src/Database/Demo/CustomerDemoData.php` - Add reg_type, use CustomerModel::create()
+- `src/Controllers/CustomerController.php` - Removed createDemoCustomer() (-28 lines)
+- `src/Models/Customer/CustomerModel.php` - Removed createDemoData() and getFormatArray() (-71 lines)
+
+**Flow Baru**:
+```
+CustomerDemoData
+  ↓ Call CustomerModel::create($data)
+CustomerModel::create()
+  ↓ Hook: wp_customer_created
+AutoEntityCreator::handleCustomerCreated()
+  ↓ Auto-create Branch Pusat
+  ↓ Hook: wp_customer_branch_created
+AutoEntityCreator::handleBranchCreated()
+  ↓ Auto-create Employee
+  ✅ Complete entity chain
+```
+
+**Benefits**:
+- ✅ Consistent dengan production flow
+- ✅ Single source of truth untuk customer creation
+- ✅ Simplified codebase (-99 lines)
+- ✅ Auto-increment IDs (simpler management)
+- ✅ `reg_type` tracking: self, by_admin, generate
+
+**Test Plan**:
+- [ ] Generate 10 demo customers via WP-CLI
+- [ ] Verify each has `reg_type = 'generate'`
+- [ ] Verify each auto-creates 1 branch pusat
+- [ ] Verify each auto-creates 1 employee
+- [ ] Verify HOOK debug logs show entity creation chain
+
+**Related Tasks**:
+- TODO-2165: Auto Entity Creation Hooks (prerequisite)
 
 ---
 
@@ -596,6 +620,185 @@ if (current_user_can('view_XXX_detail')) return true;
   - **Breaking Change**: Hook filters removed (if external plugins relied on them)
   - **Migration**: External plugins should use WordPress capability system instead
   - (see TODO/TODO-2165-refactor-hook-naming-convention.md for detailed history)
+
+---
+
+## TODO-2165: Auto Entity Creation Hooks ✅ COMPLETED
+
+**Status**: ✅ COMPLETED (Including Form Sync & jQuery Validation Fix)
+**Created**: 2025-01-20
+**Hook Completed**: 2025-01-20
+**Form Sync Started**: 2025-01-21
+**Form Sync Completed**: 2025-01-21
+**Priority**: High
+**Related To**: Demo Data Generators
+
+**Summary**: Implement hook system untuk otomatis membuat entity terkait saat customer/branch dibuat. Menjamin konsistensi user_id antara customer, branch, dan employee.
+
+**Problem**:
+- Customer/branch bisa dibuat tanpa employee (manual process)
+- user_id tidak terjamin konsisten antara customer → branch → employee
+- Demo data generators melakukan ini manual
+
+**Solution**:
+- Hook 1: `wp_customer_created` → Auto-create branch pusat ✅
+- Hook 2: `wp_customer_branch_created` → Auto-create employee ✅
+- Handler: `AutoEntityCreator` class ✅
+- 2 Registration Scenarios: Self Register + Register by Admin ✅
+
+**Implementation**: See [TODO/TODO-2165-auto-entity-creation.md](TODO/TODO-2165-auto-entity-creation.md)
+
+**Files Modified** (HOOK Implementation):
+- `src/Models/Customer/CustomerModel.php` - Add hook ✅
+- `src/Models/Branch/BranchModel.php` - Add hook ✅
+- `src/Handlers/AutoEntityCreator.php` - New handler class ✅
+- `wp-customer.php` - Register hooks ✅
+
+**Self Register Scenario**:
+- `src/Views/templates/auth/register.php` - Add location fields ✅
+- `src/Controllers/Auth/CustomerRegistrationHandler.php` - Use CustomerModel ✅
+- Flow: user_id = created_by (self-created) ✅
+
+**Register by Admin Scenario**:
+- `src/Views/templates/forms/create-customer-form.php` - Add email field ✅
+- `src/Controllers/CustomerController.php` - Create WP user from email ✅
+- Flow: user_id ≠ created_by (admin creates for customer) ✅
+
+**Test Results**: ✅ HOOK verified with customer ID 212 - all entities created successfully
+
+**Post-Implementation Issues** (Form Synchronization):
+1. ❌ **Database Schema**: Field `reg_type` missing (comment only)
+2. ❌ **Field Name Bug**: CustomerRegistrationHandler uses `'register'` instead of `'reg_type'`
+3. ❌ **Validator Duplication**: NPWP/NIB formatting logic scattered (CustomerValidator + CustomerRegistrationHandler)
+4. ⚠️ **Form Duplication**: register.php vs create-customer-form.php (consider single form component)
+
+**Form Sync Action Items**:
+- [ ] Add `reg_type` field to CustomersDB schema
+- [ ] Update CustomerModel `create()` to handle `reg_type`
+- [ ] Update CustomerController `createCustomerWithUser()` to set `reg_type`
+- [ ] Fix CustomerRegistrationHandler field name (`'register'` → `'reg_type'`)
+- [ ] Move `format_npwp()` & `validate_npwp()` to CustomerValidator
+- [ ] Add `formatNib()` & `validateNibFormat()` to CustomerValidator
+- [ ] Update CustomerRegistrationHandler to use validator methods
+- [ ] Update CustomerController to use validator methods
+- [ ] Test NPWP formatting consistency
+- [ ] Test `reg_type` tracking (self vs by_admin)
+
+**Files to Modify** (Form Sync):
+- `src/Database/Tables/CustomersDB.php` - Add `reg_type` field
+- `src/Models/Customer/CustomerModel.php` - Handle `reg_type` in create()
+- `src/Controllers/CustomerController.php` - Set `reg_type = 'by_admin'`
+- `src/Controllers/Auth/CustomerRegistrationHandler.php` - Fix field name, use validator
+- `src/Validators/CustomerValidator.php` - Add NPWP/NIB formatter methods
+
+**Impact**:
+- **Functional**: HOOK system works ✅, data tracking complete with `reg_type` ✅
+- **Consistency**: NPWP formatting GUARANTEED sama (single component) ✅
+- **Audit Trail**: Can distinguish self-register vs admin-created customers ✅
+
+### Single Form Component Refactoring (2025-01-21)
+
+**Problem**: Dua form (`register.php` vs `create-customer-form.php`) dengan fields yang HARUS sama tapi defined terpisah → risk inkonsistensi
+
+**Solution**: Shared component pattern dengan single source of truth
+
+**Files Created**:
+- `src/Views/templates/partials/customer-form-fields.php` - Shared component
+- `assets/js/customer-form-auto-format.js` - Unified NPWP/NIB auto-format
+
+**Files Updated**:
+- `register.php` (v1.0.0 → v1.1.0) - Use shared component dengan mode 'self-register'
+- `create-customer-form.php` (v1.0.0 → v1.1.0) - Use shared component dengan mode 'admin-create'
+- `class-dependencies.php` - Register auto-format JS
+
+**Benefits**:
+- ✅ Zero duplication - fields defined 1x, used 2x
+- ✅ Guaranteed consistency - update 1 file affects all forms
+- ✅ NPWP/NIB auto-format unified (XX.XXX.XXX.X-XXX.XXX untuk NPWP, 13 digits untuk NIB)
+- ✅ Real-time validation feedback
+- ✅ ~290 lines eliminated from templates
+- ✅ Future-proof - no risk ketinggalan update
+
+**Architecture**:
+```
+partials/customer-form-fields.php (shared component)
+├─ Mode: 'self-register' → register.php
+└─ Mode: 'admin-create' → create-customer-form.php
+```
+
+### jQuery Validation Fix (2025-01-21)
+
+**Problem**: Admin create form error - "Uncaught TypeError: Cannot read properties of undefined (reading 'call'). Exception occurred when checking element customer-npwp, check the 'pattern' method"
+
+**Root Cause**: jQuery Validate doesn't have built-in `pattern` method - it requires additional-methods plugin
+
+**Solution**: Created custom `npwpFormat` validator method
+
+**Files Modified**:
+- `assets/js/customer/create-customer-form.js` (v1.0.0 → v1.1.0)
+  - Added `addCustomValidators()` method with custom `npwpFormat` validator
+  - Updated validation rules: `pattern` → `npwpFormat`
+  - Added `required: true` for NPWP and NIB fields
+  - Removed duplicate rules/messages objects (lines 369-388)
+  - Updated version and changelog
+
+**Benefits**:
+- ✅ No dependency on additional-methods plugin
+- ✅ Full control over validation logic
+- ✅ Consistent error messages
+- ✅ Both forms (public & admin) now working correctly
+
+**Test Results**:
+- ✅ Public register form: Working (HOOK verified)
+- ✅ Admin create form: jQuery validation error FIXED
+
+### Username Field Addition (2025-01-21)
+
+**Problem**: Admin create form auto-generates username from email, producing unfriendly usernames (e.g., `test_02` from `test_02@mail.com`)
+
+**Root Cause**: Form doesn't have username field - relies on auto-generation from email prefix
+
+**Solution**: Added "Nama Admin" field to admin create form (consistent with public register)
+
+**Files Modified**:
+- `src/Views/templates/partials/customer-form-fields.php` (v1.0.0 → v1.1.0)
+  - Added username field for admin-create mode (before email field)
+  - Label: "Nama Admin", allows letters, numbers, spaces
+  - Max length: 60 characters
+
+- `assets/js/customer/create-customer-form.js` (v1.1.0 → v1.2.0)
+  - Added username to formData
+  - Added username validation rules (required, min 3, max 60)
+  - Added username validation messages in Indonesian
+
+- `src/Controllers/CustomerController.php` (v1.0.1 → v1.0.2)
+  - Updated `store()` to accept username from POST
+  - Updated `createCustomerWithUser()` to validate provided username
+  - Removed auto-generation logic from email prefix
+  - Password still auto-generated (Option B)
+
+**Benefits**:
+- ✅ Consistent form fields between public & admin create
+- ✅ Admin has full control over username
+- ✅ Friendly usernames (e.g., "john doe", "test dua")
+- ✅ No more underscores/special chars from email
+- ✅ Better UX for admin users
+
+**Form Comparison After Fix**:
+| Field | Public Register | Admin Create (Before) | Admin Create (After) |
+|-------|----------------|----------------------|---------------------|
+| Username | ✓ (user input) | ✗ (auto-generated) | ✓ (admin input) |
+| Password | ✓ (user input) | ✗ (auto-generated) | ✗ (auto-generated) |
+| Email | ✓ | ✓ | ✓ |
+| Result | Fully controlled | Unfriendly username | Fully controlled |
+
+**Test Results**:
+- ✅ Both forms now have username field
+- ✅ Admin can create friendly usernames
+- ✅ Password still auto-generated and displayed (Option B)
+- ✅ HOOK system works with both forms
+
+See [TODO/TODO-2165-auto-entity-creation.md](TODO/TODO-2165-auto-entity-creation.md) for complete details
 
 ---
 
