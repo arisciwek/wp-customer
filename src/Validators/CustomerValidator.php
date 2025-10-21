@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Validators
- * @version     1.0.6
+ * @version     1.0.7
  * @author      arisciwek
  *
  * Path: src/Validators/CustomerValidator.php
@@ -17,8 +17,15 @@
  * Dependencies:
  * - WPCustomer\Models\CustomerModel untuk data checks
  * - WordPress Capability API
- * 
+ *
  * Changelog:
+ * 1.0.7 - 2025-01-21 (Task-2165 Form Sync)
+ * - Added formatNpwp() public method (moved from CustomerRegistrationHandler)
+ * - Added validateNpwpFormat() public method (refactored from private validation)
+ * - Added formatNib() public method for NIB formatting
+ * - Added validateNibFormat() public method for NIB format validation
+ * - Centralized NPWP/NIB formatting and validation (Single Source of Truth)
+ *
  * 1.0.6 - 2025-10-19 (TODO-2165 Refactor)
  * - Simplified permission checks using direct capability validation (Opsi 1)
  * - Removed hook filters (wp_customer_user_can_view_customer, etc.) - not needed
@@ -90,8 +97,8 @@ class CustomerValidator {
         // NPWP validation (optional)
         if (!empty($data['npwp'])) {
             $npwp = trim($data['npwp']);
-            if (!preg_match('/^\d{2}\.\d{3}\.\d{3}\.\d{1}-\d{3}\.\d{3}$/', $npwp)) {
-                $errors['npwp'] = __('Format NPWP tidak valid.', 'wp-customer');
+            if (!$this->validateNpwpFormat($npwp)) {
+                $errors['npwp'] = __('Format NPWP tidak valid. Format: XX.XXX.XXX.X-XXX.XXX', 'wp-customer');
             }
             if ($this->model->existsByNPWP($data['npwp'], $id)) {
                 $errors['npwp'] = __('NPWP sudah terdaftar.', 'wp-customer');
@@ -101,8 +108,8 @@ class CustomerValidator {
         // NIB validation (optional)
         if (!empty($data['nib'])) {
             $nib = trim($data['nib']);
-            if (!preg_match('/^\d{13}$/', $nib)) {
-                $errors['nib'] = __('Format NIB tidak valid.', 'wp-customer');
+            if (!$this->validateNibFormat($nib)) {
+                $errors['nib'] = __('Format NIB tidak valid. Harus 13 digit.', 'wp-customer');
             }
             if ($this->model->existsByNIB($data['nib'], $id)) {
                 $errors['nib'] = __('NIB sudah terdaftar.', 'wp-customer');
@@ -348,6 +355,65 @@ class CustomerValidator {
         }
 
         return $errors;
+    }
+
+    /**
+     * Format NPWP to standard format: XX.XXX.XXX.X-XXX.XXX
+     *
+     * @param string $npwp Raw NPWP (15 digits)
+     * @return string Formatted NPWP
+     */
+    public function formatNpwp(string $npwp): string {
+        // Remove non-digits
+        $numbers = preg_replace('/\D/', '', $npwp);
+
+        // Format to XX.XXX.XXX.X-XXX.XXX
+        if (strlen($numbers) === 15) {
+            return substr($numbers, 0, 2) . '.' .
+                   substr($numbers, 2, 3) . '.' .
+                   substr($numbers, 5, 3) . '.' .
+                   substr($numbers, 8, 1) . '-' .
+                   substr($numbers, 9, 3) . '.' .
+                   substr($numbers, 12, 3);
+        }
+
+        return $npwp;
+    }
+
+    /**
+     * Validate NPWP format
+     *
+     * @param string $npwp NPWP to validate
+     * @return bool True if valid format
+     */
+    public function validateNpwpFormat(string $npwp): bool {
+        // Check if NPWP matches the format: XX.XXX.XXX.X-XXX.XXX
+        return (bool) preg_match('/^\d{2}\.\d{3}\.\d{3}\.\d{1}\-\d{3}\.\d{3}$/', $npwp);
+    }
+
+    /**
+     * Format NIB to clean 13 digits
+     *
+     * @param string $nib Raw NIB
+     * @return string Formatted NIB (13 digits only)
+     */
+    public function formatNib(string $nib): string {
+        // Remove non-digits
+        $numbers = preg_replace('/\D/', '', $nib);
+
+        // Return first 13 digits
+        return substr($numbers, 0, 13);
+    }
+
+    /**
+     * Validate NIB format
+     *
+     * @param string $nib NIB to validate
+     * @return bool True if valid format (13 digits)
+     */
+    public function validateNibFormat(string $nib): bool {
+        // Check if NIB is exactly 13 digits
+        return (bool) preg_match('/^\d{13}$/', $nib);
     }
 
 }

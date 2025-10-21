@@ -4,7 +4,7 @@
 *
 * @package     WP_Customer
 * @subpackage  Controllers
-* @version     1.0.0
+* @version     1.0.2
 * @author      arisciwek
 *
 * Path: /wp-customer/src/Controllers/CustomerController.php
@@ -16,12 +16,18 @@
 *              Menyediakan endpoints untuk DataTables server-side.
 *
 * Changelog:
+* 1.0.2 - 2025-01-21
+* - Added username field to admin create form (instead of auto-generate from email)
+* - Admin can now input friendly username (e.g., "test dua" instead of "test_02")
+* - Password still auto-generated and displayed (Option B)
+* - Consistent with public register form (both have username field)
+* - Improved UX: more control over username creation
+*
 * 1.0.1 - 2024-12-08
 * - Added view_own_customer permission check in show method
 * - Enhanced permission validation
 * - Improved error handling for permission checks
 *
-* Changelog:
 * 1.0.0 - 2024-12-03 14:30:00
 * - Refactor CRUD responses untuk panel kanan
 * - Added cache integration di semua endpoints
@@ -650,53 +656,187 @@ public function createPdfButton() {
     }
 
     /**
-     * Handle customer creation request
+     * Create customer with WordPress user (Task-2165: Shared method)
+     * Can be called from store() or CustomerRegistrationHandler
+     *
+     * @param array $data Customer data (name, email, npwp, nib, provinsi_id, regency_id, status)
+     *                    Optional: username, password (for self-register)
+     *                    Optional: user_id (if user already created)
+     * @param int|null $created_by User ID who creates (null = self-created)
+     * @return array ['customer_id' => X, 'user_id' => Y, 'message' => 'Success']
+     * @throws \Exception on failure
+     */
+    public function createCustomerWithUser(array $data, ?int $created_by = null): array {
+        // Validate email
+        $email = isset($data['email']) ? sanitize_email($data['email']) : '';
+        if (empty($email)) {
+            throw new \Exception(__('Email wajib diisi', 'wp-customer'));
+        }
+
+        // Track if credentials were auto-generated
+        $credentials_generated = false;
+        $generated_username = null;
+        $generated_password = null;
+
+        // Check if user_id already provided (user already created)
+        if (isset($data['user_id']) && $data['user_id']) {
+            $user_id = (int)$data['user_id'];
+        } else {
+            // Check if email already exists
+            if (email_exists($email)) {
+                throw new \Exception(__('Email sudah terdaftar', 'wp-customer'));
+            }
+
+            // Check if username and password provided
+            if (isset($data['username']) && !empty($data['username'])) {
+                // Username provided (self-register OR admin create with username field)
+                $username = sanitize_user($data['username']);
+
+                // Validate username
+                if (empty($username)) {
+                    throw new \Exception(__('Username tidak valid', 'wp-customer'));
+                }
+
+                // Check if username already exists
+                $original_username = $username;
+                $counter = 1;
+                while (username_exists($username)) {
+                    $username = $original_username . $counter;
+                    $counter++;
+                }
+
+                // Check if password provided (self-register) or auto-generate (admin create)
+                if (isset($data['password']) && !empty($data['password'])) {
+                    $password = $data['password'];
+                } else {
+                    $password = wp_generate_password(12, true, true);
+
+                    // Mark that credentials were auto-generated (password only)
+                    $credentials_generated = true;
+                    $generated_username = $username;
+                    $generated_password = $password;
+                }
+            } else {
+                // No username provided - should not happen with current forms
+                throw new \Exception(__('Username wajib diisi', 'wp-customer'));
+            }
+
+            // Create WordPress user
+            $user_id = wp_create_user($username, $password, $email);
+
+            if (is_wp_error($user_id)) {
+                throw new \Exception($user_id->get_error_message());
+            }
+
+            // Set roles
+            $user = new \WP_User($user_id);
+            $user->set_role('customer');
+            $user->add_role('customer_admin');
+
+            // Send notification email
+            wp_new_user_notification($user_id, null, 'user');
+        }
+
+        // Prepare customer data
+        $customer_data = [
+            'name' => sanitize_text_field($data['name']),
+            'npwp' => isset($data['npwp']) ? sanitize_text_field($data['npwp']) : null,
+            'nib' => isset($data['nib']) ? sanitize_text_field($data['nib']) : null,
+            'status' => isset($data['status']) ? sanitize_text_field($data['status']) : 'active',
+            'provinsi_id' => isset($data['provinsi_id']) ? (int)$data['provinsi_id'] : null,
+            'regency_id' => isset($data['regency_id']) ? (int)$data['regency_id'] : null,
+            'user_id' => $user_id,
+            'reg_type' => isset($data['reg_type']) ? sanitize_text_field($data['reg_type']) : ($created_by ? 'by_admin' : 'self'),
+            'created_by' => $created_by ?? $user_id // If null, self-created
+        ];
+
+        // Validate form data
+        $form_errors = $this->validator->validateForm($customer_data);
+        if (!empty($form_errors)) {
+            // Rollback: delete user if validation fails
+            require_once(ABSPATH . 'wp-admin/includes/user.php');
+            wp_delete_user($user_id);
+            throw new \Exception(implode(', ', $form_errors));
+        }
+
+        // Create customer via model (triggers hooks)
+        $customer_id = $this->model->create($customer_data);
+        if (!$customer_id) {
+            // Rollback: delete user if customer creation fails
+            require_once(ABSPATH . 'wp-admin/includes/user.php');
+            wp_delete_user($user_id);
+            throw new \Exception('Failed to create customer');
+        }
+
+        $result = [
+            'customer_id' => $customer_id,
+            'user_id' => $user_id,
+            'message' => __('Customer berhasil ditambahkan. Email aktivasi telah dikirim.', 'wp-customer')
+        ];
+
+        // Include generated credentials if they were auto-generated
+        if ($credentials_generated) {
+            $result['credentials_generated'] = true;
+            $result['username'] = $generated_username;
+            $result['password'] = $generated_password;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Handle customer creation request (AJAX endpoint)
      * Endpoint: wp_ajax_create_customer
+     * Task-2165: Refactored to use shared createCustomerWithUser method
      */
     public function store() {
         try {
-            error_log('Store method called'); // Debug 1
+            error_log('Store method called'); // Debug
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
+            // Check permission
             $permission_errors = $this->validator->validatePermission('create');
             if (!empty($permission_errors)) {
                 wp_send_json_error(['message' => reset($permission_errors)]);
                 return;
             }
 
+            // Prepare data for shared method
             $data = [
-                'name' => sanitize_text_field($_POST['name']),
-                'npwp' => isset($_POST['npwp']) ? sanitize_text_field($_POST['npwp']) : null,
-                'nib' => isset($_POST['nib']) ? sanitize_text_field($_POST['nib']) : null,
-                'status' => isset($_POST['status']) ? sanitize_text_field($_POST['status']) : 'active',
-                'provinsi_id' => isset($_POST['provinsi_id']) ? (int)$_POST['provinsi_id'] : null,
-                'regency_id' => isset($_POST['regency_id']) ? (int)$_POST['regency_id'] : null,
-                'user_id' => isset($_POST['user_id']) ? (int)$_POST['user_id'] : get_current_user_id(),
-                'created_by' => get_current_user_id()
+                'username' => $_POST['username'] ?? '',
+                'email' => $_POST['email'] ?? '',
+                'name' => $_POST['name'] ?? '',
+                'npwp' => !empty($_POST['npwp']) ? $this->validator->formatNpwp($_POST['npwp']) : null,
+                'nib' => !empty($_POST['nib']) ? $this->validator->formatNib($_POST['nib']) : null,
+                'provinsi_id' => $_POST['provinsi_id'] ?? null,
+                'regency_id' => $_POST['regency_id'] ?? null,
+                'status' => $_POST['status'] ?? 'active'
             ];
-    
-            error_log('Received data: ' . print_r($data, true)); // Debug 2
 
-            $form_errors = $this->validator->validateForm($data);
-            if (!empty($form_errors)) {
-                wp_send_json_error(['message' => implode(', ', $form_errors)]);
-                return;
-            }
+            // Call shared method (created_by = current admin)
+            $result = $this->createCustomerWithUser($data, get_current_user_id());
 
-            $id = $this->model->create($data);
-            if (!$id) {
-                throw new \Exception('Failed to create customer');
-            }
-            
-            error_log('Created customer ID: ' . $id); // Debug 3
+            error_log('Created customer ID: ' . $result['customer_id']); // Debug
 
-            $customer = $this->model->find($id);
-            error_log('Found customer: ' . print_r($customer, true)); // Debug 4
+            // Get customer data for response
+            $customer = $this->model->find($result['customer_id']);
 
-            wp_send_json_success([
-                'message' => __('Customer berhasil ditambahkan', 'wp-customer'),
+            // Prepare response
+            $response = [
+                'message' => $result['message'],
                 'data' => $customer
-            ]);
+            ];
+
+            // Include generated credentials if available (Option B)
+            if (isset($result['credentials_generated']) && $result['credentials_generated']) {
+                $response['credentials'] = [
+                    'username' => $result['username'],
+                    'password' => $result['password'],
+                    'email' => $_POST['email'] ?? ''
+                ];
+            }
+
+            wp_send_json_success($response);
 
         } catch (\Exception $e) {
             wp_send_json_error(['message' => $e->getMessage()]);
@@ -946,11 +1086,24 @@ public function createPdfButton() {
                 }
             }
 
-            $stats = [
-                'total_customers' => $this->model->getTotalCount(),
-                'total_branches' => $this->branchModel->getTotalCount($customer_id),
-                'total_employees' => $this->employeeModel->getTotalCount($customer_id)
-            ];
+            // Cache key based on customer_id and user access
+            $cache_key = 'customer_stats_' . $customer_id . '_' . get_current_user_id();
+            $cache_group = 'wp_customer';
+
+            // Try to get from cache
+            $stats = wp_cache_get($cache_key, $cache_group);
+
+            if (false === $stats) {
+                // Cache miss - get fresh data
+                $stats = [
+                    'total_customers' => $this->model->getTotalCount(),
+                    'total_branches' => $this->branchModel->getTotalCount($customer_id),
+                    'total_employees' => $this->employeeModel->getTotalCount($customer_id)
+                ];
+
+                // Cache for 5 minutes
+                wp_cache_set($cache_key, $stats, $cache_group, 300);
+            }
 
             wp_send_json_success($stats);
 

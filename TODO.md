@@ -1,5 +1,184 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2165: Auto Entity Creation Hooks ✅ COMPLETED
+
+**Status**: ✅ COMPLETED (Including Form Sync & jQuery Validation Fix)
+**Created**: 2025-01-20
+**Hook Completed**: 2025-01-20
+**Form Sync Started**: 2025-01-21
+**Form Sync Completed**: 2025-01-21
+**Priority**: High
+**Related To**: Demo Data Generators
+
+**Summary**: Implement hook system untuk otomatis membuat entity terkait saat customer/branch dibuat. Menjamin konsistensi user_id antara customer, branch, dan employee.
+
+**Problem**:
+- Customer/branch bisa dibuat tanpa employee (manual process)
+- user_id tidak terjamin konsisten antara customer → branch → employee
+- Demo data generators melakukan ini manual
+
+**Solution**:
+- Hook 1: `wp_customer_created` → Auto-create branch pusat ✅
+- Hook 2: `wp_customer_branch_created` → Auto-create employee ✅
+- Handler: `AutoEntityCreator` class ✅
+- 2 Registration Scenarios: Self Register + Register by Admin ✅
+
+**Implementation**: See [TODO/TODO-2165-auto-entity-creation.md](TODO/TODO-2165-auto-entity-creation.md)
+
+**Files Modified** (HOOK Implementation):
+- `src/Models/Customer/CustomerModel.php` - Add hook ✅
+- `src/Models/Branch/BranchModel.php` - Add hook ✅
+- `src/Handlers/AutoEntityCreator.php` - New handler class ✅
+- `wp-customer.php` - Register hooks ✅
+
+**Self Register Scenario**:
+- `src/Views/templates/auth/register.php` - Add location fields ✅
+- `src/Controllers/Auth/CustomerRegistrationHandler.php` - Use CustomerModel ✅
+- Flow: user_id = created_by (self-created) ✅
+
+**Register by Admin Scenario**:
+- `src/Views/templates/forms/create-customer-form.php` - Add email field ✅
+- `src/Controllers/CustomerController.php` - Create WP user from email ✅
+- Flow: user_id ≠ created_by (admin creates for customer) ✅
+
+**Test Results**: ✅ HOOK verified with customer ID 212 - all entities created successfully
+
+**Post-Implementation Issues** (Form Synchronization):
+1. ❌ **Database Schema**: Field `reg_type` missing (comment only)
+2. ❌ **Field Name Bug**: CustomerRegistrationHandler uses `'register'` instead of `'reg_type'`
+3. ❌ **Validator Duplication**: NPWP/NIB formatting logic scattered (CustomerValidator + CustomerRegistrationHandler)
+4. ⚠️ **Form Duplication**: register.php vs create-customer-form.php (consider single form component)
+
+**Form Sync Action Items**:
+- [ ] Add `reg_type` field to CustomersDB schema
+- [ ] Update CustomerModel `create()` to handle `reg_type`
+- [ ] Update CustomerController `createCustomerWithUser()` to set `reg_type`
+- [ ] Fix CustomerRegistrationHandler field name (`'register'` → `'reg_type'`)
+- [ ] Move `format_npwp()` & `validate_npwp()` to CustomerValidator
+- [ ] Add `formatNib()` & `validateNibFormat()` to CustomerValidator
+- [ ] Update CustomerRegistrationHandler to use validator methods
+- [ ] Update CustomerController to use validator methods
+- [ ] Test NPWP formatting consistency
+- [ ] Test `reg_type` tracking (self vs by_admin)
+
+**Files to Modify** (Form Sync):
+- `src/Database/Tables/CustomersDB.php` - Add `reg_type` field
+- `src/Models/Customer/CustomerModel.php` - Handle `reg_type` in create()
+- `src/Controllers/CustomerController.php` - Set `reg_type = 'by_admin'`
+- `src/Controllers/Auth/CustomerRegistrationHandler.php` - Fix field name, use validator
+- `src/Validators/CustomerValidator.php` - Add NPWP/NIB formatter methods
+
+**Impact**:
+- **Functional**: HOOK system works ✅, data tracking complete with `reg_type` ✅
+- **Consistency**: NPWP formatting GUARANTEED sama (single component) ✅
+- **Audit Trail**: Can distinguish self-register vs admin-created customers ✅
+
+### Single Form Component Refactoring (2025-01-21)
+
+**Problem**: Dua form (`register.php` vs `create-customer-form.php`) dengan fields yang HARUS sama tapi defined terpisah → risk inkonsistensi
+
+**Solution**: Shared component pattern dengan single source of truth
+
+**Files Created**:
+- `src/Views/templates/partials/customer-form-fields.php` - Shared component
+- `assets/js/customer-form-auto-format.js` - Unified NPWP/NIB auto-format
+
+**Files Updated**:
+- `register.php` (v1.0.0 → v1.1.0) - Use shared component dengan mode 'self-register'
+- `create-customer-form.php` (v1.0.0 → v1.1.0) - Use shared component dengan mode 'admin-create'
+- `class-dependencies.php` - Register auto-format JS
+
+**Benefits**:
+- ✅ Zero duplication - fields defined 1x, used 2x
+- ✅ Guaranteed consistency - update 1 file affects all forms
+- ✅ NPWP/NIB auto-format unified (XX.XXX.XXX.X-XXX.XXX untuk NPWP, 13 digits untuk NIB)
+- ✅ Real-time validation feedback
+- ✅ ~290 lines eliminated from templates
+- ✅ Future-proof - no risk ketinggalan update
+
+**Architecture**:
+```
+partials/customer-form-fields.php (shared component)
+├─ Mode: 'self-register' → register.php
+└─ Mode: 'admin-create' → create-customer-form.php
+```
+
+### jQuery Validation Fix (2025-01-21)
+
+**Problem**: Admin create form error - "Uncaught TypeError: Cannot read properties of undefined (reading 'call'). Exception occurred when checking element customer-npwp, check the 'pattern' method"
+
+**Root Cause**: jQuery Validate doesn't have built-in `pattern` method - it requires additional-methods plugin
+
+**Solution**: Created custom `npwpFormat` validator method
+
+**Files Modified**:
+- `assets/js/customer/create-customer-form.js` (v1.0.0 → v1.1.0)
+  - Added `addCustomValidators()` method with custom `npwpFormat` validator
+  - Updated validation rules: `pattern` → `npwpFormat`
+  - Added `required: true` for NPWP and NIB fields
+  - Removed duplicate rules/messages objects (lines 369-388)
+  - Updated version and changelog
+
+**Benefits**:
+- ✅ No dependency on additional-methods plugin
+- ✅ Full control over validation logic
+- ✅ Consistent error messages
+- ✅ Both forms (public & admin) now working correctly
+
+**Test Results**:
+- ✅ Public register form: Working (HOOK verified)
+- ✅ Admin create form: jQuery validation error FIXED
+
+### Username Field Addition (2025-01-21)
+
+**Problem**: Admin create form auto-generates username from email, producing unfriendly usernames (e.g., `test_02` from `test_02@mail.com`)
+
+**Root Cause**: Form doesn't have username field - relies on auto-generation from email prefix
+
+**Solution**: Added "Nama Admin" field to admin create form (consistent with public register)
+
+**Files Modified**:
+- `src/Views/templates/partials/customer-form-fields.php` (v1.0.0 → v1.1.0)
+  - Added username field for admin-create mode (before email field)
+  - Label: "Nama Admin", allows letters, numbers, spaces
+  - Max length: 60 characters
+
+- `assets/js/customer/create-customer-form.js` (v1.1.0 → v1.2.0)
+  - Added username to formData
+  - Added username validation rules (required, min 3, max 60)
+  - Added username validation messages in Indonesian
+
+- `src/Controllers/CustomerController.php` (v1.0.1 → v1.0.2)
+  - Updated `store()` to accept username from POST
+  - Updated `createCustomerWithUser()` to validate provided username
+  - Removed auto-generation logic from email prefix
+  - Password still auto-generated (Option B)
+
+**Benefits**:
+- ✅ Consistent form fields between public & admin create
+- ✅ Admin has full control over username
+- ✅ Friendly usernames (e.g., "john doe", "test dua")
+- ✅ No more underscores/special chars from email
+- ✅ Better UX for admin users
+
+**Form Comparison After Fix**:
+| Field | Public Register | Admin Create (Before) | Admin Create (After) |
+|-------|----------------|----------------------|---------------------|
+| Username | ✓ (user input) | ✗ (auto-generated) | ✓ (admin input) |
+| Password | ✓ (user input) | ✗ (auto-generated) | ✗ (auto-generated) |
+| Email | ✓ | ✓ | ✓ |
+| Result | Fully controlled | Unfriendly username | Fully controlled |
+
+**Test Results**:
+- ✅ Both forms now have username field
+- ✅ Admin can create friendly usernames
+- ✅ Password still auto-generated and displayed (Option B)
+- ✅ HOOK system works with both forms
+
+See [TODO/TODO-2165-auto-entity-creation.md](TODO/TODO-2165-auto-entity-creation.md) for complete details
+
+---
+
 ## TODO-2166: Platform Access to Branch and Employee DataTables ✅ COMPLETED
 
 **Status**: ✅ COMPLETED

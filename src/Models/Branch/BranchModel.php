@@ -193,6 +193,11 @@ class BranchModel {
             $this->invalidateAllDataTableCache('customer_branch_list', (int)$data['customer_id']);
         }
 
+        // Task-2165: Fire hook for auto-create employee
+        if ($branch_id) {
+            do_action('wp_customer_branch_created', $branch_id, $insertData);
+        }
+
         return $branch_id;
     }
 

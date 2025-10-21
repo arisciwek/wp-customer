@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS/Components
- * @version     1.0.0
+ * @version     1.2.0
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/components/create-customer-form.js
@@ -21,6 +21,18 @@
  * - WordPress AJAX API
  *
  * Changelog:
+ * 1.2.0 - 2025-01-21
+ * - Added username field to admin create form
+ * - Added username validation (required, min 3, max 60)
+ * - Send username to backend (consistent with public form)
+ *
+ * 1.1.0 - 2025-01-21
+ * - Fixed jQuery validation error for NPWP pattern
+ * - Added custom npwpFormat validator method
+ * - Added required validation for NPWP and NIB fields
+ * - Removed duplicate rules/messages objects
+ * - Added Option B credentials display
+ *
  * 1.0.0 - 2024-12-03
  * - Added proper form validation
  * - Added AJAX integration
@@ -30,7 +42,7 @@
  * - Added toast notifications
  * - Added panel integration
  *
- * Last modified: 2024-12-03 16:30:00
+ * Last modified: 2025-01-21 10:30:00
  */
 (function($) {
     'use strict';
@@ -43,8 +55,17 @@
             this.modal = $('#create-customer-modal');
             this.form = $('#create-customer-form');
 
+            this.addCustomValidators();
             this.bindEvents();
             this.initializeValidation();
+        },
+
+        addCustomValidators() {
+            // Add custom NPWP pattern validator
+            $.validator.addMethod('npwpFormat', function(value, element) {
+                if (!value) return true; // Let 'required' rule handle empty values
+                return /^\d{2}\.\d{3}\.\d{3}\.\d{1}-\d{3}\.\d{3}$/.test(value);
+            }, 'Format NPWP tidak valid. Format: XX.XXX.XXX.X-XXX.XXX');
         },
         
         initializeInputMasks() {
@@ -194,6 +215,8 @@
             const formData = {
                 action: 'create_customer',
                 nonce: wpCustomerData.nonce,
+                username: this.form.find('[name="username"]').val().trim(),
+                email: this.form.find('[name="email"]').val().trim(),
                 name: this.form.find('[name="name"]').val().trim(),
                 npwp: this.form.find('[name="npwp"]').val().trim(),
                 nib: this.form.find('[name="nib"]').val().trim(),
@@ -223,10 +246,34 @@
 
                 if (response.success) {
                     console.log('Success response data:', response.data); // Debug 4
-                    CustomerToast.success('Customer berhasil ditambahkan');
+
+                    // Check if credentials were auto-generated (Option B)
+                    if (response.data.credentials) {
+                        const creds = response.data.credentials;
+                        const message = `
+                            <div style="text-align: left; font-family: monospace;">
+                                <strong style="color: #28a745;">✓ Customer berhasil ditambahkan!</strong><br><br>
+                                <div style="background: #f8f9fa; padding: 12px; border-radius: 4px; border-left: 4px solid #007bff;">
+                                    <strong>Generated Credentials:</strong><br>
+                                    <strong>Email:</strong> ${creds.email}<br>
+                                    <strong>Username:</strong> <span style="color: #007bff;">${creds.username}</span><br>
+                                    <strong>Password:</strong> <span style="color: #dc3545;">${creds.password}</span>
+                                </div>
+                                <br>
+                                <small style="color: #6c757d;">
+                                    📧 Credentials telah dikirim via email ke customer.<br>
+                                    💡 Simpan password ini untuk referensi Anda.
+                                </small>
+                            </div>
+                        `;
+                        CustomerToast.success(message, 10000); // Show for 10 seconds
+                    } else {
+                        CustomerToast.success('Customer berhasil ditambahkan');
+                    }
+
                     this.hideModal();
                     $(document).trigger('customer:created', [response.data]);
-    
+
                     console.log('Triggered customer:created event'); // Debug 5
 
                 } else {
@@ -243,6 +290,15 @@
         initializeValidation() {
             this.form.validate({
                 rules: {
+                    username: {
+                        required: true,
+                        minlength: 3,
+                        maxlength: 60
+                    },
+                    email: {
+                        required: true,
+                        email: true
+                    },
                     name: {
                         required: true,
                         minlength: 3,
@@ -255,9 +311,11 @@
                         required: true
                     },
                     npwp: {
-                        pattern: /^\d{2}\.\d{3}\.\d{3}\.\d{1}-\d{3}\.\d{3}$/
+                        required: true,
+                        npwpFormat: true
                     },
                     nib: {
+                        required: true,
                         minlength: 13,
                         maxlength: 13,
                         digits: true
@@ -267,17 +325,27 @@
                     }
                 },
                 messages: {
+                    username: {
+                        required: 'Nama admin wajib diisi',
+                        minlength: 'Nama admin minimal 3 karakter',
+                        maxlength: 'Nama admin maksimal 60 karakter'
+                    },
+                    email: {
+                        required: 'Email wajib diisi',
+                        email: 'Format email tidak valid'
+                    },
                     name: {
                         required: 'Nama customer wajib diisi',
                         minlength: 'Nama customer minimal 3 karakter',
                         maxlength: 'Nama customer maksimal 100 karakter'
                     },
                     npwp: {
-                        pattern: 'Format NPWP tidak valid'
+                        required: 'NPWP wajib diisi'
                     },
                     nib: {
+                        required: 'NIB wajib diisi',
                         minlength: 'NIB harus 13 digit',
-                        maxlength: 'NIB harus 13 digit', 
+                        maxlength: 'NIB harus 13 digit',
                         digits: 'NIB hanya boleh berisi angka'
                     },
                     provinsi_id: {
@@ -332,26 +400,6 @@
             $regencySelect
                 .html('<option value="">Pilih Kabupaten/Kota</option>')
                 .prop('disabled', true);
-        },
-        rules: {
-            npwp: {
-                pattern: /^\d{2}\.\d{3}\.\d{3}\.\d{1}-\d{3}\.\d{3}$/
-            },
-            nib: {
-                minlength: 13,
-                maxlength: 13,
-                digits: true
-            }
-        },
-        messages: {
-            npwp: {
-                pattern: 'Format NPWP tidak valid'
-            },
-            nib: {
-                minlength: 'NIB harus 13 digit',
-                maxlength: 'NIB harus 13 digit', 
-                digits: 'NIB hanya boleh berisi angka'
-            }
         }
 
     };

@@ -70,7 +70,7 @@
          // Add messages
          messages.forEach(msg => {
              const p = document.createElement('p');
-             p.textContent = msg;
+             p.innerHTML = msg; // Support HTML content for formatted messages
              p.style.margin = '5px 0';
              toast.appendChild(p);
          });

@@ -46,6 +46,9 @@ class WP_Customer_Dependencies {
         if (get_query_var('wp_customer_register') !== '') {
             error_log('Enqueuing registration assets...');
 
+            // Enqueue wilayah handler untuk provinsi/regency select
+            $this->enqueue_wilayah_handler();
+
             // Register page specific style
             wp_enqueue_style(
                 'wp-customer-register',
@@ -57,7 +60,7 @@ class WP_Customer_Dependencies {
             // Enqueue styles
             wp_enqueue_style(
                 'wp-customer-form',
-                WP_CUSTOMER_URL . 'assets/css/customer-form.css',
+                WP_CUSTOMER_URL . 'assets/css/customer/customer-form.css',
                 [],
                 $this->version
             );
@@ -88,11 +91,20 @@ class WP_Customer_Dependencies {
                 true
             );
 
+            // Auto-format for NPWP/NIB
+            wp_enqueue_script(
+                'customer-form-auto-format',
+                WP_CUSTOMER_URL . 'assets/js/customer-form-auto-format.js',
+                ['jquery'],
+                $this->version,
+                true
+            );
+
             // Registration form handler
             wp_enqueue_script(
                 'wp-customer-register',
                 WP_CUSTOMER_URL . 'assets/js/auth/register.js',
-                ['jquery', 'jquery-validate', 'wp-customer-toast'],
+                ['jquery', 'jquery-validate', 'wp-customer-toast', 'customer-form-auto-format'],
                 $this->version,
                 true
             );
@@ -259,10 +271,14 @@ class WP_Customer_Dependencies {
 
         // Check if we're on the registration page
         if (get_query_var('wp_customer_register')) {
+            // Enqueue wilayah handler untuk provinsi/regency select
+            $this->enqueue_wilayah_handler();
+
             // Enqueue registration-specific scripts
             wp_enqueue_script('jquery-validate', 'https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js', ['jquery'], '1.19.5', true);
             wp_enqueue_script('wp-customer-toast', WP_CUSTOMER_URL . 'assets/js/customer/toast.js', ['jquery'], $this->version, true);
-            wp_enqueue_script('wp-customer-register', WP_CUSTOMER_URL . 'assets/js/auth/register.js', ['jquery', 'jquery-validate', 'wp-customer-toast'], $this->version, true);
+            wp_enqueue_script('customer-form-auto-format', WP_CUSTOMER_URL . 'assets/js/customer-form-auto-format.js', ['jquery'], $this->version, true);
+            wp_enqueue_script('wp-customer-register', WP_CUSTOMER_URL . 'assets/js/auth/register.js', ['jquery', 'jquery-validate', 'wp-customer-toast', 'customer-form-auto-format'], $this->version, true);
 
             // Localize script
             wp_localize_script('wp-customer-register', 'wpCustomerData', [
@@ -421,9 +437,10 @@ class WP_Customer_Dependencies {
 
 
             // Customer scripts - path fixed according to tree.md
+            wp_enqueue_script('customer-form-auto-format', WP_CUSTOMER_URL . 'assets/js/customer-form-auto-format.js', ['jquery'], $this->version, true);
             wp_enqueue_script('customer-datatable', WP_CUSTOMER_URL . 'assets/js/customer/customer-datatable.js', ['jquery', 'datatables', 'customer-toast'], $this->version, true);
-            wp_enqueue_script('create-customer-form', WP_CUSTOMER_URL . 'assets/js/customer/create-customer-form.js', ['jquery', 'jquery-validate', 'customer-toast'], $this->version, true);
-            wp_enqueue_script('edit-customer-form', WP_CUSTOMER_URL . 'assets/js/customer/edit-customer-form.js', ['jquery', 'jquery-validate', 'customer-toast'], $this->version, true);
+            wp_enqueue_script('create-customer-form', WP_CUSTOMER_URL . 'assets/js/customer/create-customer-form.js', ['jquery', 'jquery-validate', 'customer-toast', 'customer-form-auto-format'], $this->version, true);
+            wp_enqueue_script('edit-customer-form', WP_CUSTOMER_URL . 'assets/js/customer/edit-customer-form.js', ['jquery', 'jquery-validate', 'customer-toast', 'customer-form-auto-format'], $this->version, true);
 
             wp_enqueue_script('customer',
                 WP_CUSTOMER_URL . 'assets/js/customer/customer-script.js',

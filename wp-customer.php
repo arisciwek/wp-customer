@@ -124,6 +124,11 @@ class WPCustomer {
 
         // Custom role names for wp-customer roles
         add_filter('wp_app_core_role_display_name', [$this, 'get_role_display_name'], 10, 2);
+
+        // Task-2165: Auto entity creation hooks
+        $auto_entity_creator = new \WPCustomer\Handlers\AutoEntityCreator();
+        add_action('wp_customer_created', [$auto_entity_creator, 'handleCustomerCreated'], 10, 2);
+        add_action('wp_customer_branch_created', [$auto_entity_creator, 'handleBranchCreated'], 10, 2);
     }
 
     /**
