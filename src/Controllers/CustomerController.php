@@ -4,7 +4,7 @@
 *
 * @package     WP_Customer
 * @subpackage  Controllers
-* @version     1.0.10
+* @version     1.0.11
 * @author      arisciwek
 *
 * Path: /wp-customer/src/Controllers/CustomerController.php

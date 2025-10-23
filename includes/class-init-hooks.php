@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Includes
- * @version     1.0.10
+ * @version     1.0.11
  * @author      arisciwek
  *
  * Path: /wp-customer/includes/class-init-hooks.php

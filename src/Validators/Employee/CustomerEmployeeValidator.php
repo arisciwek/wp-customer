@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Validators/Employee
- * @version     1.0.10
+ * @version     1.0.11
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Validators/Employee/CustomerEmployeeValidator.php

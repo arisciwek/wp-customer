@@ -4,7 +4,7 @@
  * Path /wp-customer/src/Views/templates/settings/tab-membership-features.php
  * @package     WP_Customer
  * @subpackage  Views/Settings
- * @version     1.0.10
+ * @version     1.0.11
  */
 
 if (!defined('ABSPATH')) {

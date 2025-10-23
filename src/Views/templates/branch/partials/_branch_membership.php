@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Templates/Customer/Partials
- * @version     1.0.10
+ * @version     1.0.11
  * @author      arisciwek
  *
  * Description: Template for displaying customer membership information

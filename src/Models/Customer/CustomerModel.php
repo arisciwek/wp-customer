@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models
- * @version     1.0.10
+ * @version     1.0.11
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Customer/CustomerModel.php

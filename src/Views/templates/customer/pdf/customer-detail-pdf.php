@@ -4,7 +4,7 @@
  * 
  * @package     WP_Customer
  * @subpackage  Views/Templates/Customer/PDF
- * @version     1.0.10
+ * @version     1.0.11
  * 
  * Path: /wp-customer/src/Views/templates/customer/pdf/customer-detail-pdf.php
  */

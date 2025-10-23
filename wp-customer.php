@@ -3,22 +3,22 @@
  * Plugin Name: WP Customer
  * Plugin URI:
  * Description: Plugin untuk mengelola data Customer dan Cabangnya
- * Version: 1.0.10
+ * Version: 1.0.11
  * Author: arisciwek
- * Author URI: 
+ * Author URI:
  * License: GPL v2 or later
- * 
+ *
  * @package     WP_Customer
- * @version     1.0.10
+ * @version     1.0.11
  * @author      arisciwek
- * 
+ *
  * Path: /wp-customer/wp-customer.php
  */
 
 defined('ABSPATH') || exit;
 
 // Define plugin constants first, before anything else
-define('WP_CUSTOMER_VERSION', '1.0.10');
+define('WP_CUSTOMER_VERSION', '1.0.11');
 define('WP_CUSTOMER_FILE', __FILE__);
 define('WP_CUSTOMER_PATH', plugin_dir_path(__FILE__));
 define('WP_CUSTOMER_URL', plugin_dir_url(__FILE__));

@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Branch
- * @version     1.0.10
+ * @version     1.0.11
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Branch/BranchModel.php
@@ -988,14 +988,28 @@ class BranchModel {
             else if ($is_customer_employee) $access_type = 'customer_employee';
 
             // Apply access_type filter - allow plugins to modify access type
-            $access_type = apply_filters('wp_branch_access_type', $access_type, [
+            $context = [
                 'is_admin' => $is_admin,
                 'is_customer_admin' => $is_customer_admin,
                 'is_customer_branch_admin' => $is_customer_branch_admin,
                 'is_customer_employee' => $is_customer_employee,
                 'user_id' => $user_id,
                 'branch_id' => $branch_id
-            ]);
+            ];
+
+            // Fire NEW filter (v1.1.0+) - consistent naming
+            $access_type = apply_filters('wp_customer_branch_access_type', $access_type, $context);
+
+            // Fire OLD filter with deprecation notice (backward compatibility)
+            if (has_filter('wp_branch_access_type')) {
+                _deprecated_hook(
+                    'wp_branch_access_type',
+                    '1.1.0',
+                    'wp_customer_branch_access_type',
+                    'Please update your code to use the new standardized HOOK name for consistency with wp_customer_{entity}_{purpose} naming pattern.'
+                );
+                $access_type = apply_filters('wp_branch_access_type', $access_type, $context);
+            }
 
             // Generate appropriate cache key based on access_type
             if ($branch_id === 0) {
@@ -1068,7 +1082,19 @@ class BranchModel {
             }
 
             // Apply filters to allow extensions
-            $relation = apply_filters('wp_branch_user_relation', $relation, $branch_id, $user_id);
+            // Fire NEW filter (v1.1.0+) - consistent naming
+            $relation = apply_filters('wp_customer_branch_user_relation', $relation, $branch_id, $user_id);
+
+            // Fire OLD filter with deprecation notice (backward compatibility)
+            if (has_filter('wp_branch_user_relation')) {
+                _deprecated_hook(
+                    'wp_branch_user_relation',
+                    '1.1.0',
+                    'wp_customer_branch_user_relation',
+                    'Please update your code to use the new standardized HOOK name for consistency with wp_customer_{entity}_{purpose} naming pattern.'
+                );
+                $relation = apply_filters('wp_branch_user_relation', $relation, $branch_id, $user_id);
+            }
 
             // Add access_type to relation
             $relation['access_type'] = $access_type;
@@ -1103,7 +1129,7 @@ class BranchModel {
 
                 // LEVEL 3: Access Type Filter
                 error_log("  LEVEL 3 (Access Type Filter):");
-                error_log("    Filter: 'wp_branch_access_type'");
+                error_log("    Filter: 'wp_customer_branch_access_type'");
                 error_log("    Result: {$access_type}");
 
                 if ($access_type === 'agency' || $access_type === 'platform') {
@@ -1112,7 +1138,7 @@ class BranchModel {
                     // Display agency/platform context if available
                     if (isset($relation['agency_id'])) {
                         error_log("");
-                        error_log("  Context (from 'wp_branch_user_relation' filter):");
+                        error_log("  Context (from 'wp_customer_branch_user_relation' filter):");
                         error_log("    Agency: {$relation['agency_name']} (ID: {$relation['agency_id']})");
 
                         if (isset($relation['division_id']) && $relation['division_id']) {

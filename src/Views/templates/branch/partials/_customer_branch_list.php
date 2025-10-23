@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Templates/Branch/Partials
- * @version     1.0.10
+ * @version     1.0.11
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Views/templates/branch/partials/_branch_list.php
