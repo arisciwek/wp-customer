@@ -982,56 +982,80 @@
             $is_customer_branch_admin = false;
             $is_customer_employee = false;
 
+            // TODO-2173: Single query optimization (Task-2173)
+            // Replace 3 separate queries with 1 optimized query using LEFT JOINs
+
+            // Initialize relation data
+            $relation_data = null;
+
             if (!$is_admin) {
-                // Check if user is owner (lightweight query)
-                if ($customer_id > 0) {
-                    $is_customer_admin = (bool) $wpdb->get_var($wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers
-                        WHERE id = %d AND user_id = %d",
-                        $customer_id, $user_id
-                    ));
+                // Single query to check all user relations (customers, branches, employees)
+                $query = $wpdb->prepare("
+                    SELECT
+                        -- Role checks (boolean)
+                        CASE WHEN c.user_id IS NOT NULL THEN 1 ELSE 0 END as is_customer_admin,
+                        CASE WHEN b.user_id IS NOT NULL THEN 1 ELSE 0 END as is_customer_branch_admin,
+                        CASE
+                            WHEN ce.user_id IS NOT NULL
+                                 AND c.user_id IS NULL
+                                 AND b.user_id IS NULL
+                            THEN 1
+                            ELSE 0
+                        END as is_customer_employee,
+
+                        -- Customer Owner details
+                        c.id as owner_of_customer_id,
+                        c.name as owner_of_customer_name,
+
+                        -- Branch Admin details
+                        b.customer_id as branch_admin_of_customer_id,
+                        b.id as branch_admin_of_branch_id,
+                        b.name as branch_admin_of_branch_name,
+
+                        -- Employee details
+                        ce.customer_id as employee_of_customer_id,
+                        ce.branch_id as employee_of_branch_id,
+                        c_emp.name as employee_of_customer_name
+
+                    FROM (SELECT %d as uid, %d as cust_id) u
+
+                    -- LEFT JOIN customers (check ownership)
+                    LEFT JOIN {$wpdb->prefix}app_customers c
+                        ON c.user_id = u.uid
+                        AND (u.cust_id = 0 OR c.id = u.cust_id)
+                        AND c.status = 'active'
+
+                    -- LEFT JOIN branches (check branch admin)
+                    LEFT JOIN {$wpdb->prefix}app_customer_branches b
+                        ON b.user_id = u.uid
+                        AND (u.cust_id = 0 OR b.customer_id = u.cust_id)
+                        AND b.status = 'active'
+
+                    -- LEFT JOIN employees (check employee)
+                    LEFT JOIN {$wpdb->prefix}app_customer_employees ce
+                        ON ce.user_id = u.uid
+                        AND (u.cust_id = 0 OR ce.customer_id = u.cust_id)
+                        AND ce.status = 'active'
+                    LEFT JOIN {$wpdb->prefix}app_customers c_emp ON ce.customer_id = c_emp.id
+
+                    LIMIT 1
+                ",
+                    $user_id,      // uid in subquery
+                    $customer_id   // cust_id in subquery
+                );
+
+                $relation_data = $wpdb->get_row($query, ARRAY_A);
+
+                if ($relation_data) {
+                    // Convert integer booleans to PHP booleans
+                    $is_customer_admin = (bool) $relation_data['is_customer_admin'];
+                    $is_customer_branch_admin = (bool) $relation_data['is_customer_branch_admin'];
+                    $is_customer_employee = (bool) $relation_data['is_customer_employee'];
                 } else {
-                    $is_customer_admin = (bool) $wpdb->get_var($wpdb->prepare(
-                        "SELECT COUNT(*) FROM {$wpdb->prefix}app_customers
-                        WHERE user_id = %d LIMIT 1",
-                        $user_id
-                    ));
-                }
-
-                // Check if user is branch admin - only if not customer owner
-                if (!$is_customer_admin) {
-                    if ($customer_id > 0) {
-                        // Check if user is admin of any branch of this customer
-                        $is_customer_branch_admin = (bool) $wpdb->get_var($wpdb->prepare(
-                            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches
-                            WHERE customer_id = %d AND user_id = %d",
-                            $customer_id, $user_id
-                        ));
-                    } else {
-                        // General check - is user admin of any branch
-                        $is_customer_branch_admin = (bool) $wpdb->get_var($wpdb->prepare(
-                            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches
-                            WHERE user_id = %d LIMIT 1",
-                            $user_id
-                        ));
-                    }
-                }
-
-                // Check if user is employee - only if not owner and not branch admin
-                if (!$is_customer_admin && !$is_customer_branch_admin) {
-                    if ($customer_id > 0) {
-                        $is_customer_employee = (bool) $wpdb->get_var($wpdb->prepare(
-                            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees
-                            WHERE customer_id = %d AND user_id = %d AND status = 'active'",
-                            $customer_id, $user_id
-                        ));
-                    } else {
-                        $is_customer_employee = (bool) $wpdb->get_var($wpdb->prepare(
-                            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees
-                            WHERE user_id = %d AND status = 'active' LIMIT 1",
-                            $user_id
-                        ));
-                    }
+                    // No relation found
+                    $is_customer_admin = false;
+                    $is_customer_branch_admin = false;
+                    $is_customer_employee = false;
                 }
             }
 
@@ -1074,101 +1098,44 @@
                 error_log("CustomerModel::getUserRelation - Cache miss for access_type {$access_type} and customer {$customer_id}");
             }
 
-            // Build relation with values we already have
+            // Build relation array with data from single query (TODO-2173)
+            // All data already fetched in single query above - no additional queries needed
+
             $relation = [
                 'is_admin' => $is_admin,
                 'is_customer_admin' => $is_customer_admin,
                 'is_customer_branch_admin' => $is_customer_branch_admin,
                 'is_customer_employee' => $is_customer_employee,
-                'owner_of_customer_id' => null,
-                'owner_of_customer_name' => null,
-                'customer_branch_admin_of_customer_id' => null,
-                'customer_branch_admin_of_branch_name' => null,
-                'employee_of_customer_id' => null,
-                'employee_of_customer_name' => null
+                //
+                // TODO : tidak diguunakan lagi
+                //
+                //'owner_of_customer_id' => null,
+                //'owner_of_customer_name' => null,
+                //'customer_branch_admin_of_customer_id' => null,
+                //'customer_branch_admin_of_branch_name' => null,
+                //'employee_of_customer_id' => null,
+                //'employee_of_customer_name' => null
             ];
 
-            // Get additional details if user is owner (already know from lightweight query above)
-            if ($is_customer_admin) {
-                if ($customer_id > 0) {
-                    // Specific customer check - get customer name
-                    $customer = $this->find($customer_id);
-                    if ($customer) {
-                        $relation['owner_of_customer_id'] = $customer_id;
-                        $relation['owner_of_customer_name'] = $customer->name;
-                    }
-                } else {
-                    // General check - get owned customer details
-                    $customer = $wpdb->get_row($wpdb->prepare(
-                        "SELECT id, name FROM {$wpdb->prefix}app_customers
-                        WHERE user_id = %d
-                        LIMIT 1",
-                        $user_id
-                    ));
-
-                    if ($customer) {
-                        $relation['owner_of_customer_id'] = (int)$customer->id;
-                        $relation['owner_of_customer_name'] = $customer->name;
-                    }
+            // Populate detail fields from single query result
+            // TODO-2173: All data comes from single query - no additional queries needed
+            if ($relation_data) {
+                // Customer Owner details (if user is owner)
+                if ($is_customer_admin && $relation_data['owner_of_customer_id']) {
+                    $relation['owner_of_customer_id'] = (int) $relation_data['owner_of_customer_id'];
+                    $relation['owner_of_customer_name'] = $relation_data['owner_of_customer_name'];
                 }
-            }
 
-            // Get additional details if user is branch admin (already know from lightweight query above)
-            if ($is_customer_branch_admin) {
-                if ($customer_id > 0) {
-                    // Specific customer check - get branch details
-                    $branch_row = $wpdb->get_row($wpdb->prepare(
-                        "SELECT b.id, b.name as branch_name, b.customer_id
-                        FROM {$wpdb->prefix}app_customer_branches b
-                        WHERE b.customer_id = %d AND b.user_id = %d
-                        LIMIT 1",
-                        $customer_id, $user_id
-                    ));
-
-                    if ($branch_row) {
-                        $relation['customer_branch_admin_of_customer_id'] = (int)$branch_row->customer_id;
-                        $relation['customer_branch_admin_of_branch_name'] = $branch_row->branch_name;
-                    }
-                } else {
-                    // General check - get branch admin details
-                    $branch_row = $wpdb->get_row($wpdb->prepare(
-                        "SELECT b.customer_id, b.name as branch_name, c.name as customer_name
-                        FROM {$wpdb->prefix}app_customer_branches b
-                        JOIN {$wpdb->prefix}app_customers c ON b.customer_id = c.id
-                        WHERE b.user_id = %d
-                        LIMIT 1",
-                        $user_id
-                    ));
-
-                    if ($branch_row) {
-                        $relation['customer_branch_admin_of_customer_id'] = (int)$branch_row->customer_id;
-                        $relation['customer_branch_admin_of_branch_name'] = $branch_row->branch_name;
-                    }
+                // Branch Admin details (if user is branch admin)
+                if ($is_customer_branch_admin && $relation_data['branch_admin_of_customer_id']) {
+                    $relation['customer_branch_admin_of_customer_id'] = (int) $relation_data['branch_admin_of_customer_id'];
+                    $relation['customer_branch_admin_of_branch_name'] = $relation_data['branch_admin_of_branch_name'];
                 }
-            }
 
-            // Get additional details if user is employee (already know from lightweight query above)
-            if ($is_customer_employee) {
-                if ($customer_id > 0) {
-                    // Specific customer check - get customer name
-                    $relation['employee_of_customer_id'] = $customer_id;
-                    $customer = $this->find($customer_id);
-                    $relation['employee_of_customer_name'] = $customer ? $customer->name : null;
-                } else {
-                    // General check - get employee customer details
-                    $employee_row = $wpdb->get_row($wpdb->prepare(
-                        "SELECT ce.customer_id, c.name as customer_name
-                        FROM {$wpdb->prefix}app_customer_employees ce
-                        JOIN {$wpdb->prefix}app_customers c ON ce.customer_id = c.id
-                        WHERE ce.user_id = %d AND ce.status = 'active'
-                        LIMIT 1",
-                        $user_id
-                    ));
-
-                    if ($employee_row) {
-                        $relation['employee_of_customer_id'] = (int)$employee_row->customer_id;
-                        $relation['employee_of_customer_name'] = $employee_row->customer_name;
-                    }
+                // Employee details (if user is employee)
+                if ($is_customer_employee && $relation_data['employee_of_customer_id']) {
+                    $relation['employee_of_customer_id'] = (int) $relation_data['employee_of_customer_id'];
+                    $relation['employee_of_customer_name'] = $relation_data['employee_of_customer_name'];
                 }
             }
             
@@ -1178,15 +1145,116 @@
             // Add access_type to relation
             $relation['access_type'] = $access_type;
 
-            // Debug logging for access validation (requested by user)
+            // Hierarchical debug logging (Task-2172)
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Access Result: " . print_r([
-                    'has_access' => ($access_type !== 'none'),
-                    'access_type' => $access_type,
-                    'relation' => $relation,
-                    'customer_id' => $customer_id,
-                    'user_id' => $user_id
-                ], true));
+                $user = wp_get_current_user();
+                $user_login = isset($user->user_login) ? $user->user_login : 'unknown';
+
+                error_log("============================================================");
+                error_log("[ACCESS CONTROL] User {$user_id} ({$user_login}) - Hierarchical Validation:");
+                error_log("");
+
+                // LEVEL 1: Capability Check
+                $has_cap = current_user_can('view_customer_list');
+                error_log("  LEVEL 1 (Capability Check):");
+                error_log("    " . ($has_cap ? "✓ PASS" : "✗ FAIL") . " - Has 'view_customer_list' capability");
+
+                // LEVEL 2: Database Record Check
+                error_log("  LEVEL 2 (Database Record Check):");
+                if ($is_admin) {
+                    error_log("    ✓ PASS - WordPress Administrator");
+                } else if ($is_customer_admin) {
+                    error_log("    ✓ PASS - Customer Owner (customer_id: {$relation['owner_of_customer_id']})");
+                } else if ($is_customer_branch_admin) {
+                    error_log("    ✓ PASS - Branch Admin");
+                } else if ($is_customer_employee) {
+                    error_log("    ✓ PASS - Customer Employee");
+                } else {
+                    error_log("    ⊘ SKIP - Not a direct customer record");
+                }
+
+                // LEVEL 3: Access Type Filter
+                error_log("  LEVEL 3 (Access Type Filter):");
+                error_log("    Filter: 'wp_customer_access_type'");
+                error_log("    Result: {$access_type}");
+
+                if ($access_type === 'agency' || $access_type === 'platform') {
+                    error_log("    ✓ Modified by external plugin ({$access_type})");
+
+                    // Display agency/platform context if available
+                    if (isset($relation['agency_id'])) {
+                        error_log("");
+                        error_log("  Context (from 'wp_customer_user_relation' filter):");
+                        error_log("    Agency: {$relation['agency_name']} (ID: {$relation['agency_id']})");
+
+                        if (isset($relation['division_id']) && $relation['division_id']) {
+                            error_log("    Division: {$relation['division_name']} (ID: {$relation['division_id']})");
+                        }
+
+                        if (isset($relation['access_level'])) {
+                            $level_desc = [
+                                'agency_wide' => 'Agency-wide (admin_dinas)',
+                                'division_specific' => 'Division-specific (admin_unit)',
+                                'branch_specific' => 'Branch-specific (pengawas)'
+                            ];
+                            $access_level_display = isset($level_desc[$relation['access_level']])
+                                ? $level_desc[$relation['access_level']]
+                                : $relation['access_level'];
+                            error_log("    Access Level: {$access_level_display}");
+                        }
+
+                        if (isset($relation['assigned_branch_ids']) && !empty($relation['assigned_branch_ids'])) {
+                            $branch_count = count($relation['assigned_branch_ids']);
+                            error_log("    Assigned Branches: {$branch_count} branches [" .
+                                     implode(', ', array_slice($relation['assigned_branch_ids'], 0, 5)) .
+                                     ($branch_count > 5 ? '...' : '') . "]");
+                        }
+                    }
+                } else if ($access_type === 'customer_admin') {
+                    error_log("    = Customer Owner access");
+                } else if ($access_type === 'admin') {
+                    error_log("    = Full administrator access");
+                } else {
+                    error_log("    = No access");
+                }
+
+                // LEVEL 4: Data Scope Filter
+                error_log("");
+                error_log("  LEVEL 4 (Data Scope Filter):");
+                if ($access_type === 'admin') {
+                    error_log("    Scope: ALL records (no filter)");
+                } else if ($access_type === 'customer_admin') {
+                    error_log("    Scope: Customer {$relation['owner_of_customer_id']} only");
+                } else if ($access_type === 'agency') {
+                    if (isset($relation['access_level'])) {
+                        if ($relation['access_level'] === 'branch_specific') {
+                            $assigned_branches = isset($relation['assigned_branch_ids']) ? $relation['assigned_branch_ids'] : [];
+                            $branch_count = count($assigned_branches);
+                            error_log("    Scope: {$branch_count} assigned branches only (WHERE inspector_id={$user_id})");
+                        } else if ($relation['access_level'] === 'division_specific') {
+                            error_log("    Scope: Division {$relation['division_id']} only (WHERE division_id={$relation['division_id']})");
+                        } else {
+                            error_log("    Scope: Agency {$relation['agency_id']} (WHERE agency_id={$relation['agency_id']})");
+                        }
+                    } else {
+                        error_log("    Scope: Agency-filtered records");
+                    }
+                } else if ($access_type === 'platform') {
+                    error_log("    Scope: Platform-filtered records");
+                } else {
+                    error_log("    Scope: NONE (access denied)");
+                }
+
+                // FINAL RESULT
+                error_log("");
+                error_log("  FINAL RESULT:");
+                $has_access = ($access_type !== 'none');
+                error_log("    Has Access: " . ($has_access ? "✓ TRUE" : "✗ FALSE"));
+                error_log("    Access Type: {$access_type}");
+                error_log("    Customer ID: " . ($customer_id ?: 'N/A (list view)'));
+
+                error_log("============================================================");
+                error_log("");
             }
             
             // Get cache duration (configurable or default 2 minutes)

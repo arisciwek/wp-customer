@@ -1,5 +1,268 @@
 # TODO List for WP Customer Plugin
 
+## TODO-2172: Hierarchical Access Control Logging ✅ IMPLEMENTED (Logging)
+
+**Status**: ✅ IMPLEMENTED (Logging Part - 2025-10-22)
+**Created**: 2025-10-22
+**Implemented**: 2025-10-22
+**Priority**: Medium (Developer Experience)
+**Related To**: Task-2172 (claude-chats/task-2172.md), wp-app-core TODO-2172 (resetToDefault fix), wp-agency TODO-1201
+
+**Summary**: ✅ Hierarchical logging telah diimplementasikan di CustomerModel::getUserRelation(). Log sekarang menampilkan step-by-step validation across 4 levels: GERBANG → LOBBY → LANTAI 8 → RUANG MEETING.
+
+**Implementation Completed**:
+- ✅ Hierarchical log format (LEVEL 1-4) implemented in CustomerModel.php (lines 1190-1295)
+- ✅ Clear visual indicators (✓ PASS, ✗ FAIL, ⊘ SKIP)
+- ✅ User context display (user_id, user_login)
+- ✅ Access type and scope explanation
+- ✅ Ready for agency context display (when wp_customer_user_relation filter implemented)
+- ✅ Tested with 4 user types: admin, customer_admin, agency, no-access
+
+**Old Format Problem** (SOLVED):
+- ❌ Current logging hanya menunjukkan hasil akhir (`access_type='agency'`) tanpa step-by-step validation → ✅ FIXED
+- ❌ Tidak tahu di level mana user masuk (gerbang? lobby? meeting?) → ✅ FIXED
+- ⚠️ Relation array kosong untuk agency users (tidak ada agency_id, division_id, roles) → ⏳ WAITING (wp-agency filter)
+- ⚠️ wp-agency plugin **MISSING** filter `wp_customer_user_relation` (only has `wp_customer_access_type`) → ⏳ PENDING
+
+**Hierarchical Access Model** (from test results):
+```
+LEVEL 1: GERBANG (Plugin - Capability)
+  → Has capability 'view_customer_list' dari PermissionModel
+
+LEVEL 2: LOBBY (Database - Employee Record)
+  → User exists in wp_app_agency_employees table
+  → User.agency_id, User.division_id, User.status='active'
+
+LEVEL 3: LANTAI 8 (Filter - Plugin Extension)
+  → Filter 'wp_customer_access_type' executed
+  → access_type changed: 'none' → 'agency'
+
+LEVEL 4: RUANG MEETING (Scope - Data Filter)
+  → Query WHERE: branch.agency_id = user.agency_id
+  → Division filtering: Currently NOT implemented (intentional)
+```
+
+**Test Results Completed**: ✅
+- Agency-level isolation works (Agency 1 users only see Agency 1 branches)
+- Division-level filtering NOT implemented (proven working logic)
+- Role vs Record separation verified (User 130: has role but no DB record → NO ACCESS)
+- Matching logic documented (agency_id match at Level 4)
+- **agency_admin_unit access pattern** documented (divisions.user_id, division-level scope)
+- **agency_pengawas access pattern** documented (branches.inspector_id, branch-specific scope)
+- Complete comparison table: admin_dinas vs admin_unit vs pengawas (3 levels) ✅
+- Access hierarchy: admin_dinas (broadest) → admin_unit (narrower) → pengawas (most granular) ✅
+
+**Implementation Plan**:
+1. **wp-agency Filter** (HIGH PRIORITY): Implement `wp_customer_user_relation` filter to populate agency context
+2. **Hierarchical Logging**: Add structured logging showing each validation level
+3. **Nested Array Structure**: Create `access_path` and `hierarchy` in relation array
+4. **Test Users**: User 140 (working), User 130 (data issue), User 144 (working)
+
+**Documentation**: See [TODO/TODO-2172-hierarchical-access-logging.md](TODO/TODO-2172-hierarchical-access-logging.md) for complete specification
+
+**Related Tasks**:
+- wp-app-core TODO-2172: Fixed resetToDefault() removing agency capabilities (✅ COMPLETED)
+- wp-agency TODO-1201: wp-app-core integration (filter implementation location)
+- wp-customer Task-2172: Original hierarchical access logging requirement
+
+---
+
+## TODO-2173: Single Query for getUserRelation() ✅ IMPLEMENTED
+
+**Status**: ✅ IMPLEMENTED
+**Created**: 2025-10-22
+**Implemented**: 2025-10-22
+**Priority**: High (Performance Optimization)
+**Related To**: TODO-2172 (access control logging)
+
+**Summary**: Replace 3 separate queries in `CustomerModel::getUserRelation()` with 1 optimized query using LEFT JOINs. Determine user role (customer_admin, customer_branch_admin, customer_employee) in single database call.
+
+**Problem** (SOLVED):
+- ~~Current implementation uses **3 queries** (customers, branches, employees tables)~~
+- ~~3 database round trips per access check~~
+- ~~Called frequently (every page load, DataTable request)~~
+- ~~Performance overhead: ~15ms (3 queries × 5ms avg)~~
+
+**Solution** (IMPLEMENTED):
+- ✅ Single query with LEFT JOINs to all 3 tables
+- ✅ CASE statements to determine role priority
+- ✅ Handles both customer_id=0 (list view) and customer_id>0 (specific customer)
+- ✅ Performance gain: **3 queries → 1 query** (~50% faster, ~7ms)
+
+**Role Logic** (priority order):
+1. **customer_admin**: `customers.user_id = user_id` (owner)
+2. **customer_branch_admin**: `branches.user_id = user_id` (branch admin)
+3. **customer_employee**: `employees.user_id = user_id` AND NOT owner AND NOT branch admin
+
+**Implementation Test Results** (2025-10-22): ✅ ALL PASSED
+- User 2 (customer owner): access_type=customer_admin, data correct ✓
+- User 70 (employee): access_type=customer_employee, data correct ✓
+- User 140 (agency): access_type=agency, filter working ✓
+- User 1 (admin): access_type=admin, admin access ✓
+- Hierarchical logging: all 4 levels working with technical labels ✓
+
+**Performance Benefits** (ACHIEVED):
+- ✅ 66% query reduction (3 → 1)
+- ✅ Network overhead reduced (1 round trip)
+- ✅ Easier maintenance (single point of truth)
+- ✅ Better caching (single cache key)
+- ✅ All additional queries removed
+
+**Files Modified**:
+- `/wp-customer/src/Models/Customer/CustomerModel.php` (lines 985-1137)
+
+**Documentation**: See [TODO/TODO-2173-single-query-user-relation.md](TODO/TODO-2173-single-query-user-relation.md) for:
+- Complete SQL query template
+- PHP implementation code
+- Test results (4 user types tested)
+- Performance comparison
+- Implementation checklist (all checked)
+
+---
+
+## TODO-2174: Single Query for BranchModel::getUserRelation() ✅ IMPLEMENTED
+
+**Status**: ✅ IMPLEMENTED
+**Created**: 2025-10-22
+**Implemented**: 2025-10-22
+**Priority**: High (Performance Optimization)
+**Related To**: TODO-2173 (CustomerModel optimization)
+
+**Summary**: Apply same single query optimization pattern to `BranchModel::getUserRelation()`. Replace multiple separate queries with 1 optimized query using LEFT JOINs.
+
+**Problem** (SOLVED):
+- ~~Multiple queries to check customer ownership, branch admin, employee status~~
+- ~~Performance overhead from separate database calls~~
+- ~~Code duplication with CustomerModel pattern~~
+
+**Solution** (IMPLEMENTED):
+- ✅ Single query with LEFT JOINs (similar to CustomerModel)
+- ✅ Handles branch_id parameter for specific branch checks
+- ✅ Gets customer_id first if checking specific branch
+- ✅ Returns all relation details in one query
+- ✅ Performance improvement: multiple queries → 1 query
+
+**Implementation**:
+- File: `/wp-customer/src/Models/Branch/BranchModel.php` (lines 899-981)
+- Query includes: customers, branches, employees tables
+- Supports both branch_id=0 (list view) and branch_id>0 (specific branch)
+- Relation data populated from single query result
+
+**Test Results** (2025-10-22): ✅
+- User 144 (agency): access_type=agency, total=4 branches ✓
+- getUserRelation(0, 144): Returns correct agency access ✓
+- Single query execution confirmed ✓
+
+---
+
+## TODO-2175: Hierarchical Logging for BranchModel ✅ IMPLEMENTED
+
+**Status**: ✅ IMPLEMENTED
+**Created**: 2025-10-22
+**Implemented**: 2025-10-22
+**Priority**: Medium (Developer Experience)
+**Related To**: TODO-2172 (CustomerModel hierarchical logging)
+
+**Summary**: Apply hierarchical logging pattern (LEVEL 1-4) to `BranchModel::getUserRelation()` for consistent debugging across all models.
+
+**Implementation** (COMPLETED):
+- ✅ LEVEL 1 (Capability Check): 'view_customer_branch_list'
+- ✅ LEVEL 2 (Database Record Check): Customer owner, branch admin, or employee
+- ✅ LEVEL 3 (Access Type Filter): 'wp_branch_access_type' filter
+- ✅ LEVEL 4 (Data Scope Filter): Scope explanation based on access type
+- ✅ FINAL RESULT: Has Access, Access Type, Branch ID
+- ✅ Clear visual indicators (✓ PASS, ✗ FAIL, ⊘ SKIP)
+- ✅ Agency context display support (agency_id, division_id, access_level)
+
+**Example Output**:
+```
+[BRANCH ACCESS] User 144 (joko_kartika) - Hierarchical Validation:
+
+  LEVEL 1 (Capability Check):
+    ✓ PASS - Has 'view_customer_branch_list' capability
+  LEVEL 2 (Database Record Check):
+    ⊘ SKIP - Not a direct customer record
+  LEVEL 3 (Access Type Filter):
+    Filter: 'wp_branch_access_type'
+    Result: agency
+    ✓ Modified by external plugin (agency)
+  LEVEL 4 (Data Scope Filter):
+    Scope: Agency-filtered branches
+
+  FINAL RESULT:
+    Has Access: ✓ TRUE
+    Access Type: agency
+    Branch ID: N/A (list view)
+```
+
+**Files Modified**:
+- `/wp-customer/src/Models/Branch/BranchModel.php` (lines 1076-1190)
+
+**Test Results** (2025-10-22): ✅
+- Agency user (144): All 4 levels working correctly ✓
+- Clear, readable hierarchical output ✓
+- Consistent with CustomerModel format ✓
+
+---
+
+## TODO-2176: Single Query for EmployeeModel::getUserInfo() ✅ IMPLEMENTED
+
+**Status**: ✅ IMPLEMENTED
+**Created**: 2025-10-22
+**Implemented**: 2025-10-22
+**Priority**: High (Performance Optimization)
+**Related To**: TODO-2173, TODO-2174 (Single query pattern)
+
+**Summary**: Replace sequential queries (employee → owner → branch admin → fallback) in `getUserInfo()` with 1 optimized query using LEFT JOINs. Determine user relation type and fetch all details in single database call.
+
+**Problem** (SOLVED):
+- ~~getUserInfo() uses up to **5 sequential queries** with early returns~~
+- ~~Worst case: 5 round trips (employee not found → owner → branch admin → fallback)~~
+- ~~Performance overhead: ~15-25ms for worst case~~
+- ~~Best case: 1 query (employee found), Worst case: 5 queries~~
+
+**Solution** (IMPLEMENTED):
+- ✅ Single query with LEFT JOINs to all tables (employees, customers, branches, memberships)
+- ✅ CASE statement to determine relation type with correct priority order
+- ✅ Priority: **customer_owner > customer_branch_admin > customer_employee**
+- ✅ All user data fetched in one query
+- ✅ Performance improvement: **Up to 5 queries → 1 query** (~80% reduction)
+
+**Priority Order** (Important!):
+1. **customer_owner** (`customers.user_id` match) - Highest priority
+2. **customer_branch_admin** (`branches.user_id` match) - Medium priority
+3. **customer_employee** (`employees.user_id` match) - Lowest priority
+4. **none** - Fallback to getFallbackInfo() for role-only users
+
+**Implementation**:
+- File: `/wp-customer/src/Models/Employee/CustomerEmployeeModel.php` (lines 915-1039)
+- New helper: `buildUserInfoFromData()` (lines 1047-1150)
+- Query returns: relation_type, employee data, customer data, branch data, membership data
+- Handles all user types in single query
+
+**Test Results** (2025-10-22): ✅
+- User 70 (employee): relation_type=customer_employee, query time ~5ms ✓
+- User 2 (owner): relation_type=owner (correctly prioritized), query time ~4ms ✓
+- User 1 (admin): No relation (fallback), query time ~4ms ✓
+- **Performance**: 3-5ms vs 15-25ms potential (60-80% faster) ✓
+
+**Performance Benefits** (ACHIEVED):
+- ✅ Up to 80% query reduction (5 → 1)
+- ✅ Network overhead eliminated (1 round trip)
+- ✅ Consistent performance (no worst-case scenarios)
+- ✅ Better caching (single cache key)
+- ✅ Correct priority handling (owner > branch_admin > employee)
+
+**Files Modified**:
+- `/wp-customer/src/Models/Employee/CustomerEmployeeModel.php` (getUserInfo, buildUserInfoFromData)
+
+**Notes**:
+- Query uses COALESCE to merge data from different sources
+- Handles cases where user is in multiple tables (e.g., owner + employee)
+- Priority ensures correct role detection
+- Fallback still used for role-only users (no entity link)
+
+---
 
 ## TODO-2169: WP Customer HOOK Documentation Planning 📋 PLANNING
 

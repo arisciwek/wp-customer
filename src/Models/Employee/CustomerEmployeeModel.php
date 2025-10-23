@@ -921,34 +921,241 @@ public function create(array $data): ?int {
             return $cached_data;
         }
 
-        // Try employee first (most common case)
-        $result = $this->getEmployeeInfo($user_id);
-        if ($result) {
-            $this->cache->set($cache_key, $result, 5 * MINUTE_IN_SECONDS, $user_id);
+        // TODO-2176: Single query optimization
+        // Replace sequential queries (employee → owner → branch admin → fallback) with 1 optimized query
+        global $wpdb;
+
+        $query = $wpdb->prepare("
+            SELECT
+                -- Determine relation type (priority order: owner > branch_admin > employee)
+                CASE
+                    WHEN c_owner.user_id IS NOT NULL THEN 'customer_owner'
+                    WHEN b_admin.user_id IS NOT NULL THEN 'customer_branch_admin'
+                    WHEN e.user_id IS NOT NULL THEN 'customer_employee'
+                    ELSE 'none'
+                END as relation_type,
+
+                -- Employee data (if employee)
+                e.id as employee_id,
+                e.customer_id as employee_customer_id,
+                e.branch_id as employee_branch_id,
+                e.name as employee_name,
+                e.position as employee_position,
+                e.finance as employee_finance,
+                e.operation as employee_operation,
+                e.legal as employee_legal,
+                e.purchase as employee_purchase,
+                e.keterangan as employee_keterangan,
+                e.email as employee_email,
+                e.phone as employee_phone,
+                e.status as employee_status,
+                e.created_by as employee_created_by,
+                e.created_at as employee_created_at,
+                e.updated_at as employee_updated_at,
+
+                -- Customer data (via employee or as owner)
+                COALESCE(c_emp.id, c_owner.id) as customer_id,
+                COALESCE(c_emp.code, c_owner.code) as customer_code,
+                COALESCE(c_emp.name, c_owner.name) as customer_name,
+                COALESCE(c_emp.npwp, c_owner.npwp) as customer_npwp,
+                COALESCE(c_emp.nib, c_owner.nib) as customer_nib,
+                COALESCE(c_emp.status, c_owner.status) as customer_status,
+
+                -- Branch data (via employee or as admin or pusat)
+                COALESCE(b_emp.id, b_admin.id, b_pusat.id) as branch_id,
+                COALESCE(b_emp.code, b_admin.code, b_pusat.code) as branch_code,
+                COALESCE(b_emp.name, b_admin.name, b_pusat.name) as branch_name,
+                COALESCE(b_emp.type, b_admin.type, b_pusat.type) as branch_type,
+                COALESCE(b_emp.nitku, b_admin.nitku, b_pusat.nitku) as branch_nitku,
+                COALESCE(b_emp.address, b_admin.address, b_pusat.address) as branch_address,
+                COALESCE(b_emp.phone, b_admin.phone, b_pusat.phone) as branch_phone,
+                COALESCE(b_emp.email, b_admin.email, b_pusat.email) as branch_email,
+                COALESCE(b_emp.postal_code, b_admin.postal_code, b_pusat.postal_code) as branch_postal_code,
+                COALESCE(b_emp.latitude, b_admin.latitude, b_pusat.latitude) as branch_latitude,
+                COALESCE(b_emp.longitude, b_admin.longitude, b_pusat.longitude) as branch_longitude,
+
+                -- Membership data (via employee's customer or owner's customer)
+                cm.level_id as membership_level_id,
+                cm.status as membership_status,
+                cm.period_months as membership_period_months,
+                cm.start_date as membership_start_date,
+                cm.end_date as membership_end_date,
+                cm.price_paid as membership_price_paid,
+                cm.payment_status as membership_payment_status,
+                cm.payment_method as membership_payment_method,
+                cm.payment_date as membership_payment_date,
+
+                -- User data
+                u.user_login,
+                u.user_nicename,
+                u.user_email,
+                u.user_url,
+                u.user_registered,
+                u.user_status,
+                u.display_name
+
+            FROM (SELECT %d as uid) params
+
+            -- Check employee (priority 1)
+            LEFT JOIN {$wpdb->prefix}app_customer_employees e
+                ON e.user_id = params.uid AND e.status = 'active'
+            LEFT JOIN {$wpdb->prefix}app_customers c_emp ON e.customer_id = c_emp.id
+            LEFT JOIN {$wpdb->prefix}app_customer_branches b_emp ON e.branch_id = b_emp.id
+
+            -- Check customer owner (priority 2)
+            LEFT JOIN {$wpdb->prefix}app_customers c_owner ON c_owner.user_id = params.uid
+            LEFT JOIN {$wpdb->prefix}app_customer_branches b_pusat
+                ON b_pusat.customer_id = c_owner.id AND b_pusat.type = 'pusat'
+
+            -- Check branch admin (priority 3)
+            LEFT JOIN {$wpdb->prefix}app_customer_branches b_admin ON b_admin.user_id = params.uid
+
+            -- Get membership (via employee's customer or owner's customer)
+            LEFT JOIN {$wpdb->prefix}app_customer_memberships cm
+                ON cm.customer_id = COALESCE(e.customer_id, c_owner.id)
+                AND cm.status IN ('active', 'pending')
+
+            -- Get user info
+            INNER JOIN {$wpdb->users} u ON u.ID = params.uid
+
+            LIMIT 1
+        ", $user_id);
+
+        $data = $wpdb->get_row($query, ARRAY_A);
+
+        if (!$data || $data['relation_type'] === 'none') {
+            // Fallback for users with role but no entity link
+            $result = $this->getFallbackInfo($user_id);
+            if ($result) {
+                $this->cache->set($cache_key, $result, 5 * MINUTE_IN_SECONDS, $user_id);
+            } else {
+                // Cache null result for short time to prevent repeated queries
+                $this->cache->set($cache_key, null, 5 * MINUTE_IN_SECONDS, $user_id);
+            }
             return $result;
         }
 
-        // Try customer owner
-        $result = $this->getCustomerOwnerInfo($user_id);
-        if ($result) {
-            $this->cache->set($cache_key, $result, 5 * MINUTE_IN_SECONDS, $user_id);
-            return $result;
+        // Build result array based on relation type
+        $result = $this->buildUserInfoFromData($data, $user_id);
+
+        // Cache result
+        $this->cache->set($cache_key, $result, 5 * MINUTE_IN_SECONDS, $user_id);
+
+        return $result;
+    }
+
+    /**
+     * Build user info array from single query data (TODO-2176)
+     *
+     * @param array $data Query result data
+     * @param int $user_id WordPress user ID
+     * @return array User info array
+     */
+    private function buildUserInfoFromData(array $data, int $user_id): array {
+        $user = get_userdata($user_id);
+
+        // Base result structure
+        $result = [
+            'branch_id' => $data['branch_id'],
+            'branch_name' => $data['branch_name'],
+            'branch_type' => $data['branch_type'],
+            'entity_name' => $data['customer_name'],
+            'entity_code' => $data['customer_code'],
+            'relation_type' => $data['relation_type'],
+            'icon' => '🏢'
+        ];
+
+        // Add type-specific fields
+        if ($data['relation_type'] === 'customer_employee') {
+            // Employee - add comprehensive data
+            $result = array_merge($result, [
+                'id' => $data['employee_id'],
+                'user_id' => $user_id,
+                'customer_id' => $data['employee_customer_id'],
+                'branch_id' => $data['employee_branch_id'],
+                'name' => $data['employee_name'],
+                'position' => $data['employee_position'],
+                'finance' => $data['employee_finance'],
+                'operation' => $data['employee_operation'],
+                'legal' => $data['employee_legal'],
+                'purchase' => $data['employee_purchase'],
+                'keterangan' => $data['employee_keterangan'],
+                'email' => $data['employee_email'],
+                'phone' => $data['employee_phone'],
+                'status' => $data['employee_status'],
+                'created_by' => $data['employee_created_by'],
+                'created_at' => $data['employee_created_at'],
+                'updated_at' => $data['employee_updated_at'],
+
+                // Customer info
+                'customer_code' => $data['customer_code'],
+                'customer_name' => $data['customer_name'],
+                'customer_npwp' => $data['customer_npwp'],
+                'customer_nib' => $data['customer_nib'],
+                'customer_status' => $data['customer_status'],
+
+                // Branch info
+                'branch_code' => $data['branch_code'],
+                'branch_name' => $data['branch_name'],
+                'branch_type' => $data['branch_type'],
+                'branch_nitku' => $data['branch_nitku'],
+                'branch_address' => $data['branch_address'],
+                'branch_phone' => $data['branch_phone'],
+                'branch_email' => $data['branch_email'],
+                'branch_postal_code' => $data['branch_postal_code'],
+                'branch_latitude' => $data['branch_latitude'],
+                'branch_longitude' => $data['branch_longitude'],
+
+                // Membership info
+                'membership_level_id' => $data['membership_level_id'],
+                'membership_status' => $data['membership_status'],
+                'membership_period_months' => $data['membership_period_months'],
+                'membership_start_date' => $data['membership_start_date'],
+                'membership_end_date' => $data['membership_end_date'],
+                'membership_price_paid' => $data['membership_price_paid'],
+                'membership_payment_status' => $data['membership_payment_status'],
+                'membership_payment_method' => $data['membership_payment_method'],
+                'membership_payment_date' => $data['membership_payment_date'],
+
+                // User info
+                'user_email' => $data['user_email'],
+                'user_login' => $data['user_login'],
+                'display_name' => $data['display_name'],
+
+                'entity_name' => $data['customer_name'],
+                'entity_code' => $data['customer_code']
+            ]);
+
+        } else if ($data['relation_type'] === 'customer_owner') {
+            // Customer owner - simpler structure
+            $result['relation_type'] = 'owner';
+
+        } else if ($data['relation_type'] === 'customer_branch_admin') {
+            // Branch admin
+            $result['relation_type'] = 'branch_admin';
         }
 
-        // Try branch admin
-        $result = $this->getBranchAdminInfo($user_id);
-        if ($result) {
-            $this->cache->set($cache_key, $result, 5 * MINUTE_IN_SECONDS, $user_id);
-            return $result;
-        }
+        // Add role names and permissions (if user data available)
+        if ($user) {
+            // Get capabilities from wp_usermeta
+            $capabilities = get_user_meta($user_id, 'wp_capabilities', true);
 
-        // Fallback for users with role but no entity link
-        $result = $this->getFallbackInfo($user_id);
-        if ($result) {
-            $this->cache->set($cache_key, $result, 5 * MINUTE_IN_SECONDS, $user_id);
-        } else {
-            // Cache null result for short time to prevent repeated queries
-            $this->cache->set($cache_key, null, 5 * MINUTE_IN_SECONDS, $user_id);
+            if ($capabilities && is_array($capabilities)) {
+                $admin_bar_model = new \WPAppCore\Models\AdminBarModel();
+
+                $result['role_names'] = $admin_bar_model->getRoleNamesFromCapabilities(
+                    serialize($capabilities),
+                    call_user_func(['WP_Customer_Role_Manager', 'getRoleSlugs']),
+                    ['WP_Customer_Role_Manager', 'getRoleName']
+                );
+
+                $permission_model = new \WPCustomer\Models\Settings\PermissionModel();
+                $result['permission_names'] = $admin_bar_model->getPermissionNamesFromUserId(
+                    $user_id,
+                    call_user_func(['WP_Customer_Role_Manager', 'getRoleSlugs']),
+                    $permission_model->getAllCapabilities()
+                );
+            }
         }
 
         return $result;

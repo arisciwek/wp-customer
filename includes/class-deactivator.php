@@ -4,13 +4,20 @@
  *
  * @package     WP_Customer
  * @subpackage  Includes
- * @version     1.0.10
+ * @version     1.0.11
  * @author      arisciwek
  *
  * Description: Menangani proses deaktivasi plugin:
  *              - Database cleanup (hanya dalam mode development)
- *              - Cache cleanup 
+ *              - Cache cleanup
  *              - Settings cleanup
+ *
+ * Changelog:
+ * 1.0.11 - 2025-01-22
+ * - Added SET FOREIGN_KEY_CHECKS = 0 before dropping tables
+ * - Added SET FOREIGN_KEY_CHECKS = 1 after dropping tables
+ * - Fixed potential foreign key constraint errors during deactivation
+ * - Cleaned up table drop order comments
  */
 
 use WPCustomer\Cache\CustomerCacheManager;
@@ -56,17 +63,20 @@ class WP_Customer_Deactivator {
             // Start transaction
             $wpdb->query('START TRANSACTION');
 
+            // Disable foreign key checks to allow dropping tables with dependencies
+            $wpdb->query('SET FOREIGN_KEY_CHECKS = 0');
+
             // Delete tables in correct order (child tables first)
             $tables = [
                 // First level - no dependencies
                 'app_customer_memberships',  // Drop this first as it references both customers and levels
                 'app_customer_employees',    // Drop this next as it references customers and branches
-                'app_customer_branches',             // Drop this after employees as it only references customers
+                'app_customer_branches',     // Drop this after employees as it only references customers
                 // Second level - referenced by others
-                'app_customer_membership_levels',  // Can now be dropped as
+                'app_customer_membership_levels',  // Can now be dropped as memberships is gone
                 'app_customer_membership_features',  // Can now be dropped as memberships is gone
                 'app_customer_membership_feature_groups',  // Drop after features as features reference groups
-                'app_customers'             // Drop this last as it's referenced by all
+                'app_customers'              // Drop this last as it's referenced by all
             ];
 
             foreach ($tables as $table) {
@@ -74,6 +84,9 @@ class WP_Customer_Deactivator {
                 self::debug("Attempting to drop table: {$table_name}");
                 $wpdb->query("DROP TABLE IF EXISTS {$table_name}");
             }
+
+            // Re-enable foreign key checks
+            $wpdb->query('SET FOREIGN_KEY_CHECKS = 1');
 
             // Delete demo users (after tables are gone)
             self::delete_demo_users();
