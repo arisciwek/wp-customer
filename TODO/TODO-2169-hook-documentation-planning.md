@@ -901,7 +901,7 @@ All design decisions have been finalized:
 - ✅ Better testing (know what HOOKs should fire)
 - ✅ Version control for HOOKs
 
-**For Claude/AI Assistance**:
+**For AI Assistance**:
 - ✅ Quick reference without grepping codebase
 - ✅ Understand HOOK dependencies
 - ✅ Know correct parameters for each HOOK

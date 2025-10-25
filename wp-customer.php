@@ -148,6 +148,13 @@ class WPCustomer {
         $employee_cleanup_handler = new \WPCustomer\Handlers\EmployeeCleanupHandler();
         add_action('wp_customer_employee_before_delete', [$employee_cleanup_handler, 'handleBeforeDelete'], 10, 2);
         add_action('wp_customer_employee_deleted', [$employee_cleanup_handler, 'handleAfterDelete'], 10, 3);
+
+        // TODO-2071: Cross-plugin integration with wp-agency
+        // Filter agencies based on customer's branches
+        // Only initialize if wp-agency is active
+        if (class_exists('WPAgency\Models\Agency\AgencyDataTableModel')) {
+            new \WPCustomer\Integrations\AgencyAccessFilter();
+        }
     }
 
     /**
@@ -162,6 +169,9 @@ class WPCustomer {
 
         // Branch Controller
         new \WPCustomer\Controllers\Branch\BranchController();
+
+        // Companies Controller (Branch Management with Hook-based System)
+        new \WPCustomer\Controllers\Companies\CompaniesController();
 
         // Company Controllers
         new \WPCustomer\Controllers\Company\CompanyMembershipController();

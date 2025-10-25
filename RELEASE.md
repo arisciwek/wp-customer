@@ -333,7 +333,7 @@ New developers can now quickly understand:
 
 ### Contributors
 - **arisciwek** - Lead developer
-- **Claude (Anthropic)** - Development assistance & documentation
+
 
 ### Related Projects
 - **wp-app-core** - Platform role integration

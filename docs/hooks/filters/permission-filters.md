@@ -1,249 +1,135 @@
-# Permission - Filter Hooks
+# Company Permission Filter Hooks
 
-Filters for overriding permission checks and access control logic.
+This document describes all filter hooks for permission checks in the Companies (Branches) management system.
 
-## Overview
+## Table of Contents
 
-Permission filters allow you to customize who can perform specific actions. All permission filters:
-- **Type**: Filter (must return value)
-- **Return**: `bool` (true = allowed, false = denied)
-- **Purpose**: Override default permission logic
+- [wp_customer_can_access_companies_page](#wp_customer_can_access_companies_page)
+- [wp_customer_can_view_company](#wp_customer_can_view_company)
+- [wp_customer_can_create_company](#wp_customer_can_create_company)
+- [wp_customer_can_edit_company](#wp_customer_can_edit_company)
+- [wp_customer_can_delete_company](#wp_customer_can_delete_company)
 
-## Available Permission Filters
+---
 
-### wp_customer_can_view_customer_employee
+## wp_customer_can_access_companies_page
 
-**Purpose**: Override employee view permission
+Filters whether the current user can access the companies list page.
 
-**Location**: `src/Models/Customer/CustomerEmployeeValidator.php:63`
+**Location**:
+- `CompaniesController::register_menu()` (src/Controllers/Companies/CompaniesController.php:84)
+- `CompaniesValidator::can_access_page()` (src/Validators/Companies/CompaniesValidator.php:49)
 
-**Parameters**:
-- `$can_view` (bool) - Default permission
-- `$employee` (array) - Employee data
-- `$customer` (array) - Customer data
-- `$current_user_id` (int) - Current user ID
+### Parameters
 
-**Example**:
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `$can_access` | bool | Default access permission (based on `view_customer_branch_list` capability) |
+| `$context` | array | Context data including `user_id` and `is_admin` |
+
+### Default Behavior
+
 ```php
-add_filter('wp_customer_can_view_customer_employee', 'custom_employee_view_permission', 10, 4);
+$can_access = current_user_can('view_customer_branch_list');
+```
 
-function custom_employee_view_permission($can_view, $employee, $customer, $current_user_id) {
-    // Allow HR role to view all employees
-    if (user_has_role($current_user_id, 'hr_manager')) {
-        return true;
+### Usage Example
+
+```php
+/**
+ * Example: Allow agency employees to access companies page
+ * File: wp-agency/src/Integrations/WPCustomer/CompaniesAccessIntegration.php
+ */
+add_filter('wp_customer_can_access_companies_page', function($can_access, $context) {
+    // If already has access, return early
+    if ($can_access) {
+        return $can_access;
     }
 
-    return $can_view;  // Keep default
-}
+    $user_id = $context['user_id'];
+    
+    // Use CustomerCacheManager for caching
+    $cache = new \WPCustomer\Cache\CustomerCacheManager();
+    $cache_key = "agency_employee_access_{$user_id}";
+    
+    // Check cache first
+    $cached = $cache->get('user_access', $cache_key);
+    if ($cached !== null) {
+        return (bool) $cached;
+    }
+
+    // Check if user is agency employee
+    global $wpdb;
+    $is_agency_employee = $wpdb->get_var($wpdb->prepare(
+        "SELECT COUNT(*) FROM {$wpdb->prefix}app_agency_employees
+         WHERE user_id = %d AND status = 'active'",
+        $user_id
+    ));
+
+    $has_access = $is_agency_employee > 0;
+    
+    // Cache the result
+    $cache->set('user_access', $has_access, 15 * MINUTE_IN_SECONDS, $cache_key);
+
+    return $has_access;
+}, 10, 2);
 ```
 
 ---
 
-### wp_customer_can_create_customer_employee
+## Best Practices
 
-**Purpose**: Override employee creation permission
+### 1. Use CustomerCacheManager
 
-**Location**: `src/Models/Customer/CustomerEmployeeValidator.php:85`
+Always use the existing CustomerCacheManager for caching:
 
-**Parameters**:
-- `$can_create` (bool) - Default permission
-- `$customer_id` (int) - Customer ID
-- `$branch_id` (int) - Branch ID
-- `$current_user_id` (int) - Current user ID
-
-**Example**:
 ```php
-add_filter('wp_customer_can_create_customer_employee', 'limit_employee_creation', 10, 4);
+use WPCustomer\Cache\CustomerCacheManager;
 
-function limit_employee_creation($can_create, $customer_id, $branch_id, $current_user_id) {
-    // Limit to 100 employees per branch
-    $employee_count = count_branch_employees($branch_id);
-
-    if ($employee_count >= 100) {
-        return false;  // Deny
+add_filter('wp_customer_can_view_company', function($can_view, $company_id) {
+    if ($can_view) {
+        return $can_view;
     }
 
-    return $can_create;
-}
+    $cache = new CustomerCacheManager();
+    $user_id = get_current_user_id();
+    
+    // Check cache
+    $cached = $cache->get('company_access', $company_id, $user_id);
+    if ($cached !== null) {
+        return (bool) $cached;
+    }
+
+    // Expensive check here
+    $has_access = /* your logic */;
+    
+    // Cache it
+    $cache->set('company_access', $has_access, 15 * MINUTE_IN_SECONDS, $company_id, $user_id);
+    
+    return $has_access;
+}, 10, 2);
+```
+
+### 2. Clear Cache When Needed
+
+Clear relevant caches when data changes:
+
+```php
+/**
+ * Clear access cache when company is updated
+ */
+add_action('wp_customer_company_updated', function($company_id, $old_data, $new_data) {
+    // If agency changed, clear access caches
+    if ($old_data->agency_id !== $new_data->agency_id) {
+        $cache = new \WPCustomer\Cache\CustomerCacheManager();
+        $cache->delete('company_access', $company_id);
+    }
+}, 10, 3);
 ```
 
 ---
 
-### wp_customer_can_edit_customer_employee
+## See Also
 
-**Purpose**: Override employee edit permission
-
-**Location**: `src/Models/Customer/CustomerEmployeeValidator.php:113`
-
-**Parameters**:
-- `$can_edit` (bool) - Default permission
-- `$employee` (array) - Employee data
-- `$customer` (array) - Customer data
-- `$current_user_id` (int) - Current user ID
-
-**Example**:
-```php
-add_filter('wp_customer_can_edit_customer_employee', 'prevent_self_edit', 10, 4);
-
-function prevent_self_edit($can_edit, $employee, $customer, $current_user_id) {
-    // Prevent employees from editing themselves
-    if ($employee['user_id'] == $current_user_id) {
-        return false;
-    }
-
-    return $can_edit;
-}
-```
-
----
-
-### wp_customer_can_create_branch
-
-**Purpose**: Override branch creation permission
-
-**Location**: `src/Models/Branch/BranchValidator.php:187`
-
-**Parameters**:
-- `$can_create` (bool) - Default permission
-- `$customer_id` (int) - Customer ID
-- `$current_user_id` (int) - Current user ID
-
-**Example**:
-```php
-add_filter('wp_customer_can_create_branch', 'limit_branch_count', 10, 3);
-
-function limit_branch_count($can_create, $customer_id, $current_user_id) {
-    // Limit based on membership tier
-    $tier = get_customer_membership_tier($customer_id);
-    $branch_count = count_customer_branches($customer_id);
-
-    $limits = [
-        'basic' => 3,
-        'pro' => 10,
-        'enterprise' => -1  // Unlimited
-    ];
-
-    $limit = $limits[$tier] ?? 3;
-
-    if ($limit !== -1 && $branch_count >= $limit) {
-        return false;  // Deny
-    }
-
-    return $can_create;
-}
-```
-
----
-
-### wp_customer_can_delete_customer_branch
-
-**Purpose**: Override branch deletion permission
-
-**Location**: `src/Models/Branch/BranchValidator.php:214`
-
-**Parameters**:
-- `$can_delete` (bool) - Default permission
-- `$relation` (array) - User relation data
-
-**Example**:
-```php
-add_filter('wp_customer_can_delete_customer_branch', 'protect_main_branch', 10, 2);
-
-function protect_main_branch($can_delete, $relation) {
-    // Get branch data
-    $branch = get_branch_by_id($relation['branch_id']);
-
-    // Prevent deletion of Pusat branch
-    if ($branch && $branch['is_pusat']) {
-        return false;  // Cannot delete main branch
-    }
-
-    return $can_delete;
-}
-```
-
----
-
-### wp_customer_can_access_company_page
-
-**Purpose**: Override company page access permission
-
-**Location**: `src/Models/Customer/CompanyValidator.php:165`
-
-**Parameters**:
-- `$can_access` (bool) - Default permission
-- `$current_user_id` (int) - Current user ID
-
-**Example**:
-```php
-add_filter('wp_customer_can_access_company_page', 'restrict_company_access', 10, 2);
-
-function restrict_company_access($can_access, $current_user_id) {
-    // Only allow during business hours
-    $current_hour = (int) date('H');
-
-    if ($current_hour < 8 || $current_hour > 17) {
-        return false;  // Outside business hours
-    }
-
-    return $can_access;
-}
-```
-
----
-
-## Common Patterns
-
-### Pattern 1: Role-based Override
-
-```php
-add_filter('wp_customer_can_view_customer_employee', 'role_based_view', 10, 4);
-
-function role_based_view($can_view, $employee, $customer, $current_user_id) {
-    $allowed_roles = ['administrator', 'hr_manager', 'auditor'];
-
-    if (user_has_any_role($current_user_id, $allowed_roles)) {
-        return true;  // Always allow these roles
-    }
-
-    return $can_view;  // Keep default for others
-}
-```
-
-### Pattern 2: Conditional Based on Settings
-
-```php
-add_filter('wp_customer_can_create_branch', 'setting_based_permission', 10, 3);
-
-function setting_based_permission($can_create, $customer_id, $current_user_id) {
-    // Check customer settings
-    $settings = get_customer_settings($customer_id);
-
-    if (!$settings['allow_branch_creation']) {
-        return false;  // Disabled in settings
-    }
-
-    return $can_create;
-}
-```
-
-### Pattern 3: Time-based Restrictions
-
-```php
-add_filter('wp_customer_can_edit_customer_employee', 'time_based_edit', 10, 4);
-
-function time_based_edit($can_edit, $employee, $customer, $current_user_id) {
-    // Prevent edits during payroll processing (1st-3rd of month)
-    $day_of_month = (int) date('d');
-
-    if ($day_of_month >= 1 && $day_of_month <= 3) {
-        return false;  // Payroll period - locked
-    }
-
-    return $can_edit;
-}
-```
-
----
-
-**Back to**: [README.md](../README.md)
+- [Action Hooks Documentation](../actions/company-actions.md)
+- [CustomerCacheManager](../../src/Cache/CustomerCacheManager.php)

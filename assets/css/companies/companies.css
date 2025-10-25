@@ -1,0 +1,1043 @@
+/**
+ * Companies CSS
+ *
+ * Styling for companies (branches) management pages
+ *
+ * @package WPCustomer
+ * @subpackage Assets\CSS
+ * @since 1.1.0
+ * @author arisciwek
+ */
+
+/* ==========================================================================
+   Page Layout
+   ========================================================================== */
+
+.wp-customer-companies-list {
+    padding: 20px 20px 40px;
+}
+
+.wpapp-page-header {
+    margin-bottom: 0;
+}
+
+.wpapp-page-header .page-header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.wpapp-page-header .header-left {
+    flex: 1;
+    margin: 0;
+    padding: 0;
+}
+
+.wpapp-page-header .header-right {
+    display: flex;
+    align-items: center;
+}
+
+.wpapp-page-header h1 {
+    margin: 0 0 5px 0;
+    padding: 0;
+    font-size: 23px;
+    font-weight: 400;
+    line-height: 1.3;
+}
+
+.wpapp-page-header .subtitle {
+    font-size: 13px;
+    color: #666;
+    font-weight: normal;
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+}
+
+.wpapp-page-header .page-title-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-left: 10px;
+    padding: 6px 12px;
+    background: #2271b1;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    text-decoration: none;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.wpapp-page-header .page-title-action:hover {
+    background: #135e96;
+    color: #fff;
+}
+
+.wpapp-page-header .page-title-action .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+.wpapp-page-header .button-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 36px;
+    padding: 0 15px;
+    text-decoration: none;
+    box-shadow: none;
+    border: none;
+}
+
+.wpapp-page-header .button-primary:hover {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.wpapp-page-header .button-primary .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* ==========================================================================
+   Statistics Container & Cards (Outside sliding panel)
+   ========================================================================== */
+
+.wpapp-statistics-container {
+    margin: 20px 0 20px 0;
+}
+
+.wpapp-statistics-container .statistics-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+
+/* Override global .hidden for smooth fade-in */
+.wpapp-statistics-container .statistics-cards.hidden {
+    display: grid !important; /* Override global .hidden */
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.stats-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stats-icon {
+    width: 55px;
+    height: 55px;
+    min-width: 55px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f0f0;
+    color: #666;
+    font-size: 26px;
+}
+
+.stats-icon.active {
+    background: #d4edda;
+    color: #28a745;
+}
+
+.stats-icon.pusat {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.stats-icon.cabang {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.stats-icon .dashicons {
+    font-size: 26px;
+    width: 26px;
+    height: 26px;
+}
+
+.stats-content {
+    flex: 1;
+}
+
+.stats-number {
+    margin: 0 0 5px 0;
+    font-size: 32px;
+    font-weight: 700;
+    color: #2c3e50;
+    line-height: 1;
+}
+
+.stats-label {
+    margin: 0;
+    font-size: 13px;
+    color: #7f8c8d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   Filters Container & DataTable Filters (Outside sliding panel)
+   ========================================================================== */
+
+.wpapp-filters-container {
+    margin: 0 0 20px 0;
+}
+
+.wpapp-filters-container .datatable-filters {
+    padding: 12px 20px;
+    background: #fff;
+    border-radius: 5px;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.wpapp-filters-container .datatable-filters label {
+    margin: 0;
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
+
+.wpapp-filters-container .datatable-filters select.status-filter {
+    padding: 7px 12px;
+    min-width: 150px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+    background: #fff;
+    font-size: 14px;
+}
+
+/* ==========================================================================
+   DataTable Container (Inside sliding panel)
+   ========================================================================== */
+
+.companies-list-container {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    padding: 0; /* No padding - table fills container */
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    overflow: hidden; /* Contain table borders */
+}
+
+/* ==========================================================================
+   DataTable Styling
+   ========================================================================== */
+
+.wp-customer-datatable {
+    width: 100% !important;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+.wp-customer-datatable thead th,
+.wp-customer-datatable tfoot th {
+    background: #f8f9fa;
+    font-weight: 600;
+    text-align: left;
+    padding: 12px;
+    border-bottom: 2px solid #dee2e6;
+    color: #495057;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.wp-customer-datatable tbody td {
+    padding: 12px;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: middle;
+    font-size: 14px;
+}
+
+.wp-customer-datatable tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* DataTable wrapper - add padding since container has none */
+.companies-list-container .dataTables_wrapper {
+    padding: 20px;
+}
+
+/* DataTable header and footer */
+.datatable-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 15px;
+}
+
+.datatable-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+    gap: 15px;
+}
+
+/* DataTable length select */
+.dataTables_wrapper .dataTables_length {
+    margin-bottom: 15px;
+}
+
+.dataTables_wrapper .dataTables_length select {
+    min-width: 60px;
+    padding: 5px 8px;
+    margin: 0 5px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+}
+
+.dataTables_wrapper .dataTables_length label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* DataTable search */
+.dataTables_filter input {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 13px;
+    margin-left: 8px;
+    min-width: 250px;
+}
+
+/* DataTable info */
+.dataTables_info {
+    font-size: 13px;
+    color: #666;
+}
+
+/* DataTable pagination */
+.dataTables_paginate {
+    display: flex;
+    gap: 5px;
+}
+
+.dataTables_paginate .paginate_button {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    font-size: 13px;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.dataTables_paginate .paginate_button:hover {
+    background: #f0f0f0;
+    border-color: #bbb;
+}
+
+.dataTables_paginate .paginate_button.current {
+    background: #2271b1;
+    color: #fff;
+    border-color: #2271b1;
+}
+
+.dataTables_paginate .paginate_button.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Badges
+   ========================================================================== */
+
+.badge {
+    display: inline-block;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 12px;
+    white-space: nowrap;
+    line-height: 1.2;
+}
+
+.badge-primary {
+    background: #007bff;
+    color: #fff;
+}
+
+.badge-secondary {
+    background: #6c757d;
+    color: #fff;
+}
+
+.badge-success {
+    background: #28a745;
+    color: #fff;
+}
+
+.badge-danger {
+    background: #dc3545;
+    color: #fff;
+}
+
+.badge-warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.badge-info {
+    background: #17a2b8;
+    color: #fff;
+}
+
+.badge .dashicons {
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
+    vertical-align: middle;
+    margin-top: -2px;
+    margin-right: 3px;
+}
+
+/* ==========================================================================
+   Buttons
+   ========================================================================== */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s;
+    font-size: 13px;
+    font-weight: 500;
+    gap: 5px;
+}
+
+.btn-sm {
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+.btn-info {
+    background: #17a2b8;
+    color: #fff;
+}
+
+.btn-info:hover {
+    background: #138496;
+    color: #fff;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+    color: #fff;
+}
+
+.btn-danger {
+    background: #dc3545;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    color: #fff;
+}
+
+.btn-success {
+    background: #28a745;
+    color: #fff;
+}
+
+.btn-success:hover {
+    background: #218838;
+    color: #fff;
+}
+
+.btn .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+.btn-group {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.btn:disabled,
+.btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ==========================================================================
+   Links
+   ========================================================================== */
+
+.company-code-link,
+.company-name-link {
+    color: #2271b1;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.company-code-link:hover,
+.company-name-link:hover {
+    color: #135e96;
+    text-decoration: underline;
+}
+
+.customer-link {
+    color: #666;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.customer-link:hover {
+    color: #2271b1;
+    text-decoration: underline;
+}
+
+/* ==========================================================================
+   Contact Info
+   ========================================================================== */
+
+.contact-info {
+    font-size: 12px;
+    line-height: 1.8;
+    color: #666;
+}
+
+.contact-info .dashicons {
+    font-size: 14px;
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+    margin-top: -2px;
+    margin-right: 4px;
+    color: #999;
+}
+
+/* ==========================================================================
+   Address
+   ========================================================================== */
+
+.address-truncated {
+    display: inline-block;
+    max-width: 250px;
+    cursor: help;
+    color: #666;
+}
+
+/* ==========================================================================
+   Loading States
+   ========================================================================== */
+
+.datatable-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    color: #666;
+}
+
+.datatable-loading .spinner {
+    float: none;
+    margin: 0;
+}
+
+/* ==========================================================================
+   Admin Notices
+   ========================================================================== */
+
+.wp-customer-companies-list .notice {
+    margin: 15px 0;
+    padding: 12px 15px;
+    border-left: 4px solid;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.wp-customer-companies-list .notice-success {
+    border-left-color: #28a745;
+}
+
+.wp-customer-companies-list .notice-error {
+    border-left-color: #dc3545;
+}
+
+.wp-customer-companies-list .notice-warning {
+    border-left-color: #ffc107;
+}
+
+.wp-customer-companies-list .notice-info {
+    border-left-color: #17a2b8;
+}
+
+.wp-customer-companies-list .notice p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* ==========================================================================
+   Sliding Panel (Perfex CRM Pattern)
+   ========================================================================== */
+
+/* Row container for sliding panels */
+#companies-container {
+    display: flex;
+    flex-wrap: nowrap; /* IMPORTANT: Don't wrap to next line */
+    margin-right: -15px;
+    margin-left: -15px;
+    align-items: flex-start;
+}
+
+/* Left panel (DataTable container) - with transition */
+#companies-table-container {
+    position: relative;
+    min-height: 1px;
+    padding-right: 15px;
+    padding-left: 15px;
+    transition: all 0.3s ease;
+    -webkit-transition: all 0.3s ease;
+    flex: 1 1 100%; /* Start at 100% width */
+    max-width: 100%;
+}
+
+#companies-table-container.col-md-7 {
+    flex: 1 1 58.33333333%;
+    max-width: 58.33333333%;
+}
+
+/* Right panel (Detail panel) - with transition */
+.company-detail-panel {
+    position: relative;
+    min-height: 1px;
+    padding-right: 15px;
+    padding-left: 15px;
+    transition: all 0.3s ease, opacity 0.2s ease;
+    -webkit-transition: all 0.3s ease, opacity 0.2s ease;
+    border-left: 1px solid #d2d3d5;
+    background: #fff;
+    max-height: calc(100vh - 150px);
+    overflow-y: auto;
+    flex: 0 0 41.66666667%; /* Fixed width when visible */
+    max-width: 41.66666667%;
+    opacity: 1;
+}
+
+/* When panel is hidden, don't take up space */
+.company-detail-panel.hidden {
+    flex: 0 0 0%;
+    max-width: 0%;
+    padding: 0;
+    border: none;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+}
+
+/* Detail Panel Header */
+.detail-panel-header {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    padding: 15px 20px 10px;
+    border-bottom: 1px solid #e0e0e0;
+    z-index: 10;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.close-detail-panel {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    color: #666;
+    text-decoration: none;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #f8f9fa;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.close-detail-panel:hover {
+    background: #e9ecef;
+    color: #333;
+    text-decoration: none;
+}
+
+.close-detail-panel .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* Detail Panel Title */
+.detail-panel-title {
+    padding: 15px 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.detail-panel-title h2 {
+    margin: 0 0 5px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.detail-panel-title .company-code {
+    margin: 0;
+    font-size: 13px;
+    color: #7f8c8d;
+    font-family: monospace;
+}
+
+/* Tabs Navigation */
+.company-detail-tabs {
+    display: flex;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-bottom: 2px solid #e0e0e0;
+    background: #f8f9fa;
+}
+
+.company-detail-tabs li {
+    margin: 0;
+    padding: 0;
+}
+
+.company-detail-tabs a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    color: #666;
+    text-decoration: none;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+}
+
+.company-detail-tabs a:hover {
+    background: #e9ecef;
+    color: #333;
+}
+
+.company-detail-tabs li.active a {
+    color: #2271b1;
+    border-bottom-color: #2271b1;
+    background: #fff;
+    font-weight: 600;
+}
+
+.company-detail-tabs a .dashicons {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+}
+
+/* Tabs Content */
+.company-detail-content {
+    padding: 0;
+}
+
+.tab-pane {
+    display: none;
+    padding: 20px;
+}
+
+.tab-pane.active {
+    display: block;
+}
+
+/* Detail Section */
+.detail-section {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.detail-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #2c3e50;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.section-title .dashicons {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: #2271b1;
+}
+
+/* Detail Table */
+.detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.detail-table tr {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.detail-table tr:last-child {
+    border-bottom: none;
+}
+
+.detail-table th {
+    width: 35%;
+    padding: 10px 0;
+    text-align: left;
+    font-weight: 600;
+    color: #555;
+    font-size: 13px;
+    vertical-align: top;
+}
+
+.detail-table td {
+    padding: 10px 0 10px 15px;
+    color: #333;
+    font-size: 14px;
+}
+
+.detail-table td .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+    margin-right: 5px;
+    margin-top: -2px;
+    color: #999;
+}
+
+.detail-table td a {
+    color: #2271b1;
+    text-decoration: none;
+}
+
+.detail-table td a:hover {
+    text-decoration: underline;
+}
+
+/* Loading Placeholder */
+.loading-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.loading-placeholder .spinner {
+    float: none;
+    margin: 0 0 15px 0;
+}
+
+.loading-placeholder p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+/* Tab Loading */
+.tab-loading {
+    display: none;
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.tab-loading .spinner {
+    float: none;
+    margin: 0 0 15px 0;
+}
+
+.tab-loading p {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.tab-content-placeholder {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
+
+/* Hidden utility class */
+.hidden {
+    display: none !important;
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+
+@media screen and (max-width: 782px) {
+    .statistics-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .datatable-header,
+    .datatable-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .dataTables_filter input {
+        min-width: 100%;
+        margin-left: 0;
+        margin-top: 5px;
+    }
+
+    .wp-customer-datatable {
+        font-size: 12px;
+    }
+
+    .wp-customer-datatable thead th,
+    .wp-customer-datatable tfoot th,
+    .wp-customer-datatable tbody td {
+        padding: 8px;
+    }
+
+    .address-truncated {
+        max-width: 150px;
+    }
+
+    /* Sliding panel responsiveness */
+    #companies-container {
+        flex-wrap: wrap; /* Allow wrapping on mobile */
+    }
+
+    #companies-table-container,
+    #companies-table-container.col-md-7 {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+
+    .company-detail-panel {
+        flex: 1 1 100%;
+        max-width: 100%;
+        border-left: none;
+        border-top: 2px solid #d2d3d5;
+        margin-top: 20px;
+    }
+
+    .company-detail-panel.hidden {
+        display: none; /* Completely hide on mobile when closed */
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .wp-customer-companies-list {
+        padding: 10px;
+    }
+
+    .companies-list-container {
+        padding: 10px;
+    }
+
+    .btn-group {
+        flex-direction: column;
+    }
+
+    /* Detail panel adjustments */
+    .detail-panel-title h2 {
+        font-size: 18px;
+    }
+
+    .company-detail-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+    }
+
+    .company-detail-tabs a {
+        padding: 10px 15px;
+        font-size: 13px;
+    }
+
+    .detail-table th {
+        width: 40%;
+    }
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+    .page-title-action,
+    .dataTables_filter,
+    .dataTables_length,
+    .dataTables_paginate,
+    .btn-group {
+        display: none !important;
+    }
+
+    .statistics-cards,
+    .companies-list-container {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}

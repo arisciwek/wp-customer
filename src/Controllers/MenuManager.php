@@ -15,6 +15,7 @@ use WPCustomer\Controllers\SettingsController;
 use WPCustomer\Controllers\CustomerController;
 use WPCustomer\Controllers\Company\CompanyController;
 use WPCustomer\Controllers\Company\CompanyInvoiceController;
+use WPCustomer\Controllers\Companies\CompaniesController;
 
 class MenuManager {
     private $plugin_name;
@@ -23,6 +24,7 @@ class MenuManager {
     private $customer_controller;
     private $company_controller;  // Tambah property untuk CompanyController
     private $company_invoice_controller;  // Tambah property untuk CompanyInvoiceController
+    private $companies_controller;  // Tambah property untuk CompaniesController
 
     public function __construct($plugin_name, $version) {
         $this->plugin_name = $plugin_name;
@@ -31,6 +33,7 @@ class MenuManager {
         $this->customer_controller = new CustomerController();
         $this->company_controller = new CompanyController();  // Inisialisasi CompanyController
         $this->company_invoice_controller = new CompanyInvoiceController();  // Inisialisasi CompanyInvoiceController
+        $this->companies_controller = new CompaniesController();  // Inisialisasi CompaniesController
     }
 
     public function init() {
@@ -70,6 +73,17 @@ class MenuManager {
             [$this->company_invoice_controller, 'render_page'],
             'dashicons-media-spreadsheet',
             32
+        );
+
+        // Menu Companies (Perusahaan-2)
+        add_menu_page(
+            __('Perusahaan-2', 'wp-customer'),
+            __('🏢 Perusahaan-2', 'wp-customer'),
+            'view_customer_branch_list',
+            'wp-customer-companies',
+            [$this->companies_controller, 'render_page'],
+            'dashicons-store',
+            33
         );
 
         // Submenu Settings
