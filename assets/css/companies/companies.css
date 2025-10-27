@@ -13,7 +13,7 @@
    Page Layout
    ========================================================================== */
 
-.wp-customer-companies-list {
+.wpapp-datatable-page {
     padding: 20px 20px 40px;
 }
 
@@ -21,7 +21,7 @@
     margin-bottom: 0;
 }
 
-.wpapp-page-header .page-header-container {
+.wpapp-page-header .wpapp-page-header-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -115,7 +115,7 @@
     margin: 20px 0 20px 0;
 }
 
-.wpapp-statistics-container .statistics-cards {
+.wpapp-statistics-container .customer-statistics-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 20px;
@@ -124,14 +124,14 @@
 }
 
 /* Override global .hidden for smooth fade-in */
-.wpapp-statistics-container .statistics-cards.hidden {
+.wpapp-statistics-container .customer-statistics-cards.hidden {
     display: grid !important; /* Override global .hidden */
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
 }
 
-.stats-card {
+.customer-stats-card {
     background: #fff;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
@@ -143,7 +143,7 @@
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
-.stats-card:hover {
+.customer-stats-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -211,7 +211,7 @@
     margin: 0 0 20px 0;
 }
 
-.wpapp-filters-container .datatable-filters {
+.wpapp-filters-container .wpapp-datatable-filters {
     padding: 12px 20px;
     background: #fff;
     border-radius: 5px;
@@ -222,13 +222,16 @@
     gap: 10px;
 }
 
-.wpapp-filters-container .datatable-filters label {
+.wpapp-filters-container .wpapp-datatable-filters label {
     margin: 0;
     font-weight: 600;
     color: #333;
     font-size: 14px;
 }
 
+/*
+ * apakah ini selector campuran ?
+ */
 .wpapp-filters-container .datatable-filters select.status-filter {
     padding: 7px 12px;
     min-width: 150px;
@@ -242,7 +245,7 @@
    DataTable Container (Inside sliding panel)
    ========================================================================== */
 
-.companies-list-container {
+.wpapp-companies-list-container {
     background: #fff;
     border: 1px solid #e0e0e0;
     border-radius: 5px;
@@ -286,7 +289,7 @@
 }
 
 /* DataTable wrapper - add padding since container has none */
-.companies-list-container .dataTables_wrapper {
+.wpapp-companies-list-container .dataTables_wrapper {
     padding: 20px;
 }
 
@@ -594,7 +597,7 @@
    Admin Notices
    ========================================================================== */
 
-.wp-customer-companies-list .notice {
+.wpapp-datatable-page .notice {
     margin: 15px 0;
     padding: 12px 15px;
     border-left: 4px solid;
@@ -602,23 +605,23 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.wp-customer-companies-list .notice-success {
+.wpapp-datatable-page .notice-success {
     border-left-color: #28a745;
 }
 
-.wp-customer-companies-list .notice-error {
+.wpapp-datatable-page .notice-error {
     border-left-color: #dc3545;
 }
 
-.wp-customer-companies-list .notice-warning {
+.wpapp-datatable-page .notice-warning {
     border-left-color: #ffc107;
 }
 
-.wp-customer-companies-list .notice-info {
+.wpapp-datatable-page .notice-info {
     border-left-color: #17a2b8;
 }
 
-.wp-customer-companies-list .notice p {
+.wpapp-datatable-page .notice p {
     margin: 0;
     font-size: 14px;
 }
@@ -628,7 +631,7 @@
    ========================================================================== */
 
 /* Row container for sliding panels */
-#companies-container {
+#wpapp-datatable-container {
     display: flex;
     flex-wrap: nowrap; /* IMPORTANT: Don't wrap to next line */
     margin-right: -15px;
@@ -637,7 +640,7 @@
 }
 
 /* Left panel (DataTable container) - with transition */
-#companies-table-container {
+#wpapp-companies-table-container {
     position: relative;
     min-height: 1px;
     padding-right: 15px;
@@ -648,7 +651,7 @@
     max-width: 100%;
 }
 
-#companies-table-container.col-md-7 {
+#wpapp-companies-table-container.col-md-7 {
     flex: 1 1 58.33333333%;
     max-width: 58.33333333%;
 }
@@ -935,7 +938,7 @@
    ========================================================================== */
 
 @media screen and (max-width: 782px) {
-    .statistics-cards {
+    .customer-statistics-cards {
         grid-template-columns: 1fr;
     }
 
@@ -966,12 +969,12 @@
     }
 
     /* Sliding panel responsiveness */
-    #companies-container {
+    #wpapp-datatable-container {
         flex-wrap: wrap; /* Allow wrapping on mobile */
     }
 
-    #companies-table-container,
-    #companies-table-container.col-md-7 {
+    #wpapp-companies-table-container,
+    #wpapp-companies-table-container.col-md-7 {
         flex: 1 1 100%;
         max-width: 100%;
     }
@@ -990,11 +993,11 @@
 }
 
 @media screen and (max-width: 600px) {
-    .wp-customer-companies-list {
+    .wpapp-datatable-page {
         padding: 10px;
     }
 
-    .companies-list-container {
+    .wpapp-companies-list-container {
         padding: 10px;
     }
 
@@ -1035,8 +1038,8 @@
         display: none !important;
     }
 
-    .statistics-cards,
-    .companies-list-container {
+    .customer-statistics-cards,
+    .wpapp-companies-list-container {
         box-shadow: none;
         border: 1px solid #ddd;
     }

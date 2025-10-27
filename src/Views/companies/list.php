@@ -25,10 +25,10 @@ $can_create = $validator->can_create_company();
 ?>
 
 <div class="wrap wpapp-dashboard-wrap">
-<div class="wrap wp-customer-companies-list">
+<div class="wrap wpapp-datatable-page">
     <!-- Page Header -->
     <div class="wpapp-page-header">
-        <div class="page-header-container">
+        <div class="wpapp-page-header-container">
             <div class="header-left">
                 <h1 class="wp-heading-inline">
                     <?php echo esc_html__('Perusahaan-2', 'wp-customer'); ?>
@@ -63,8 +63,8 @@ $can_create = $validator->can_create_company();
 
     <!-- Statistics Container -->
     <div class="wpapp-statistics-container">
-        <div class="statistics-cards hidden" id="companies-statistics">
-            <div class="stats-card">
+        <div class="customer-statistics-cards hidden" id="companies-statistics">
+            <div class="customer-stats-card">
                 <div class="stats-icon">
                     <span class="dashicons dashicons-building"></span>
                 </div>
@@ -74,7 +74,7 @@ $can_create = $validator->can_create_company();
                 </div>
             </div>
 
-            <div class="stats-card">
+            <div class="customer-stats-card">
                 <div class="stats-icon active">
                     <span class="dashicons dashicons-yes-alt"></span>
                 </div>
@@ -84,7 +84,7 @@ $can_create = $validator->can_create_company();
                 </div>
             </div>
 
-            <div class="stats-card">
+            <div class="customer-stats-card">
                 <div class="stats-icon pusat">
                     <span class="dashicons dashicons-admin-home"></span>
                 </div>
@@ -94,7 +94,7 @@ $can_create = $validator->can_create_company();
                 </div>
             </div>
 
-            <div class="stats-card">
+            <div class="customer-stats-card">
                 <div class="stats-icon cabang">
                     <span class="dashicons dashicons-store"></span>
                 </div>
@@ -104,14 +104,14 @@ $can_create = $validator->can_create_company();
                 </div>
             </div>
         </div>
-        <!-- End statistics-cards -->
+        <!-- End customer-statistics-cards -->
     </div>
     <!-- End wpapp-statistics-container -->
 
     <!-- Filters Container -->
     <?php if (current_user_can('edit_all_customers')) : ?>
     <div class="wpapp-filters-container">
-        <div class="datatable-filters">
+        <div class="wpapp-datatable-filters">
             <label for="status-filter">
                 <?php echo esc_html__('Filter Status:', 'wp-customer'); ?>
             </label>
@@ -129,14 +129,14 @@ $can_create = $validator->can_create_company();
     <div class="wpapp-datatable-layout">
 
         <!-- Sliding Panel Row Container -->
-        <div class="row" id="companies-container">
+        <div class="row" id="wpapp-datatable-container">
 
         <!-- Left Panel: DataTable -->
-        <div class="col-md-12" id="companies-table-container">
+        <div class="col-md-12" id="wpapp-companies-table-container">
 
-            <div class="companies-list-container">
+            <div class="wpapp-companies-list-container">
                 <!-- DataTable -->
-        <table id="companies-datatable" class="display wp-customer-datatable">
+        <table id="wpapp-companies-datatable" class="display wp-customer-datatable">
             <thead>
                 <tr>
                     <th><?php echo esc_html__('ID', 'wp-customer'); ?></th>
@@ -165,7 +165,7 @@ $can_create = $validator->can_create_company();
         </table>
 
             </div>
-            <!-- End companies-list-container -->
+            <!-- End wpapp-companies-list-container -->
 
         </div>
         <!-- End Left Panel -->
@@ -183,7 +183,7 @@ $can_create = $validator->can_create_company();
         <!-- End Right Panel -->
 
         </div>
-        <!-- End companies-container -->
+        <!-- End wpapp-datatable-container -->
 
     </div>
     <!-- End wpapp-datatable-layout -->
