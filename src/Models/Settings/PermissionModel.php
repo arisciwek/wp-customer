@@ -34,6 +34,15 @@ namespace WPCustomer\Models\Settings;
 
 class PermissionModel {
     private $available_capabilities = [
+        // WP Agency Plugin - View Access (required for cross-plugin integration)
+        // Customer employees need view access to agencies they work with
+        'view_agency_list' => 'Lihat Daftar Agency',
+        'view_agency_detail' => 'Lihat Detail Agency',
+        'view_division_list' => 'Lihat Daftar Unit Kerja',
+        'view_division_detail' => 'Lihat Detail Unit Kerja',
+        'view_employee_list' => 'Lihat Daftar Pegawai Agency',
+        'view_employee_detail' => 'Lihat Detail Pegawai Agency',
+
         // Customer capabilities
         'view_customer_list' => 'Lihat Daftar Customer',
         'view_customer_detail' => 'Lihat Detail Customer',
@@ -236,6 +245,14 @@ class PermissionModel {
         $customer_admin = get_role('customer_admin');
         if ($customer_admin) {
             $default_capabilities = [
+                // WP Agency Plugin - View Access (filtered by related agencies)
+                'view_agency_list' => true,        // Can see agencies related to their branches
+                'view_agency_detail' => true,      // Can see agency details (filtered)
+                'view_division_list' => true,      // Can see divisions
+                'view_division_detail' => true,    // Can see division details
+                'view_employee_list' => true,      // Can see agency employees
+                'view_employee_detail' => true,    // Can see employee details
+
                 // Customer capabilities - owner manages their customer
                 'view_customer_list' => true,
                 'view_customer_detail' => true,
@@ -294,6 +311,14 @@ class PermissionModel {
         $customer_branch_admin = get_role('customer_branch_admin');
         if ($customer_branch_admin) {
             $default_capabilities = [
+                // WP Agency Plugin - View Access (filtered by related agencies)
+                'view_agency_list' => true,        // Can see agencies related to their branch
+                'view_agency_detail' => true,      // Can see agency details (filtered)
+                'view_division_list' => true,      // Can see divisions
+                'view_division_detail' => true,    // Can see division details
+                'view_employee_list' => true,      // Can see agency employees
+                'view_employee_detail' => true,    // Can see employee details
+
                 // Customer capabilities - can view parent customer
                 'view_customer_list' => true,      // Can see customer list (filtered to their customer)
                 'view_customer_detail' => true,    // Can see their customer details
@@ -352,6 +377,14 @@ class PermissionModel {
         $customer_employee = get_role('customer_employee');
         if ($customer_employee) {
             $default_capabilities = [
+                // WP Agency Plugin - View Access (filtered by related agencies)
+                'view_agency_list' => true,        // Can see agencies related to their branch
+                'view_agency_detail' => true,      // Can see agency details (filtered)
+                'view_division_list' => true,      // Can see divisions
+                'view_division_detail' => true,    // Can see division details
+                'view_employee_list' => true,      // Can see agency employees
+                'view_employee_detail' => true,    // Can see employee details
+
                 // Customer capabilities - view only
                 'view_customer_list' => true,      // Can see customer (their employer)
                 'view_customer_detail' => true,

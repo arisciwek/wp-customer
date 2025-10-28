@@ -149,22 +149,15 @@ class WPCustomer {
         add_action('wp_customer_employee_before_delete', [$employee_cleanup_handler, 'handleBeforeDelete'], 10, 2);
         add_action('wp_customer_employee_deleted', [$employee_cleanup_handler, 'handleAfterDelete'], 10, 3);
 
-        // TODO-2179: Generic Entity Integration Framework (Phase 2)
-        // Replaces old one-to-one integration approach with config-based generic framework
-        new \WPCustomer\Controllers\Integration\IntegrationBootstrap();
+        // Simple Integration: AgencyTabController
+        // Injects customer statistics into wp-agency info tab via generic hook
+        // MVC proper: Controller → Model → View
+        $agency_tab_controller = new \WPCustomer\Controllers\Integration\AgencyTabController();
+        $agency_tab_controller->init();
 
-        // Fallback: Ensure DataTable hooks are registered (for cases where bootstrap runs with old code)
-        add_action('admin_init', function() {
-            global $wp_filter;
-            $hook = 'wpapp_datatable_agencies_where';
-
-            // Check if hook is not registered
-            if (!isset($wp_filter[$hook])) {
-                // Force re-register by creating a new DataTableAccessFilter instance
-                $model = new \WPCustomer\Models\Relation\EntityRelationModel();
-                $filter = new \WPCustomer\Controllers\Integration\DataTableAccessFilter($model);
-            }
-        }, 999); // Late priority to ensure all configs are loaded
+        // Initialize DataTableAccessFilter for access control
+        // Filters agency datatable based on user role and access
+        new \WPCustomer\Controllers\Integration\DataTableAccessFilter();
 
         // DEBUG: Log all database queries related to agencies
         add_filter('query', function($query) {

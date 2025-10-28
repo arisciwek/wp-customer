@@ -29,9 +29,9 @@ class EntityRelationModel {
     /**
      * Entity relation configurations
      *
-     * @var array
+     * @var array|null
      */
-    private $configs = [];
+    private $configs = null;
 
     /**
      * Global database instance
@@ -57,14 +57,13 @@ class EntityRelationModel {
     /**
      * Constructor
      *
-     * Loads entity relation configurations via filter hook.
+     * Initializes the model. Configs are loaded lazily on first access.
      *
      * @since 1.0.12
      */
     public function __construct() {
         global $wpdb;
         $this->wpdb = $wpdb;
-        $this->load_configs();
     }
 
     /**
@@ -98,6 +97,11 @@ class EntityRelationModel {
      * @since 1.0.12
      */
     private function get_config(string $entity_type): ?array {
+        // Lazy load configs on first access
+        if ($this->configs === null) {
+            $this->load_configs();
+        }
+
         return $this->configs[$entity_type] ?? null;
     }
 

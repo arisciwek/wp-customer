@@ -57,15 +57,26 @@ class DataTableAccessFilter {
     /**
      * Load access filter configurations
      *
-     * Configurations registered via filter hook by integration classes.
+     * Simple inline configs for agency entity.
+     * Other plugins can add configs via filter hook.
      *
      * @since 1.0.12
      */
     private function load_configs(): void {
+        // Default config for agency (from Schema: BranchesDB.php has agency_id)
+        $default_configs = [
+            'agency' => [
+                'hook' => 'wpapp_datatable_agencies_where',
+                'table_alias' => 'a',
+                'id_column' => 'id',
+                'priority' => 10
+            ]
+        ];
+
         /**
          * Filter: wp_customer_datatable_access_configs
          *
-         * Register DataTable access filter configurations.
+         * Allows other plugins to add DataTable access filter configurations.
          *
          * @param array $configs Access filter configurations
          * @return array Modified configurations
@@ -75,16 +86,16 @@ class DataTableAccessFilter {
          * @example
          * ```php
          * add_filter('wp_customer_datatable_access_configs', function($configs) {
-         *     $configs['agency'] = [
-         *         'hook' => 'wpapp_datatable_agencies_where',
-         *         'table_alias' => 'a',
+         *     $configs['company'] = [
+         *         'hook' => 'wpapp_datatable_companies_where',
+         *         'table_alias' => 'c',
          *         'id_column' => 'id'
          *     ];
          *     return $configs;
          * });
          * ```
          */
-        $this->configs = apply_filters('wp_customer_datatable_access_configs', []);
+        $this->configs = apply_filters('wp_customer_datatable_access_configs', $default_configs);
     }
 
     /**
@@ -169,12 +180,12 @@ class DataTableAccessFilter {
          *
          * @since 1.0.12
          */
-        $is_platform = $this->is_platform_staff($user_id);
-        error_log('Is platform staff: ' . ($is_platform ? 'YES' : 'NO'));
+        $should_bypass = $this->should_bypass_filter($user_id, $entity_type);
+        error_log('Should bypass filter: ' . ($should_bypass ? 'YES' : 'NO'));
 
         $should_filter = apply_filters(
             'wp_customer_should_filter_datatable',
-            !$is_platform,
+            !$should_bypass,
             $user_id,
             $entity_type,
             $config
@@ -184,7 +195,7 @@ class DataTableAccessFilter {
 
         if (!$should_filter) {
             error_log('AFTER WHERE (no filter): ' . json_encode($where));
-            // Platform staff or whitelisted user - no filtering
+            // Admin, platform staff, or whitelisted user - no filtering
             return $where;
         }
 
@@ -294,10 +305,10 @@ class DataTableAccessFilter {
             return $this->apply_deny_access_filter($where, $config);
         }
 
-        // Check if user should be filtered
-        $is_platform = $this->is_platform_staff($user_id);
+        // Check if user should bypass filter
+        $should_bypass = $this->should_bypass_filter($user_id, $entity_type);
 
-        if (!$is_platform) {
+        if (!$should_bypass) {
             // Get accessible entity IDs
             try {
                 $accessible_ids = $this->model->get_accessible_entity_ids($entity_type, $user_id);
@@ -372,6 +383,111 @@ class DataTableAccessFilter {
         }
 
         return false;
+    }
+
+    /**
+     * Check if user should bypass filter
+     *
+     * Determines if user should see all data without filtering based on:
+     * 1. WordPress administrator role (global super admin)
+     * 2. Platform staff (platform-level access)
+     * 3. Entity-specific admin roles (configured per entity)
+     *
+     * Uses PermissionModel approach: Checks if user has required capabilities
+     * for viewing the entity, then checks if they're in an admin-level role.
+     *
+     * @param int    $user_id     User ID
+     * @param string $entity_type Entity type (agency, customer, etc.)
+     * @return bool True if should bypass filter, false otherwise
+     *
+     * @since 1.0.12
+     */
+    private function should_bypass_filter(int $user_id, string $entity_type): bool {
+        $user = get_user_by('id', $user_id);
+        if (!$user) {
+            return false;
+        }
+
+        // 1. WordPress administrator always bypasses (global super admin)
+        if (in_array('administrator', $user->roles)) {
+            error_log("User {$user_id} is WordPress administrator - bypassing filter");
+            return true;
+        }
+
+        // 2. Platform staff bypasses all entities
+        if ($this->is_platform_staff($user_id)) {
+            error_log("User {$user_id} is platform staff - bypassing filter");
+            return true;
+        }
+
+        // 3. Entity-specific admin roles bypass
+        // This mapping defines which roles should bypass filtering for each entity type
+        // Admin roles can see ALL data, non-admin roles are filtered
+        $entity_admin_roles = [
+            'agency' => [
+                'agency_admin_dinas',     // Admin Dinas (top level)
+                'agency_admin_unit',      // Admin Unit (unit level)
+                'agency_kepala_dinas',    // Kepala Dinas (head of agency)
+                'agency_kepala_bidang',   // Kepala Bidang (head of division)
+            ],
+            'customer' => [
+                'customer_admin',         // Customer Admin (owner/top level)
+            ],
+            // Add more entity-specific admin roles here as needed
+        ];
+
+        /**
+         * Filter: Modify entity admin roles mapping
+         *
+         * Allows plugins to add or modify admin roles for entities.
+         * Admin roles will bypass data filtering and see all records.
+         *
+         * @param array  $entity_admin_roles Entity => roles mapping
+         * @param int    $user_id            User ID being checked
+         * @param string $entity_type        Entity type being checked
+         * @return array Modified mapping
+         *
+         * @since 1.0.12
+         */
+        $entity_admin_roles = apply_filters(
+            'wp_customer_entity_admin_roles',
+            $entity_admin_roles,
+            $user_id,
+            $entity_type
+        );
+
+        // Check if user has any admin role for this entity
+        if (isset($entity_admin_roles[$entity_type])) {
+            $admin_roles = $entity_admin_roles[$entity_type];
+            foreach ($admin_roles as $admin_role) {
+                if (in_array($admin_role, $user->roles)) {
+                    error_log("User {$user_id} has {$admin_role} role - bypassing filter for {$entity_type}");
+                    return true;
+                }
+            }
+        }
+
+        /**
+         * Filter: Override bypass filter check
+         *
+         * Allows plugins/themes to override the bypass logic.
+         * This is the last check before filtering is applied.
+         *
+         * @param bool   $should_bypass Whether user should bypass filter
+         * @param int    $user_id       User ID
+         * @param string $entity_type   Entity type
+         * @param object $user          User object
+         * @return bool Modified should_bypass
+         *
+         * @since 1.0.12
+         */
+        return apply_filters(
+            'wp_customer_should_bypass_filter',
+            false,
+            $user_id,
+            $entity_type,
+            $user
+        );
     }
 
     /**
