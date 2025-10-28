@@ -149,12 +149,40 @@ class WPCustomer {
         add_action('wp_customer_employee_before_delete', [$employee_cleanup_handler, 'handleBeforeDelete'], 10, 2);
         add_action('wp_customer_employee_deleted', [$employee_cleanup_handler, 'handleAfterDelete'], 10, 3);
 
+        // TODO-2179: Generic Entity Integration Framework (Phase 2)
+        // Replaces old one-to-one integration approach with config-based generic framework
+        new \WPCustomer\Controllers\Integration\IntegrationBootstrap();
+
+        // Fallback: Ensure DataTable hooks are registered (for cases where bootstrap runs with old code)
+        add_action('admin_init', function() {
+            global $wp_filter;
+            $hook = 'wpapp_datatable_agencies_where';
+
+            // Check if hook is not registered
+            if (!isset($wp_filter[$hook])) {
+                // Force re-register by creating a new DataTableAccessFilter instance
+                $model = new \WPCustomer\Models\Relation\EntityRelationModel();
+                $filter = new \WPCustomer\Controllers\Integration\DataTableAccessFilter($model);
+            }
+        }, 999); // Late priority to ensure all configs are loaded
+
+        // DEBUG: Log all database queries related to agencies
+        add_filter('query', function($query) {
+            if (strpos($query, 'app_agencies') !== false) {
+                error_log('=== FINAL SQL QUERY (agencies) ===');
+                error_log($query);
+                error_log('=== END SQL QUERY ===');
+            }
+            return $query;
+        });
+
+        // OLD CODE - Commented out (replaced by generic framework)
         // TODO-2071: Cross-plugin integration with wp-agency
         // Filter agencies based on customer's branches
         // Only initialize if wp-agency is active
-        if (class_exists('WPAgency\Models\Agency\AgencyDataTableModel')) {
-            new \WPCustomer\Integrations\AgencyAccessFilter();
-        }
+        // if (class_exists('WPAgency\Models\Agency\AgencyDataTableModel')) {
+        //     new \WPCustomer\Integrations\AgencyAccessFilter();
+        // }
     }
 
     /**
@@ -178,8 +206,9 @@ class WPCustomer {
         new \WPCustomer\Controllers\Company\CompanyInvoiceController();
 
         // Integration Controllers (Hook-based Cross-Plugin Integration)
+        // OLD CODE - Commented out (replaced by generic framework TODO-2179)
         // Task-2177: Agency Integration - Injects customer statistics into wp-agency dashboard
-        new \WPCustomer\Controllers\Integration\AgencyIntegrationController();
+        // new \WPCustomer\Controllers\Integration\AgencyIntegrationController();
 
         // Register AJAX handlers
         add_action('wp_ajax_get_customer_stats', [$this->customer_controller, 'getStats']);
@@ -253,6 +282,16 @@ class WPCustomer {
      */
     public function run() {
         $this->loader->run();
+
+        /**
+         * Action: wp_customer_init
+         *
+         * Fires after wp-customer core is initialized.
+         * Used by integration framework for bootstrapping.
+         *
+         * @since 1.0.12
+         */
+        do_action('wp_customer_init');
     }
 }
 
