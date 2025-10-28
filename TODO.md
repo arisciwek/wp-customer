@@ -1,6 +1,103 @@
 # TODO List for WP Customer Plugin
 
-## TODO-2177: WP Customer HOOK Documentation ✅ COMPLETED
+## TODO-2178: Generic Integration Framework - Technical Documentation ✅ COMPLETED
+
+**Status**: ✅ COMPLETED
+**Created**: 2025-10-28
+**Completed**: 2025-10-28
+**Priority**: HIGH (Blocks TODO-2179 implementation)
+**Category**: Documentation, Architecture, Developer Experience
+**Dependencies**: TODO-2177 Phase 1 (completed)
+
+**Summary**: Create comprehensive PHPdoc-style technical documentation for Generic Entity Integration Framework **BEFORE** implementation begins.
+
+**Why Documentation First**:
+- Clarify architecture before coding
+- Identify design issues early
+- Serve as implementation specification
+- Enable parallel development
+- Reduce rework
+
+**Deliverables Created**:
+1. ✅ **8 Technical Documentation Files** in `/docs/developer/integration-framework/`:
+   - integration-framework-overview.md (240+ lines)
+   - entity-relation-model.md (580+ lines)
+   - integration-manager.md (480+ lines)
+   - tab-content-injector.md (550+ lines)
+   - datatable-access-filter.md (570+ lines)
+   - adding-new-entity-integration.md (670+ lines)
+   - api-reference.md (500+ lines)
+   - README.md (index/navigation)
+
+2. ✅ **Documentation Quality**:
+   - PHPdoc-style code examples (100+)
+   - Complete method signatures with @param, @return, @throws
+   - Architecture diagrams (10+ ASCII diagrams)
+   - Working code examples (copy-paste ready)
+   - Troubleshooting guides
+   - FAQ sections
+   - Quick start guide (5 minutes)
+
+**Total**: ~3,600 lines of comprehensive documentation
+
+**Scope**:
+- Document Generic Entity Integration Framework
+- ONE customer plugin → MANY target plugins (agency, company, branch, etc.)
+- Configuration-based, MVC-compliant, scalable architecture
+
+**Outcome**: Complete technical specification ready for implementation
+
+**Next**: TODO-2179 (Implementation) - can now proceed
+
+**See**: `TODO/TODO-2178-integration-framework-documentation.md` for complete specification
+
+---
+
+## TODO-2177: Agency-Customer Statistics Integration 🔄 IN PROGRESS
+
+**Status**: 🔄 IN PROGRESS (Phase 1 Complete, Phase 2 Planning)
+**Created**: 2025-10-28
+**Phase 1 Completed**: 2025-10-28
+**Priority**: HIGH
+**Related Task**: wp-agency Task-3085, wp-agency TODO-3084
+**Category**: Cross-Plugin Integration, Hook-Based Pattern
+
+**Summary**: Implemented hook-based customer statistics integration into wp-agency dashboard. Uses the Hook-Based Content Injection Pattern from wp-agency TODO-3084 Review-03 to display customer count in agency detail tabs without modifying any wp-agency files.
+
+**Problem Solved**:
+- Display customer count statistics in wp-agency dashboard
+- No direct coupling between plugins
+- Maintain plugin independence
+- Optimal performance with single SQL query
+
+**Implementation**:
+- ✅ Created `AgencyIntegrationController.php` (174 lines)
+- ✅ Hooked into `wpapp_tab_view_content` at priority 20
+- ✅ Single SQL query with user access filtering
+- ✅ Clean separation - zero wp-agency file modifications
+- ✅ Tested and verified working
+
+**Technical Details**:
+- **Hook**: `wpapp_tab_view_content` (priority 20)
+- **Method**: `inject_customer_statistics()`
+- **SQL**: Single optimized query with INNER JOIN
+- **Filter**: Platform staff + Customer employee access
+- **Output**: "Statistik Customer" section in agency tab
+
+**Files**:
+- Created: `/src/Controllers/Integration/AgencyIntegrationController.php`
+- Modified: `wp-customer.php` (+3 lines to register controller)
+
+**Pattern**: Hook-Based Content Injection (WordPress standard)
+**Performance**: Single SQL query (no N+1)
+**Maintainability**: Clean code, well documented
+**Extensibility**: Provides filter/action hooks for further extension
+
+**See**: `TODO/TODO-2177-agency-customer-statistics-integration.md` for complete documentation
+
+---
+
+## TODO-2176: Align Page Header with wpapp-* Prefix ✅ COMPLETED
 
 **Status**: ✅ COMPLETED
 **Created**: 2025-10-23

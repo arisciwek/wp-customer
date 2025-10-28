@@ -177,6 +177,10 @@ class WPCustomer {
         new \WPCustomer\Controllers\Company\CompanyMembershipController();
         new \WPCustomer\Controllers\Company\CompanyInvoiceController();
 
+        // Integration Controllers (Hook-based Cross-Plugin Integration)
+        // Task-2177: Agency Integration - Injects customer statistics into wp-agency dashboard
+        new \WPCustomer\Controllers\Integration\AgencyIntegrationController();
+
         // Register AJAX handlers
         add_action('wp_ajax_get_customer_stats', [$this->customer_controller, 'getStats']);
         add_action('wp_ajax_handle_customer_datatable', [$this->customer_controller, 'handleDataTableRequest']);
