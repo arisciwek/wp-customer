@@ -82,10 +82,10 @@ class WP_Customer_Dependencies {
                 true
             );
 
-            // Toast component
+            // Toast component - use advanced customer-toast.js (v1.0.0) instead of old toast.js
             wp_enqueue_script(
                 'wp-customer-toast',
-                WP_CUSTOMER_URL . 'assets/js/customer/toast.js',
+                WP_CUSTOMER_URL . 'assets/js/customer/customer-toast.js',
                 ['jquery'],
                 $this->version,
                 true
@@ -142,9 +142,8 @@ class WP_Customer_Dependencies {
 
         // Settings page styles
         if ($screen && $screen->id === 'wp-customer_page_wp-customer-settings') {
-           // Common styles for settings page
-           wp_enqueue_style('wp-customer-common', WP_CUSTOMER_URL . 'assets/css/settings/common-style.css', [], $this->version);
-           wp_enqueue_style('wp-customer-settings', WP_CUSTOMER_URL . 'assets/css/settings/settings-style.css', ['wp-customer-common'], $this->version);
+           // Main settings styles (includes common styles)
+           wp_enqueue_style('wp-customer-settings', WP_CUSTOMER_URL . 'assets/css/settings/settings-style.css', [], $this->version);
            wp_enqueue_style('wp-customer-modal', WP_CUSTOMER_URL . 'assets/css/customer/confirmation-modal.css', [], $this->version);
 
            // Get current tab and permission tab
@@ -276,7 +275,8 @@ class WP_Customer_Dependencies {
 
             // Enqueue registration-specific scripts
             wp_enqueue_script('jquery-validate', 'https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js', ['jquery'], '1.19.5', true);
-            wp_enqueue_script('wp-customer-toast', WP_CUSTOMER_URL . 'assets/js/customer/toast.js', ['jquery'], $this->version, true);
+            // Use advanced customer-toast.js (v1.0.0) instead of old toast.js
+            wp_enqueue_script('wp-customer-toast', WP_CUSTOMER_URL . 'assets/js/customer/customer-toast.js', ['jquery'], $this->version, true);
             wp_enqueue_script('customer-form-auto-format', WP_CUSTOMER_URL . 'assets/js/customer-form-auto-format.js', ['jquery'], $this->version, true);
             wp_enqueue_script('wp-customer-register', WP_CUSTOMER_URL . 'assets/js/auth/register.js', ['jquery', 'jquery-validate', 'wp-customer-toast', 'customer-form-auto-format'], $this->version, true);
 
@@ -301,10 +301,20 @@ class WP_Customer_Dependencies {
 
             switch ($current_tab) {
                 case 'permissions':
+                    // Enqueue customer toast component first (dependency)
+                    wp_enqueue_script(
+                        'wp-customer-toast',
+                        WP_CUSTOMER_URL . 'assets/js/customer/customer-toast.js',
+                        ['jquery'],
+                        $this->version,
+                        true
+                    );
+
+                    // Enqueue permissions script with toast dependency
                     wp_enqueue_script(
                         'wp-customer-permissions-tab',
-                        WP_CUSTOMER_URL . 'assets/js/settings/permissions-tab-script.js',
-                        ['jquery', 'wp-customer-settings'],
+                        WP_CUSTOMER_URL . 'assets/js/settings/customer-permissions-tab-script.js',
+                        ['jquery', 'wp-customer-settings', 'wp-customer-toast'],
                         $this->version,
                         true
                     );

@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/CSS/Settings
- * @version     2.0.0
+ * @version     2.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/css/settings/settings-style.css
@@ -14,12 +14,17 @@
  *              - Tab navigation for all settings pages
  *              - Common form elements
  *              - Shared UI components across settings
+ *              - Sticky footer for action buttons
  *
  * Dependencies:
  * - WordPress Admin CSS
- * - common-style.css
  *
  * Changelog:
+ * 2.1.0 - 2025-10-30
+ * - Merged common-style.css into this file
+ * - Added sticky footer styles
+ * - Removed dependency on common-style.css
+ *
  * 2.0.0 - 2024-01-15
  * - Refactored to separate common navigation styles
  * - Added shared settings components
@@ -28,6 +33,64 @@
  * 1.0.0 - 2024-01-07
  * - Initial version
  */
+
+/* ========================================
+   COMMON STYLES (from common-style.css)
+   ======================================== */
+
+/* Global Settings Layout */
+.settings-wrapper {
+    margin: 20px 20px 0 0;
+    max-width: 1200px;
+}
+
+/* Form & Table Base Styles */
+.form-table {
+    border-collapse: collapse;
+    margin-top: 0.5em;
+    width: 100%;
+}
+
+.form-table th {
+    width: 200px;
+    padding: 20px 10px 20px 0;
+}
+
+.form-table td {
+    padding: 15px 10px;
+    vertical-align: middle;
+}
+
+.description {
+    font-style: italic;
+    color: #666;
+    margin: 5px 0;
+}
+
+table.fixed {
+    table-layout: fixed;
+    margin: 2px 0 5px;
+}
+
+/* Utility Classes */
+.hidden {
+    display: none !important;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Submit Button Area */
+.submit-wrapper {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #ddd;
+}
+
+/* ========================================
+   SETTINGS PAGE SPECIFIC STYLES
+   ======================================== */
 
 /* Tab Navigation - Global Settings */
 .nav-tab-wrapper {
@@ -141,6 +204,47 @@
     margin: 0 0 20px 0;
 }
 
+/* Sticky Footer for Action Buttons */
+.settings-footer {
+    position: fixed;
+    bottom: 0;
+    left: 160px; /* WordPress admin menu width */
+    right: 0;
+    background: #fff;
+    padding: 15px 20px;
+    border-top: 1px solid #ccd0d4;
+    box-shadow: 0 -2px 5px rgba(0,0,0,.05);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.settings-footer .submit {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.settings-footer .submit input[type="submit"],
+.settings-footer .submit .button {
+    margin: 0;
+}
+
+/* Add padding to prevent content being hidden behind footer */
+.permissions-section {
+    padding-bottom: 80px;
+}
+
+/* Collapsed admin menu */
+@media screen and (max-width: 960px) {
+    .settings-footer {
+        left: 36px; /* Collapsed menu width */
+    }
+}
+
 /* Responsive Adjustments */
 @media screen and (max-width: 782px) {
     .nav-tab-wrapper {
@@ -171,5 +275,21 @@
     .settings-section {
         padding: 15px;
         margin: 15px 0;
+    }
+
+    .settings-footer {
+        left: 0;
+        padding: 12px 15px;
+    }
+
+    .settings-footer .submit {
+        flex-direction: column;
+        width: 100%;
+        gap: 8px;
+    }
+
+    .settings-footer .submit input[type="submit"],
+    .settings-footer .submit .button {
+        width: 100%;
     }
 }

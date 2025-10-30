@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Settings
- * @version     1.0.11
+ * @version     1.0.13
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Settings/PermissionModel.php
@@ -12,6 +12,20 @@
  * Description: Model untuk mengelola hak akses plugin
  *
  * Changelog:
+ * 1.0.13 - 2025-10-30
+ * - CRITICAL FIX: Adopted clean reset pattern from wp-agency and wp-app-core
+ * - Added: getDefaultCapabilitiesForRole() method for role-specific defaults
+ * - Improved: resetToDefault() using RoleManager::isPluginRole() check
+ * - Fixed: Reset now only affects customer roles + administrator
+ * - Fixed: No longer touches agency/platform/other plugin roles
+ * - Changed: Use WP_Customer_Role_Manager for all role operations
+ * - Security: Prevents accidental permission removal from other plugins
+ *
+ * 1.0.12 - 2025-10-29
+ * - Added 'wp_agency' tab to permission matrix for cross-plugin integration
+ * - WP Agency view access capabilities now manageable via UI
+ * - Updated getDisplayedCapabiities() to include wp_agency capabilities
+ *
  * 1.2.0 - 2025-01-16
  * - Added default capabilities for customer_admin role
  * - Added default capabilities for customer_branch_admin role
@@ -81,26 +95,41 @@ class PermissionModel {
         'approve_customer_membership_invoice' => 'Approve Invoice Membership',
 
         // Membership Invoice Payment capabilities
-        'pay_all_customer_membership_invoices' => 'Bayar Semua Invoice Membership Customer',
+        'pay_all_customer_membership_invoices' => 'Bayar Semua Invoice Membership Customer termasuk Customer Lain',
         'pay_own_customer_membership_invoices' => 'Bayar Invoice Membership Customer Sendiri',
         'pay_own_branch_membership_invoices' => 'Bayar Invoice Membership Cabang Sendiri'
     ];
 
     // Define base capabilities untuk setiap role beserta nilai default-nya
     private $displayed_capabilities_in_tabs = [
+        'wp_agency' => [
+            'title' => 'WP Agency',
+            'description' => 'WP Agency - View Access Permissions',
+            'caps' => [
+                // WP Agency Plugin - View Access (required for cross-plugin integration)
+                'view_agency_list',
+                'view_agency_detail',
+                'view_division_list',
+                'view_division_detail',
+                'view_employee_list',
+                'view_employee_detail'
+            ]
+        ],
         'customer' => [
-            'title' => 'Customer Permissions',
+            'title' => 'Customer',
+            'description' => 'Customer Permissions',
             'caps' => [
                 // Customer capabilities
                 'view_customer_list',
-                'view_own_customer', 
+                'view_own_customer',
                 'add_customer',
                 'edit_own_customer',
                 'edit_all_customers'
             ]
         ],
         'branch' => [
-            'title' => 'Branch Permissions',
+            'title' => 'Branch',
+            'description' => 'Branch Permissions',
             'caps' => [
                 'view_customer_branch_list',
                 'view_customer_branch_detail',
@@ -112,7 +141,8 @@ class PermissionModel {
             ]
         ],
         'employee' => [
-            'title' => 'Employee Permissions',
+            'title' => 'Employee',
+            'description' => 'Employee Permissions',
             'caps' => [
                 'view_customer_employee_list',
                 'view_customer_employee_detail',
@@ -124,7 +154,8 @@ class PermissionModel {
             ]
         ],
         'membership_invoice' => [
-            'title' => 'Membership Invoice Permissions',
+            'title' => 'Membership Invoice',
+            'description' => 'Membership Invoice Permissions',
             'caps' => [
                 'view_customer_membership_invoice_list',
                 'view_customer_membership_invoice_detail',
@@ -137,7 +168,8 @@ class PermissionModel {
             ]
         ],
         'membership_invoice_payment' => [
-            'title' => 'Membership Invoice Payment Permissions',
+            'title' => 'Invoice Payment',
+            'description' => 'Membership Invoice Payment Permissions',
             'caps' => [
                 'pay_all_customer_membership_invoices',
                 'pay_own_customer_membership_invoices',
@@ -148,6 +180,7 @@ class PermissionModel {
 
     private function getDisplayedCapabiities(): array{
        return array_merge(
+            $this->displayed_capabilities_in_tabs['wp_agency']['caps'],
             $this->displayed_capabilities_in_tabs['customer']['caps'],
             $this->displayed_capabilities_in_tabs['branch']['caps'],
             $this->displayed_capabilities_in_tabs['employee']['caps'],
@@ -159,6 +192,65 @@ class PermissionModel {
 
     public function getAllCapabilities(): array {
         return $this->available_capabilities;
+    }
+
+    /**
+     * Get capability descriptions for tooltips/help text
+     *
+     * @return array Associative array of capability => description
+     */
+    public function getCapabilityDescriptions(): array {
+        return [
+            // WP Agency Plugin - View Access
+            'view_agency_list' => __('Memungkinkan melihat daftar semua agency', 'wp-customer'),
+            'view_agency_detail' => __('Memungkinkan melihat detail informasi agency', 'wp-customer'),
+            'view_division_list' => __('Memungkinkan melihat daftar semua unit kerja', 'wp-customer'),
+            'view_division_detail' => __('Memungkinkan melihat detail informasi unit kerja', 'wp-customer'),
+            'view_employee_list' => __('Memungkinkan melihat daftar semua pegawai agency', 'wp-customer'),
+            'view_employee_detail' => __('Memungkinkan melihat detail informasi pegawai agency', 'wp-customer'),
+
+            // Customer capabilities
+            'view_customer_list' => __('Memungkinkan melihat daftar semua customer dalam format tabel', 'wp-customer'),
+            'view_customer_detail' => __('Memungkinkan melihat detail informasi customer', 'wp-customer'),
+            'view_own_customer' => __('Memungkinkan melihat customer yang ditugaskan ke pengguna', 'wp-customer'),
+            'add_customer' => __('Memungkinkan menambahkan data customer baru', 'wp-customer'),
+            'edit_all_customers' => __('Memungkinkan mengedit semua data customer', 'wp-customer'),
+            'edit_own_customer' => __('Memungkinkan mengedit hanya customer yang ditugaskan', 'wp-customer'),
+            'delete_customer' => __('Memungkinkan menghapus data customer', 'wp-customer'),
+
+            // Branch capabilities
+            'view_customer_branch_list' => __('Memungkinkan melihat daftar semua cabang', 'wp-customer'),
+            'view_customer_branch_detail' => __('Memungkinkan melihat detail informasi cabang', 'wp-customer'),
+            'view_own_customer_branch' => __('Memungkinkan melihat cabang yang ditugaskan', 'wp-customer'),
+            'add_customer_branch' => __('Memungkinkan menambahkan data cabang baru', 'wp-customer'),
+            'edit_all_customer_branches' => __('Memungkinkan mengedit semua data cabang', 'wp-customer'),
+            'edit_own_customer_branch' => __('Memungkinkan mengedit hanya cabang yang ditugaskan', 'wp-customer'),
+            'delete_customer_branch' => __('Memungkinkan menghapus data cabang', 'wp-customer'),
+
+            // Employee capabilities
+            'view_customer_employee_list' => __('Memungkinkan melihat daftar semua karyawan', 'wp-customer'),
+            'view_customer_employee_detail' => __('Memungkinkan melihat detail informasi karyawan', 'wp-customer'),
+            'view_own_customer_employee' => __('Memungkinkan melihat karyawan yang ditugaskan', 'wp-customer'),
+            'add_customer_employee' => __('Memungkinkan menambahkan data karyawan baru', 'wp-customer'),
+            'edit_all_customer_employees' => __('Memungkinkan mengedit semua data karyawan', 'wp-customer'),
+            'edit_own_customer_employee' => __('Memungkinkan mengedit hanya karyawan yang ditugaskan', 'wp-customer'),
+            'delete_customer_employee' => __('Memungkinkan menghapus data karyawan', 'wp-customer'),
+
+            // Membership Invoice capabilities
+            'view_customer_membership_invoice_list' => __('Memungkinkan melihat daftar semua invoice membership', 'wp-customer'),
+            'view_customer_membership_invoice_detail' => __('Memungkinkan melihat detail informasi invoice membership', 'wp-customer'),
+            'view_own_customer_membership_invoice' => __('Memungkinkan melihat invoice membership yang ditugaskan', 'wp-customer'),
+            'create_customer_membership_invoice' => __('Memungkinkan membuat invoice membership baru', 'wp-customer'),
+            'edit_all_customer_membership_invoices' => __('Memungkinkan mengedit semua invoice membership', 'wp-customer'),
+            'edit_own_customer_membership_invoice' => __('Memungkinkan mengedit invoice membership yang ditugaskan', 'wp-customer'),
+            'delete_customer_membership_invoice' => __('Memungkinkan menghapus invoice membership', 'wp-customer'),
+            'approve_customer_membership_invoice' => __('Memungkinkan menyetujui invoice membership', 'wp-customer'),
+
+            // Membership Invoice Payment capabilities
+            'pay_all_customer_membership_invoices' => __('Memungkinkan membayar semua invoice membership customer termasuk customer lain', 'wp-customer'),
+            'pay_own_customer_membership_invoices' => __('Memungkinkan membayar invoice membership customer sendiri', 'wp-customer'),
+            'pay_own_branch_membership_invoices' => __('Memungkinkan membayar invoice membership cabang sendiri', 'wp-customer'),
+        ];
     }
 
     public function getCapabilityGroups(): array {
@@ -439,34 +531,96 @@ class PermissionModel {
     }
 
     public function resetToDefault(): bool {
+        global $wpdb;
+
         try {
-            // Reset all roles to default
-            foreach (get_editable_roles() as $role_name => $role_info) {
-                $role = get_role($role_name);
-                if (!$role) continue;
+            error_log('[CustomerPermissionModel] resetToDefault() START - Using direct DB manipulation');
 
-                // Remove all existing capabilities first
-                foreach (array_keys($this->available_capabilities) as $cap) {
-                    $role->remove_cap($cap);
-                }
+            // CRITICAL: Increase execution limits
+            $old_time_limit = ini_get('max_execution_time');
+            @set_time_limit(120);
+            error_log('[CustomerPermissionModel] Time limit set to 120 seconds');
 
-                // Administrator gets all capabilities
-                if ($role_name === 'administrator') {
-                    foreach (array_keys($this->available_capabilities) as $cap) {
-                        $role->add_cap($cap);
-                    }
+            // Require Role Manager
+            require_once WP_CUSTOMER_PATH . 'includes/class-role-manager.php';
+
+            // Get WordPress roles option from database
+            $wp_user_roles = $wpdb->get_var("SELECT option_value FROM {$wpdb->options} WHERE option_name = '{$wpdb->prefix}user_roles'");
+            $roles = maybe_unserialize($wp_user_roles);
+            error_log('[CustomerPermissionModel] Retrieved ' . count($roles) . ' roles from database');
+
+            $modified = false;
+
+            foreach ($roles as $role_name => $role_data) {
+                error_log('[CustomerPermissionModel] Processing role: ' . $role_name);
+
+                // Only process customer roles + administrator
+                $is_customer_role = \WP_Customer_Role_Manager::isPluginRole($role_name);
+                $is_admin = $role_name === 'administrator';
+
+                if (!$is_customer_role && !$is_admin) {
+                    error_log('[CustomerPermissionModel] Skipping ' . $role_name);
                     continue;
                 }
 
-                // Customer roles get their specific default capabilities
-                if (in_array($role_name, ['customer', 'customer_admin', 'customer_branch_admin', 'customer_employee'])) {
-                    $this->addCapabilities(); // Gunakan method yang sudah ada
+                // Remove all customer capabilities
+                error_log('[CustomerPermissionModel] Removing customer capabilities from ' . $role_name);
+                foreach (array_keys($this->available_capabilities) as $cap) {
+                    if (isset($roles[$role_name]['capabilities'][$cap])) {
+                        unset($roles[$role_name]['capabilities'][$cap]);
+                        $modified = true;
+                    }
                 }
+
+                // Add capabilities back
+                if ($role_name === 'administrator') {
+                    error_log('[CustomerPermissionModel] Adding all capabilities to administrator');
+                    foreach (array_keys($this->available_capabilities) as $cap) {
+                        $roles[$role_name]['capabilities'][$cap] = true;
+                        $modified = true;
+                    }
+                } else if ($is_customer_role) {
+                    error_log('[CustomerPermissionModel] Adding default capabilities to ' . $role_name);
+                    // Add read capability
+                    $roles[$role_name]['capabilities']['read'] = true;
+
+                    // Add default capabilities
+                    $default_caps = $this->getDefaultCapabilitiesForRole($role_name);
+                    foreach ($default_caps as $cap => $enabled) {
+                        if ($enabled && isset($this->available_capabilities[$cap])) {
+                            $roles[$role_name]['capabilities'][$cap] = true;
+                            $modified = true;
+                        }
+                    }
+                }
+                error_log('[CustomerPermissionModel] Completed processing ' . $role_name);
             }
+
+            // Save back to database if modified
+            if ($modified) {
+                error_log('[CustomerPermissionModel] Saving modified roles to database');
+                $updated = update_option($wpdb->prefix . 'user_roles', $roles);
+                error_log('[CustomerPermissionModel] Database update result: ' . ($updated ? 'SUCCESS' : 'NO CHANGE'));
+            }
+
+            error_log('[CustomerPermissionModel] All roles processed successfully');
+            error_log('[CustomerPermissionModel] resetToDefault() END - returning TRUE');
+
+            // Restore time limit
+            @set_time_limit($old_time_limit);
+
             return true;
 
         } catch (\Exception $e) {
-            error_log('Error resetting permissions: ' . $e->getMessage());
+            error_log('[CustomerPermissionModel] EXCEPTION in resetToDefault(): ' . $e->getMessage());
+            error_log('[CustomerPermissionModel] Stack trace: ' . $e->getTraceAsString());
+
+            // Restore time limit
+            if (isset($old_time_limit)) {
+                @set_time_limit($old_time_limit);
+            }
+
+            error_log('[CustomerPermissionModel] resetToDefault() END - returning FALSE');
             return false;
         }
     }
@@ -511,5 +665,179 @@ class PermissionModel {
         }
 
         return true;
+    }
+
+    /**
+     * Get default capabilities for a specific customer role
+     *
+     * @param string $role_slug Role slug
+     * @return array Array of capability => bool pairs
+     */
+    private function getDefaultCapabilitiesForRole(string $role_slug): array {
+        $defaults = [
+            'customer' => [
+                'read' => true
+                // Customer base role has no customer management capabilities by default
+                // Only has 'read' for wp-admin access
+            ],
+            'customer_admin' => [
+                'read' => true,
+                // WP Agency Plugin - View Access (filtered by related agencies)
+                'view_agency_list' => true,
+                'view_agency_detail' => true,
+                'view_division_list' => true,
+                'view_division_detail' => true,
+                'view_employee_list' => true,
+                'view_employee_detail' => true,
+
+                // Customer capabilities - owner manages their customer
+                'view_customer_list' => true,
+                'view_customer_detail' => true,
+                'view_own_customer' => true,
+                'add_customer' => false,
+                'edit_own_customer' => true,
+                'edit_all_customers' => false,
+                'delete_customer' => false,
+
+                // Branch capabilities - full access to their branches
+                'view_customer_branch_list' => true,
+                'view_customer_branch_detail' => true,
+                'view_own_customer_branch' => true,
+                'add_customer_branch' => true,
+                'edit_all_customer_branches' => true,
+                'edit_own_customer_branch' => true,
+                'delete_customer_branch' => false,
+
+                // Employee capabilities - full access to their employees
+                'view_customer_employee_list' => true,
+                'view_customer_employee_detail' => true,
+                'view_own_customer_employee' => true,
+                'add_customer_employee' => true,
+                'edit_all_customer_employees' => true,
+                'edit_own_customer_employee' => true,
+                'delete_customer_employee' => false,
+
+                // Membership Invoice capabilities - full access for their branches
+                'view_customer_membership_invoice_list' => true,
+                'view_customer_membership_invoice_detail' => true,
+                'view_own_customer_membership_invoice' => true,
+                'create_customer_membership_invoice' => true,
+                'edit_all_customer_membership_invoices' => true,
+                'edit_own_customer_membership_invoice' => true,
+                'delete_customer_membership_invoice' => false,
+                'approve_customer_membership_invoice' => false,
+
+                // Membership Invoice Payment capabilities
+                'pay_all_customer_membership_invoices' => false,
+                'pay_own_customer_membership_invoices' => true,
+                'pay_own_branch_membership_invoices' => false
+            ],
+            'customer_branch_admin' => [
+                'read' => true,
+                // WP Agency Plugin - View Access (filtered by related agencies)
+                'view_agency_list' => true,
+                'view_agency_detail' => true,
+                'view_division_list' => true,
+                'view_division_detail' => true,
+                'view_employee_list' => true,
+                'view_employee_detail' => true,
+
+                // Customer capabilities - can view parent customer
+                'view_customer_list' => true,
+                'view_customer_detail' => true,
+                'view_own_customer' => true,
+                'add_customer' => false,
+                'edit_own_customer' => false,
+                'edit_all_customers' => false,
+                'delete_customer' => false,
+
+                // Branch capabilities - manages only their branch
+                'view_customer_branch_list' => true,
+                'view_customer_branch_detail' => true,
+                'view_own_customer_branch' => true,
+                'add_customer_branch' => false,
+                'edit_all_customer_branches' => false,
+                'edit_own_customer_branch' => true,
+                'delete_customer_branch' => false,
+
+                // Employee capabilities - manages employees in their branch
+                'view_customer_employee_list' => true,
+                'view_customer_employee_detail' => true,
+                'view_own_customer_employee' => true,
+                'add_customer_employee' => true,
+                'edit_all_customer_employees' => false,
+                'edit_own_customer_employee' => true,
+                'delete_customer_employee' => true,
+
+                // Membership Invoice capabilities - limited to their branch
+                'view_customer_membership_invoice_list' => true,
+                'view_customer_membership_invoice_detail' => true,
+                'view_own_customer_membership_invoice' => true,
+                'create_customer_membership_invoice' => true,
+                'edit_all_customer_membership_invoices' => false,
+                'edit_own_customer_membership_invoice' => true,
+                'delete_customer_membership_invoice' => false,
+                'approve_customer_membership_invoice' => false,
+
+                // Membership Invoice Payment capabilities
+                'pay_all_customer_membership_invoices' => false,
+                'pay_own_customer_membership_invoices' => false,
+                'pay_own_branch_membership_invoices' => true
+            ],
+            'customer_employee' => [
+                'read' => true,
+                // WP Agency Plugin - View Access (filtered by related agencies)
+                'view_agency_list' => true,
+                'view_agency_detail' => true,
+                'view_division_list' => true,
+                'view_division_detail' => true,
+                'view_employee_list' => true,
+                'view_employee_detail' => true,
+
+                // Customer capabilities - view only
+                'view_customer_list' => true,
+                'view_customer_detail' => true,
+                'view_own_customer' => true,
+                'add_customer' => false,
+                'edit_own_customer' => false,
+                'edit_all_customers' => false,
+                'delete_customer' => false,
+
+                // Branch capabilities - view only their branch
+                'view_customer_branch_list' => true,
+                'view_customer_branch_detail' => true,
+                'view_own_customer_branch' => true,
+                'add_customer_branch' => false,
+                'edit_all_customer_branches' => false,
+                'edit_own_customer_branch' => false,
+                'delete_customer_branch' => false,
+
+                // Employee capabilities - view only
+                'view_customer_employee_list' => true,
+                'view_customer_employee_detail' => true,
+                'view_own_customer_employee' => true,
+                'add_customer_employee' => false,
+                'edit_all_customer_employees' => false,
+                'edit_own_customer_employee' => false,
+                'delete_customer_employee' => false,
+
+                // Membership Invoice capabilities - view only
+                'view_customer_membership_invoice_list' => true,
+                'view_customer_membership_invoice_detail' => true,
+                'view_own_customer_membership_invoice' => true,
+                'create_customer_membership_invoice' => false,
+                'edit_all_customer_membership_invoices' => false,
+                'edit_own_customer_membership_invoice' => false,
+                'delete_customer_membership_invoice' => false,
+                'approve_customer_membership_invoice' => false,
+
+                // Membership Invoice Payment capabilities - cannot pay
+                'pay_all_customer_membership_invoices' => false,
+                'pay_own_customer_membership_invoices' => false,
+                'pay_own_branch_membership_invoices' => false
+            ],
+        ];
+
+        return $defaults[$role_slug] ?? [];
     }
 }

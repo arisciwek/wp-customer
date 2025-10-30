@@ -68,34 +68,70 @@ class SettingsController {
     }
 
     public function handle_reset_customer_permissions() {
-        error_log('Received nonce: ' . $_POST['nonce']);
-        error_log('Expected nonce for wp_customer_reset_permissions: ' . wp_create_nonce('wp_customer_reset_permissions'));
+        // CRITICAL: Start output buffering to prevent contamination from plugin hooks
+        // resetToDefault() triggers WordPress hooks that may init other plugins
+        // which can output to buffer and cause 500 errors
+        ob_start();
+
+        error_log('=== WP-CUSTOMER RESET PERMISSIONS START ===');
+        error_log('Received nonce: ' . ($_POST['nonce'] ?? 'NOT SET'));
+        error_log('Expected nonce: ' . wp_create_nonce('wp_customer_reset_permissions'));
+        error_log('Current user ID: ' . get_current_user_id());
+        error_log('User can manage_options: ' . (current_user_can('manage_options') ? 'YES' : 'NO'));
 
         try {
             // Verify nonce
             check_ajax_referer('wp_customer_reset_permissions', 'nonce');
+            error_log('Nonce verified successfully');
 
             // Check permissions
             if (!current_user_can('manage_options')) {
-                throw new \Exception(__('You do not have permission to perform this action.', 'wp-customer'));
+                error_log('ERROR: User does not have manage_options capability');
+                error_log('=== WP-CUSTOMER RESET PERMISSIONS END (Permission Denied) ===');
+                ob_end_clean(); // Clean buffer before sending JSON
+                wp_send_json_error([
+                    'message' => __('You do not have permission to perform this action.', 'wp-customer')
+                ]);
+                die(); // Ensure no code runs after wp_send_json
             }
 
             // Reset permissions using PermissionModel
+            error_log('Creating PermissionModel instance...');
             $permission_model = new \WPCustomer\Models\Settings\PermissionModel();
+
+            error_log('Calling resetToDefault()...');
             $success = $permission_model->resetToDefault();
+            error_log('resetToDefault() returned: ' . ($success ? 'TRUE' : 'FALSE'));
+
+            // CRITICAL: Clean output buffer before sending JSON response
+            // This removes any output from plugin hooks triggered during reset
+            ob_end_clean();
 
             if (!$success) {
-                throw new \Exception(__('Failed to reset permissions.', 'wp-customer'));
+                error_log('ERROR: resetToDefault() returned false');
+                error_log('=== WP-CUSTOMER RESET PERMISSIONS END (Failed) ===');
+                wp_send_json_error([
+                    'message' => __('Failed to reset permissions.', 'wp-customer')
+                ]);
+                die(); // Ensure no code runs after wp_send_json
             }
 
+            error_log('SUCCESS: Permissions reset successfully');
+            error_log('=== WP-CUSTOMER RESET PERMISSIONS END (Success) ===');
             wp_send_json_success([
                 'message' => __('Permissions have been reset to default settings.', 'wp-customer')
             ]);
+            die(); // Ensure no code runs after wp_send_json
 
         } catch (\Exception $e) {
+            error_log('EXCEPTION caught: ' . $e->getMessage());
+            error_log('Exception trace: ' . $e->getTraceAsString());
+            error_log('=== WP-CUSTOMER RESET PERMISSIONS END (Exception) ===');
+            ob_end_clean(); // Clean buffer before sending JSON
             wp_send_json_error([
                 'message' => $e->getMessage()
             ]);
+            die(); // Ensure no code runs after wp_send_json
         }
     }
 

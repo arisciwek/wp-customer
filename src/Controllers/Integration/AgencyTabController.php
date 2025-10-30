@@ -24,6 +24,12 @@
  * ```
  *
  * Changelog:
+ * 1.1.0 - 2025-10-29 (TODO-2180)
+ * - CHANGED: Use wpapp_tab_view_after_content hook instead of wpapp_tab_view_content
+ * - REASON: Separate core content rendering from extension injection
+ * - BENEFIT: Prevents duplicate rendering when used with TabViewTemplate
+ * - RELATED: wp-app-core TODO-1188 (added new hook)
+ *
  * 1.0.0 - 2025-10-29
  * - Initial creation (Refactor from over-engineered solution)
  * - Simple hook handler approach
@@ -87,9 +93,10 @@ class AgencyTabController {
         // This allows EntityRelationModel to query customer-agency relations
         add_filter('wp_customer_entity_relation_configs', [$this, 'register_agency_entity_config'], 10, 1);
 
-        // Register hook handler
-        // Priority 20 - allow other plugins to inject at 10
-        add_action('wpapp_tab_view_content', [$this, 'inject_content'], 20, 3);
+        // Register hook handler for extension content injection
+        // Use wpapp_tab_view_after_content (added in wp-app-core TODO-1188)
+        // Priority 20 - extension content after core content
+        add_action('wpapp_tab_view_after_content', [$this, 'inject_content'], 20, 3);
     }
 
     /**

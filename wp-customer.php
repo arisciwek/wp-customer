@@ -84,8 +84,9 @@ class WPCustomer {
 
         $this->loader = new WP_Customer_Loader();
 
-        // Initialize Settings Controller
-        new \WPCustomer\Controllers\SettingsController();
+        // Initialize Settings Controller with AJAX handlers
+        $settings_controller = new \WPCustomer\Controllers\SettingsController();
+        $settings_controller->init();
     }
 
     /**
