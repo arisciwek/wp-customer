@@ -677,10 +677,11 @@ class BranchController {
                         }
                     }
 
-                    // Add customer_branch_admin role (dual-role pattern)
+                    // Add customer_branch_admin and customer_employee roles (multi-role pattern)
                     $user = get_user_by('ID', $user_id);
                     if ($user) {
                         $user->add_role('customer_branch_admin');
+                        $user->add_role('customer_employee');
                     }
 
                     $data['user_id'] = $user_id;

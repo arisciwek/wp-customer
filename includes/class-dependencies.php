@@ -487,6 +487,55 @@ class WP_Customer_Dependencies {
             ]);
         }
 
+        // Customer V2 page (NEW - Centralized DataTable System)
+        if ($screen->id === 'toplevel_page_wp-customer-v2') {
+            // Core dependencies
+            wp_enqueue_script('datatables', 'https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js', ['jquery'], '1.13.7', true);
+
+            // NEW CSS for centralized system
+            wp_enqueue_style('wp-customer-header-cards', WP_CUSTOMER_URL . 'assets/css/customer/customer-header-cards.css', [], $this->version);
+            wp_enqueue_style('wp-customer-filter', WP_CUSTOMER_URL . 'assets/css/customer/customer-filter.css', [], $this->version);
+            wp_enqueue_style('wp-customer-datatable', WP_CUSTOMER_URL . 'assets/css/customer/customer-datatable.css', ['datatables'], $this->version);
+
+            // NEW JS for centralized DataTable
+            wp_enqueue_script('customer-datatable-v2', WP_CUSTOMER_URL . 'assets/js/customer/customer-datatable-v2.js', ['jquery', 'datatables'], $this->version, true);
+
+            // NEW JS for modal CRUD handler
+            wp_enqueue_script('customer-modal-handler', WP_CUSTOMER_URL . 'assets/js/customer/customer-modal-handler.js', ['jquery'], $this->version, true);
+
+            // NEW JS for modal form interactions (Province/Regency cascade)
+            wp_enqueue_script('customer-modal-form', WP_CUSTOMER_URL . 'assets/js/customer/customer-modal-form.js', ['jquery'], $this->version, true);
+            wp_localize_script('customer-modal-form', 'wpCustomerModal', [
+                'wilayah_nonce' => wp_create_nonce('wilayah_select_nonce')
+            ]);
+
+            // Localization untuk centralized DataTable system
+            wp_localize_script('customer-datatable-v2', 'wpAppCoreCustomer', [
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('wpapp_panel_nonce'),
+                'i18n' => [
+                    'code' => __('Code', 'wp-customer'),
+                    'name' => __('Name', 'wp-customer'),
+                    'npwp' => __('NPWP', 'wp-customer'),
+                    'nib' => __('NIB', 'wp-customer'),
+                    'email' => __('Email', 'wp-customer'),
+                    'actions' => __('Actions', 'wp-customer'),
+                    'processing' => __('Processing...', 'wp-customer'),
+                    'search' => __('Search:', 'wp-customer'),
+                    'lengthMenu' => __('Show _MENU_ entries', 'wp-customer'),
+                    'info' => __('Showing _START_ to _END_ of _TOTAL_ entries', 'wp-customer'),
+                    'infoEmpty' => __('Showing 0 to 0 of 0 entries', 'wp-customer'),
+                    'infoFiltered' => __('(filtered from _MAX_ total entries)', 'wp-customer'),
+                    'zeroRecords' => __('No matching records found', 'wp-customer'),
+                    'emptyTable' => __('No data available in table', 'wp-customer'),
+                    'first' => __('First', 'wp-customer'),
+                    'previous' => __('Previous', 'wp-customer'),
+                    'next' => __('Next', 'wp-customer'),
+                    'last' => __('Last', 'wp-customer'),
+                ]
+            ]);
+        }
+
         // Script section di method enqueue_scripts()
         if ($screen->id === 'toplevel_page_perusahaan') {
             // Core dependencies

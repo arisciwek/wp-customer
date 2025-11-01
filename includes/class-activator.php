@@ -6,7 +6,7 @@
  * 
  * @package     WP_Customer
  * @subpackage  Includes
- * @version     1.0.11
+ * @version     1.0.12
  * @author      arisciwek
  * 
  * Description: Menangani proses aktivasi plugin dan instalasi database.
@@ -21,6 +21,11 @@
  * - WordPress Options API
  * 
  * Changelog:
+ * 1.0.12 - 2025-11-02
+ * - Added user/role cache clearing after adding capabilities
+ * - Ensures capabilities load immediately without re-login required
+ * - Fixes issue where users need to reset permissions manually after activation
+ *
  * 1.0.1 - 2024-01-07
  * - Refactored database installation to use Database\Installer
  * - Enhanced error handling
@@ -74,6 +79,22 @@ class WP_Customer_Activator {
             try {
                 $permission_model = new PermissionModel();
                 $permission_model->addCapabilities(); // This will add caps to both admin and customer roles
+
+                // 3.1 Clear WordPress user/role caches to ensure capabilities load immediately
+                // This ensures logged-in users see new capabilities without re-login
+                global $wpdb;
+
+                // Clear all user meta cache (forces WordPress to reload capabilities)
+                wp_cache_delete('alloptions', 'options');
+
+                // Clear user meta cache for all users
+                $user_ids = $wpdb->get_col("SELECT ID FROM {$wpdb->users}");
+                foreach ($user_ids as $user_id) {
+                    clean_user_cache($user_id);
+                    wp_cache_delete($user_id, 'users');
+                    wp_cache_delete($user_id, 'user_meta');
+                }
+
             } catch (\Exception $e) {
                 self::logError('Error adding capabilities: ' . $e->getMessage());
             }

@@ -1,0 +1,273 @@
+/**
+ * Customer DataTable Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Customer
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/customer/customer-datatable.css
+ *
+ * Description: Styling untuk customer DataTable.
+ *              Mengatur layout, column widths, dan text overflow.
+ *              Prevents columns from overlapping.
+ *
+ * Changelog:
+ * 1.0.0 - 2025-11-01 (TODO-2187)
+ * - Initial styles for customer DataTable
+ * - Fixed column overflow issue
+ * - Added table-layout: fixed for consistent column widths
+ * - Added text-overflow handling for long content
+ */
+
+/* ==========================================================================
+   DataTable Container
+   ========================================================================== */
+
+.dataTables_wrapper {
+    width: 100%;
+    overflow-x: auto;
+}
+
+/* ==========================================================================
+   Table Layout
+   ========================================================================== */
+
+#customer-list-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse;
+}
+
+#customer-list-table thead th {
+    background: #f6f7f7;
+    border-bottom: 2px solid #2271b1;
+    padding: 12px 8px;
+    font-weight: 600;
+    text-align: left !important;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Ensure Actions column header is centered */
+#customer-list-table thead th:last-child {
+    text-align: center !important;
+}
+
+#customer-list-table tbody td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #dcdcde;
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#customer-list-table tbody tr:hover {
+    background-color: #f6f7f7;
+    cursor: pointer;
+}
+
+/* ==========================================================================
+   Column Specific Widths
+   ========================================================================== */
+
+/* Code Column - 10% */
+#customer-list-table th:nth-child(1),
+#customer-list-table td:nth-child(1) {
+    width: 10%;
+    max-width: 10%;
+}
+
+/* Name Column - 20% */
+#customer-list-table th:nth-child(2),
+#customer-list-table td:nth-child(2) {
+    width: 20%;
+    max-width: 20%;
+}
+
+/* NPWP Column - 18% */
+#customer-list-table th:nth-child(3),
+#customer-list-table td:nth-child(3) {
+    width: 18%;
+    max-width: 18%;
+}
+
+/* NIB Column - 15% */
+#customer-list-table th:nth-child(4),
+#customer-list-table td:nth-child(4) {
+    width: 15%;
+    max-width: 15%;
+}
+
+/* Email Column - 22% */
+#customer-list-table th:nth-child(5),
+#customer-list-table td:nth-child(5) {
+    width: 22%;
+    max-width: 22%;
+}
+
+/* Actions Column - 15% */
+#customer-list-table th:nth-child(6),
+#customer-list-table td:nth-child(6) {
+    width: 15%;
+    max-width: 15%;
+    white-space: nowrap;
+}
+
+/* ==========================================================================
+   Action Buttons in Table
+   ========================================================================== */
+
+#customer-list-table .view-customer-btn,
+#customer-list-table .delete-customer-btn {
+    display: inline-block;
+    margin-right: 5px;
+    padding: 4px 8px;
+    font-size: 12px;
+    text-decoration: none;
+    border-radius: 3px;
+    transition: all 0.2s ease;
+}
+
+#customer-list-table .view-customer-btn {
+    color: #2271b1;
+    background: transparent;
+    border: 1px solid #2271b1;
+}
+
+#customer-list-table .view-customer-btn:hover {
+    background: #2271b1;
+    color: #fff;
+}
+
+#customer-list-table .delete-customer-btn {
+    color: #d63638;
+    background: transparent;
+    border: 1px solid #d63638;
+}
+
+#customer-list-table .delete-customer-btn:hover {
+    background: #d63638;
+    color: #fff;
+}
+
+/* ==========================================================================
+   DataTables Controls
+   ========================================================================== */
+
+.dataTables_length select {
+    padding: 4px 8px;
+    border: 1px solid #8c8f94;
+    border-radius: 3px;
+}
+
+.dataTables_filter input {
+    padding: 4px 8px;
+    border: 1px solid #8c8f94;
+    border-radius: 3px;
+    margin-left: 8px;
+}
+
+/* ==========================================================================
+   Responsive Adjustments
+   ========================================================================== */
+
+@media screen and (max-width: 1200px) {
+    #customer-list-table {
+        font-size: 12px;
+    }
+
+    #customer-list-table th,
+    #customer-list-table td {
+        padding: 8px 6px;
+    }
+}
+
+@media screen and (max-width: 782px) {
+    .dataTables_wrapper {
+        overflow-x: scroll;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ==========================================================================
+   Action Buttons - Horizontal Layout
+   ========================================================================== */
+
+/* Actions column - ensure buttons stay horizontal */
+#customer-list-table td.text-center {
+    white-space: nowrap !important;
+}
+
+/* Action buttons container - horizontal inline */
+#customer-list-table .button-small {
+    display: inline-block !important;
+    margin: 0 2px !important;
+    padding: 4px 8px !important;
+    min-width: 32px;
+    height: 28px;
+    line-height: 20px;
+    vertical-align: middle;
+}
+
+/* Dashicons inside buttons */
+#customer-list-table .button-small .dashicons {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+/* Specific button colors */
+#customer-list-table .wpapp-panel-trigger {
+    background: #2271b1;
+    border-color: #2271b1;
+    color: #fff;
+}
+
+#customer-list-table .wpapp-panel-trigger:hover {
+    background: #135e96;
+    border-color: #135e96;
+}
+
+#customer-list-table .customer-edit-btn {
+    background: #50575e;
+    border-color: #50575e;
+    color: #fff;
+}
+
+#customer-list-table .customer-edit-btn:hover {
+    background: #3c434a;
+    border-color: #3c434a;
+}
+
+#customer-list-table .customer-delete-btn {
+    background: #d63638;
+    border-color: #d63638;
+    color: #fff;
+}
+
+#customer-list-table .customer-delete-btn:hover {
+    background: #b02a2c;
+    border-color: #b02a2c;
+}
+
+/* Prevent button wrapping on smaller screens */
+@media screen and (max-width: 1280px) {
+    #customer-list-table .button-small {
+        margin: 0 1px !important;
+        padding: 3px 6px !important;
+        min-width: 28px;
+        height: 26px;
+    }
+
+    #customer-list-table .button-small .dashicons {
+        width: 14px;
+        height: 14px;
+        font-size: 14px;
+    }
+}

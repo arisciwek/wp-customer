@@ -315,7 +315,36 @@
             $format
         );
 
+        // Debug: Log insert result
+        error_log('CustomerModel::create() - Insert result: ' . ($result === false ? 'FALSE' : 'TRUE'));
+        error_log('CustomerModel::create() - Insert ID: ' . $wpdb->insert_id);
+
         if ($result === false) {
+            error_log('CustomerModel::create() - INSERT FAILED!');
+            error_log('CustomerModel::create() - wpdb last_error: ' . $wpdb->last_error);
+            error_log('CustomerModel::create() - wpdb last_query: ' . $wpdb->last_query);
+
+            // Check for duplicate entry error
+            if (strpos($wpdb->last_error, 'Duplicate entry') !== false) {
+                // Extract which field is duplicate and provide user-friendly message
+                if (strpos($wpdb->last_error, "'npwp'") !== false) {
+                    throw new \Exception('NPWP already exists in database. Please use a different NPWP.');
+                } elseif (strpos($wpdb->last_error, "'nib'") !== false) {
+                    throw new \Exception('NIB already exists in database. Please use a different NIB.');
+                } elseif (strpos($wpdb->last_error, "'code'") !== false) {
+                    throw new \Exception('Customer code conflict. Please try again or contact support.');
+                } elseif (strpos($wpdb->last_error, "'name_region'") !== false) {
+                    throw new \Exception('Customer with this name already exists in the same province/regency. Please use a different name or location.');
+                } elseif (strpos($wpdb->last_error, 'user_id') !== false) {
+                    throw new \Exception('This user already has a customer account.');
+                } else {
+                    // Generic message with actual duplicate value for debugging
+                    preg_match("/Duplicate entry '([^']+)'/", $wpdb->last_error, $matches);
+                    $duplicate_value = $matches[1] ?? 'unknown';
+                    throw new \Exception('Duplicate data detected: "' . $duplicate_value . '". Please check your input.');
+                }
+            }
+
             return null;
         }
 
@@ -387,6 +416,26 @@
         if ($result === false) {
             error_log('Update failed. Last error: ' . $wpdb->last_error);
             error_log('Update data: ' . print_r($updateData, true));
+
+            // Check for duplicate entry error
+            if (strpos($wpdb->last_error, 'Duplicate entry') !== false) {
+                // Extract which field is duplicate and provide user-friendly message
+                if (strpos($wpdb->last_error, "'npwp'") !== false) {
+                    throw new \Exception('NPWP already exists in database. Please use a different NPWP.');
+                } elseif (strpos($wpdb->last_error, "'nib'") !== false) {
+                    throw new \Exception('NIB already exists in database. Please use a different NIB.');
+                } elseif (strpos($wpdb->last_error, "'code'") !== false) {
+                    throw new \Exception('Customer code conflict. Please try again or contact support.');
+                } elseif (strpos($wpdb->last_error, "'name_region'") !== false) {
+                    throw new \Exception('Customer with this name already exists in the same province/regency. Please use a different name or location.');
+                } else {
+                    // Generic message with actual duplicate value for debugging
+                    preg_match("/Duplicate entry '([^']+)'/", $wpdb->last_error, $matches);
+                    $duplicate_value = $matches[1] ?? 'unknown';
+                    throw new \Exception('Duplicate data detected: "' . $duplicate_value . '". Please check your input.');
+                }
+            }
+
             return false;
         }
 

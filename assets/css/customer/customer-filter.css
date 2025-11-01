@@ -1,0 +1,138 @@
+/**
+ * Customer Dashboard - Filter Controls
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Customer
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/customer/customer-filter.css
+ *
+ * Description: Styles untuk customer filter controls.
+ *              Inherits global wpapp-filter-* variables from wp-app-core.
+ *              Uses local scope classes for customer-specific styling.
+ *
+ * Changelog:
+ * 1.0.0 - 2025-11-01 (TODO-2187)
+ * - Initial implementation following platform-staff pattern
+ * - Inherits global CSS variables from wpapp-datatable.css
+ * - Local scope classes for plugin-specific styling
+ */
+
+/* ========================================
+   Filter Controls
+   Inherits: --wpapp-filter-* variables
+======================================== */
+
+.customer-status-filter-group {
+    /* Inherits from wpapp-status-filter-group */
+    /* Additional customer-specific styles can be added here */
+}
+
+.customer-filter-select {
+    /* Inherits from wpapp-filter-select */
+    /* Additional customer-specific styles can be added here */
+}
+
+/* ========================================
+   Tab Content Styles
+======================================== */
+
+.customer-info-tab {
+    padding: 20px;
+}
+
+.customer-info-section {
+    margin-bottom: 25px;
+}
+
+.customer-info-section:last-child {
+    margin-bottom: 0;
+}
+
+.customer-info-section h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2327;
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.customer-info-row {
+    display: flex;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f1;
+}
+
+.customer-info-row:last-child {
+    border-bottom: none;
+}
+
+.customer-info-row label {
+    min-width: 120px;
+    font-weight: 600;
+    color: #646970;
+    font-size: 13px;
+}
+
+.customer-info-row span {
+    flex: 1;
+    color: #1d2327;
+    font-size: 13px;
+}
+
+.customer-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.customer-status-aktif {
+    background: #d5e9d6;
+    color: #00a32a;
+}
+
+.customer-status-tidak.aktif {
+    background: #ffd6d6;
+    color: #cc1818;
+}
+
+.customer-placeholder-tab {
+    padding: 40px 20px;
+}
+
+.customer-empty-state {
+    text-align: center;
+    color: #646970;
+}
+
+.customer-empty-state .dashicons {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: #c3c4c7;
+    margin-bottom: 15px;
+}
+
+.customer-empty-state p {
+    font-size: 14px;
+    margin: 0;
+}
+
+/* ========================================
+   Responsive Design
+======================================== */
+
+@media (max-width: 782px) {
+    .customer-info-row {
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .customer-info-row label {
+        min-width: auto;
+    }
+}

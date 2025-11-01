@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Includes
- * @version     1.0.11
+ * @version     1.0.12
  * @author      arisciwek
  *
  * Path: /wp-customer/includes/class-role-manager.php
@@ -13,12 +13,32 @@
  *              Single source of truth untuk role definitions.
  *              Accessible untuk plugin lain dan internal components.
  *
+ * Role Structure:
+ * - customer: Base role for all customer plugin users
+ * - customer_admin: Customer company administrator
+ * - customer_branch_admin: Branch administrator
+ * - customer_employee: Employee role
+ *
+ * Multi-Role Assignment Pattern:
+ *
+ * 1. Create Customer:
+ *    $user->set_role('customer');           // Primary role
+ *    $user->add_role('customer_admin');     // Admin privileges
+ *    $user->add_role('customer_employee');  // Employee privileges
+ *
+ * 2. Create Branch:
+ *    Base role 'customer' is already set in wp_insert_user()
+ *    $user->add_role('customer_branch_admin');  // Branch admin privileges
+ *    $user->add_role('customer_employee');      // Employee privileges
+ *
  * Usage:
  * - Get all roles: WP_Customer_Role_Manager::getRoles()
  * - Get role slugs: WP_Customer_Role_Manager::getRoleSlugs()
  * - Check if role exists: WP_Customer_Role_Manager::roleExists($slug)
  *
  * Changelog:
+ * 1.0.12 - 2025-11-02
+ * - Added multi-role assignment pattern documentation
  * 1.0.0 - 2024-01-14
  * - Initial creation
  * - Moved role definitions from WP_Customer_Activator

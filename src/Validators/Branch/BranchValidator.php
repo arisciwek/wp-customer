@@ -284,7 +284,20 @@ class BranchValidator {
             }
         }
 
-        // Validasi lainnya sesuai kebutuhan
+        // Validasi user_id (required for AutoEntityCreator to create employee record)
+        if (empty($data['user_id'])) {
+            $errors['user_id'] = __('User ID wajib diisi untuk membuat employee record.', 'wp-customer');
+        }
+
+        // Validasi provinsi_id (required for AutoEntityCreator)
+        if (empty($data['provinsi_id'])) {
+            $errors['provinsi_id'] = __('Provinsi wajib dipilih.', 'wp-customer');
+        }
+
+        // Validasi regency_id (required for AutoEntityCreator)
+        if (empty($data['regency_id'])) {
+            $errors['regency_id'] = __('Kabupaten/Kota wajib dipilih.', 'wp-customer');
+        }
 
         return $errors;
     }

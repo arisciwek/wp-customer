@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Tables
- * @version     1.0.11
+ * @version     1.0.12
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Tables/CustomersDB.php
@@ -20,8 +20,8 @@
  * - name           : Nama customer
  * - nik            : Nomor Induk Kependudukan
  * - npwp           : Nomor Pokok Wajib Pajak
- * - provinsi_id    : ID provinsi (nullable)
- * - regency_id     : ID kabupaten/kota (nullable)
+ * - provinsi_id    : ID provinsi (required)
+ * - regency_id     : ID kabupaten/kota (required)
  * - user_id        : ID User WP sebagai Owner (nullable)
  * - reg_type       : Tipe registrasi (self/by_admin/generate)
  * - created_by     : User ID pembuat
@@ -29,6 +29,10 @@
  * - updated_at     : Timestamp update terakhir
  *
  * Changelog:
+ * 1.0.12 - 2025-11-02
+ * - Changed provinsi_id from NULL to NOT NULL (required field)
+ * - Changed regency_id from NULL to NOT NULL (required field)
+ *
  * 1.0.3 - 2025-01-21 (Task-2165 Form Sync)
  * - Added reg_type field to track registration source
  * - reg_type enum: 'self' (user register), 'by_admin' (admin create), 'generate' (demo data)
@@ -64,8 +68,8 @@ class CustomersDB {
             npwp varchar(20) NULL,
             nib varchar(20) NULL,
             status enum('inactive','active') NOT NULL DEFAULT 'inactive',
-            provinsi_id bigint(20) UNSIGNED NULL,
-            regency_id bigint(20) UNSIGNED NULL,
+            provinsi_id bigint(20) UNSIGNED NOT NULL,
+            regency_id bigint(20) UNSIGNED NOT NULL,
             user_id bigint(20) UNSIGNED NULL,
             reg_type enum('self','by_admin','generate') NOT NULL DEFAULT 'self',
             created_by bigint(20) NOT NULL,

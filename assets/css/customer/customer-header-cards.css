@@ -1,0 +1,156 @@
+/**
+ * Customer Dashboard - Header & Statistics Cards
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Customer
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/customer/customer-header-cards.css
+ *
+ * Description: Styles untuk customer dashboard header, title, buttons, dan statistics cards.
+ *              Follows local scope pattern (customer-* classes).
+ *              Inherits global wpapp-* container styles from wp-app-core.
+ *
+ * Changelog:
+ * 1.0.0 - 2025-11-01 (TODO-2187)
+ * - Initial implementation following platform-staff pattern
+ * - Local scope classes for plugin-specific styling
+ * - Statistics cards with theme colors
+ * - Responsive design
+ */
+
+/* ========================================
+   Page Header - Title & Buttons
+======================================== */
+
+.customer-title {
+    font-size: 23px;
+    font-weight: 400;
+    margin: 0;
+    padding: 0;
+    line-height: 1.3;
+    color: #1d2327;
+}
+
+.customer-subtitle {
+    font-size: 13px;
+    color: #646970;
+    margin-top: 5px;
+}
+
+.customer-add-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.customer-add-btn .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* ========================================
+   Statistics Cards
+======================================== */
+
+.customer-statistics-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin: 0;
+}
+
+.customer-stat-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: default;
+}
+
+.customer-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.customer-stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.customer-stat-icon .dashicons {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+    color: #fff;
+}
+
+.customer-stat-content {
+    flex: 1;
+}
+
+.customer-stat-label {
+    font-size: 13px;
+    color: #646970;
+    margin-bottom: 5px;
+}
+
+.customer-stat-value {
+    font-size: 28px;
+    font-weight: 600;
+    color: #1d2327;
+    line-height: 1;
+}
+
+/* Theme Colors */
+.customer-theme-blue .customer-stat-icon {
+    background: #2271b1;
+}
+
+.customer-theme-green .customer-stat-icon {
+    background: #00a32a;
+}
+
+.customer-theme-orange .customer-stat-icon {
+    background: #f0860b;
+}
+
+/* ========================================
+   Responsive Design
+======================================== */
+
+@media (max-width: 782px) {
+    .customer-statistics-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .customer-stat-card {
+        padding: 15px;
+    }
+
+    .customer-stat-icon {
+        width: 40px;
+        height: 40px;
+    }
+
+    .customer-stat-icon .dashicons {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+    }
+
+    .customer-stat-value {
+        font-size: 24px;
+    }
+}

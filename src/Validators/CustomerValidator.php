@@ -116,6 +116,21 @@ class CustomerValidator {
             }
         }
 
+        // Province validation (required)
+        if (empty($data['provinsi_id'])) {
+            $errors['provinsi_id'] = __('Province is required', 'wp-customer');
+        }
+
+        // Regency validation (required)
+        if (empty($data['regency_id'])) {
+            $errors['regency_id'] = __('City/Regency is required', 'wp-customer');
+        }
+
+        // Province/Regency dependency validation
+        if (!empty($data['provinsi_id']) && empty($data['regency_id'])) {
+            $errors['regency_id'] = __('City/Regency is required when Province is selected', 'wp-customer');
+        }
+
         return $errors;
     }
 
@@ -378,6 +393,34 @@ class CustomerValidator {
         }
 
         return $npwp;
+    }
+
+    /**
+     * Validate admin fields for customer creation
+     *
+     * @param array $data Data containing admin_name and admin_email
+     * @return array Array of errors, empty if valid
+     */
+    public function validateAdminFields(array $data): array {
+        $errors = [];
+
+        // Admin name validation
+        $admin_name = trim($data['admin_name'] ?? '');
+        if (empty($admin_name)) {
+            $errors['admin_name'] = __('Admin name is required', 'wp-customer');
+        }
+
+        // Admin email validation
+        $admin_email = trim($data['admin_email'] ?? '');
+        if (empty($admin_email)) {
+            $errors['admin_email'] = __('Admin email is required', 'wp-customer');
+        } elseif (!is_email($admin_email)) {
+            $errors['admin_email'] = __('Invalid email format', 'wp-customer');
+        } elseif (email_exists($admin_email)) {
+            $errors['admin_email'] = __('Admin email already exists', 'wp-customer');
+        }
+
+        return $errors;
     }
 
     /**

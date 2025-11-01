@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Tables
- * @version     1.0.11
+ * @version     1.0.12
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Tables/BranchesDB.php
@@ -20,8 +20,8 @@
  * - code           : Format 
  * - name           : Nama branch
  * - type           : Tipe wilayah (cabang)
- * - provinsi_id    : ID provinsi (nullable)
- * - regency_id     : ID cabang (nullable)
+ * - provinsi_id    : ID provinsi (required)
+ * - regency_id     : ID cabang (required)
  * - created_by     : User ID pembuat
  * - created_at     : Timestamp pembuatan
  * - updated_at     : Timestamp update terakhir
@@ -30,6 +30,10 @@
  * - customer_id    : REFERENCES app_customers(id) ON DELETE CASCADE
  *
  * Changelog:
+ * 1.0.12 - 2025-11-02
+ * - Changed provinsi_id from NULL to NOT NULL (required field)
+ * - Changed regency_id from NULL to NOT NULL (required field)
+ *
  * 1.0.5 - 2025-10-06
  * - Removed unique constraint for agency_id + inspector_id (inspector can manage multiple branches)
  * 1.0.4 - 2024-10-01
@@ -72,9 +76,9 @@ class BranchesDB {
             address text NULL,
             phone varchar(20) NULL,
             email varchar(100) NULL,
-            provinsi_id bigint(20) UNSIGNED NULL,
+            provinsi_id bigint(20) UNSIGNED NOT NULL,
             agency_id bigint(20) UNSIGNED NOT NULL,
-            regency_id bigint(20) UNSIGNED NULL,
+            regency_id bigint(20) UNSIGNED NOT NULL,
             division_id bigint(20) UNSIGNED NULL,
             user_id bigint(20) UNSIGNED NULL,
             inspector_id bigint(20) UNSIGNED NULL,

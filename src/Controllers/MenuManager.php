@@ -13,6 +13,7 @@ namespace WPCustomer\Controllers;
 
 use WPCustomer\Controllers\SettingsController;
 use WPCustomer\Controllers\CustomerController;
+use WPCustomer\Controllers\Customer\CustomerDashboardController;
 use WPCustomer\Controllers\Company\CompanyController;
 use WPCustomer\Controllers\Company\CompanyInvoiceController;
 use WPCustomer\Controllers\Companies\CompaniesController;
@@ -22,6 +23,7 @@ class MenuManager {
     private $version;
     private $settings_controller;
     private $customer_controller;
+    private $customer_dashboard_controller;  // NEW: CustomerDashboardController for centralized DataTable
     private $company_controller;  // Tambah property untuk CompanyController
     private $company_invoice_controller;  // Tambah property untuk CompanyInvoiceController
     private $companies_controller;  // Tambah property untuk CompaniesController
@@ -31,6 +33,7 @@ class MenuManager {
         $this->version = $version;
         $this->settings_controller = new SettingsController();
         $this->customer_controller = new CustomerController();
+        $this->customer_dashboard_controller = new CustomerDashboardController();  // NEW: Inisialisasi CustomerDashboardController
         $this->company_controller = new CompanyController();  // Inisialisasi CompanyController
         $this->company_invoice_controller = new CompanyInvoiceController();  // Inisialisasi CompanyInvoiceController
         $this->companies_controller = new CompaniesController();  // Inisialisasi CompaniesController
@@ -42,7 +45,7 @@ class MenuManager {
     }
 
     public function registerMenus() {
-        // Menu WP Customer
+        // Menu WP Customer (OLD)
         add_menu_page(
             __('WP Customer', 'wp-customer'),
             __('WP Customer', 'wp-customer'),
@@ -51,6 +54,17 @@ class MenuManager {
             [$this->customer_controller, 'renderMainPage'],
             'dashicons-businessperson',
             30
+        );
+
+        // Menu WP Customer V2 (NEW - Centralized DataTable)
+        add_menu_page(
+            __('Customer V2', 'wp-customer'),
+            __('Customer V2', 'wp-customer'),
+            'view_customer_list',
+            'wp-customer-v2',
+            [$this->customer_dashboard_controller, 'renderDashboard'],
+            'dashicons-businessperson',
+            30.5
         );
 
         // Menu WP Perusahaan

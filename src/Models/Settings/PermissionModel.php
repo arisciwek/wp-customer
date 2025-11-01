@@ -528,6 +528,61 @@ class PermissionModel {
                 }
             }
         }
+
+        // Add capabilities to platform roles from wp-app-core
+        // Platform roles should have full view/manage access to customer data
+        $platform_roles = ['platform_support', 'platform_admin', 'platform_super_admin', 'platform_analyst'];
+
+        foreach ($platform_roles as $role_slug) {
+            $role = get_role($role_slug);
+            if ($role) {
+                // Platform Support - View access to all customer data
+                if ($role_slug === 'platform_support') {
+                    $platform_caps = [
+                        'view_customer_list' => true,
+                        'view_customer_detail' => true,
+                        'view_customer_branch_list' => true,
+                        'view_customer_branch_detail' => true,
+                        'view_customer_employee_list' => true,
+                        'view_customer_employee_detail' => true,
+                        'view_customer_membership_invoice_list' => true,
+                        'view_customer_membership_invoice_detail' => true,
+                    ];
+
+                    foreach ($platform_caps as $cap => $enabled) {
+                        if ($enabled) {
+                            $role->add_cap($cap);
+                        }
+                    }
+                }
+
+                // Platform Admin - Full access except delete
+                if ($role_slug === 'platform_admin') {
+                    foreach (array_keys($this->available_capabilities) as $cap) {
+                        // Skip delete capabilities
+                        if (strpos($cap, 'delete_') === false) {
+                            $role->add_cap($cap);
+                        }
+                    }
+                }
+
+                // Platform Super Admin - Full access to everything
+                if ($role_slug === 'platform_super_admin') {
+                    foreach (array_keys($this->available_capabilities) as $cap) {
+                        $role->add_cap($cap);
+                    }
+                }
+
+                // Platform Analyst - View only access
+                if ($role_slug === 'platform_analyst') {
+                    foreach (array_keys($this->available_capabilities) as $cap) {
+                        if (strpos($cap, 'view_') === 0) {
+                            $role->add_cap($cap);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public function resetToDefault(): bool {
