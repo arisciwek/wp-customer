@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Branch
- * @version     1.0.11
+ * @version     1.0.12
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Branch/BranchModel.php
@@ -15,6 +15,13 @@
  *              Menyediakan metode untuk DataTables server-side.
  *
  * Changelog:
+ * 1.0.12 - 2025-11-01 (TODO-3098)
+ * - Added 'wp_customer_branch_before_insert' filter hook in create() method
+ * - Allows modification of insert data before database insertion
+ * - Use cases: demo data (static IDs), migration, data sync, testing
+ * - Added dynamic format array handling for 'id' field injection
+ * - Pattern consistent with CustomerModel (TODO-3098)
+ *
  * 1.0.0 - 2024-12-10
  * - Initial implementation
  * - Added core CRUD operations
@@ -153,32 +160,78 @@ class BranchModel {
             'status' => $data['status'] ?? 'active'
         ];
 
+        /**
+         * Filter insert data before database insertion
+         *
+         * Allows modification of branch data before it's inserted into the database.
+         * Useful for:
+         * - Demo data: Force static IDs for predictable test data
+         * - Migration: Import branches with preserved IDs from external system
+         * - Data sync: Synchronize with external system maintaining same IDs
+         * - Testing: Unit tests with predictable IDs
+         *
+         * @since 1.0.12 (TODO-3098)
+         * @param array $insertData Prepared data ready for $wpdb->insert
+         * @param array $data Original input data
+         */
+        $insertData = apply_filters('wp_customer_branch_before_insert', $insertData, $data);
+
+        // Prepare format array
+        $format = [
+            '%d', // customer_id
+            '%s', // code
+            '%s', // name
+            '%s', // type
+            '%s', // nitku
+            '%s', // postal_code
+            '%f', // latitude
+            '%f', // longitude
+            '%s', // address
+            '%s', // phone
+            '%s', // email
+            '%d', // provinsi_id
+            '%d', // agency_id
+            '%d', // regency_id
+            '%d', // division_id
+            '%d', // user_id
+            '%d', // inspector_id
+            '%d', // created_by
+            '%s', // created_at
+            '%s', // updated_at
+            '%s'  // status
+        ];
+
+        // If 'id' was added by filter, rebuild format array dynamically
+        if (isset($insertData['id']) && !isset($data['id'])) {
+            $format = [];
+            foreach ($insertData as $key => $value) {
+                switch ($key) {
+                    case 'id':
+                    case 'customer_id':
+                    case 'provinsi_id':
+                    case 'agency_id':
+                    case 'regency_id':
+                    case 'division_id':
+                    case 'user_id':
+                    case 'inspector_id':
+                    case 'created_by':
+                        $format[] = '%d';
+                        break;
+                    case 'latitude':
+                    case 'longitude':
+                        $format[] = '%f';
+                        break;
+                    default:
+                        $format[] = '%s';
+                        break;
+                }
+            }
+        }
+
         $result = $wpdb->insert(
             $this->table,
             $insertData,
-            [
-                '%d', // customer_id
-                '%s', // code
-                '%s', // name
-                '%s', // type
-                '%s', // nitku
-                '%s', // postal_code
-                '%f', // latitude
-                '%f', // longitude
-                '%s', // address
-                '%s', // phone
-                '%s', // email
-                '%d', // provinsi_id
-                '%d', // agency_id
-                '%d', // regency_id
-                '%d', // division_id
-                '%d', // user_id
-                '%d', // inspector_id
-                '%d', // created_by
-                '%s', // created_at
-                '%s', // updated_at
-                '%s'  // status
-            ]
+            $format
         );
 
         if ($result === false) {

@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Employee
- * @version     1.0.11
+ * @version     1.0.12
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Employee/CustomerEmployeeModel.php
@@ -15,6 +15,13 @@
  *              Menyediakan metode untuk DataTables server-side.
  *
  * Changelog:
+ * 1.0.12 - 2025-11-01 (TODO-3098)
+ * - Added 'wp_customer_employee_before_insert' filter hook in create() method
+ * - Allows modification of insert data before database insertion
+ * - Use cases: demo data (static IDs), migration, data sync, testing
+ * - Added dynamic format array handling for 'id' field injection
+ * - Pattern consistent with CustomerModel and BranchModel (TODO-3098)
+ *
  * 1.1.0 - 2025-01-18
  * - REFACTOR: getUserInfo() now handles ALL user types (employee, owner, branch admin, fallback)
  * - Added: getEmployeeInfo() private method (extracted from getUserInfo)
@@ -57,44 +64,88 @@ class CustomerEmployeeModel {
 public function create(array $data): ?int {
     global $wpdb;
 
+    $insertData = [
+        'customer_id' => $data['customer_id'],  // Ambil customer_id dari data
+        'branch_id' => $data['branch_id'],
+        'user_id' => $data['user_id'] ?? get_current_user_id(), // Use provided user_id or current user as fallback
+        'name' => $data['name'],
+        'position' => $data['position'],
+        'finance' => $data['finance'],
+        'operation' => $data['operation'],
+        'legal' => $data['legal'],
+        'purchase' => $data['purchase'],
+        'keterangan' => $data['keterangan'],
+        'email' => $data['email'],
+        'phone' => $data['phone'],
+        'created_by' => $data['created_by'] ?? get_current_user_id(), // Allow override for demo data
+        'created_at' => current_time('mysql'),
+        'updated_at' => current_time('mysql'),
+        'status' => $data['status'] ?? 'active'
+    ];
+
+    /**
+     * Filter insert data before database insertion
+     *
+     * Allows modification of employee data before it's inserted into the database.
+     * Useful for:
+     * - Demo data: Force static IDs for predictable test data
+     * - Migration: Import employees with preserved IDs from external system
+     * - Data sync: Synchronize with external system maintaining same IDs
+     * - Testing: Unit tests with predictable IDs
+     *
+     * @since 1.0.12 (TODO-3098)
+     * @param array $insertData Prepared data ready for $wpdb->insert
+     * @param array $data Original input data
+     */
+    $insertData = apply_filters('wp_customer_employee_before_insert', $insertData, $data);
+
+    // Prepare format array
+    $format = [
+        '%d', // customer_id
+        '%d', // branch_id
+        '%d', // user_id
+        '%s', // name
+        '%s', // position
+        '%d', // finance
+        '%d', // operation
+        '%d', // legal
+        '%d', // purchase
+        '%s', // keterangan
+        '%s', // email
+        '%s', // phone
+        '%d', // created_by
+        '%s', // created_at
+        '%s', // updated_at
+        '%s'  // status
+    ];
+
+    // If 'id' was added by filter, rebuild format array dynamically
+    if (isset($insertData['id']) && !isset($data['id'])) {
+        $format = [];
+        foreach ($insertData as $key => $value) {
+            switch ($key) {
+                case 'id':
+                case 'customer_id':
+                case 'branch_id':
+                case 'user_id':
+                case 'finance':
+                case 'operation':
+                case 'legal':
+                case 'purchase':
+                case 'created_by':
+                    $format[] = '%d';
+                    break;
+                default:
+                    $format[] = '%s';
+                    break;
+            }
+        }
+    }
+
     $result = $wpdb->insert(
         $this->table,
-        [
-            'customer_id' => $data['customer_id'],  // Ambil customer_id dari data
-            'branch_id' => $data['branch_id'],
-            'user_id' => $data['user_id'] ?? get_current_user_id(), // Use provided user_id or current user as fallback
-            'name' => $data['name'],
-            'position' => $data['position'],
-            'finance' => $data['finance'],
-            'operation' => $data['operation'],
-            'legal' => $data['legal'],
-            'purchase' => $data['purchase'],
-            'keterangan' => $data['keterangan'],
-            'email' => $data['email'],
-            'phone' => $data['phone'],
-            'created_by' => $data['created_by'] ?? get_current_user_id(), // Allow override for demo data
-            'created_at' => current_time('mysql'),
-            'updated_at' => current_time('mysql'),
-            'status' => $data['status'] ?? 'active'
-        ],
-        [
-            '%d', // customer_id
-            '%d', // branch_id
-            '%d', // user_id
-            '%s', // name
-            '%s', // position
-            '%d', // finance
-            '%d', // operation
-            '%d', // legal
-            '%d', // purchase
-            '%s', // keterangan
-            '%s', // email
-            '%s', // phone
-            '%d', // created_by
-            '%s', // created_at
-            '%s', // updated_at
-            '%s'  // status
-        ]
+        $insertData,
+        $format
     );
 
     if ($result === false) {

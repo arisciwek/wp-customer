@@ -4,10 +4,17 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Demo
- * @version     1.0.11
+ * @version     1.0.12
  * @author      arisciwek
- * 
+ *
  * Path: /wp-customer/src/Database/Demo/CustomerEmployeeDemoData.php
+ *
+ * Changelog:
+ * 1.0.12 - 2025-11-01 (TODO-3098)
+ * - Updated createEmployeeViaRuntimeFlow() to support optional static ID parameter
+ * - Uses wp_customer_employee_before_insert hook to force static IDs when needed
+ * - Tests full production code flow (Validator → Model → Hook)
+ * - Pattern consistent with CustomerDemoData and BranchDemoData
  */
 
 namespace WPCustomer\Database\Demo;
@@ -302,11 +309,13 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
             $this->debug("Updated roles for user {$user_id} ({$user_data['display_name']}): customer + customer_employee");
 
             // Create employee record with ACTUAL database IDs (not static data IDs)
+            // Pass static employee ID from user_data for predictable test data (TODO-3098)
             $this->createEmployeeRecord(
                 $actual_customer_id,
                 $actual_branch_id,
                 $user_id,
-                $user_data['departments']
+                $user_data['departments'],
+                $user_data['id']  // Static employee ID (70-129)
             );
         }
     }
@@ -380,8 +389,29 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
      * @return int|null Employee ID or null on failure
      * @throws \Exception On validation or creation error
      */
-    private function createEmployeeViaRuntimeFlow(array $employee_data): ?int {
+    /**
+     * Create employee via runtime flow with optional static ID enforcement
+     *
+     * Uses full production code path:
+     * 1. CustomerEmployeeValidator::validateForm() - validates input
+     * 2. CustomerEmployeeModel::create() - inserts to database
+     * 3. Hook 'wp_customer_employee_created' - extensibility point
+     *
+     * Demo-specific behavior via hook (optional):
+     * - If $static_id provided, hooks into 'wp_customer_employee_before_insert' to force ID
+     * - Removes hook after creation to not affect other operations
+     *
+     * @since 1.0.12 (TODO-3098)
+     * @param array $employee_data Employee data
+     * @param int|null $static_id Optional static ID to force (demo data)
+     * @return int|null Employee ID or null on failure
+     * @throws \Exception on failure
+     */
+    private function createEmployeeViaRuntimeFlow(array $employee_data, ?int $static_id = null): ?int {
         error_log("[EmployeeDemoData] === createEmployeeViaRuntimeFlow START ===");
+        if ($static_id !== null) {
+            error_log("[EmployeeDemoData] Static ID requested: {$static_id}");
+        }
         error_log("[EmployeeDemoData] Employee data: " . json_encode([
             'name' => $employee_data['name'],
             'user_id' => $employee_data['user_id'],
@@ -391,7 +421,7 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
         ]));
 
         try {
-            // 1. Validate data using EmployeeValidator (simulating real runtime validation)
+            // 1. Validate data using EmployeeValidator (production code testing!)
             $validation_errors = $this->employeeValidator->validateForm($employee_data);
 
             if (!empty($validation_errors)) {
@@ -402,36 +432,82 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
 
             error_log("[EmployeeDemoData] ✓ Validation passed");
 
-            // 2. Create employee using EmployeeModel::create()
+            // 2. Hook to force static ID (demo-specific behavior, optional)
+            if ($static_id !== null) {
+                add_filter('wp_customer_employee_before_insert', function($insertData, $original_data) use ($static_id) {
+                    global $wpdb;
+
+                    // Delete existing record with static ID if exists (idempotent)
+                    $wpdb->delete(
+                        $wpdb->prefix . 'app_customer_employees',
+                        ['id' => $static_id],
+                        ['%d']
+                    );
+
+                    // Force static ID
+                    $insertData['id'] = $static_id;
+
+                    error_log("[EmployeeDemoData] ✓ Forcing static ID {$static_id} for: {$insertData['name']}");
+
+                    return $insertData;
+                }, 10, 2);
+            }
+
+            // 3. Create employee using EmployeeModel::create() (production code!)
             // This triggers wp_customer_employee_created HOOK (extensibility point)
             $employee_id = $this->employeeModel->create($employee_data);
+
+            // Remove hook after use (don't affect subsequent operations)
+            if ($static_id !== null) {
+                remove_all_filters('wp_customer_employee_before_insert');
+            }
 
             if (!$employee_id) {
                 error_log("[EmployeeDemoData] EmployeeModel::create() returned NULL");
                 throw new \Exception('Failed to create employee via Model');
             }
 
-            error_log("[EmployeeDemoData] ✓ Employee created with ID: {$employee_id}");
+            $log_msg = "✓ Employee created with ID: {$employee_id}";
+            if ($static_id !== null) {
+                $log_msg .= " [STATIC ID: {$static_id}]";
+            }
+            error_log("[EmployeeDemoData] {$log_msg}");
             error_log("[EmployeeDemoData] ✓ HOOK wp_customer_employee_created triggered");
 
-            // 3. Cache invalidation is handled automatically by EmployeeModel::create()
+            // 4. Cache invalidation is handled automatically by EmployeeModel::create()
             // No need to manually invalidate cache here
 
             error_log("[EmployeeDemoData] === createEmployeeViaRuntimeFlow COMPLETED ===");
 
-            return $employee_id;
+            return $static_id !== null ? $static_id : $employee_id;
 
         } catch (\Exception $e) {
+            // Clean up hook on error
+            if ($static_id !== null) {
+                remove_all_filters('wp_customer_employee_before_insert');
+            }
             error_log("[EmployeeDemoData] ERROR in createEmployeeViaRuntimeFlow: " . $e->getMessage());
             throw $e;
         }
     }
 
+    /**
+     * Create employee record
+     *
+     * @param int $customer_id Actual customer ID from database
+     * @param int $branch_id Actual branch ID from database
+     * @param int $user_id WordPress user ID
+     * @param array $departments Department permissions
+     * @param int|null $static_employee_id Optional static employee ID (TODO-3098)
+     * @return void
+     * @throws \Exception on failure
+     */
     private function createEmployeeRecord(
         int $customer_id,
         int $branch_id,
         int $user_id,
-        array $departments
+        array $departments,
+        ?int $static_employee_id = null
     ): void {
         try {
             $wp_user = get_userdata($user_id);
@@ -464,15 +540,20 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
                 'status' => 'active'
             ];
 
-            // Create employee via runtime flow (Task-2170)
+            // Create employee via runtime flow with static ID (Task-2170, TODO-3098)
             // Validator → Model → HOOK (same as production)
-            $employee_id = $this->createEmployeeViaRuntimeFlow($employee_data);
+            // Pass static employee ID for predictable test data
+            $employee_id = $this->createEmployeeViaRuntimeFlow($employee_data, $static_employee_id);
 
             if (!$employee_id) {
                 throw new \Exception('Failed to create employee via runtime flow');
             }
 
-            $this->debug("Created employee record for: {$wp_user->display_name} via runtime flow");
+            $log_msg = "Created employee record for: {$wp_user->display_name} via runtime flow";
+            if ($static_employee_id !== null) {
+                $log_msg .= " [STATIC ID: {$static_employee_id}]";
+            }
+            $this->debug($log_msg);
 
         } catch (\Exception $e) {
             $this->debug("Error creating employee record: " . $e->getMessage());

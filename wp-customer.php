@@ -3,22 +3,27 @@
  * Plugin Name: WP Customer
  * Plugin URI:
  * Description: Plugin untuk mengelola data Customer dan Cabangnya
- * Version: 1.0.11
+ * Version: 1.0.12
  * Author: arisciwek
  * Author URI:
  * License: GPL v2 or later
  *
  * @package     WP_Customer
- * @version     1.0.11
+ * @version     1.0.12
  * @author      arisciwek
  *
  * Path: /wp-customer/wp-customer.php
+ *
+ * Changelog:
+ * 1.0.12 - 2025-10-31 (TODO-2183)
+ * - Added: AgencyAccessFilter instantiation for cross-plugin integration
+ * - Fixed: customer_admin now can see Disnaker list (Task-2176)
  */
 
 defined('ABSPATH') || exit;
 
 // Define plugin constants first, before anything else
-define('WP_CUSTOMER_VERSION', '1.0.11');
+define('WP_CUSTOMER_VERSION', '1.0.12');
 define('WP_CUSTOMER_FILE', __FILE__);
 define('WP_CUSTOMER_PATH', plugin_dir_path(__FILE__));
 define('WP_CUSTOMER_URL', plugin_dir_url(__FILE__));
@@ -144,6 +149,15 @@ class WPCustomer {
         $customer_cleanup_handler = new \WPCustomer\Handlers\CustomerCleanupHandler();
         add_action('wp_customer_before_delete', [$customer_cleanup_handler, 'handleBeforeDelete'], 10, 2);
         add_action('wp_customer_deleted', [$customer_cleanup_handler, 'handleAfterDelete'], 10, 3);
+
+        // TODO-2183: Agency access filter integration (cross-plugin with wp-agency)
+        $agency_access_filter = new \WPCustomer\Integrations\AgencyAccessFilter();
+
+        // TODO-2183 Follow-up: Agency employee access filter integration
+        $employee_access_filter = new \WPCustomer\Integrations\EmployeeAccessFilter();
+
+        // TODO-2183 Follow-up: Branch access filter integration (new companies tab)
+        $branch_access_filter = new \WPCustomer\Integrations\BranchAccessFilter();
 
         // Task-2170: Employee lifecycle hooks (created, updated, before_delete, deleted)
         $employee_cleanup_handler = new \WPCustomer\Handlers\EmployeeCleanupHandler();

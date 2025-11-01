@@ -597,9 +597,84 @@ class BranchController {
                         'role' => 'customer'  // Base role for all plugin users
                     ];
 
+                    /**
+                     * Filter user data before creating WordPress user for branch admin
+                     *
+                     * Allows modification of user data before wp_insert_user() call.
+                     *
+                     * Use cases:
+                     * - Demo data: Force static IDs for predictable test data
+                     * - Migration: Import users with preserved IDs from external system
+                     * - Testing: Unit tests with predictable user IDs
+                     * - Custom user data: Add custom fields or metadata
+                     *
+                     * @param array $user_data User data for wp_insert_user()
+                     * @param array $data Original branch data from controller
+                     * @param string $context Context identifier ('branch_admin')
+                     * @return array Modified user data
+                     *
+                     * @since 1.0.0
+                     */
+                    $user_data = apply_filters(
+                        'wp_customer_branch_user_before_insert',
+                        $user_data,
+                        $data,
+                        'branch_admin'
+                    );
+
+                    // Handle static ID if requested (e.g., by demo data)
+                    $static_user_id = null;
+                    if (isset($user_data['ID'])) {
+                        $static_user_id = $user_data['ID'];
+                        unset($user_data['ID']); // wp_insert_user() doesn't accept ID parameter
+                    }
+
                     $user_id = wp_insert_user($user_data);
                     if (is_wp_error($user_id)) {
                         throw new \Exception($user_id->get_error_message());
+                    }
+
+                    // If static ID was requested, update the user ID
+                    if ($static_user_id !== null && $static_user_id != $user_id) {
+                        global $wpdb;
+
+                        // Check if target ID already exists
+                        $existing = $wpdb->get_var($wpdb->prepare(
+                            "SELECT ID FROM {$wpdb->users} WHERE ID = %d",
+                            $static_user_id
+                        ));
+
+                        if (!$existing) {
+                            // Update to static ID
+                            $wpdb->query('SET FOREIGN_KEY_CHECKS=0');
+
+                            $result_users = $wpdb->update(
+                                $wpdb->users,
+                                ['ID' => $static_user_id],
+                                ['ID' => $user_id],
+                                ['%d'],
+                                ['%d']
+                            );
+
+                            $result_meta = $wpdb->update(
+                                $wpdb->usermeta,
+                                ['user_id' => $static_user_id],
+                                ['user_id' => $user_id],
+                                ['%d'],
+                                ['%d']
+                            );
+
+                            $wpdb->query('SET FOREIGN_KEY_CHECKS=1');
+
+                            if ($result_users !== false && $result_meta !== false) {
+                                $user_id = $static_user_id;
+                                error_log("[BranchController] Updated user ID to static ID: {$static_user_id}");
+                            } else {
+                                error_log("[BranchController] Failed to update to static ID: " . $wpdb->last_error);
+                            }
+                        } else {
+                            error_log("[BranchController] Static ID {$static_user_id} already exists, using auto ID {$user_id}");
+                        }
                     }
 
                     // Add customer_branch_admin role (dual-role pattern)

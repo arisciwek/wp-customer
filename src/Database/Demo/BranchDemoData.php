@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Demo
- * @version     1.0.11
+ * @version     1.0.12
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Demo/BranchDemoData.php
@@ -57,6 +57,15 @@
  * 5. Track generated branch IDs
  *
  * Changelog:
+ * 1.0.12 - 2025-11-01 (TODO-3098)
+ * - Updated createBranchViaRuntimeFlow() to support optional static ID parameter
+ * - Uses wp_customer_branch_before_insert hook to force static IDs for cabang branches
+ * - Removed unused private static $branches variable (dead code cleanup)
+ * - Branch pusat static ID enforced via CustomerDemoData hook (no changes here)
+ * - Fixes user cleanup: delete by both ID and username (handles auto-increment IDs)
+ * - Tests full production code flow (Validator → Model → Hook)
+ * - Pattern consistent with CustomerDemoData static ID enforcement
+ *
  * 1.0.0 - 2024-01-27
  * - Initial version
  * - Added integration with wi_provinces and wi_regencies
@@ -82,13 +91,6 @@ class BranchDemoData extends AbstractDemoData {
     private $customer_ids;
     private $user_ids;
     protected $branch_users = [];
-
-    // Format nama branch
-    private static $branches = [
-        ['id' => 1, 'name' => '%s Kantor Pusat'],       // Kantor Pusat
-        ['id' => 2, 'name' => '%s Cabang %s'],         // Cabang Regional
-        ['id' => 3, 'name' => '%s Cabang %s']          // Cabang Area
-    ];
 
     public function __construct() {
         parent::__construct();
@@ -246,16 +248,36 @@ class BranchDemoData extends AbstractDemoData {
                 // Skip pusat deletion - only delete cabang users
                 if (isset($branches['cabang1'])) {
                     $user_ids_to_delete[] = $branches['cabang1']['id'];
+
+                    // Also delete by username if exists with different ID
+                    $existing_user = get_user_by('login', $branches['cabang1']['username']);
+                    if ($existing_user && !in_array($existing_user->ID, $user_ids_to_delete)) {
+                        $user_ids_to_delete[] = $existing_user->ID;
+                    }
                 }
                 if (isset($branches['cabang2'])) {
                     $user_ids_to_delete[] = $branches['cabang2']['id'];
+
+                    // Also delete by username if exists with different ID
+                    $existing_user = get_user_by('login', $branches['cabang2']['username']);
+                    if ($existing_user && !in_array($existing_user->ID, $user_ids_to_delete)) {
+                        $user_ids_to_delete[] = $existing_user->ID;
+                    }
                 }
             }
 
-            // Extra branch users
+            // Extra branch users - delete by both ID and username (TODO-3098 fix)
+            // Users might exist with auto-increment IDs instead of static IDs
             $extra_users = BranchUsersData::$extra_branch_users;
             foreach ($extra_users as $user_data) {
                 $user_ids_to_delete[] = $user_data['id'];
+
+                // Also delete by username (if exists with different ID)
+                $existing_user = get_user_by('login', $user_data['username']);
+                if ($existing_user && !in_array($existing_user->ID, $user_ids_to_delete)) {
+                    $user_ids_to_delete[] = $existing_user->ID;
+                    error_log("[BranchDemoData] Found extra user with auto-increment ID: {$existing_user->ID} (username: {$user_data['username']})");
+                }
             }
 
             error_log("[BranchDemoData] User IDs to clean: " . json_encode($user_ids_to_delete));
@@ -286,9 +308,10 @@ class BranchDemoData extends AbstractDemoData {
                     continue;
                 }
 
-                // Skip pusat branch generation - now auto-created via wp_customer_created HOOK
+                // Skip pusat branch generation - auto-created via wp_customer_created HOOK
                 // Pusat branch is created by AutoEntityCreator when customer is created
-                $this->debug("Pusat branch for customer {$customer_id} should be auto-created via HOOK");
+                // Static ID is enforced via hook in CustomerDemoData (TODO-3098)
+                $this->debug("Pusat branch for customer {$customer_id} auto-created via HOOK with static ID");
 
                 // Check for existing cabang branches
                 $existing_cabang_count = $this->wpdb->get_var($this->wpdb->prepare(
@@ -428,12 +451,35 @@ class BranchDemoData extends AbstractDemoData {
      * @return int Branch ID
      * @throws \Exception If validation fails or creation fails
      */
+    /**
+     * Create branch via runtime flow with optional static ID enforcement
+     *
+     * Uses full production code path:
+     * 1. BranchValidator::validateCreate() - validates input
+     * 2. BranchModel::create() - inserts to database
+     * 3. Hook 'wp_customer_branch_created' - auto-creates employee
+     *
+     * Demo-specific behavior via hook (optional):
+     * - If $static_id provided, hooks into 'wp_customer_branch_before_insert' to force ID
+     * - Removes hook after creation to not affect other operations
+     *
+     * @since 1.0.12 (TODO-3098)
+     * @param int $customer_id Customer ID
+     * @param array $branch_data Branch data
+     * @param array $admin_data Admin user data
+     * @param int $current_user_id Current user ID
+     * @param bool $auto_assign_inspector Auto-assign inspector or leave NULL
+     * @param int|null $static_id Optional static ID to force (demo data)
+     * @return int Branch ID
+     * @throws \Exception on failure
+     */
     private function createBranchViaRuntimeFlow(
         int $customer_id,
         array $branch_data,
         array $admin_data,
         int $current_user_id,
-        bool $auto_assign_inspector = true
+        bool $auto_assign_inspector = true,
+        ?int $static_id = null
     ): int {
         // Initialize validator and model (same as Controller)
         $validator = new \WPCustomer\Validators\Branch\BranchValidator();
@@ -527,9 +573,41 @@ class BranchDemoData extends AbstractDemoData {
                 'role' => 'customer'  // Base role for all plugin users
             ];
 
+            // Apply same filter as production code (for consistency)
+            $user_data = apply_filters(
+                'wp_customer_branch_user_before_insert',
+                $user_data,
+                $data,
+                'branch_admin'
+            );
+
+            // Handle static ID if requested
+            $static_user_id = null;
+            if (isset($user_data['ID'])) {
+                $static_user_id = $user_data['ID'];
+                unset($user_data['ID']);
+            }
+
             $user_id = wp_insert_user($user_data);
             if (is_wp_error($user_id)) {
                 throw new \Exception($user_id->get_error_message());
+            }
+
+            // Update to static ID if requested
+            if ($static_user_id !== null && $static_user_id != $user_id) {
+                $existing = $this->wpdb->get_var($this->wpdb->prepare(
+                    "SELECT ID FROM {$this->wpdb->users} WHERE ID = %d",
+                    $static_user_id
+                ));
+
+                if (!$existing) {
+                    $this->wpdb->query('SET FOREIGN_KEY_CHECKS=0');
+                    $this->wpdb->update($this->wpdb->users, ['ID' => $static_user_id], ['ID' => $user_id], ['%d'], ['%d']);
+                    $this->wpdb->update($this->wpdb->usermeta, ['user_id' => $static_user_id], ['user_id' => $user_id], ['%d'], ['%d']);
+                    $this->wpdb->query('SET FOREIGN_KEY_CHECKS=1');
+                    $user_id = $static_user_id;
+                    $this->debug("Updated user ID to static ID: {$static_user_id}");
+                }
             }
 
             // Add customer_branch_admin role (dual-role pattern)
@@ -544,20 +622,60 @@ class BranchDemoData extends AbstractDemoData {
             // wp_new_user_notification($user_id, null, 'user');
         }
 
-        // Step 8: Save branch (line 612-618 from store())
-        $branch_id = $model->create($data);
-        if (!$branch_id) {
-            if (!empty($user_id)) {
-                wp_delete_user($user_id); // Rollback user creation jika gagal
-            }
-            throw new \Exception('Gagal menambah cabang');
+        // Step 8: Hook to force static ID (demo-specific behavior, optional)
+        if ($static_id !== null) {
+            add_filter('wp_customer_branch_before_insert', function($insertData, $original_data) use ($static_id) {
+                global $wpdb;
+
+                // Delete existing record with static ID if exists (idempotent)
+                $wpdb->delete(
+                    $wpdb->prefix . 'app_customer_branches',
+                    ['id' => $static_id],
+                    ['%d']
+                );
+
+                // Force static ID
+                $insertData['id'] = $static_id;
+
+                error_log("[BranchDemoData] ✓ Forcing static ID {$static_id} for: {$insertData['name']}");
+
+                return $insertData;
+            }, 10, 2);
         }
 
-        // Cache invalidation handled by Model
+        // Step 9: Save branch via BranchModel::create() (production code!)
+        try {
+            $branch_id = $model->create($data);
 
-        $this->debug("Created branch via runtime flow (ID: {$branch_id}) for customer {$customer_id}");
+            // Remove hook after use (don't affect subsequent operations)
+            if ($static_id !== null) {
+                remove_all_filters('wp_customer_branch_before_insert');
+            }
 
-        return $branch_id;
+            if (!$branch_id) {
+                if (!empty($user_id)) {
+                    wp_delete_user($user_id); // Rollback user creation jika gagal
+                }
+                throw new \Exception('Gagal menambah cabang');
+            }
+
+            // Cache invalidation handled by Model
+
+            $log_msg = "Created branch via runtime flow (ID: {$branch_id}) for customer {$customer_id}";
+            if ($static_id !== null) {
+                $log_msg .= " [STATIC ID: {$static_id}]";
+            }
+            $this->debug($log_msg);
+
+            return $static_id !== null ? $static_id : $branch_id;
+
+        } catch (\Exception $e) {
+            // Clean up hook on error
+            if ($static_id !== null) {
+                remove_all_filters('wp_customer_branch_before_insert');
+            }
+            throw $e;
+        }
     }
 
     /**
@@ -647,15 +765,23 @@ class BranchDemoData extends AbstractDemoData {
             wp_set_current_user($customer->user_id);
 
             try {
+                // Use user_id as static branch ID for predictable test data (TODO-3098)
                 $branch_id = $this->createBranchViaRuntimeFlow(
                     $customer->id,
                     $branch_data,
                     $admin_data,
-                    $customer->user_id  // created_by = customer owner
+                    $customer->user_id,  // created_by = customer owner
+                    true,                // auto_assign_inspector
+                    $user_id             // static_id = user_id (12-41)
                 );
 
                 $this->branch_ids[] = $branch_id;
-                $this->debug("Created cabang branch via runtime flow (ID: {$branch_id}) for customer {$customer->name} in {$regency_name}");
+
+                $log_msg = "Created cabang branch via runtime flow (ID: {$branch_id}) for customer {$customer->name} in {$regency_name}";
+                if ($branch_id === $user_id) {
+                    $log_msg .= " [STATIC ID: {$user_id}]";
+                }
+                $this->debug($log_msg);
 
             } catch (\Exception $e) {
                 error_log("[BranchDemoData] Failed to create cabang branch for customer {$customer->id}: " . $e->getMessage());
@@ -797,7 +923,8 @@ class BranchDemoData extends AbstractDemoData {
                     $branch_data,
                     $admin_data,
                     $customer->user_id,  // created_by = customer owner
-                    false  // auto_assign_inspector = false for extra branches
+                    false,  // auto_assign_inspector = false for extra branches
+                    $user_data['id']  // static_id = user_id (50-69 from BranchUsersData::$extra_branch_users)
                 );
 
                 $this->branch_ids[] = $branch_id;

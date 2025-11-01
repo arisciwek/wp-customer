@@ -1,10 +1,12 @@
-# TODO-3098: Add `wp_customer_before_insert` Hook to Production Code
+# TODO-2186: Add `wp_customer_before_insert` Hook to Production Code
 
 **Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Created**: 2025-11-01
 **Completed**: 2025-11-01
 **Related**: CustomerDemoData.php static ID issue
+
+**Note**: Originally numbered TODO-3098, renamed to TODO-2186 to avoid conflict with wp-agency TODO-3098
 
 ## Summary
 
@@ -268,7 +270,7 @@ Our implementation follows the same pattern:
 **Result**: PASSED
 
 ```
-=== Testing TODO-3098: Static ID Hook ===
+=== Testing TODO-2186: Static ID Hook ===
 
 ✓ Tables cleaned
 

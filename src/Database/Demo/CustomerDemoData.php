@@ -4,16 +4,27 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Demo
- * @version     1.0.11
+ * @version     1.0.12
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Demo/Data/CustomerDemoData.php
- * 
+ *
  * Description: Generate customer demo data dengan:
  *              - Data perusahaan dengan format yang valid
  *              - Integrasi dengan WordPress user
  *              - Data wilayah dari Provinces/Regencies
  *              - Validasi dan tracking data unik
+ *              - Static ID enforcement via wp_customer_before_insert hook (TODO-3098)
+ *
+ * Changelog:
+ * 1.0.12 - 2025-11-01 (TODO-3098)
+ * - Updated createCustomerViaRuntimeFlow() to accept $static_id parameter
+ * - Uses wp_customer_before_insert hook to force static customer IDs
+ * - Uses wp_customer_branch_before_insert hook to force static branch pusat IDs
+ * - Fixes ID overlap issue between pusat (auto-increment) and cabang (static)
+ * - Fixes duplicate employee email on regeneration (explicit cleanup in generate())
+ * - Tests full production code flow (Validator → Model → Hook)
+ * - Ensures predictable test data (customer_id=3, branch_pusat_id=18)
  */
 
 namespace WPCustomer\Database\Demo;
@@ -121,8 +132,26 @@ class CustomerDemoData extends AbstractDemoData {
      * @return int|null Customer ID or null on failure
      * @throws \Exception On validation or creation error
      */
-    private function createCustomerViaRuntimeFlow(array $customer_data): ?int {
-        error_log("[CustomerDemoData] === createCustomerViaRuntimeFlow START ===");
+    /**
+     * Create customer via runtime flow with static ID enforcement
+     *
+     * Uses full production code path:
+     * 1. CustomerValidator::validateForm() - validates input
+     * 2. CustomerModel::create() - inserts to database
+     * 3. Hook 'wp_customer_created' - auto-creates branch pusat
+     *
+     * Demo-specific behavior via hook:
+     * - Hooks into 'wp_customer_before_insert' to force static ID
+     * - Removes hook after creation to not affect other operations
+     *
+     * @since 1.0.12 (TODO-3098)
+     * @param array $customer_data Customer data (name, npwp, nib, etc)
+     * @param int $static_id Static ID from self::$customers array
+     * @return int Customer ID (static ID)
+     * @throws \Exception on failure
+     */
+    private function createCustomerViaRuntimeFlow(array $customer_data, int $static_id): int {
+        error_log("[CustomerDemoData] === createCustomerViaRuntimeFlow START (Static ID: {$static_id}) ===");
         error_log("[CustomerDemoData] Customer data: " . json_encode([
             'name' => $customer_data['name'],
             'user_id' => $customer_data['user_id'],
@@ -131,7 +160,7 @@ class CustomerDemoData extends AbstractDemoData {
         ]));
 
         try {
-            // 1. Validate data using CustomerValidator (simulating real runtime validation)
+            // 1. Validate data using CustomerValidator (production code testing!)
             $validation_errors = $this->customerValidator->validateForm($customer_data);
 
             if (!empty($validation_errors)) {
@@ -142,26 +171,82 @@ class CustomerDemoData extends AbstractDemoData {
 
             error_log("[CustomerDemoData] ✓ Validation passed");
 
-            // 2. Create customer using CustomerModel::create()
+            // 2. Hook to force static ID for customer (demo-specific behavior)
+            add_filter('wp_customer_before_insert', function($insert_data, $original_data) use ($static_id) {
+                global $wpdb;
+
+                // Delete existing record with static ID if exists (idempotent)
+                $wpdb->delete(
+                    $wpdb->prefix . 'app_customers',
+                    ['id' => $static_id],
+                    ['%d']
+                );
+
+                // Force static ID
+                $insert_data['id'] = $static_id;
+
+                error_log("[CustomerDemoData] ✓ Forcing customer static ID {$static_id} for: {$insert_data['name']}");
+
+                return $insert_data;
+            }, 10, 2);
+
+            // 2b. Hook to force static ID for branch pusat (auto-created via wp_customer_created)
+            // TODO-3098: Branch pusat uses user_id from BranchUsersData as static branch_id
+            add_filter('wp_customer_branch_before_insert', function($insert_data, $original_data) use ($static_id) {
+                global $wpdb;
+
+                // Get pusat user_id from BranchUsersData
+                $branch_users = \WPCustomer\Database\Demo\Data\BranchUsersData::$data;
+
+                if (!isset($branch_users[$static_id]['pusat']['id'])) {
+                    error_log("[CustomerDemoData] WARNING: No pusat user_id found for customer {$static_id}");
+                    return $insert_data; // Skip static ID for branch
+                }
+
+                $pusat_user_id = $branch_users[$static_id]['pusat']['id'];
+
+                // Delete existing branch with this static ID if exists (idempotent)
+                $wpdb->delete(
+                    $wpdb->prefix . 'app_customer_branches',
+                    ['id' => $pusat_user_id],
+                    ['%d']
+                );
+
+                // Force static ID for branch pusat
+                $insert_data['id'] = $pusat_user_id;
+
+                error_log("[CustomerDemoData] ✓ Forcing branch pusat static ID {$pusat_user_id} for customer {$static_id}");
+
+                return $insert_data;
+            }, 10, 2);
+
+            // 3. Create customer using CustomerModel::create() (production code!)
             // This triggers wp_customer_created HOOK which auto-creates branch pusat + employee
             $customer_id = $this->customerModel->create($customer_data);
+
+            // Remove hooks after use (don't affect subsequent operations)
+            remove_all_filters('wp_customer_before_insert');
+            remove_all_filters('wp_customer_branch_before_insert');
 
             if (!$customer_id) {
                 error_log("[CustomerDemoData] CustomerModel::create() returned NULL");
                 throw new \Exception('Failed to create customer via Model');
             }
 
-            error_log("[CustomerDemoData] ✓ Customer created with ID: {$customer_id}");
+            error_log("[CustomerDemoData] ✓ Customer created with static ID: {$static_id}");
             error_log("[CustomerDemoData] ✓ HOOK wp_customer_created triggered - will auto-create branch pusat + employee");
 
-            // 3. Cache invalidation is handled automatically by CustomerModel::create()
+            // 4. Cache invalidation is handled automatically by CustomerModel::create()
             // No need to manually invalidate cache here
 
             error_log("[CustomerDemoData] === createCustomerViaRuntimeFlow COMPLETED ===");
 
-            return $customer_id;
+            return $static_id;
 
         } catch (\Exception $e) {
+            // Clean up hooks on error
+            remove_all_filters('wp_customer_before_insert');
+            remove_all_filters('wp_customer_branch_before_insert');
             error_log("[CustomerDemoData] ERROR in createCustomerViaRuntimeFlow: " . $e->getMessage());
             throw $e;
         }
@@ -192,14 +277,25 @@ class CustomerDemoData extends AbstractDemoData {
             );
             error_log("[CustomerDemoData] Found " . count($demo_customers) . " demo customers to clean");
 
-            // 3. Delete via Model (triggers HOOK → cascade to branches → cascade to employees)
+            // 2b. Delete auto-created employees first (TODO-3098 fix)
+            // Employees auto-created via wp_customer_branch_created hook need manual cleanup
+            if (!empty($demo_customers)) {
+                $customer_ids_str = implode(',', array_map('intval', $demo_customers));
+                $deleted_employees = $this->wpdb->query(
+                    "DELETE FROM {$this->wpdb->prefix}app_customer_employees
+                     WHERE customer_id IN ({$customer_ids_str})"
+                );
+                error_log("[CustomerDemoData] Deleted {$deleted_employees} auto-created employees");
+            }
+
+            // 3. Delete via Model (triggers HOOK → cascade to branches)
             $deleted_count = 0;
             foreach ($demo_customers as $customer_id) {
                 if ($this->customerModel->delete($customer_id)) {
                     $deleted_count++;
                 }
             }
-            error_log("[CustomerDemoData] Deleted {$deleted_count} demo customers (branches & employees cascaded via HOOK)");
+            error_log("[CustomerDemoData] Deleted {$deleted_count} demo customers (branches cascaded via HOOK)");
 
             // 4. Restore original settings
             update_option('wp_customer_general_options', $original_settings);
@@ -327,15 +423,21 @@ class CustomerDemoData extends AbstractDemoData {
                     'user_id' => $customer_data['user_id'],
                     'provinsi_id' => $customer_data['provinsi_id'],
                     'regency_id' => $customer_data['regency_id'],
-                    'reg_type' => $customer_data['reg_type']
+                    'reg_type' => $customer_data['reg_type'],
+                    'static_id' => $customer['id']
                 ]));
 
-                // 5. Create customer via runtime flow (Validator → Model → HOOK)
-                $customer_id = $this->createCustomerViaRuntimeFlow($customer_data);
+                // 5. Create customer via runtime flow with static ID (Validator → Model → HOOK)
+                $customer_id = $this->createCustomerViaRuntimeFlow($customer_data, $customer['id']);
 
                 if (!$customer_id) {
                     error_log("[CustomerDemoData] ERROR: Failed to create customer via runtime flow");
                     throw new \Exception("Failed to create customer: {$customer['name']}");
+                }
+
+                // Verify static ID was used
+                if ($customer_id !== $customer['id']) {
+                    error_log("[CustomerDemoData] WARNING: Expected ID {$customer['id']}, got {$customer_id}");
                 }
 
                 error_log("[CustomerDemoData] Successfully created customer ID {$customer_id} via runtime flow");

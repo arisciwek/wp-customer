@@ -1,393 +1,295 @@
-# WP Customer Release Notes - Version 1.0.11
+# WP Customer Plugin - Release Notes
 
-**Release Date**: 2025-10-23
-**Focus**: Documentation, Performance Optimization, Hook System Standardization
+## Version 1.0.12 (2025-11-01)
 
-## 🎯 Overview
+**Release Date**: November 1, 2025
+**Priority**: HIGH (Critical Fixes + Major Features)
+**Type**: Integration Framework + Static ID Pattern + Critical Bug Fixes
 
-Version 1.0.11 adalah major documentation release dengan significant performance improvements dan hook system standardization. Release ini mencakup comprehensive HOOK documentation (~6,000 lines), query optimization untuk access control (66% query reduction), dan naming convention standardization untuk filter hooks.
+---
 
-## ✨ Major Features
+### 🎯 Overview
 
-### 📚 Comprehensive HOOK Documentation (TODO-2177)
-**NEW** - Complete developer documentation untuk extensibility
+Versi 1.0.12 merupakan release major yang mencakup:
+- **Static ID Hook Pattern** untuk predictable demo data generation
+- **Generic Entity Integration Framework** untuk cross-plugin integration
+- **Permission Matrix Improvements** dengan race condition fix
+- **Agency Filter Integration Fix** (critical bug fix)
 
-**Documentation Structure** (15 files, ~6,000 lines):
-```
-/docs/hooks/
-├── README.md                      - Overview + Quick Start + Index
-├── naming-convention.md           - Naming Rules & Patterns
-├── migration-guide.md             - Deprecated Hook Migration
-├── actions/
-│   ├── customer-actions.md       - 4 Customer Action Hooks
-│   ├── branch-actions.md         - 4 Branch Action Hooks
-│   ├── employee-actions.md       - 4 Employee Action Hooks
-│   └── audit-actions.md          - 1 Audit Action Hook
-├── filters/
-│   ├── access-control-filters.md - 4 Access Control Filters
-│   ├── permission-filters.md     - 6 Permission Filters
-│   ├── query-filters.md          - 4 Query Modification Filters
-│   ├── ui-filters.md             - 4 UI/UX Filters
-│   ├── integration-filters.md    - 2 External Integration Filters
-│   └── system-filters.md         - 1 System Filter
-└── examples/
-    ├── actions/01-extend-customer-creation.md
-    └── filters/01-platform-integration.md
-```
+Total: **8 TODOs completed** (TODO-2179 sampai TODO-2186)
 
-**Hooks Documented**:
-- **13 Action Hooks**: Customer (4), Branch (4), Employee (4), Audit (1)
-- **21+ Filter Hooks**: Access Control (4), Permissions (6), Query (4), UI (4), Integration (2), System (1)
+---
 
-**Key Features**:
-- ✅ Complete parameter documentation with data structures
-- ✅ Real-world integration examples (wp-app-core, wp-agency, CRM)
-- ✅ Security & performance considerations
-- ✅ Debugging examples & common anti-patterns
-- ✅ Migration guide for deprecated hooks
-- ✅ Copy-paste ready code examples
+### 🚀 Major Features
+
+#### 1. Static ID Hook Pattern ✅ (TODO-2185, TODO-2186)
+
+Implemented complete static ID hook pattern untuk WordPress users dan entities:
+
+**WordPress User Hooks** (TODO-2185):
+- `wp_customer_branch_user_before_insert` - Branch admin user creation
+- `wp_customer_employee_user_before_insert` - Employee user creation
+
+**Entity Hooks** (TODO-2186):
+- `wp_customer_before_insert` - Customer entity creation
+- `wp_customer_branch_before_insert` - Branch entity creation
+- `wp_customer_employee_before_insert` - Employee entity creation
 
 **Benefits**:
-- External developers dapat extend plugin tanpa modifikasi core
-- Clear API contract untuk prevent breaking changes
-- Platform integration patterns (wp-app-core, wp-agency)
-- Easier onboarding untuk new developers
+- Demo data dengan predictable IDs (customers 1-10, users 57-129)
+- Fixes agus_dedi user ID mismatch (1948 → 57)
+- Consistent pattern dengan wp-agency plugin
+- Support untuk migration dan testing scenarios
+
+**Files Modified**:
+- BranchController v1.0.8 - User static ID hook
+- CustomerEmployeeController v1.0.8 - User static ID hook
+- CustomerModel v1.0.11 - Entity static ID hook (with array reordering)
+- BranchModel v1.0.x - Entity static ID hook
+- EmployeeModel v1.0.x - Entity static ID hook
+
+**Note**: TODO-2186 originally numbered as TODO-3098, renamed to avoid conflict dengan wp-agency TODO-3098
 
 ---
 
-## 🚀 Performance Optimizations
+#### 2. Generic Entity Integration Framework ✅ (TODO-2179)
 
-### Query Optimization - Single Query Pattern (TODO-2173, 2174, 2176)
-**Performance Improvement**: 66% query reduction untuk access control
+Implemented Generic Entity Integration Framework untuk wp-customer integration dengan wp-agency:
 
-#### CustomerModel::getUserRelation() Optimization (TODO-2173)
-**Problem**: 3 separate queries ke customers, branches, employees tables
-**Solution**: Single optimized query dengan LEFT JOINs
-- ✅ 3 queries → 1 query (~50% faster, ~7ms dari ~15ms)
-- ✅ CASE statements untuk determine role priority
-- ✅ Handles both customer_id=0 (list view) dan customer_id>0 (specific)
-- ✅ Better caching (single cache key)
+**Architecture Decision**: Pragmatic simplicity over complex interface-based system
 
-**Files Modified**:
-- `src/Models/Customer/CustomerModel.php` (lines 985-1137)
+**Components Created**:
+- **EntityRelationModel**: Generic model untuk query customer-entity relations
+  - `get_customer_count_for_entity()` - Count customers untuk entity
+  - `get_accessible_entity_ids()` - Get accessible IDs untuk filtering
+  - `get_branch_count_for_entity()` - Count branches
+  - Config-based via `wp_customer_entity_relation_configs` filter
 
-**Role Logic** (priority order):
-1. `customer_admin`: customers.user_id = user_id (owner)
-2. `customer_branch_admin`: branches.user_id = user_id
-3. `customer_employee`: employees.user_id = user_id
+- **DataTableAccessFilter**: Access control untuk DataTable & Statistics
+  - `filter_datatable_where()` - Filter DataTable queries
+  - `filter_statistics_where()` - Filter statistics queries
+  - Platform staff bypass logic
+  - Customer employee filtering
 
-#### BranchModel::getUserRelation() Optimization (TODO-2174)
-**Same pattern applied to BranchModel**
-- ✅ Multiple queries → 1 optimized query
-- ✅ LEFT JOINs ke customers, branches, employees
-- ✅ Supports branch_id=0 (list) dan branch_id>0 (specific)
+**Pattern**: Config via filters, automatic hook registration, platform staff bypass
 
-**Files Modified**:
-- `src/Models/Branch/BranchModel.php` (lines 899-981)
-
-#### EmployeeModel::getUserInfo() Optimization (TODO-2176)
-**Optimization for employee access checks**
-- ✅ Reduced query overhead
-- ✅ Consistent pattern with Customer & Branch models
-
-**Files Modified**:
-- `src/Models/Employee/CustomerEmployeeModel.php`
-
-**Performance Benefits**:
-- ✅ 66% query reduction (3 → 1 per access check)
-- ✅ Network overhead reduced (1 round trip)
-- ✅ Easier maintenance (single point of truth)
-- ✅ Better caching efficiency
-
----
-
-## 🔧 Developer Experience
-
-### Hierarchical Access Control Logging (TODO-2172, 2175)
-**NEW** - Step-by-step validation logging untuk debugging
-
-**Hierarchical Access Model** (4 Levels):
-```
-LEVEL 1: GERBANG (Plugin - Capability)
-  → Has capability 'view_customer_list'
-
-LEVEL 2: LOBBY (Database - Employee Record)
-  → User exists in customers/branches/employees table
-
-LEVEL 3: LANTAI 8 (Filter - Plugin Extension)
-  → Filter 'wp_customer_access_type' executed
-  → access_type changed: 'none' → 'agency'
-
-LEVEL 4: RUANG MEETING (Scope - Data Filter)
-  → Query WHERE: branch.agency_id = user.agency_id
-```
-
-**Implementation**:
-- ✅ CustomerModel::getUserRelation() (lines 1190-1295)
-- ✅ BranchModel::getUserRelation() (lines 1076-1190)
-- ✅ Clear visual indicators (✓ PASS, ✗ FAIL, ⊘ SKIP)
-- ✅ User context display (user_id, user_login)
-- ✅ Access type & scope explanation
-- ✅ Agency context display support
-
-**Example Output**:
-```
-[CUSTOMER ACCESS] User 144 (joko_kartika) - Hierarchical Validation:
-
-  LEVEL 1 (Capability Check):
-    ✓ PASS - Has 'view_customer_list' capability
-  LEVEL 2 (Database Record Check):
-    ⊘ SKIP - Not a direct customer record
-  LEVEL 3 (Access Type Filter):
-    Filter: 'wp_customer_access_type'
-    Result: agency
-    ✓ Modified by external plugin (agency)
-  LEVEL 4 (Data Scope Filter):
-    Scope: Agency-filtered customers
-
-  FINAL RESULT:
-    Has Access: ✓ TRUE
-    Access Type: agency
-    Customer ID: N/A (list view)
-```
-
-**Benefits**:
-- ✅ Understand exactly at which level user gains access
-- ✅ Debug agency/platform access issues easily
-- ✅ Trace filter hook execution
-- ✅ Verify access type and scope
-
----
-
-## 🏗️ Hook System Standardization
-
-### Branch Filter Hooks Renamed for Consistency
-**Breaking Change** (with backward compatibility)
-
-**Problem**: Inconsistent naming pattern
-- ❌ Customer hooks: `wp_customer_access_type`
-- ❌ Branch hooks: `wp_branch_access_type` (missing `_customer_`)
-
-**Solution**: Standardize to `wp_customer_{entity}_{purpose}` pattern
-- ✅ `wp_branch_access_type` → `wp_customer_branch_access_type`
-- ✅ `wp_branch_user_relation` → `wp_customer_branch_user_relation`
-
-**Implementation**:
-- Both old and new hooks fire (backward compatibility)
-- Old hooks show deprecation notice via `_deprecated_hook()`
-- Follows WordPress deprecation standards
-
-**Deprecation Timeline**:
-- **v1.0**: Old naming (`wp_branch_*`)
-- **v1.0.11** (Current): Both names work + deprecation notice
-- **v1.2.0**: Louder warnings
-- **v2.0.0**: Old names removed
-
-**Migration Example**:
+**Configuration Example**:
 ```php
-// OLD (deprecated)
-add_filter('wp_branch_access_type', 'my_handler', 10, 2);
+add_filter('wp_customer_entity_relation_configs', function($configs) {
+    $configs['agency'] = [
+        'bridge_table' => 'app_customer_branches',
+        'entity_column' => 'agency_id',
+        'customer_column' => 'customer_id',
+        'access_filter' => true
+    ];
+    return $configs;
+});
+```
 
-// NEW (recommended)
-add_filter('wp_customer_branch_access_type', 'my_handler', 10, 2);
+**Related**: TODO-2177 (Agency Statistics), TODO-2178 (Documentation)
+
+---
+
+#### 3. Permission Matrix Improvements ✅ (TODO-2181, TODO-2182)
+
+**Display Improvements** (TODO-2181):
+- Show ONLY customer roles (bukan semua WordPress roles)
+- Visual indicator: `dashicons-groups` untuk customer roles
+- Improved section styling (header, reset, matrix sections)
+- Consistent dengan wp-app-core dan wp-agency pattern
+
+**Files Modified**:
+- tab-permissions.php v1.1.0 - Filter logic + sections + icons
+
+**Critical Race Condition Fix** (TODO-2182):
+- Page-level locking untuk prevent data corruption
+- Cross-disable buttons (reset + save) saat operasi berjalan
+- Disable checkboxes during operations
+- Immediate reload (no vulnerable window)
+
+**Files Modified**:
+- customer-permissions-tab-script.js v1.0.2 - Added lockPage/unlockPage methods
+
+**Related**: TODO-3090, TODO-3091 (wp-agency same fixes)
+
+---
+
+### 🐛 Critical Bug Fixes
+
+#### Agency Filter Integration Fix ✅ (TODO-2183)
+
+**Problem**: Customer admin users could see Disnaker menu but couldn't see agency list
+
+**Root Causes**:
+1. Missing filter hook call di AgencyModel
+2. Table alias mismatch (a.id vs p.id)
+3. AgencyAccessFilter never instantiated
+
+**Solution**:
+- Fixed table alias dari `a.id` → `p.id` in AgencyAccessFilter
+- Instantiated filter di wp-customer.php (line 148-149)
+
+**Files Modified**:
+- AgencyAccessFilter v1.0.1 - Table alias fix
+- wp-customer.php - Filter instantiation
+
+**Impact**: Customer admin sekarang bisa lihat agencies related to their branches ✅
+
+---
+
+#### Extension Hook Migration ✅ (TODO-2180)
+
+**Problem**: Duplicate statistics rendering di agency tabs
+
+**Solution**: Migrated AgencyTabController dari `wpapp_tab_view_content` ke `wpapp_tab_view_after_content` hook
+
+**Pattern**:
+```
+wpapp_tab_view_content (Priority 10) - Core content
+wpapp_tab_view_after_content (Priority 20+) - Extension content
 ```
 
 **Files Modified**:
-- `src/Models/Branch/BranchModel.php` (lines 1000-1012, 1084-1097)
-- Documentation updated across 6 files
+- AgencyTabController v1.1.0 - Hook migration
 
-**Benefits**:
-- ✅ Consistent naming across all entities
-- ✅ Predictable hook names
-- ✅ Professional API design
-- ✅ Backward compatible transition
+**Related**: TODO-3086 (wp-agency), TODO-1188 (wp-app-core)
 
 ---
 
-## 📦 Files Changed
+### 📊 Metrics Summary
 
-### Core Files
-- `wp-customer.php` - Version bump to 1.0.11
+**Code Quality**:
+- Hooks implemented: 10 total (6 entity + 4 user)
+- Integration components: 2 (EntityRelationModel + DataTableAccessFilter)
+- Bug fixes: 3 critical fixes
 
-### Models
-- `src/Models/Customer/CustomerModel.php` - Single query optimization + hierarchical logging
-- `src/Models/Branch/BranchModel.php` - Single query optimization + hierarchical logging + hook rename
-- `src/Models/Employee/CustomerEmployeeModel.php` - Single query optimization
+**Performance**:
+- Static ID pattern: Enables predictable test data
+- Entity integration: Config-based, scalable architecture
+- Access filtering: Automatic hook-based filtering
 
-### Documentation (NEW)
-- `docs/hooks/README.md` - Main HOOK documentation
-- `docs/hooks/naming-convention.md` - Naming rules
-- `docs/hooks/migration-guide.md` - Migration guide
-- `docs/hooks/actions/*.md` - 4 action documentation files
-- `docs/hooks/filters/*.md` - 6 filter documentation files
-- `docs/hooks/examples/**/*.md` - 2 example files
-
-**Total**: 15 new documentation files (~6,000 lines)
+**Architecture**:
+- Cross-plugin integration: ✅ Framework implemented
+- Static ID pattern: ✅ Complete (users + entities)
+- Permission security: ✅ Race condition fixed
+- Scope separation: ✅ Hook-based pattern
 
 ---
 
-## 🔄 Migration Guide
+### 🔧 Files Modified Summary
 
-### For Plugin Users
-**No action required** - All changes are backward compatible.
+**Controllers**:
+- BranchController v1.0.8 - User static ID hook
+- CustomerEmployeeController v1.0.8 - User static ID hook
+- AgencyTabController v1.1.0 - Extension hook migration
 
-### For Extension Developers
+**Models**:
+- CustomerModel v1.0.11 - Entity static ID hook + array reordering
+- BranchModel - Entity static ID hook
+- EmployeeModel - Entity static ID hook
+- EntityRelationModel (NEW) - Generic entity queries
+- DataTableAccessFilter (NEW) - Access control integration
 
-#### 1. Update Branch Filter Hooks (Optional but Recommended)
-```php
-// Update your hooks to new naming convention
-// Old hooks still work but show deprecation notice
+**Views/Templates**:
+- tab-permissions.php v1.1.0 - Filter + sections
 
-// BEFORE
-add_filter('wp_branch_access_type', 'my_function', 10, 2);
-add_filter('wp_branch_user_relation', 'my_function', 10, 3);
+**JavaScript**:
+- customer-permissions-tab-script.js v1.0.2 - Race condition fix
 
-// AFTER
-add_filter('wp_customer_branch_access_type', 'my_function', 10, 2);
-add_filter('wp_customer_branch_user_relation', 'my_function', 10, 3);
-```
-
-#### 2. Enable Debug Logging (Optional)
-```php
-// Add to wp-config.php to see hierarchical logging
-define('WP_DEBUG', true);
-define('WP_DEBUG_LOG', true);
-```
-
-#### 3. Review HOOK Documentation
-- Check `/docs/hooks/README.md` for complete hook reference
-- Review integration examples for your use case
-- Update any custom extensions to use documented patterns
+**Integration**:
+- AgencyAccessFilter v1.0.1 - Table alias fix
+- wp-customer.php - Filter instantiation
 
 ---
 
-## 🎓 Documentation Highlights
+### 🧪 Testing
 
-### Quick Start Guide
-New developers can now quickly understand:
-- **Actions vs Filters** - When to use each
-- **Available Hooks** - Complete index with quick reference table
-- **Integration Patterns** - wp-app-core, wp-agency examples
-- **Common Use Cases** - Email notifications, CRM sync, custom permissions
-
-### Migration Support
-- Clear migration path for deprecated hooks
-- Before/after code examples
-- Deprecation timeline
-- Testing instructions
-
-### Real-World Examples
-- Customer creation extension (welcome email, CRM sync)
-- Platform integration (wp-app-core pattern)
-- Custom permissions (membership-based limits)
-- Query modification (agency filtering)
+**Test Coverage**:
+- ✅ Static ID hooks (WordPress users + entities)
+- ✅ Demo data generation dengan predictable IDs
+- ✅ Agency filter integration (customer admin access)
+- ✅ Permission matrix race condition protection
+- ✅ Entity integration framework (agency statistics)
 
 ---
 
-## 📊 Performance Metrics
+### 🔄 Migration Notes
 
-### Query Optimization Results
-- **Access Control Queries**: 3 → 1 (66% reduction)
-- **Execution Time**: ~15ms → ~7ms (50% faster)
-- **Cache Efficiency**: Improved (single cache key)
-- **Network Round Trips**: Reduced by 2 per access check
+**Breaking Changes**: None (backward compatible)
 
-### Development Impact
-- **Documentation Coverage**: 0 → 100% (13 actions, 21+ filters)
-- **Code Examples**: 0 → 20+ examples
-- **Integration Patterns**: 0 → 3 documented patterns
+**New Features**:
+1. Static ID hooks available untuk demo data
+2. Generic entity integration framework
+3. Agency filter integration working
 
----
+**Migration Steps**:
+1. Update wp-customer to v1.0.12
+2. Clear WordPress cache
+3. Verify agency access for customer admin users
+4. Test permission matrix operations
 
-## 🐛 Bug Fixes
-
-### Hook System
-- ✅ Fixed inconsistent naming pattern for branch hooks
-- ✅ Added deprecation notices for old hook names
-- ✅ Updated logging to reference new hook names
-
-### Performance
-- ✅ Eliminated redundant queries in access control
-- ✅ Optimized cache key generation
-- ✅ Reduced database round trips
+**Backward Compatibility**:
+- ✅ All existing features work unchanged
+- ✅ New hooks are optional (no code changes required)
+- ✅ Bug fixes improve existing functionality
 
 ---
 
-## 🔮 Future Improvements
+### 🎯 Upgrade Recommendations
 
-### Planned for Next Release
-- Additional hook examples (audit logging, cascade operations)
-- Visual diagram of hook lifecycle
-- HOOK documentation link in plugin activation screen
-- More integration examples (external APIs, custom workflows)
+**Required**:
+- wp-app-core minimal version: Compatible with hook infrastructure
+- wp-agency minimal version: Compatible for integration features
+- WordPress: 5.8+
+- PHP: 7.4+
 
-### Under Consideration
-- GraphQL API support
-- REST API expansion
-- Advanced caching strategies
-- Multi-tenancy enhancements
-
----
-
-## 🙏 Credits
-
-### Contributors
-- **arisciwek** - Lead developer
-
-
-### Related Projects
-- **wp-app-core** - Platform role integration
-- **wp-agency** - Agency management integration
-- **wp-wilayah-indonesia** - Location data integration
+**Recommended**:
+- Clear all caches setelah upgrade
+- Test customer admin access to agency list
+- Verify permission matrix operations
+- Test demo data generation (jika digunakan)
 
 ---
 
-## 📝 Changelog Summary
+### 👥 Contributors
 
-### Added
-- ✅ Comprehensive HOOK documentation (15 files, ~6,000 lines)
-- ✅ Hierarchical access control logging (CustomerModel, BranchModel)
-- ✅ Migration guide for deprecated hooks
-- ✅ Real-world integration examples
-
-### Changed
-- ✅ Renamed branch filter hooks for consistency (backward compatible)
-- ✅ Optimized access control queries (3 → 1 query)
-- ✅ Updated hook references in debug logging
-
-### Deprecated
-- ⚠️ `wp_branch_access_type` (use `wp_customer_branch_access_type`)
-- ⚠️ `wp_branch_user_relation` (use `wp_customer_branch_user_relation`)
-
-### Performance
-- ✅ 66% query reduction for access control
-- ✅ 50% faster execution time (~15ms → ~7ms)
-- ✅ Improved cache efficiency
+- **Development**: Claude Code
+- **Architecture Design**: Based on wp-agency pattern
+- **Testing**: Automated + manual verification
+- **Documentation**: Complete TODO documentation (8 files)
 
 ---
 
-## 📚 Documentation Links
+### 📖 References
 
-- **Main Documentation**: `/docs/hooks/README.md`
-- **Naming Convention**: `/docs/hooks/naming-convention.md`
-- **Migration Guide**: `/docs/hooks/migration-guide.md`
-- **Action Hooks**: `/docs/hooks/actions/`
-- **Filter Hooks**: `/docs/hooks/filters/`
-- **Examples**: `/docs/hooks/examples/`
+**Related Releases**:
+- wp-agency v1.0.8 (TODO-3098 - Static ID hooks)
+- wp-app-core v1.1.0+ (Hook infrastructure)
 
----
-
-## 🔗 Related TODOs
-
-- ✅ TODO-2177: HOOK Documentation (COMPLETED)
-- ✅ TODO-2172: Hierarchical Access Control Logging (COMPLETED)
-- ✅ TODO-2173: Single Query for CustomerModel (COMPLETED)
-- ✅ TODO-2174: Single Query for BranchModel (COMPLETED)
-- ✅ TODO-2175: Hierarchical Logging for BranchModel (COMPLETED)
-- ✅ TODO-2176: Single Query for EmployeeModel (COMPLETED)
+**Documentation**:
+- See `/TODO/` directory untuk detailed implementation notes
+- Each TODO file contains complete technical documentation
 
 ---
 
-**Version 1.0.11** - Ready for Production 🚀
+### 🔮 Next Steps
 
-For questions or support, please visit: https://github.com/arisciwek/wp-customer
+**Completed in v1.0.12**:
+- ✅ Static ID hook pattern
+- ✅ Generic entity integration framework
+- ✅ Critical bug fixes (agency filter, race condition)
+- ✅ Permission matrix improvements
+
+**Planned for Future**:
+- Enhanced demo data generation features
+- Additional entity integrations
+- Performance optimizations
+- Extended test coverage
+
+---
+
+**End of Release Notes v1.0.12**
+
+*Generated: 2025-11-01*
+*Plugin: WP Customer*
+*Release Type: Major (Integration Framework + Static ID + Critical Fixes)*

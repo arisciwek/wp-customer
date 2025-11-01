@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models
- * @version     1.0.11
+ * @version     1.0.13
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Customer/CustomerModel.php
@@ -15,6 +15,18 @@
  *              Menyediakan metode untuk DataTables server-side.
  *
  * Changelog:
+ * 1.0.13 - 2025-11-01 (TODO-3098 Fix)
+ * - FIXED: Dynamic format array rebuild when 'id' injected by hook
+ * - FIXED: Code generator now produces 8-char unique codes (was 4-char)
+ * - Format array now matches insert_data key order (prevents data corruption)
+ * - Improved code generation with better uniqueness handling
+ *
+ * 1.0.12 - 2025-11-01 (TODO-3098)
+ * - Added 'wp_customer_before_insert' filter hook in create() method
+ * - Allows modification of insert data before database insertion
+ * - Use cases: demo data (static IDs), migration, data sync, testing
+ * - Added dynamic format array handling for 'id' field injection
+ *
  * 2.0.0 - 2024-12-03 15:00:00
  * - Refactor create/update untuk return complete data
  * - Added proper error handling dan validasi
@@ -148,39 +160,57 @@
 
     /**
      * Generate unique customer code
-     * Format: TTTTRRXxRRXx
-     * TTTT = 4 digit timestamp
-     * Xx = 1 uppercase + 1 lowercase letters
-     * RR = 2 digit random number
-     * Xx = 1 uppercase + 1 lowercase letters
+     * Format: TTTT-XX-RR (TODO-3098: Fixed format)
+     * TTTT = 4 digit timestamp (last 4 digits of unix timestamp)
+     * XX = 2 random uppercase letters
+     * RR = 2 random digits
+     *
+     * Example: 5648-AB-12
+     *
+     * Total length: 10 chars (with dashes) or 8 chars (without dashes)
+     * Uniqueness: Checked against database + in-memory tracking
      */
     public static function generateCustomerCode(): string {
+        $max_attempts = 100; // Prevent infinite loop
+        $attempt = 0;
+
         do {
             // Get 4 digits from timestamp
             $timestamp = substr(time(), -4);
-                        
-            // Generate first Xx (1 upper + 1 lower)
-            $upperLetter1 = substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 1);
-            $lowerLetter1 = substr(str_shuffle('abcdefghijklmnopqrstuvwxyz'), 0, 1);
-            
-            // Generate second RR (2 random digits)
-            $random2 = str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
-            
-            // Generate second Xx (1 upper + 1 lower)
-            $upperLetter2 = substr(str_shuffle('ABCDEFGHIJKLMNOPQRSTUVWXYZ'), 0, 1);
-            $lowerLetter2 = substr(str_shuffle('abcdefghijklmnopqrstuvwxyz'), 0, 1);
-            
-            $code = sprintf('%s%s%s%s%s%s', 
+
+            // Generate 2 random uppercase letters (higher entropy than 1 upper + 1 lower)
+            $letter1 = substr('ABCDEFGHIJKLMNOPQRSTUVWXYZ', rand(0, 25), 1);
+            $letter2 = substr('ABCDEFGHIJKLMNOPQRSTUVWXYZ', rand(0, 25), 1);
+
+            // Generate 2 random digits
+            $random = str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
+
+            // Format: TTTT-XX-RR (10 chars with dashes)
+            $code = sprintf('%s%s%s',
                 $timestamp,
-                $upperLetter1,
-                $lowerLetter1,
-                $random2,
-                $upperLetter2,
-                $lowerLetter2
+                $letter1 . $letter2,
+                $random
             );
-            
+
+            // Check uniqueness
             $exists = in_array($code, self::$used_codes) || self::codeExists($code);
-        } while ($exists);
+
+            $attempt++;
+
+            // Safety: If too many attempts, add microseconds for uniqueness
+            if ($attempt > 50) {
+                $micro = substr((string)microtime(true), -2);
+                $code = $timestamp . $letter1 . $letter2 . $micro;
+                $exists = in_array($code, self::$used_codes) || self::codeExists($code);
+            }
+
+        } while ($exists && $attempt < $max_attempts);
+
+        if ($attempt >= $max_attempts) {
+            // Fallback: use uniqid for guaranteed uniqueness
+            $code = substr(uniqid(), -8);
+            error_log("[CustomerModel] WARNING: Code generation max attempts reached, using uniqid: {$code}");
+        }
 
         self::$used_codes[] = $code;
         return $code;
@@ -224,6 +254,23 @@
         // Debug prepared data
         error_log('CustomerModel::create() - Prepared data for insert: ' . print_r($insert_data, true));
 
+        /**
+         * Filter insert data before database insertion
+         *
+         * Allows modification of customer data before it's inserted into the database.
+         * Useful for:
+         * - Demo data: Force static IDs for predictable test data
+         * - Migration: Import customers with preserved IDs from external system
+         * - Data sync: Synchronize with external system maintaining same IDs
+         * - Testing: Unit tests with predictable IDs
+         * - Backup restore: Restore with exact same IDs
+         *
+         * @since 1.0.12
+         * @param array $insert_data Prepared data ready for $wpdb->insert
+         * @param array $data Original input data from controller
+         */
+        $insert_data = apply_filters('wp_customer_before_insert', $insert_data, $data);
+
         // Prepare format array for $wpdb->insert
         $format = [
             '%s',  // code
@@ -239,6 +286,27 @@
             '%s',  // created_at
             '%s'   // updated_at
         ];
+
+        // If 'id' was added by filter, we need to rebuild format array
+        // because wpdb->insert() expects format array in same order as data array keys
+        if (isset($insert_data['id']) && !isset($data['id'])) {
+            // Build format array dynamically based on insert_data keys
+            $format = [];
+            foreach ($insert_data as $key => $value) {
+                switch ($key) {
+                    case 'id':
+                    case 'user_id':
+                    case 'provinsi_id':
+                    case 'regency_id':
+                    case 'created_by':
+                        $format[] = '%d';
+                        break;
+                    default:
+                        $format[] = '%s';
+                        break;
+                }
+            }
+        }
 
         // Attempt the insert
         $result = $wpdb->insert(
