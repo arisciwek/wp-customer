@@ -150,6 +150,10 @@ class WPCustomer {
         add_action('wp_customer_before_delete', [$customer_cleanup_handler, 'handleBeforeDelete'], 10, 2);
         add_action('wp_customer_deleted', [$customer_cleanup_handler, 'handleAfterDelete'], 10, 3);
 
+        // Customer role-based filter (Review-01 from TODO-2187)
+        // Filter customer DataTable based on user's customer_employees association
+        $customer_role_filter = new \WPCustomer\Integrations\CustomerRoleFilter();
+
         // TODO-2183: Agency access filter integration (cross-plugin with wp-agency)
         $agency_access_filter = new \WPCustomer\Integrations\AgencyAccessFilter();
 
