@@ -1,26 +1,24 @@
 <?php
 /**
- * Customer Branches Tab - Pure View Pattern (Inner Content Only)
+ * Customer Branches Tab - Lazy-Load Pattern
  *
  * @package     WP_Customer
  * @subpackage  Views/Customer/Tabs
- * @version     1.0.0
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Views/customer/tabs/branches.php
  *
- * Description: Pure HTML inner content for lazy-loaded branches tab.
- *              Outer wrapper provided by TabSystemTemplate.
- *              This template only provides INNER content (no outer div).
- *              Classes/attributes added directly to outer div via JS.
- *
- * Pattern: Inner Content Only (following wp-agency pattern)
- * - Outer wrapper: Created by TabSystemTemplate (wp-app-core)
- * - This file: Only inner HTML content
- * - Classes: Added via JS after content inject
- * - Lazy-load: Triggered by wpapp-tab-manager.js
+ * Description: Lazy-loaded branches tab with DataTable.
+ *              Content loaded via AJAX on first tab click.
+ *              Works flicker-free after wp-app-core animation fix (TODO-1197).
  *
  * Changelog:
+ * 1.1.0 - 2025-11-02 (TODO-2189)
+ * - Confirmed lazy-load works without flicker after animation fix
+ * - Root cause was fadeIn animation in wp-app-core (fixed in TODO-1197)
+ * - Lazy-load pattern preferred for performance
+ *
  * 1.0.0 - 2025-11-01 (Review-02 from TODO-2187)
  * - Initial implementation following wp-agency/tabs/divisions.php pattern
  * - Lazy-loaded DataTable for customer branches
@@ -45,20 +43,13 @@ if (!$customer_id) {
     return;
 }
 
-// Note: This template provides INNER content only
-// Outer <div id="branches" class="wpapp-tab-content"> is created by TabSystemTemplate
-// Classes and data attributes are added via JavaScript after content injection
+// Lazy-load pattern for testing
 ?>
-<!-- Inner content for branches tab -->
 <div class="wpapp-branches-tab wpapp-tab-autoload"
      data-customer-id="<?php echo esc_attr($customer_id); ?>"
      data-load-action="load_customer_branches_tab"
      data-content-target=".wpapp-branches-content"
      data-error-message="<?php esc_attr_e('Failed to load branches', 'wp-customer'); ?>">
-
-    <div class="wpapp-tab-header">
-        <h3><?php esc_html_e('Daftar Cabang', 'wp-customer'); ?></h3>
-    </div>
 
     <div class="wpapp-tab-loading">
         <p><?php esc_html_e('Memuat data cabang...', 'wp-customer'); ?></p>

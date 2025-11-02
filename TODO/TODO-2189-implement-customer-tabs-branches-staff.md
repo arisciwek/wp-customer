@@ -167,23 +167,198 @@ return [
 - ✅ Pass customer_id to AJAX handler for filtering
 - ✅ Indonesian language configuration
 
+#### 3. ajax-branches-datatable.php (v1.1.0)
+**Line 41-53**: Added Create Branch button with permission check
+- ✅ Permission: `add_customer_branch` capability
+- ✅ Button class: `branch-add-btn`
+- ✅ Data attribute: `data-customer-id` for context
+- ✅ Layout: Flex with title and button
+
+#### 4. ajax-employees-datatable.php (v1.1.0)
+**Line 41-53**: Added Create Employee button with permission check
+- ✅ Permission: `add_customer_employee` capability
+- ✅ Button class: `employee-add-btn`
+- ✅ Data attribute: `data-customer-id` for context
+- ✅ Layout: Flex with title and button
+
 ### Test Results
 - ✅ Cache cleared successfully
 - ✅ JavaScript lazy-load handlers added
+- ✅ Edit/Delete buttons added to DataTable rows
+- ✅ Create buttons added to tab headers with permission checks
 - ⏳ Manual testing required (user will verify in browser)
 
 ### Testing Instructions
 1. Hard refresh browser (Ctrl+F5 / Cmd+Shift+R) to clear JS cache
-2. Open Customer dashboard menu
-3. Click on any customer row to open right panel
-4. Should see 3 tabs: **Info**, **Cabang**, **Staff**
-5. Click **Cabang** tab:
+2. Login as customer_admin (user ID 2614)
+3. Open Customer dashboard menu
+4. Click on any customer row to open right panel
+5. Should see 3 tabs: **Info**, **Cabang**, **Staff**
+6. Click **Cabang** tab:
    - Should see loading indicator
+   - Should see **"Tambah Cabang"** button at top
    - DataTable should initialize with branches data
-6. Click **Staff** tab:
+   - Each row should have **Edit** and **Delete** buttons
+7. Click **Staff** tab:
    - Should see loading indicator
+   - Should see **"Tambah Staff"** button at top
    - DataTable should initialize with employees data
-7. Check browser console for logs starting with `[CustomerDataTable]`
+   - Each row should have **Edit** and **Delete** buttons
+8. Check browser console for logs starting with `[CustomerDataTable]`
+
+### Additional Work (Post-Implementation)
+
+#### 5. BranchDataTableModel.php & EmployeeDataTableModel.php
+**Added Action Buttons to DataTable Rows**
+- ✅ Added `generate_action_buttons()` method with permission checks
+- ✅ Edit button: `manage_options` OR `edit_all_*` OR `edit_own_*` capabilities
+- ✅ Delete button: `manage_options` OR `delete_all_*` OR `delete_own_*` capabilities
+- ✅ Buttons include dashicons and proper titles
+- ✅ Added 'actions' column to `format_row()` output
+
+#### 6. customer-tabs.css (NEW FILE v1.2.0)
+**Created Separate CSS for Tab Styling**
+- ✅ Tab content wrapper styling
+- ✅ Header actions (button positioning)
+- ✅ DataTable filter/length alignment
+- ✅ Responsive design for mobile
+- ✅ No inline CSS in PHP templates
+
+#### 7. customer-filter.css (v1.1.0)
+**Improved Info Tab Styling**
+- ✅ Card-based section design with borders and shadow
+- ✅ Section headers with blue accent bar
+- ✅ Better spacing and typography
+- ✅ Enhanced status badge (rounded, borders, uppercase)
+- ✅ Responsive adjustments for mobile
+
+#### 8. branches.php & employees.php (v1.1.0) FINAL
+**Confirmed Lazy-Load Pattern Works Flicker-Free**
+- ✅ RESTORED lazy-load pattern after animation fix
+- ✅ Uses wpapp-tab-autoload for performance
+- ✅ No flicker after wp-app-core animation removal
+- ✅ Lazy-load is PREFERRED pattern (load on demand)
+
+#### 9. customer-datatable-v2.js (v2.2.1) FINAL
+**Lazy-Load DataTable Support**
+- ✅ Kept `initLazyDataTable()` method
+- ✅ Listen to `wpapp:tab-switched` event
+- ✅ Initialize DataTables when tabs are clicked
+- ✅ Reduced setTimeout from 300ms to 100ms
+- ✅ Removed initPreRenderedTabs() - not needed with lazy-load
+
+#### 10. customer-datatable.css (v1.1.0)
+**Fixed Main DataTable Alignment**
+- ✅ Added DataTable controls alignment CSS
+- ✅ Float left for dataTables_length and dataTables_info
+- ✅ Float right for dataTables_filter and dataTables_paginate
+- ✅ Fixed "customer-list-table_length tidak sejajar dengan pagination"
+
+#### 11. wp-app-core Fix (TODO-1197)
+**Removed fadeIn Animation Causing Flicker**
+- ✅ Fixed in `/wp-app-core/assets/css/datatable/wpapp-datatable.css`
+- ✅ Removed `animation: fadeIn 0.3s ease` from `.wpapp-tab-content`
+- ✅ Removed `@keyframes fadeIn` definition
+- ✅ Benefits ALL plugins using tab system
+- ✅ Created TODO-1197 documentation
+
+## User Feedback & Iterations
+
+### Issue 1: Empty DataTables
+**Problem**: "hanya ada tabel heading tanpa row"
+**Cause**: No action buttons in DataTable rows
+**Fix**: Added Edit/Delete buttons to BranchDataTableModel and EmployeeDataTableModel
+
+### Issue 2: Poor Layout
+**Problem**: "tampillannya tdak menarik sama sekali"
+**Cause**: Basic styling, no visual hierarchy
+**Fix**:
+- Added card-based design with hover effects
+- Better section headers with blue accent
+- Enhanced status badges
+- Removed redundant headings
+
+### Issue 3: Class Naming Convention
+**Problem**: "ada class wpapp-, apakah di wp-app-core belum tersedia tab wrapper?"
+**Cause**: Incorrectly used wpapp- prefix for custom implementation
+**Fix**: Changed to customer- prefix (wpapp- is RESERVED for wp-app-core only)
+
+### Issue 4: DataTable Misalignment
+**Problem**: "customer-branches-datatable_filter dengan customer-branches-datatable_length tidak sejajar"
+**Cause**: No CSS for DataTable controls
+**Fix**: Added float alignment CSS in customer-tabs.css
+
+### Issue 5: Inline CSS/JS in PHP
+**Problem**: "saya tidak suka ada CSS dan JS di PHP"
+**Cause**: Quick inline styling
+**Fix**: Created separate customer-tabs.css file, moved all styles there
+
+### Issue 6: Info Tab Empty After Restyle
+**Problem**: "body tab nya kosong" after adopting old template
+**Cause**: $data variable scope issue when switching template patterns
+**Fix**: Rollback to working simple template, then improve only CSS
+
+### Issue 7: Tab Switching Flicker
+**Problem**: "masih sangat kuat, tinggi dari teks...terlihat berdenyut turun sedikit lalu naik"
+**Root Cause**: wp-app-core fadeIn animation (0.3s with opacity + translateY)
+**Attempted Fixes**:
+1. ❌ CSS transition with min-height
+2. ❌ Changed to direct render (helped but didn't eliminate) - incorrect approach
+3. ✅ **Removed animation at wp-app-core level (TODO-1197)**
+
+**Final Solution**: Fixed root cause in wp-app-core, benefits all plugins
+**User Testing**: "ya sudah saya test di 2 browser dengan jumlah record berbeda, tidak ada flicker"
+**Conclusion**: Lazy-load is OK, animation was the problem. Lazy-load is PREFERRED for performance.
+
+### Issue 8: Main DataTable Alignment
+**Problem**: "customer-list-table_length tidak sejajar dengan pagination"
+**Cause**: No CSS for main DataTable controls alignment
+**Fix**: Added float alignment CSS in customer-datatable.css
+
+## Final Implementation Summary
+
+### Architecture Pattern
+- **Info Tab**: Direct render (non-lazy)
+- **Branches/Staff Tabs**: LAZY-LOAD (wpapp-tab-autoload)
+- **Reason**: Performance optimization (load on demand), works flicker-free after animation fix
+
+### Files Modified/Created
+
+#### wp-customer Plugin
+```
+src/
+├── Controllers/Customer/CustomerDashboardController.php (v1.4.0)
+├── Models/Branch/BranchDataTableModel.php (v1.1.0 - action buttons)
+├── Models/Employee/EmployeeDataTableModel.php (v1.1.0 - action buttons)
+└── Views/customer/
+    ├── tabs/
+    │   ├── info.php (v1.1.0 - improved CSS only)
+    │   ├── branches.php (v1.1.0 - LAZY-LOAD pattern)
+    │   └── employees.php (v1.1.0 - LAZY-LOAD pattern)
+    └── partials/
+        ├── ajax-branches-datatable.php (v1.1.0 - add button)
+        └── ajax-employees-datatable.php (v1.1.0 - add button)
+
+assets/
+├── css/customer/
+│   ├── customer-tabs.css (NEW v1.2.0 - tab styling)
+│   ├── customer-filter.css (v1.1.0 - info tab styling)
+│   └── customer-datatable.css (v1.1.0 - main table alignment)
+└── js/customer/
+    └── customer-datatable-v2.js (v2.2.1 - lazy-load support)
+
+includes/
+└── class-dependencies.php (v1.1.0 - enqueue CSS files)
+```
+
+#### wp-app-core Framework
+```
+assets/css/datatable/wpapp-datatable.css
+└── Removed fadeIn animation (TODO-1197)
+
+TODO/
+└── TODO-1197-remove-tab-fadeIn-animation.md (NEW)
+```
 
 ## Changelog
 ### 2025-11-02
@@ -191,4 +366,18 @@ return [
 - Identified existing infrastructure
 - Planned activation strategy
 - Implemented all changes
+- Added action buttons to DataTables
+- Improved info tab styling
+- Fixed class naming conventions (wpapp- → customer-)
+- Created separate CSS files (customer-tabs.css)
+- Tested direct render pattern (temporary workaround)
+- Fixed root cause: removed fadeIn animation in wp-app-core (TODO-1197)
+- Restored lazy-load pattern after confirming flicker-free
+- Fixed main customer list DataTable alignment
 - Marked as COMPLETED
+
+### Key Learnings
+1. **Lazy-load is PREFERRED**: Performance benefits, works flicker-free after animation fix
+2. **Root Cause Analysis**: Animation was the problem, not lazy-loading
+3. **Framework-Level Fixes**: Benefits all plugins using tab system
+4. **Class Naming**: wpapp- prefix reserved for wp-app-core only

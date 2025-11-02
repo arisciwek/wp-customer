@@ -1,0 +1,133 @@
+/**
+ * Customer Tabs Styling
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Customer
+ * @version     1.2.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/customer/customer-tabs.css
+ *
+ * Description: Styling for customer tabs (Cabang & Staff).
+ *              Includes tab content wrapper, header actions, and DataTable alignment.
+ *
+ * Changelog:
+ * 1.2.0 - 2025-11-02 (TODO-2189)
+ * - Removed animation override (fixed at wp-app-core level)
+ * - Cleaner implementation without workarounds
+ *
+ * 1.1.0 - 2025-11-02 (TODO-2189)
+ * - Added smooth tab transition to prevent flicker
+ * - Added min-height for tab content to prevent layout shift
+ *
+ * 1.0.0 - 2025-11-02 (TODO-2189)
+ * - Initial version
+ * - Added tab content wrapper styling
+ * - Added header actions styling
+ * - Added DataTable filter & length alignment
+ */
+
+/* ========================================
+   Tab Content Wrapper
+   ======================================== */
+
+.customer-tab-content-wrapper {
+    padding: 20px;
+    background: #fff;
+    border-radius: 4px;
+}
+
+/* ========================================
+   Tab Header Actions (Add Button)
+   ======================================== */
+
+.customer-tab-header-actions {
+    margin-bottom: 20px;
+    text-align: right;
+}
+
+.customer-tab-header-actions .button-primary {
+    font-size: 14px;
+    padding: 6px 12px;
+}
+
+.customer-tab-header-actions .dashicons {
+    font-size: 16px;
+    margin-top: 3px;
+}
+
+/* ========================================
+   Branches DataTable Alignment
+   ======================================== */
+
+#customer-branches-datatable_wrapper .dataTables_length,
+#customer-branches-datatable_wrapper .dataTables_filter {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+#customer-branches-datatable_wrapper .dataTables_length {
+    float: left;
+    margin-bottom: 15px;
+}
+
+#customer-branches-datatable_wrapper .dataTables_filter {
+    float: right;
+    margin-bottom: 15px;
+}
+
+#customer-branches-datatable_wrapper .dataTables_length label,
+#customer-branches-datatable_wrapper .dataTables_filter label {
+    margin: 0;
+    font-weight: normal;
+}
+
+/* ========================================
+   Employees DataTable Alignment
+   ======================================== */
+
+#customer-employees-datatable_wrapper .dataTables_length,
+#customer-employees-datatable_wrapper .dataTables_filter {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+#customer-employees-datatable_wrapper .dataTables_length {
+    float: left;
+    margin-bottom: 15px;
+}
+
+#customer-employees-datatable_wrapper .dataTables_filter {
+    float: right;
+    margin-bottom: 15px;
+}
+
+#customer-employees-datatable_wrapper .dataTables_length label,
+#customer-employees-datatable_wrapper .dataTables_filter label {
+    margin: 0;
+    font-weight: normal;
+}
+
+/* ========================================
+   Responsive Adjustments
+   ======================================== */
+
+@media screen and (max-width: 782px) {
+    .customer-tab-content-wrapper {
+        padding: 15px;
+    }
+
+    .customer-tab-header-actions {
+        text-align: center;
+    }
+
+    #customer-branches-datatable_wrapper .dataTables_length,
+    #customer-branches-datatable_wrapper .dataTables_filter,
+    #customer-employees-datatable_wrapper .dataTables_length,
+    #customer-employees-datatable_wrapper .dataTables_filter {
+        float: none;
+        display: block;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+}

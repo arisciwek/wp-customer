@@ -37,7 +37,21 @@ if (!isset($customer_id)) {
     echo '<p>' . __('Customer ID not available', 'wp-customer') . '</p>';
     return;
 }
+
+// Check permission for add button
+$can_add_branch = current_user_can('manage_options') || current_user_can('add_customer_branch');
 ?>
+
+<div class="customer-tab-content-wrapper">
+
+<?php if ($can_add_branch): ?>
+<div class="customer-tab-header-actions">
+    <button type="button" class="button button-primary branch-add-btn" data-customer-id="<?php echo esc_attr($customer_id); ?>">
+        <span class="dashicons dashicons-plus-alt"></span>
+        <?php esc_html_e('Tambah Cabang', 'wp-customer'); ?>
+    </button>
+</div>
+<?php endif; ?>
 
 <table id="customer-branches-datatable"
        class="wpapp-datatable customer-lazy-datatable"
@@ -53,9 +67,12 @@ if (!isset($customer_id)) {
             <th><?php esc_html_e('Email', 'wp-customer'); ?></th>
             <th><?php esc_html_e('Telepon', 'wp-customer'); ?></th>
             <th><?php esc_html_e('Status', 'wp-customer'); ?></th>
+            <th><?php esc_html_e('Actions', 'wp-customer'); ?></th>
         </tr>
     </thead>
     <tbody>
         <!-- DataTable will populate via AJAX -->
     </tbody>
 </table>
+
+</div><!-- .customer-tab-content-wrapper -->

@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/CSS/Customer
- * @version     1.0.0
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/css/customer/customer-datatable.css
@@ -13,6 +13,10 @@
  *              Prevents columns from overlapping.
  *
  * Changelog:
+ * 1.1.0 - 2025-11-02 (TODO-2189)
+ * - Added DataTable controls alignment (length, filter, pagination)
+ * - Fixed customer-list-table_length not aligned with pagination
+ *
  * 1.0.0 - 2025-11-01 (TODO-2187)
  * - Initial styles for customer DataTable
  * - Fixed column overflow issue
@@ -27,6 +31,44 @@
 .dataTables_wrapper {
     width: 100%;
     overflow-x: auto;
+}
+
+/* ==========================================================================
+   DataTable Controls Alignment
+   ========================================================================== */
+
+/* Length selector and filter */
+#customer-list-table_wrapper .dataTables_length,
+#customer-list-table_wrapper .dataTables_filter {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+#customer-list-table_wrapper .dataTables_length {
+    float: left;
+    margin-bottom: 15px;
+}
+
+#customer-list-table_wrapper .dataTables_filter {
+    float: right;
+    margin-bottom: 15px;
+}
+
+#customer-list-table_wrapper .dataTables_length label,
+#customer-list-table_wrapper .dataTables_filter label {
+    margin: 0;
+    font-weight: normal;
+}
+
+/* Info and pagination */
+#customer-list-table_wrapper .dataTables_info {
+    float: left;
+    padding-top: 8px;
+}
+
+#customer-list-table_wrapper .dataTables_paginate {
+    float: right;
+    padding-top: 0;
 }
 
 /* ==========================================================================

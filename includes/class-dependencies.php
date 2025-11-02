@@ -496,6 +496,8 @@ class WP_Customer_Dependencies {
             wp_enqueue_style('wp-customer-header-cards', WP_CUSTOMER_URL . 'assets/css/customer/customer-header-cards.css', [], $this->version);
             wp_enqueue_style('wp-customer-filter', WP_CUSTOMER_URL . 'assets/css/customer/customer-filter.css', [], $this->version);
             wp_enqueue_style('wp-customer-datatable', WP_CUSTOMER_URL . 'assets/css/customer/customer-datatable.css', ['datatables'], $this->version);
+            wp_enqueue_style('wp-customer-tabs', WP_CUSTOMER_URL . 'assets/css/customer/customer-tabs.css', [], $this->version);
+            wp_enqueue_style('wp-customer-style', WP_CUSTOMER_URL . 'assets/css/customer/customer-style.css', [], $this->version);
 
             // NEW JS for centralized DataTable
             wp_enqueue_script('customer-datatable-v2', WP_CUSTOMER_URL . 'assets/js/customer/customer-datatable-v2.js', ['jquery', 'datatables'], $this->version, true);

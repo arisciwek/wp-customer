@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS/Customer
- * @version     2.1.0
+ * @version     2.2.1
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/customer/customer-datatable-v2.js
@@ -19,6 +19,23 @@
  * - wpAppCoreCustomer localized object
  *
  * Changelog:
+ * 2.2.1 - 2025-11-02 (TODO-2189 FINAL)
+ * - Confirmed lazy-load works without flicker after wp-app-core animation fix
+ * - Removed initPreRenderedTabs() - not needed with lazy-load
+ * - Keep lazy-load pattern for performance (load on demand)
+ * - Root cause was fadeIn animation (fixed in TODO-1197)
+ *
+ * 2.2.0 - 2025-11-02 (TODO-2189)
+ * - Changed: Branches and Staff tabs from lazy-load to direct render
+ * - Added: initPreRenderedTabs() to initialize DataTables on panel load
+ * - Fixed: Eliminated flicker by rendering all tab content immediately
+ * - Removed: AJAX loading delay for better UX
+ *
+ * 2.1.1 - 2025-11-02 (TODO-2189)
+ * - Fixed: Tab switching flicker by caching initialized tabs
+ * - Added: initializedTabs tracking to prevent re-initialization
+ * - Reduced: setTimeout delay from 300ms to 100ms for faster response
+ *
  * 2.1.0 - 2025-11-02 (TODO-2189)
  * - Added: initLazyDataTable() - Initialize lazy-loaded DataTables in tabs
  * - Added: initBranchesDataTable() - Initialize Branches DataTable
@@ -48,6 +65,11 @@
          * Initialization flag
          */
         initialized: false,
+
+        /**
+         * Track initialized lazy tabs to prevent flicker
+         */
+        initializedTabs: {},
 
         /**
          * Initialize DataTable
@@ -205,6 +227,13 @@
             // TODO-2189: Listen to tab-switched event for lazy-loaded DataTables
             $(document).on('wpapp:tab-switched', (e, data) => {
                 console.log('[CustomerDataTable] Tab switched:', data);
+
+                // Skip if tab already initialized (prevent flicker)
+                if (this.initializedTabs[data.tabId]) {
+                    console.log('[CustomerDataTable] Tab', data.tabId, 'already initialized, skipping');
+                    return;
+                }
+
                 this.initLazyDataTable(data.tabId);
             });
 
@@ -286,7 +315,7 @@
         initLazyDataTable(tabId) {
             console.log('[CustomerDataTable] initLazyDataTable called for tab:', tabId);
 
-            // Wait a bit for tab content to be fully loaded
+            // Wait a bit for tab content to be fully loaded (reduced from 300ms to 100ms)
             setTimeout(() => {
                 const $tab = $('#' + tabId);
                 console.log('[CustomerDataTable] Looking for lazy DataTable in tab:', tabId);
@@ -304,6 +333,7 @@
                 // Check if already initialized
                 if ($.fn.DataTable.isDataTable($lazyTable)) {
                     console.log('[CustomerDataTable] DataTable already initialized');
+                    this.initializedTabs[tabId] = true;
                     return;
                 }
 
@@ -321,10 +351,12 @@
                 // Initialize DataTable based on table ID
                 if (tableId === 'customer-branches-datatable') {
                     this.initBranchesDataTable($lazyTable, ajaxAction, customerId);
+                    this.initializedTabs[tabId] = true;
                 } else if (tableId === 'customer-employees-datatable') {
                     this.initEmployeesDataTable($lazyTable, ajaxAction, customerId);
+                    this.initializedTabs[tabId] = true;
                 }
-            }, 300);
+            }, 100);
         },
 
         /**
@@ -346,12 +378,20 @@
                     }
                 },
                 columns: [
-                    { data: 'code', title: 'Kode' },
-                    { data: 'name', title: 'Nama Cabang' },
-                    { data: 'type', title: 'Tipe' },
-                    { data: 'email', title: 'Email' },
-                    { data: 'phone', title: 'Telepon' },
-                    { data: 'status', title: 'Status' }
+                    { data: 'code', title: 'Kode', width: '10%' },
+                    { data: 'name', title: 'Nama Cabang', width: '25%' },
+                    { data: 'type', title: 'Tipe', width: '10%' },
+                    { data: 'email', title: 'Email', width: '20%' },
+                    { data: 'phone', title: 'Telepon', width: '15%' },
+                    { data: 'status', title: 'Status', width: '10%' },
+                    {
+                        data: 'actions',
+                        title: 'Actions',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center',
+                        width: '10%'
+                    }
                 ],
                 order: [[0, 'asc']],
                 pageLength: 10,
@@ -394,11 +434,19 @@
                     }
                 },
                 columns: [
-                    { data: 'name', title: 'Nama' },
-                    { data: 'position', title: 'Jabatan' },
-                    { data: 'email', title: 'Email' },
-                    { data: 'phone', title: 'Telepon' },
-                    { data: 'status', title: 'Status' }
+                    { data: 'name', title: 'Nama', width: '25%' },
+                    { data: 'position', title: 'Jabatan', width: '20%' },
+                    { data: 'email', title: 'Email', width: '25%' },
+                    { data: 'phone', title: 'Telepon', width: '15%' },
+                    { data: 'status', title: 'Status', width: '10%' },
+                    {
+                        data: 'actions',
+                        title: 'Actions',
+                        orderable: false,
+                        searchable: false,
+                        className: 'text-center',
+                        width: '10%'
+                    }
                 ],
                 order: [[0, 'asc']],
                 pageLength: 10,

@@ -4,15 +4,23 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Customer/Tabs
- * @version     1.0.0
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Views/customer/tabs/info.php
  *
  * Description: Tab untuk menampilkan informasi customer.
  *              Shows customer details, contact info, and address.
+ *              Improved styling with card-based design.
  *
  * Changelog:
+ * 1.1.0 - 2025-11-02 (TODO-2189)
+ * - Improved CSS styling in customer-filter.css
+ * - Card-based section design with hover effects
+ * - Better spacing, colors, and typography
+ * - Enhanced status badge styling
+ * - Improved responsive design
+ *
  * 1.0.0 - 2025-11-01 (TODO-2187)
  * - Initial implementation following platform-staff pattern
  */

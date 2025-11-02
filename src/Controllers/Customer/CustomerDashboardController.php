@@ -299,18 +299,15 @@ class CustomerDashboardController {
         return [
             'info' => [
                 'title' => __('Customer Information', 'wp-customer'),
-                'priority' => 10,
-                'lazy_load' => false
+                'priority' => 10
             ],
             'branches' => [
                 'title' => __('Cabang', 'wp-customer'),
-                'priority' => 20,
-                'lazy_load' => true
+                'priority' => 20
             ],
             'employees' => [
                 'title' => __('Staff', 'wp-customer'),
-                'priority' => 30,
-                'lazy_load' => true
+                'priority' => 30
             ]
         ];
     }
@@ -330,6 +327,8 @@ class CustomerDashboardController {
         $tab_file = WP_CUSTOMER_PATH . 'src/Views/customer/tabs/info.php';
 
         if (file_exists($tab_file)) {
+            // Make $data available to template
+            // Template expects $data variable
             include $tab_file;
         }
     }

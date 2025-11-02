@@ -101,14 +101,54 @@ class EmployeeDataTableModel extends DataTableModel {
             'DT_RowId' => 'employee-' . ($row->id ?? 0),
             'DT_RowData' => [
                 'id' => $row->id ?? 0,
-                'status' => $row->status ?? 'active'
+                'status' => $row->status ?? 'active',
+                'entity' => 'employee'
             ],
             'name' => esc_html($row->name ?? ''),
             'position' => esc_html($row->position ?? '-'),
             'email' => esc_html($row->email ?? '-'),
             'phone' => esc_html($row->phone ?? '-'),
-            'status' => $status_badge
+            'status' => $status_badge,
+            'actions' => $this->generate_action_buttons($row)
         ];
+    }
+
+    /**
+     * Generate action buttons for employee row (TODO-2189)
+     *
+     * @param object $row Employee data
+     * @return string HTML buttons
+     */
+    private function generate_action_buttons($row): string {
+        $buttons = [];
+
+        // Edit button (shown for users with edit permission)
+        if (current_user_can('manage_options') ||
+            current_user_can('edit_all_customer_employees') ||
+            current_user_can('edit_own_customer_employee')) {
+            $buttons[] = sprintf(
+                '<button type="button" class="button button-small employee-edit-btn" data-id="%d" title="%s">
+                    <span class="dashicons dashicons-edit"></span>
+                </button>',
+                esc_attr($row->id),
+                esc_attr__('Edit Employee', 'wp-customer')
+            );
+        }
+
+        // Delete button (shown for users with delete permission)
+        if (current_user_can('manage_options') ||
+            current_user_can('delete_all_customer_employees') ||
+            current_user_can('delete_own_customer_employee')) {
+            $buttons[] = sprintf(
+                '<button type="button" class="button button-small employee-delete-btn" data-id="%d" title="%s">
+                    <span class="dashicons dashicons-trash"></span>
+                </button>',
+                esc_attr($row->id),
+                esc_attr__('Delete Employee', 'wp-customer')
+            );
+        }
+
+        return implode(' ', $buttons);
     }
 
     /**

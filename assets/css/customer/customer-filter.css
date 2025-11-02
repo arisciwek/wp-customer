@@ -40,10 +40,16 @@
 
 .customer-info-tab {
     padding: 20px;
+    max-width: 1200px;
 }
 
 .customer-info-section {
-    margin-bottom: 25px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 1px rgba(0,0,0,0.04);
 }
 
 .customer-info-section:last-child {
@@ -51,53 +57,75 @@
 }
 
 .customer-info-section h3 {
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     color: #1d2327;
-    margin: 0 0 15px 0;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ddd;
+    margin: 0 0 20px 0;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #2271b1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.customer-info-section h3::before {
+    content: '';
+    display: inline-block;
+    width: 4px;
+    height: 18px;
+    background: #2271b1;
+    border-radius: 2px;
 }
 
 .customer-info-row {
     display: flex;
-    padding: 8px 0;
+    padding: 12px 0;
     border-bottom: 1px solid #f0f0f1;
+    align-items: flex-start;
 }
 
 .customer-info-row:last-child {
     border-bottom: none;
+    padding-bottom: 0;
 }
 
 .customer-info-row label {
-    min-width: 120px;
+    min-width: 140px;
     font-weight: 600;
-    color: #646970;
+    color: #50575e;
     font-size: 13px;
+    padding-right: 15px;
 }
 
 .customer-info-row span {
     flex: 1;
     color: #1d2327;
-    font-size: 13px;
+    font-size: 14px;
+    line-height: 1.5;
 }
 
 .customer-status-badge {
     display: inline-block;
-    padding: 3px 10px;
-    border-radius: 3px;
+    padding: 4px 12px;
+    border-radius: 12px;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-.customer-status-aktif {
+.customer-status-aktif,
+.customer-status-active {
     background: #d5e9d6;
     color: #00a32a;
+    border: 1px solid #00a32a;
 }
 
-.customer-status-tidak.aktif {
+.customer-status-tidak-aktif,
+.customer-status-inactive {
     background: #ffd6d6;
     color: #cc1818;
+    border: 1px solid #cc1818;
 }
 
 .customer-placeholder-tab {
@@ -127,12 +155,34 @@
 ======================================== */
 
 @media (max-width: 782px) {
+    .customer-info-tab {
+        padding: 15px;
+    }
+
+    .customer-info-section {
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+
+    .customer-info-section h3 {
+        font-size: 14px;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+    }
+
     .customer-info-row {
         flex-direction: column;
         gap: 5px;
+        padding: 10px 0;
     }
 
     .customer-info-row label {
         min-width: auto;
+        padding-right: 0;
+        margin-bottom: 5px;
+    }
+
+    .customer-info-row span {
+        font-size: 13px;
     }
 }
