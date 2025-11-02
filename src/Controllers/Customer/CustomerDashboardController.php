@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Controllers/Customer
- * @version     1.3.0
+ * @version     1.4.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Controllers/Customer/CustomerDashboardController.php
@@ -22,6 +22,13 @@
  * - CustomerModel untuk CRUD operations
  *
  * Changelog:
+ * 1.4.0 - 2025-11-02 (TODO-2189)
+ * - Added: Branches (Cabang) and Employees (Staff) tabs to customer detail panel
+ * - Enabled: render_branches_tab() and render_employees_tab() hooks
+ * - Enabled: AJAX handlers for lazy-loading tabs (load_customer_branches_tab, load_customer_employees_tab)
+ * - Enabled: AJAX handlers for DataTables in tabs (get_customer_branches_datatable, get_customer_employees_datatable)
+ * - Removed: Placeholder tab (no longer needed)
+ *
  * 1.3.0 - 2025-11-01 (TODO-2188)
  * - Added modal CRUD implementation
  * - Added handle_get_customer_form() - serves form HTML via AJAX
@@ -112,24 +119,23 @@ class CustomerDashboardController {
         // Tabs hook
         add_filter('wpapp_datatable_tabs', [$this, 'register_tabs'], 10, 2);
 
-        // Tab content injection hooks (V2: Only Info + Placeholder for simplicity)
+        // Tab content injection hooks (TODO-2189: Enabled branches and employees tabs)
         add_action('wpapp_tab_view_content', [$this, 'render_info_tab'], 10, 3);
-        // add_action('wpapp_tab_view_content', [$this, 'render_branches_tab'], 10, 3);  // Disabled for V2
-        // add_action('wpapp_tab_view_content', [$this, 'render_employees_tab'], 10, 3);  // Disabled for V2
-        add_action('wpapp_tab_view_content', [$this, 'render_placeholder_tab'], 10, 3);
+        add_action('wpapp_tab_view_content', [$this, 'render_branches_tab'], 10, 3);
+        add_action('wpapp_tab_view_content', [$this, 'render_employees_tab'], 10, 3);
 
         // AJAX handlers - Main DataTable
         add_action('wp_ajax_get_customer_datatable', [$this, 'handle_datatable_ajax']);
         add_action('wp_ajax_get_customer_details', [$this, 'handle_get_details']);
         add_action('wp_ajax_get_customer_stats_v2', [$this, 'handle_get_stats']);  // V2: Different action name to avoid conflict with old menu
 
-        // AJAX handlers - Lazy-load tabs (Disabled for V2)
-        // add_action('wp_ajax_load_customer_branches_tab', [$this, 'handle_load_branches_tab']);
-        // add_action('wp_ajax_load_customer_employees_tab', [$this, 'handle_load_employees_tab']);
+        // AJAX handlers - Lazy-load tabs (TODO-2189: Enabled for branches and employees)
+        add_action('wp_ajax_load_customer_branches_tab', [$this, 'handle_load_branches_tab']);
+        add_action('wp_ajax_load_customer_employees_tab', [$this, 'handle_load_employees_tab']);
 
-        // AJAX handlers - DataTables in tabs (Disabled for V2)
-        // add_action('wp_ajax_get_customer_branches_datatable', [$this, 'handle_branches_datatable']);
-        // add_action('wp_ajax_get_customer_employees_datatable', [$this, 'handle_employees_datatable']);
+        // AJAX handlers - DataTables in tabs (TODO-2189: Enabled for branches and employees)
+        add_action('wp_ajax_get_customer_branches_datatable', [$this, 'handle_branches_datatable']);
+        add_action('wp_ajax_get_customer_employees_datatable', [$this, 'handle_employees_datatable']);
 
         // AJAX handlers - Modal CRUD (Re-enabled for V2)
         add_action('wp_ajax_get_customer_form', [$this, 'handle_get_customer_form']);
@@ -289,17 +295,22 @@ class CustomerDashboardController {
             return $tabs;
         }
 
-        // V2: Only Info + Placeholder tabs (no lazy-load complexity)
+        // TODO-2189: Info, Cabang, and Staff tabs
         return [
             'info' => [
                 'title' => __('Customer Information', 'wp-customer'),
                 'priority' => 10,
                 'lazy_load' => false
             ],
-            'placeholder' => [
-                'title' => __('Additional', 'wp-customer'),
+            'branches' => [
+                'title' => __('Cabang', 'wp-customer'),
                 'priority' => 20,
-                'lazy_load' => false
+                'lazy_load' => true
+            ],
+            'employees' => [
+                'title' => __('Staff', 'wp-customer'),
+                'priority' => 30,
+                'lazy_load' => true
             ]
         ];
     }
@@ -317,25 +328,6 @@ class CustomerDashboardController {
         }
 
         $tab_file = WP_CUSTOMER_PATH . 'src/Views/customer/tabs/info.php';
-
-        if (file_exists($tab_file)) {
-            include $tab_file;
-        }
-    }
-
-    /**
-     * Render placeholder tab content
-     *
-     * @param string $tab_id Current tab ID
-     * @param string $entity Entity name
-     * @param mixed $data Entity data
-     */
-    public function render_placeholder_tab($tab_id, $entity, $data): void {
-        if ($entity !== 'customer' || $tab_id !== 'placeholder') {
-            return;
-        }
-
-        $tab_file = WP_CUSTOMER_PATH . 'src/Views/customer/tabs/placeholder.php';
 
         if (file_exists($tab_file)) {
             include $tab_file;

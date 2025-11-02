@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS/Customer
- * @version     2.0.0
+ * @version     2.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/customer/customer-datatable-v2.js
@@ -19,6 +19,12 @@
  * - wpAppCoreCustomer localized object
  *
  * Changelog:
+ * 2.1.0 - 2025-11-02 (TODO-2189)
+ * - Added: initLazyDataTable() - Initialize lazy-loaded DataTables in tabs
+ * - Added: initBranchesDataTable() - Initialize Branches DataTable
+ * - Added: initEmployeesDataTable() - Initialize Employees DataTable
+ * - Added: Event listener for 'wpapp:tab-switched' to auto-init lazy DataTables
+ *
  * 2.0.0 - 2025-11-01
  * - Initial version following platform-staff-datatable.js pattern
  * - Table ID: #customer-list-table
@@ -196,6 +202,12 @@
                 }
             });
 
+            // TODO-2189: Listen to tab-switched event for lazy-loaded DataTables
+            $(document).on('wpapp:tab-switched', (e, data) => {
+                console.log('[CustomerDataTable] Tab switched:', data);
+                this.initLazyDataTable(data.tabId);
+            });
+
             console.log('[CustomerDataTable] Events bound');
         },
 
@@ -264,6 +276,150 @@
                     console.error('[CustomerDataTable] Response text:', xhr.responseText);
                 }
             });
+        },
+
+        /**
+         * Initialize lazy-loaded DataTable in tabs (TODO-2189)
+         *
+         * @param {string} tabId Tab ID that was switched to
+         */
+        initLazyDataTable(tabId) {
+            console.log('[CustomerDataTable] initLazyDataTable called for tab:', tabId);
+
+            // Wait a bit for tab content to be fully loaded
+            setTimeout(() => {
+                const $tab = $('#' + tabId);
+                console.log('[CustomerDataTable] Looking for lazy DataTable in tab:', tabId);
+
+                // Find DataTable with customer-lazy-datatable class in this tab
+                const $lazyTable = $tab.find('.customer-lazy-datatable');
+
+                if ($lazyTable.length === 0) {
+                    console.log('[CustomerDataTable] No lazy DataTable found in this tab');
+                    return;
+                }
+
+                console.log('[CustomerDataTable] Found lazy DataTable:', $lazyTable.attr('id'));
+
+                // Check if already initialized
+                if ($.fn.DataTable.isDataTable($lazyTable)) {
+                    console.log('[CustomerDataTable] DataTable already initialized');
+                    return;
+                }
+
+                // Get configuration from data attributes
+                const ajaxAction = $lazyTable.data('ajax-action');
+                const customerId = $lazyTable.data('customer-id');
+                const tableId = $lazyTable.attr('id');
+
+                console.log('[CustomerDataTable] Initializing lazy DataTable:', {
+                    tableId: tableId,
+                    ajaxAction: ajaxAction,
+                    customerId: customerId
+                });
+
+                // Initialize DataTable based on table ID
+                if (tableId === 'customer-branches-datatable') {
+                    this.initBranchesDataTable($lazyTable, ajaxAction, customerId);
+                } else if (tableId === 'customer-employees-datatable') {
+                    this.initEmployeesDataTable($lazyTable, ajaxAction, customerId);
+                }
+            }, 300);
+        },
+
+        /**
+         * Initialize Branches DataTable (TODO-2189)
+         */
+        initBranchesDataTable($table, ajaxAction, customerId) {
+            console.log('[CustomerDataTable] Initializing Branches DataTable');
+
+            $table.DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: wpAppCoreCustomer.ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: ajaxAction,
+                        nonce: wpAppCoreCustomer.nonce,
+                        customer_id: customerId
+                    }
+                },
+                columns: [
+                    { data: 'code', title: 'Kode' },
+                    { data: 'name', title: 'Nama Cabang' },
+                    { data: 'type', title: 'Tipe' },
+                    { data: 'email', title: 'Email' },
+                    { data: 'phone', title: 'Telepon' },
+                    { data: 'status', title: 'Status' }
+                ],
+                order: [[0, 'asc']],
+                pageLength: 10,
+                language: {
+                    processing: 'Memproses...',
+                    search: 'Cari:',
+                    lengthMenu: 'Tampilkan _MENU_ data',
+                    info: 'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',
+                    infoEmpty: 'Menampilkan 0 sampai 0 dari 0 data',
+                    zeroRecords: 'Tidak ada data yang cocok',
+                    emptyTable: 'Tidak ada data tersedia',
+                    paginate: {
+                        first: 'Pertama',
+                        previous: 'Sebelumnya',
+                        next: 'Selanjutnya',
+                        last: 'Terakhir'
+                    }
+                }
+            });
+
+            console.log('[CustomerDataTable] Branches DataTable initialized');
+        },
+
+        /**
+         * Initialize Employees DataTable (TODO-2189)
+         */
+        initEmployeesDataTable($table, ajaxAction, customerId) {
+            console.log('[CustomerDataTable] Initializing Employees DataTable');
+
+            $table.DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: wpAppCoreCustomer.ajaxurl,
+                    type: 'POST',
+                    data: {
+                        action: ajaxAction,
+                        nonce: wpAppCoreCustomer.nonce,
+                        customer_id: customerId
+                    }
+                },
+                columns: [
+                    { data: 'name', title: 'Nama' },
+                    { data: 'position', title: 'Jabatan' },
+                    { data: 'email', title: 'Email' },
+                    { data: 'phone', title: 'Telepon' },
+                    { data: 'status', title: 'Status' }
+                ],
+                order: [[0, 'asc']],
+                pageLength: 10,
+                language: {
+                    processing: 'Memproses...',
+                    search: 'Cari:',
+                    lengthMenu: 'Tampilkan _MENU_ data',
+                    info: 'Menampilkan _START_ sampai _END_ dari _TOTAL_ data',
+                    infoEmpty: 'Menampilkan 0 sampai 0 dari 0 data',
+                    zeroRecords: 'Tidak ada data yang cocok',
+                    emptyTable: 'Tidak ada data tersedia',
+                    paginate: {
+                        first: 'Pertama',
+                        previous: 'Sebelumnya',
+                        next: 'Selanjutnya',
+                        last: 'Terakhir'
+                    }
+                }
+            });
+
+            console.log('[CustomerDataTable] Employees DataTable initialized');
         },
 
         /**
