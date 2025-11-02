@@ -63,6 +63,9 @@ class CustomerEmployeeController {
         add_action('wp_ajax_change_customer_employee_status', [$this, 'changeStatus']);
         add_action('wp_ajax_create_customer_employee_button', [$this, 'createEmployeeButton']);
 
+        // Modal integration (TODO-2191)
+        add_action('wp_ajax_get_employee_form', [$this, 'handle_get_employee_form']);
+
         // Hook untuk menampilkan field tambahan di profil user
         add_action('show_user_profile', [$this, 'showProfileExtras']);
         add_action('edit_user_profile', [$this, 'showProfileExtras']);        
@@ -278,12 +281,13 @@ class CustomerEmployeeController {
      * Generate action buttons HTML
      */
     private function generateActionButtons($employee) {
-        $actions = '';
         $current_user_id = get_current_user_id();
-        
+
         // Get customer untuk validasi
         $customer = $this->customerModel->find($employee->customer_id);
-        if (!$customer) return $actions;
+        if (!$customer) return '';
+
+        $actions = '<div class="wpapp-actions">';
 
         // View Button
         if ($this->validator->canViewEmployee($employee, $customer)) {
@@ -337,6 +341,7 @@ class CustomerEmployeeController {
             );
         }
 
+        $actions .= '</div>'; // Close wpapp-actions wrapper
         return $actions;
 
     }
@@ -724,5 +729,73 @@ class CustomerEmployeeController {
         $user_capabilities = array_keys(array_filter($user->allcaps));
 
         require_once WP_CUSTOMER_PATH . 'src/Views/templates/customer-employee/partials/_customer_employee_profile_fields.php';
-    }    
+    }
+
+    /**
+     * Handle Get Employee Form - Modal Integration (TODO-2191)
+     *
+     * Serves create/edit employee form for wpAppModal centralized system.
+     * Called via AJAX when Add/Edit employee button clicked.
+     *
+     * @since 1.0.0 (TODO-2191)
+     * @return void Outputs form HTML and dies
+     */
+    public function handle_get_employee_form() {
+        try {
+            check_ajax_referer('wpapp_panel_nonce', '_ajax_nonce');
+
+            $employee_id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+            $customer_id = isset($_GET['customer_id']) ? (int) $_GET['customer_id'] : 0;
+
+            if ($employee_id) {
+                // Edit mode
+                $employee = $this->model->find($employee_id);
+                if (!$employee) {
+                    wp_send_json_error(['message' => __('Employee not found', 'wp-customer')]);
+                    return;
+                }
+
+                $customer = $this->customerModel->find($employee->customer_id);
+                if (!$customer) {
+                    wp_send_json_error(['message' => __('Customer not found', 'wp-customer')]);
+                    return;
+                }
+
+                // Permission check
+                if (!$this->validator->canEditEmployee($employee, $customer)) {
+                    wp_send_json_error(['message' => __('You do not have permission to edit this employee', 'wp-customer')]);
+                    return;
+                }
+
+                // Load edit form
+                include WP_CUSTOMER_PATH . 'src/Views/customer/employee/forms/edit-employee-form.php';
+            } else {
+                // Create mode
+                if (!$customer_id) {
+                    wp_send_json_error(['message' => __('Customer ID required', 'wp-customer')]);
+                    return;
+                }
+
+                // Permission check
+                if (!current_user_can('manage_options') && !current_user_can('add_customer_employee')) {
+                    wp_send_json_error(['message' => __('You do not have permission to create employee', 'wp-customer')]);
+                    return;
+                }
+
+                $customer = $this->customerModel->find($customer_id);
+                if (!$customer) {
+                    wp_send_json_error(['message' => __('Customer not found', 'wp-customer')]);
+                    return;
+                }
+
+                // Load create form
+                include WP_CUSTOMER_PATH . 'src/Views/customer/employee/forms/create-employee-form.php';
+            }
+
+            wp_die();
+
+        } catch (\Exception $e) {
+            wp_send_json_error(['message' => $e->getMessage()]);
+        }
+    }
 }

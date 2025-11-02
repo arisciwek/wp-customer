@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Includes
- * @version     1.0.11
+ * @version     1.2.1
  * @author      arisciwek
  *
  * Path: /wp-customer/includes/class-dependencies.php
@@ -13,6 +13,17 @@
  *              dan library eksternal
  *
  * Changelog:
+ * 1.2.1 - 2025-11-02 (TODO-2190 Fix Cascade for wp-customer-v2)
+ * - Added: wilayah handler enqueue for wp-customer-v2 page
+ * - Added: Branch form scripts (create/edit) for wp-customer-v2
+ * - Added: wilayah-select-handler-core dependency to branch forms
+ * - Added: wpCustomerData localization for branch forms in v2
+ * - Fixed: Cascade select now works in wp-customer-v2 page
+ *
+ * 1.2.0 - 2025-11-02 (TODO-2190)
+ * - Added: customer-branch-form.css - Two-column layout untuk branch forms
+ * - Enqueued: Branch form styling untuk modal system
+ *
  * 1.1.0 - 2024-12-10
  * - Added branch management dependencies
  * - Added branch CSS and JS files
@@ -468,15 +479,15 @@ class WP_Customer_Dependencies {
             // Branch scripts
             wp_enqueue_script('branch-datatable', WP_CUSTOMER_URL . 'assets/js/branch/branch-datatable.js', ['jquery', 'datatables', 'customer-toast', 'customer'], $this->version, true);
             wp_enqueue_script('branch-toast', WP_CUSTOMER_URL . 'assets/js/branch/branch-toast.js', ['jquery'], $this->version, true);
-            // Update dependencies untuk form
-            wp_enqueue_script('create-branch-form', WP_CUSTOMER_URL . 'assets/js/branch/create-branch-form.js', ['jquery', 'jquery-validate', 'branch-toast', 'branch-datatable'], $this->version, true);
-            wp_enqueue_script('edit-branch-form', WP_CUSTOMER_URL . 'assets/js/branch/edit-branch-form.js', ['jquery', 'jquery-validate', 'branch-toast', 'branch-datatable'], $this->version, true);
+            // Update dependencies untuk form - tambah wilayah-select-handler-core dependency
+            wp_enqueue_script('create-branch-form', WP_CUSTOMER_URL . 'assets/js/branch/create-branch-form.js', ['jquery', 'jquery-validate', 'branch-toast', 'branch-datatable', 'wilayah-select-handler-core'], $this->version, true);
+            wp_enqueue_script('edit-branch-form', WP_CUSTOMER_URL . 'assets/js/branch/edit-branch-form.js', ['jquery', 'jquery-validate', 'branch-toast', 'branch-datatable', 'wilayah-select-handler-core'], $this->version, true);
 
-            // Employee scripts - mengikuti pola branch yang sudah berhasil
+            // Employee scripts - centralized modal pattern (TODO-2191)
             wp_enqueue_script('employee-datatable', WP_CUSTOMER_URL . 'assets/js/employee/customer-employee-datatable.js', ['jquery', 'datatables', 'customer-toast', 'customer'], $this->version, true);
             wp_enqueue_script('employee-toast', WP_CUSTOMER_URL . 'assets/js/employee/customer-employee-toast.js', ['jquery'], $this->version, true);
-            wp_enqueue_script('create-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/create-customer-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
-            wp_enqueue_script('edit-employee-form', WP_CUSTOMER_URL . 'assets/js/employee/edit-customer-employee-form.js', ['jquery', 'jquery-validate', 'employee-toast', 'employee-datatable'], $this->version, true);
+            // TODO-2191: Employee forms now use centralized wpAppModal system from wp-app-core
+            // Integrated with customer-datatable-v2.js event handlers (no standalone modal JS needed)
 
             // Gunakan wpCustomerData untuk semua
             $customer_nonce = wp_create_nonce('wp_customer_nonce');
@@ -489,14 +500,23 @@ class WP_Customer_Dependencies {
 
         // Customer V2 page (NEW - Centralized DataTable System)
         if ($screen->id === 'toplevel_page_wp-customer-v2') {
+            // Tambah handler untuk wilayah (province/regency cascade)
+            $this->enqueue_wilayah_handler();
+
             // Core dependencies
+            wp_enqueue_script('jquery-validate', 'https://cdn.jsdelivr.net/npm/jquery-validation@1.19.5/dist/jquery.validate.min.js', ['jquery'], '1.19.5', true);
             wp_enqueue_script('datatables', 'https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js', ['jquery'], '1.13.7', true);
+
+            // Toast components
+            wp_enqueue_script('customer-toast', WP_CUSTOMER_URL . 'assets/js/customer/customer-toast.js', ['jquery'], $this->version, true);
+            wp_enqueue_script('branch-toast', WP_CUSTOMER_URL . 'assets/js/branch/branch-toast.js', ['jquery'], $this->version, true);
 
             // NEW CSS for centralized system
             wp_enqueue_style('wp-customer-header-cards', WP_CUSTOMER_URL . 'assets/css/customer/customer-header-cards.css', [], $this->version);
             wp_enqueue_style('wp-customer-filter', WP_CUSTOMER_URL . 'assets/css/customer/customer-filter.css', [], $this->version);
             wp_enqueue_style('wp-customer-datatable', WP_CUSTOMER_URL . 'assets/css/customer/customer-datatable.css', ['datatables'], $this->version);
             wp_enqueue_style('wp-customer-tabs', WP_CUSTOMER_URL . 'assets/css/customer/customer-tabs.css', [], $this->version);
+            wp_enqueue_style('wp-customer-branch-form', WP_CUSTOMER_URL . 'assets/css/customer/customer-branch-form.css', [], $this->version);
             wp_enqueue_style('wp-customer-style', WP_CUSTOMER_URL . 'assets/css/customer/customer-style.css', [], $this->version);
 
             // NEW JS for centralized DataTable
@@ -507,9 +527,21 @@ class WP_Customer_Dependencies {
 
             // NEW JS for modal form interactions (Province/Regency cascade)
             wp_enqueue_script('customer-modal-form', WP_CUSTOMER_URL . 'assets/js/customer/customer-modal-form.js', ['jquery'], $this->version, true);
+
+            // Branch form scripts (TODO-2190: Required for branch CRUD in wp-customer-v2)
+            wp_enqueue_script('create-branch-form', WP_CUSTOMER_URL . 'assets/js/branch/create-branch-form.js', ['jquery', 'jquery-validate', 'branch-toast', 'wilayah-select-handler-core'], $this->version, true);
+            wp_enqueue_script('edit-branch-form', WP_CUSTOMER_URL . 'assets/js/branch/edit-branch-form.js', ['jquery', 'jquery-validate', 'branch-toast', 'wilayah-select-handler-core'], $this->version, true);
+
             wp_localize_script('customer-modal-form', 'wpCustomerModal', [
                 'wilayah_nonce' => wp_create_nonce('wilayah_select_nonce')
             ]);
+
+            // Map integration (TODO-2190)
+            // NOTE: Map components now fully handled by wp-app-core global scope:
+            //       - Leaflet.js (global)
+            //       - wpapp-map-picker.js (global map component)
+            //       - wpapp-map-adapter.js (global integration adapter)
+            // No plugin-specific adapter needed!
 
             // Localization untuk centralized DataTable system
             wp_localize_script('customer-datatable-v2', 'wpAppCoreCustomer', [
@@ -535,6 +567,14 @@ class WP_Customer_Dependencies {
                     'next' => __('Next', 'wp-customer'),
                     'last' => __('Last', 'wp-customer'),
                 ]
+            ]);
+
+            // Localization for branch forms (TODO-2190: Required by create/edit-branch-form.js)
+            $customer_nonce = wp_create_nonce('wp_customer_nonce');
+            wp_localize_script('create-branch-form', 'wpCustomerData', [
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'nonce' => $customer_nonce,
+                'debug' => true
             ]);
         }
 

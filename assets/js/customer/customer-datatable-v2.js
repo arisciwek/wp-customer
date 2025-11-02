@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS/Customer
- * @version     2.2.1
+ * @version     2.4.0
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/customer/customer-datatable-v2.js
@@ -17,8 +17,50 @@
  * - DataTables library
  * - wp-app-core base panel system
  * - wpAppCoreCustomer localized object
+ * - wpAppModal (wp-app-core modal system)
  *
  * Changelog:
+ * 2.4.0 - 2025-11-02 (TODO-2191 Employee CRUD Integration)
+ * - Added: initEmployeeHandlers() - Employee CRUD handlers via centralized modal
+ * - Added: Event handler for .employee-add-btn (create employee)
+ * - Added: Event handler for .edit-employee (edit employee)
+ * - Added: Event handler for .delete-employee (delete employee)
+ * - Integrated: wp-app-core centralized modal system (wpAppModal)
+ * - Form loading: via AJAX get_employee_form action
+ * - Form submission: via create_customer_employee / update_customer_employee actions
+ * - Delete: via delete_customer_employee action
+ * - Pattern: Same as branch CRUD, consistent implementation
+ *
+ * 2.3.3 - 2025-11-02 (TODO-2190 Map Integration)
+ * - Added: Map picker integration for branch coordinates
+ * - Integrated: CustomerBranchMap adapter for modal lifecycle
+ * - Added onOpen and onClose callbacks to initialize and cleanup map
+ * - Map automatically initializes when modal opens
+ * - Map automatically cleans up when modal closes
+ *
+ * 2.3.2 - 2025-11-02 (TODO-2190 Fix)
+ * - Fixed: Changed nonce parameter from &nonce= to &_ajax_nonce=
+ * - Fixes 403 Forbidden error when loading modal forms
+ * - WordPress check_ajax_referer() expects '_ajax_nonce' in URL query
+ *
+ * 2.3.1 - 2025-11-02 (TODO-2190 Fix)
+ * - Fixed: Edit branch handler now includes customer_id in URL parameter
+ * - Fixed: Added e.stopPropagation() to prevent URL hash change
+ * - Prevents event bubbling to row click listener
+ * - URL hash stays at #customer-211&tab=branches (no change to #customer-70)
+ * - Extract customer_id from data-customer-id attribute
+ * - URL pattern: action=get_branch_form&id=70&customer_id=211
+ *
+ * 2.3.0 - 2025-11-02 (TODO-2190)
+ * - Added: initBranchHandlers() - Branch CRUD handlers via modal
+ * - Added: Event handler for .branch-add-btn (create branch)
+ * - Added: Event handler for .branch-edit-btn (edit branch)
+ * - Added: Event handler for .branch-delete-btn (delete branch)
+ * - Integrated: wp-app-core centralized modal system (wpAppModal)
+ * - Form loading: via AJAX get_branch_form action
+ * - Form submission: via save_branch action
+ * - Delete: via delete_branch action
+ *
  * 2.2.1 - 2025-11-02 (TODO-2189 FINAL)
  * - Confirmed lazy-load works without flicker after wp-app-core animation fix
  * - Removed initPreRenderedTabs() - not needed with lazy-load
@@ -99,6 +141,8 @@
 
             this.initDataTable();
             this.bindEvents();
+            this.initBranchHandlers(); // TODO-2190
+            this.initEmployeeHandlers(); // TODO-2191
             this.loadStatistics();
 
             this.initialized = true;
@@ -468,6 +512,374 @@
             });
 
             console.log('[CustomerDataTable] Employees DataTable initialized');
+        },
+
+        /**
+         * Initialize Branch CRUD Handlers (TODO-2190)
+         */
+        initBranchHandlers() {
+            console.log('[CustomerDataTable] Initializing Branch CRUD handlers');
+
+            const self = this;
+
+            // Add Branch button
+            $(document).on('click', '.branch-add-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent event bubbling
+                console.log('[CustomerDataTable] Add Branch button clicked');
+
+                const customerId = $(this).data('customer-id');
+
+                wpAppModal.show({
+                    type: 'form',
+                    title: 'Tambah Cabang',
+                    bodyUrl: wpAppCoreCustomer.ajaxurl + '?action=get_branch_form&customer_id=' + customerId + '&_ajax_nonce=' + wpAppCoreCustomer.nonce,
+                    size: 'large',
+                    buttons: {
+                        cancel: { label: 'Batal' },
+                        submit: { label: 'Simpan Cabang', primary: true }
+                    },
+                    // Map initialization handled via jQuery events in customer-branch-map.js
+                    onSubmit: function(formData, $form) {
+                        console.log('[CustomerDataTable] Submitting create branch form');
+
+                        $.ajax({
+                            url: wpAppCoreCustomer.ajaxurl,
+                            method: 'POST',
+                            data: formData,
+                            success: function(response) {
+                                if (response.success) {
+                                    wpAppModal.info({
+                                        infoType: 'success',
+                                        title: 'Berhasil',
+                                        message: response.data.message || 'Cabang berhasil ditambahkan',
+                                        autoClose: 3000
+                                    });
+
+                                    // Reload Branches DataTable
+                                    const $branchesTable = $('#customer-branches-datatable');
+                                    if ($.fn.DataTable.isDataTable($branchesTable)) {
+                                        $branchesTable.DataTable().ajax.reload();
+                                    }
+                                } else {
+                                    wpAppModal.info({
+                                        infoType: 'error',
+                                        title: 'Error',
+                                        message: response.data.message || 'Gagal menambahkan cabang'
+                                    });
+                                }
+                            },
+                            error: function(xhr) {
+                                wpAppModal.info({
+                                    infoType: 'error',
+                                    title: 'Error',
+                                    message: 'Terjadi kesalahan pada server'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Edit Branch button
+            $(document).on('click', '.branch-edit-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent event bubbling to row click
+                console.log('[CustomerDataTable] Edit Branch button clicked');
+
+                const branchId = $(this).data('id');
+                const customerId = $(this).data('customer-id');
+
+                wpAppModal.show({
+                    type: 'form',
+                    title: 'Edit Cabang',
+                    bodyUrl: wpAppCoreCustomer.ajaxurl + '?action=get_branch_form&id=' + branchId + '&customer_id=' + customerId + '&_ajax_nonce=' + wpAppCoreCustomer.nonce,
+                    size: 'large',
+                    buttons: {
+                        cancel: { label: 'Batal' },
+                        submit: { label: 'Simpan Perubahan', primary: true }
+                    },
+                    // Map initialization handled via jQuery events in customer-branch-map.js
+                    onSubmit: function(formData, $form) {
+                        console.log('[CustomerDataTable] Submitting edit branch form');
+
+                        $.ajax({
+                            url: wpAppCoreCustomer.ajaxurl,
+                            method: 'POST',
+                            data: formData,
+                            success: function(response) {
+                                if (response.success) {
+                                    wpAppModal.info({
+                                        infoType: 'success',
+                                        title: 'Berhasil',
+                                        message: response.data.message || 'Cabang berhasil diperbarui',
+                                        autoClose: 3000
+                                    });
+
+                                    // Reload Branches DataTable
+                                    const $branchesTable = $('#customer-branches-datatable');
+                                    if ($.fn.DataTable.isDataTable($branchesTable)) {
+                                        $branchesTable.DataTable().ajax.reload();
+                                    }
+                                } else {
+                                    wpAppModal.info({
+                                        infoType: 'error',
+                                        title: 'Error',
+                                        message: response.data.message || 'Gagal memperbarui cabang'
+                                    });
+                                }
+                            },
+                            error: function(xhr) {
+                                wpAppModal.info({
+                                    infoType: 'error',
+                                    title: 'Error',
+                                    message: 'Terjadi kesalahan pada server'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Delete Branch button
+            $(document).on('click', '.branch-delete-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation(); // Prevent event bubbling to row click
+                console.log('[CustomerDataTable] Delete Branch button clicked');
+
+                const branchId = $(this).data('id');
+
+                wpAppModal.confirm({
+                    title: 'Hapus Cabang?',
+                    message: 'Apakah Anda yakin ingin menghapus cabang ini? Tindakan ini tidak dapat dibatalkan.',
+                    danger: true,
+                    confirmLabel: 'Hapus',
+                    onConfirm: function() {
+                        console.log('[CustomerDataTable] Deleting branch:', branchId);
+
+                        $.ajax({
+                            url: wpAppCoreCustomer.ajaxurl,
+                            method: 'POST',
+                            data: {
+                                action: 'delete_branch',
+                                id: branchId,
+                                nonce: wpAppCoreCustomer.nonce
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    wpAppModal.info({
+                                        infoType: 'success',
+                                        title: 'Berhasil',
+                                        message: response.data.message || 'Cabang berhasil dihapus',
+                                        autoClose: 3000
+                                    });
+
+                                    // Reload Branches DataTable
+                                    const $branchesTable = $('#customer-branches-datatable');
+                                    if ($.fn.DataTable.isDataTable($branchesTable)) {
+                                        $branchesTable.DataTable().ajax.reload();
+                                    }
+                                } else {
+                                    wpAppModal.info({
+                                        infoType: 'error',
+                                        title: 'Error',
+                                        message: response.data.message || 'Gagal menghapus cabang'
+                                    });
+                                }
+                            },
+                            error: function(xhr) {
+                                wpAppModal.info({
+                                    infoType: 'error',
+                                    title: 'Error',
+                                    message: 'Terjadi kesalahan pada server'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+        },
+
+        /**
+         * Initialize Employee CRUD Handlers (TODO-2191)
+         */
+        initEmployeeHandlers() {
+            console.log('[CustomerDataTable] Initializing Employee CRUD handlers');
+
+            const self = this;
+
+            // Add Employee button
+            $(document).on('click', '.employee-add-btn', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('[CustomerDataTable] Add Employee button clicked');
+
+                const customerId = $(this).data('customer-id');
+
+                wpAppModal.show({
+                    type: 'form',
+                    title: 'Tambah Karyawan',
+                    bodyUrl: wpAppCoreCustomer.ajaxurl + '?action=get_employee_form&customer_id=' + customerId + '&_ajax_nonce=' + wpAppCoreCustomer.nonce,
+                    size: 'large',
+                    buttons: {
+                        cancel: { label: 'Batal' },
+                        submit: { label: 'Simpan Karyawan', primary: true }
+                    },
+                    onSubmit: function(formData, $form) {
+                        console.log('[CustomerDataTable] Submitting create employee form');
+
+                        $.ajax({
+                            url: wpAppCoreCustomer.ajaxurl,
+                            method: 'POST',
+                            data: formData,
+                            success: function(response) {
+                                if (response.success) {
+                                    wpAppModal.info({
+                                        infoType: 'success',
+                                        title: 'Berhasil',
+                                        message: response.data.message || 'Karyawan berhasil ditambahkan',
+                                        autoClose: 3000
+                                    });
+
+                                    // Reload Employees DataTable
+                                    const $employeesTable = $('#customer-employees-datatable');
+                                    if ($employeesTable.length && $.fn.DataTable.isDataTable($employeesTable)) {
+                                        $employeesTable.DataTable().ajax.reload();
+                                    }
+                                } else {
+                                    wpAppModal.info({
+                                        infoType: 'error',
+                                        title: 'Error',
+                                        message: response.data.message || 'Gagal menambah karyawan'
+                                    });
+                                }
+                            },
+                            error: function() {
+                                wpAppModal.info({
+                                    infoType: 'error',
+                                    title: 'Error',
+                                    message: 'Terjadi kesalahan pada server'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Edit Employee button
+            $(document).on('click', '.edit-employee', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('[CustomerDataTable] Edit Employee button clicked');
+
+                const employeeId = $(this).data('id');
+                const customerId = $(this).data('customer-id');
+
+                wpAppModal.show({
+                    type: 'form',
+                    title: 'Edit Karyawan',
+                    bodyUrl: wpAppCoreCustomer.ajaxurl + '?action=get_employee_form&id=' + employeeId + '&customer_id=' + customerId + '&_ajax_nonce=' + wpAppCoreCustomer.nonce,
+                    size: 'large',
+                    buttons: {
+                        cancel: { label: 'Batal' },
+                        submit: { label: 'Update Karyawan', primary: true }
+                    },
+                    onSubmit: function(formData, $form) {
+                        console.log('[CustomerDataTable] Submitting update employee form');
+
+                        $.ajax({
+                            url: wpAppCoreCustomer.ajaxurl,
+                            method: 'POST',
+                            data: formData,
+                            success: function(response) {
+                                if (response.success) {
+                                    wpAppModal.info({
+                                        infoType: 'success',
+                                        title: 'Berhasil',
+                                        message: response.data.message || 'Karyawan berhasil diperbarui',
+                                        autoClose: 3000
+                                    });
+
+                                    // Reload Employees DataTable
+                                    const $employeesTable = $('#customer-employees-datatable');
+                                    if ($employeesTable.length && $.fn.DataTable.isDataTable($employeesTable)) {
+                                        $employeesTable.DataTable().ajax.reload();
+                                    }
+                                } else {
+                                    wpAppModal.info({
+                                        infoType: 'error',
+                                        title: 'Error',
+                                        message: response.data.message || 'Gagal memperbarui karyawan'
+                                    });
+                                }
+                            },
+                            error: function() {
+                                wpAppModal.info({
+                                    infoType: 'error',
+                                    title: 'Error',
+                                    message: 'Terjadi kesalahan pada server'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Delete Employee button
+            $(document).on('click', '.delete-employee', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('[CustomerDataTable] Delete Employee button clicked');
+
+                const employeeId = $(this).data('id');
+
+                wpAppModal.confirm({
+                    title: 'Hapus Karyawan?',
+                    message: 'Apakah Anda yakin ingin menghapus karyawan ini? Tindakan ini tidak dapat dibatalkan.',
+                    danger: true,
+                    confirmLabel: 'Hapus',
+                    onConfirm: function() {
+                        $.ajax({
+                            url: wpAppCoreCustomer.ajaxurl,
+                            type: 'POST',
+                            data: {
+                                action: 'delete_customer_employee',
+                                id: employeeId,
+                                nonce: wpAppCoreCustomer.nonce
+                            },
+                            success: function(response) {
+                                if (response.success) {
+                                    wpAppModal.info({
+                                        infoType: 'success',
+                                        title: 'Berhasil',
+                                        message: response.data.message || 'Karyawan berhasil dihapus',
+                                        autoClose: 3000
+                                    });
+
+                                    // Reload Employees DataTable
+                                    const $employeesTable = $('#customer-employees-datatable');
+                                    if ($employeesTable.length && $.fn.DataTable.isDataTable($employeesTable)) {
+                                        $employeesTable.DataTable().ajax.reload();
+                                    }
+                                } else {
+                                    wpAppModal.info({
+                                        infoType: 'error',
+                                        title: 'Error',
+                                        message: response.data.message || 'Gagal menghapus karyawan'
+                                    });
+                                }
+                            },
+                            error: function() {
+                                wpAppModal.info({
+                                    infoType: 'error',
+                                    title: 'Error',
+                                    message: 'Terjadi kesalahan pada server'
+                                });
+                            }
+                        });
+                    }
+                });
+            });
         },
 
         /**

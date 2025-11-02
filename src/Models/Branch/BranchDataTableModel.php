@@ -7,7 +7,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Branch
- * @version     1.0.0
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Branch/BranchDataTableModel.php
@@ -18,6 +18,15 @@
  *              Columns: Kode, Nama Cabang, Tipe, Email, Telepon, Status
  *
  * Changelog:
+ * 1.1.0 - 2025-11-02 (TODO-2190)
+ * - Changed table alias from 'b' to 'cb' (customer_branch) untuk avoid conflicts
+ * - Added $table_alias property for flexible alias management
+ * - Added get_table_alias() method for JOIN operations
+ * - All column references now use $table_alias variable
+ * - Added customer_id to columns SELECT
+ * - Added customer_id to DT_RowData
+ * - Added data-customer-id attribute to Edit button
+ *
  * 1.0.0 - 2025-11-01 (TODO-2187 Review-02)
  * - Initial implementation following wp-agency DivisionDataTableModel pattern
  * - Columns: code, name, type, email, phone, status
@@ -34,6 +43,12 @@ defined('ABSPATH') || exit;
 class BranchDataTableModel extends DataTableModel {
 
     /**
+     * Table alias for JOINs
+     * @var string
+     */
+    protected $table_alias = 'cb';
+
+    /**
      * Constructor
      * Setup table and columns configuration
      */
@@ -41,15 +56,15 @@ class BranchDataTableModel extends DataTableModel {
         parent::__construct();
 
         global $wpdb;
-        $this->table = $wpdb->prefix . 'app_customer_branches b';
-        $this->index_column = 'b.id';
+        $this->table = $wpdb->prefix . 'app_customer_branches ' . $this->table_alias;
+        $this->index_column = $this->table_alias . '.id';
 
         // Define searchable columns
         $this->searchable_columns = [
-            'b.code',
-            'b.name',
-            'b.email',
-            'b.phone'
+            $this->table_alias . '.code',
+            $this->table_alias . '.name',
+            $this->table_alias . '.email',
+            $this->table_alias . '.phone'
         ];
 
         // No joins needed for branches
@@ -68,14 +83,16 @@ class BranchDataTableModel extends DataTableModel {
      * @return array Column definitions
      */
     protected function get_columns(): array {
+        $alias = $this->table_alias;
         return [
-            'b.code as code',
-            'b.name as name',
-            'b.type as type',
-            'b.email as email',
-            'b.phone as phone',
-            'b.status as status',
-            'b.id as id'
+            "{$alias}.code as code",
+            "{$alias}.name as name",
+            "{$alias}.type as type",
+            "{$alias}.email as email",
+            "{$alias}.phone as phone",
+            "{$alias}.status as status",
+            "{$alias}.id as id",
+            "{$alias}.customer_id as customer_id"
         ];
     }
 
@@ -108,6 +125,7 @@ class BranchDataTableModel extends DataTableModel {
             'DT_RowId' => 'branch-' . ($row->id ?? 0),
             'DT_RowData' => [
                 'id' => $row->id ?? 0,
+                'customer_id' => $row->customer_id ?? 0,
                 'status' => $row->status ?? 'active',
                 'entity' => 'branch'
             ],
@@ -135,10 +153,11 @@ class BranchDataTableModel extends DataTableModel {
             current_user_can('edit_all_customer_branches') ||
             current_user_can('edit_own_customer_branch')) {
             $buttons[] = sprintf(
-                '<button type="button" class="button button-small branch-edit-btn" data-id="%d" title="%s">
+                '<button type="button" class="button button-small branch-edit-btn" data-id="%d" data-customer-id="%d" title="%s">
                     <span class="dashicons dashicons-edit"></span>
                 </button>',
                 esc_attr($row->id),
+                esc_attr($row->customer_id ?? 0),
                 esc_attr__('Edit Branch', 'wp-customer')
             );
         }
@@ -172,23 +191,34 @@ class BranchDataTableModel extends DataTableModel {
      */
     public function filter_where($where_conditions, $request_data, $model): array {
         global $wpdb;
+        $alias = $this->table_alias;
 
         // Filter by customer_id (required)
         if (isset($request_data['customer_id'])) {
             $customer_id = (int) $request_data['customer_id'];
-            $where_conditions[] = $wpdb->prepare('b.customer_id = %d', $customer_id);
+            $where_conditions[] = $wpdb->prepare("{$alias}.customer_id = %d", $customer_id);
         }
 
         // Filter by status (optional, from dropdown filter)
         if (isset($request_data['status_filter']) && !empty($request_data['status_filter'])) {
             $status = sanitize_text_field($request_data['status_filter']);
-            $where_conditions[] = $wpdb->prepare('b.status = %s', $status);
+            $where_conditions[] = $wpdb->prepare("{$alias}.status = %s", $status);
         } else {
             // Default to active if no filter specified
-            $where_conditions[] = "b.status = 'active'";
+            $where_conditions[] = "{$alias}.status = 'active'";
         }
 
         return $where_conditions;
+    }
+
+    /**
+     * Get table alias
+     *
+     * @return string Table alias for JOIN operations
+     * @since 1.1.0
+     */
+    public function get_table_alias(): string {
+        return $this->table_alias;
     }
 
     /**

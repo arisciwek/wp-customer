@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Customer/Partials
- * @version     1.0.0
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Views/customer/partials/ajax-employees-datatable.php
@@ -25,6 +25,10 @@
  * - No inline JavaScript (pure HTML only)
  *
  * Changelog:
+ * 1.1.0 - 2025-11-02 (TODO-2191)
+ * - Added: Include create and edit employee modal forms
+ * - Centralized modal pattern like branches
+ *
  * 1.0.0 - 2025-11-01 (Review-02 from TODO-2187)
  * - Initial creation following wp-agency pattern
  * - Columns: Nama, Jabatan, Email, Telepon, Status
@@ -75,3 +79,8 @@ $can_add_employee = current_user_can('manage_options') || current_user_can('add_
 </table>
 
 </div><!-- .customer-tab-content-wrapper -->
+
+<?php
+// TODO-2191: Employee forms loaded via AJAX using wpAppModal centralized system
+// Forms not included here - loaded dynamically when modal opens
+?>

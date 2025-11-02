@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Handlers
- * @version     1.0.11
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Handlers/AutoEntityCreator.php
@@ -18,7 +18,20 @@
  * - wp_customer_created(customer_id, data)
  * - wp_customer_branch_created(branch_id, data)
  *
+ * Business Rules:
+ * - agency_id and division_id ONLY set if inspector_id exists
+ * - All three fields (agency_id, division_id, inspector_id) set together or all NULL
+ * - Inspector assignment is optional during branch creation
+ *
  * Changelog:
+ * 1.1.0 - 2025-11-02 (TODO-2190 Fix)
+ * - CRITICAL FIX: agency_id and division_id only set if inspector_id exists
+ * - Changed: Try to get inspector first, then set agency/division based on result
+ * - If inspector not found: All three fields (agency_id, division_id, inspector_id) set to NULL
+ * - If inspector found: All three fields set together
+ * - Added error handling with try-catch for location ID retrieval
+ * - Added detailed logging for inspector assignment result
+ *
  * 1.0.0 - 2025-01-20 (Task-2165)
  * - Initial implementation
  * - Added handleCustomerCreated() for auto branch pusat creation
@@ -75,18 +88,6 @@ class AutoEntityCreator {
                 return;
             }
 
-            // Get agency_id and division_id from location
-            $location_ids = $this->branchModel->getAgencyAndDivisionIds(
-                $customer_data['provinsi_id'],
-                $customer_data['regency_id']
-            );
-
-            // Get inspector_id from division (with fallback to province's agency)
-            $inspector_id = $this->branchModel->getInspectorId(
-                $customer_data['provinsi_id'],
-                $location_ids['division_id']
-            );
-
             // Get regency name for branch name
             global $wpdb;
             $regency = $wpdb->get_row($wpdb->prepare(
@@ -96,6 +97,38 @@ class AutoEntityCreator {
 
             $regency_name = $regency ? $regency->name : 'Pusat';
 
+            // Try to get inspector first
+            // agency_id and division_id ONLY set if inspector exists
+            $inspector_id = null;
+            $agency_id = null;
+            $division_id = null;
+
+            try {
+                // Get agency_id and division_id from location
+                $location_ids = $this->branchModel->getAgencyAndDivisionIds(
+                    $customer_data['provinsi_id'],
+                    $customer_data['regency_id']
+                );
+
+                // Get inspector_id from division (with fallback to province's agency)
+                $inspector_id = $this->branchModel->getInspectorId(
+                    $customer_data['provinsi_id'],
+                    $location_ids['division_id']
+                );
+
+                // Only set agency_id and division_id if inspector found
+                if ($inspector_id) {
+                    $agency_id = $location_ids['agency_id'];
+                    $division_id = $location_ids['division_id'];
+                    $this->log("Inspector found for customer {$customer_id}: inspector_id={$inspector_id}, agency_id={$agency_id}, division_id={$division_id}");
+                } else {
+                    $this->log("No inspector found for customer {$customer_id} location (provinsi={$customer_data['provinsi_id']}, regency={$customer_data['regency_id']}), leaving agency/division/inspector NULL");
+                }
+            } catch (\Exception $e) {
+                // If error getting location IDs, log and continue with NULL values
+                $this->log("Warning: Could not determine agency/division/inspector for customer {$customer_id}: " . $e->getMessage());
+            }
+
             // Prepare branch data
             $branch_data = [
                 'customer_id' => $customer_id,
@@ -104,9 +137,9 @@ class AutoEntityCreator {
                 'user_id' => $customer_data['user_id'],
                 'provinsi_id' => $customer_data['provinsi_id'],
                 'regency_id' => $customer_data['regency_id'],
-                'agency_id' => $location_ids['agency_id'],
-                'division_id' => $location_ids['division_id'],
-                'inspector_id' => $inspector_id,
+                'agency_id' => $agency_id,      // NULL if no inspector
+                'division_id' => $division_id,  // NULL if no inspector
+                'inspector_id' => $inspector_id, // NULL if not found
                 'nitku' => null,
                 'postal_code' => null,
                 'latitude' => null,

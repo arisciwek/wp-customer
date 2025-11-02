@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS/Employee
- * @version     1.0.0
+ * @version     1.2.0
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/employee/customer-employee-datatable.js
@@ -19,6 +19,16 @@
  * - CustomerToast for notifications
  *
  * Changelog:
+ * 1.2.0 - 2025-11-02 (TODO-2191 Centralized Modal)
+ * - Removed: .edit-employee event handler (moved to customer-datatable-v2.js)
+ * - Now uses wpAppModal centralized system via customer-datatable-v2.js
+ * - Edit employee handled by initEmployeeHandlers() in customer-datatable-v2.js
+ * - Prevents conflict and URL hash change issue
+ *
+ * 1.1.0 - 2025-11-02 (TODO-2191 - REVERTED)
+ * - This version was incorrect (standalone modal pattern)
+ * - Reverted to use centralized modal in v1.2.0
+ *
  * 1.0.0 - 2024-01-12
  * - Initial implementation
  * - Added state management
@@ -71,6 +81,7 @@
             });
 
             // Action buttons handlers using event delegation
+            // TODO-2191: .edit-employee handler removed, now handled by customer-datatable-v2.js via centralized modal
             $('#employee-table').off('click', '.delete-employee, .toggle-status')
                 .on('click', '.delete-employee', (e) => {
                     e.preventDefault();

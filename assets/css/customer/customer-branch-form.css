@@ -1,0 +1,314 @@
+/**
+ * Customer Branch Form Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Customer
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/customer/customer-branch-form.css
+ *
+ * Description: Styling untuk branch forms dalam modal.
+ *              Two-column layout untuk form fields.
+ *              Integrated dengan wp-app-core modal system.
+ *
+ * Changelog:
+ * 1.0.0 - 2025-11-02 (TODO-2190)
+ * - Initial creation
+ * - Two-column layout for better UX
+ * - Section headers untuk grouping
+ * - Responsive design
+ */
+
+/* ==========================================================================
+   Form Container
+   ========================================================================== */
+
+.customer-modal-form {
+    max-width: 100%;
+}
+
+/* ==========================================================================
+   Section Headers
+   ========================================================================== */
+
+.customer-modal-form h4 {
+    margin: 20px 0 15px 0;
+    padding-bottom: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #23282d;
+    border-bottom: 2px solid #2271b1;
+    grid-column: 1 / -1; /* Span all columns */
+}
+
+.customer-modal-form h4:first-of-type {
+    margin-top: 0;
+}
+
+/* ==========================================================================
+   Two-Column Grid Layout
+   ========================================================================== */
+
+.customer-modal-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px 20px;
+}
+
+/* Fields yang span full width */
+.customer-form-field.full-width {
+    grid-column: 1 / -1;
+}
+
+/* ==========================================================================
+   Form Fields
+   ========================================================================== */
+
+.customer-form-field {
+    margin-bottom: 0; /* Grid gap handles spacing */
+}
+
+.customer-form-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #1d2327;
+}
+
+.customer-form-field label .required {
+    color: #d63638;
+    font-weight: bold;
+    margin-left: 2px;
+}
+
+.customer-form-field input[type="text"],
+.customer-form-field input[type="email"],
+.customer-form-field input[type="number"],
+.customer-form-field select,
+.customer-form-field textarea {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    border: 1px solid #8c8f94;
+    border-radius: 4px;
+    background-color: #fff;
+    box-shadow: 0 0 0 transparent;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.customer-form-field input[type="text"]:focus,
+.customer-form-field input[type="email"]:focus,
+.customer-form-field input[type="number"]:focus,
+.customer-form-field select:focus,
+.customer-form-field textarea:focus {
+    border-color: #2271b1;
+    box-shadow: 0 0 0 1px #2271b1;
+    outline: 2px solid transparent;
+}
+
+.customer-form-field textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.customer-form-field select {
+    height: 36px;
+    cursor: pointer;
+}
+
+.customer-form-field .description {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+    font-style: italic;
+    color: #646970;
+    line-height: 1.4;
+}
+
+/* ==========================================================================
+   Field States
+   ========================================================================== */
+
+.customer-form-field input:disabled,
+.customer-form-field select:disabled,
+.customer-form-field textarea:disabled {
+    background-color: #f6f7f7;
+    color: #646970;
+    cursor: not-allowed;
+}
+
+.customer-form-field.error input,
+.customer-form-field.error select,
+.customer-form-field.error textarea {
+    border-color: #d63638;
+}
+
+.customer-form-field .error-message {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+    color: #d63638;
+    font-weight: 500;
+}
+
+/* ==========================================================================
+   Section Dividers
+   ========================================================================== */
+
+.customer-modal-form hr {
+    grid-column: 1 / -1;
+    margin: 20px 0;
+    border: none;
+    border-top: 1px solid #dcdcde;
+}
+
+/* ==========================================================================
+   Specific Field Layouts
+   ========================================================================== */
+
+/* Address field - full width */
+.customer-form-field:has(#branch-address),
+.customer-form-field:has(textarea) {
+    grid-column: 1 / -1;
+}
+
+/* Admin section fields - stay in 2 columns */
+.customer-form-field:has(#admin-username),
+.customer-form-field:has(#admin-email),
+.customer-form-field:has(#admin-firstname),
+.customer-form-field:has(#admin-lastname) {
+    grid-column: auto;
+}
+
+/* ==========================================================================
+   Responsive Design
+   ========================================================================== */
+
+@media screen and (max-width: 782px) {
+    .customer-modal-form {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .customer-form-field {
+        grid-column: 1 / -1 !important;
+    }
+
+    .customer-modal-form h4 {
+        font-size: 13px;
+    }
+
+    .customer-form-field label {
+        font-size: 12px;
+    }
+
+    .customer-form-field input[type="text"],
+    .customer-form-field input[type="email"],
+    .customer-form-field input[type="number"],
+    .customer-form-field select,
+    .customer-form-field textarea {
+        font-size: 14px;
+        padding: 10px 12px;
+    }
+}
+
+@media screen and (max-width: 600px) {
+    .customer-modal-form {
+        gap: 12px;
+    }
+}
+
+/* ==========================================================================
+   Loading State
+   ========================================================================== */
+
+.customer-modal-form.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.customer-modal-form.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 32px;
+    height: 32px;
+    margin: -16px 0 0 -16px;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #2271b1;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   Wilayah Select Enhancement
+   ========================================================================== */
+
+.customer-form-field select.wilayah-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23646970' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px;
+    padding-right: 32px;
+}
+
+/* ==========================================================================
+   Form Validation Feedback
+   ========================================================================== */
+
+.customer-form-field input:invalid:not(:focus),
+.customer-form-field select:invalid:not(:focus) {
+    border-color: #dcdcde;
+}
+
+.customer-form-field input:valid,
+.customer-form-field select:valid {
+    border-color: #8c8f94;
+}
+
+.customer-form-field input:valid:focus,
+.customer-form-field select:valid:focus {
+    border-color: #2271b1;
+}
+
+/* ==========================================================================
+   Placeholder Styling
+   ========================================================================== */
+
+.customer-form-field input::placeholder,
+.customer-form-field textarea::placeholder {
+    color: #a7aaad;
+    font-style: italic;
+}
+
+/* ==========================================================================
+   Modal Size Override untuk Branch Forms
+   ========================================================================== */
+
+#wpapp-modal.modal-large .wpapp-modal-container {
+    max-width: 900px;
+}
+
+/* ==========================================================================
+   Print Styles
+   ========================================================================== */
+
+@media print {
+    .customer-modal-form {
+        grid-template-columns: 1fr;
+    }
+
+    .customer-form-field {
+        grid-column: 1 / -1 !important;
+        page-break-inside: avoid;
+    }
+}

@@ -3,18 +3,40 @@
  * Plugin Name: WP Customer
  * Plugin URI:
  * Description: Plugin untuk mengelola data Customer dan Cabangnya
- * Version: 1.0.12
+ * Version: 1.0.15
  * Author: arisciwek
  * Author URI:
  * License: GPL v2 or later
  *
  * @package     WP_Customer
- * @version     1.0.12
+ * @version     1.0.15
  * @author      arisciwek
  *
  * Path: /wp-customer/wp-customer.php
  *
  * Changelog:
+ * 1.0.15 - 2025-11-02 (TODO-2190 Fully Global Architecture)
+ * - Removed: customer-branch-map.js (plugin-specific adapter)
+ * - Now uses: wpapp-map-adapter.js (global adapter from wp-app-core)
+ * - Zero plugin-specific code needed for map integration
+ * - All map functionality handled by wp-app-core global scope
+ * - Cleaner, simpler, no duplication across plugins
+ *
+ * 1.0.14 - 2025-11-02 (TODO-2190 Global Scope Migration)
+ * - Changed: Map picker migrated to wp-app-core as global shared component
+ * - File: wpapp-map-picker.js now in wp-app-core/assets/js/map/
+ * - Prevents code duplication across wp-app-* plugins
+ * - wp-customer now only loads adapter (customer-branch-map.js)
+ * - Leaflet.js now loaded globally from wp-app-core
+ *
+ * 1.0.13 - 2025-11-02 (TODO-2190)
+ * - Added: Branch CRUD with wpAppModal integration
+ * - Added: Map picker (Leaflet) for branch coordinates
+ * - Added: customer-branch-map.js adapter for modal lifecycle
+ * - Fixed: Nonce security issues in form submission
+ * - Fixed: Table alias conflicts (cb/ce)
+ * - Fixed: Customer context preservation in modals
+ *
  * 1.0.12 - 2025-10-31 (TODO-2183)
  * - Added: AgencyAccessFilter instantiation for cross-plugin integration
  * - Fixed: customer_admin now can see Disnaker list (Task-2176)
@@ -23,7 +45,7 @@
 defined('ABSPATH') || exit;
 
 // Define plugin constants first, before anything else
-define('WP_CUSTOMER_VERSION', '1.0.12');
+define('WP_CUSTOMER_VERSION', '1.0.15');
 define('WP_CUSTOMER_FILE', __FILE__);
 define('WP_CUSTOMER_PATH', plugin_dir_path(__FILE__));
 define('WP_CUSTOMER_URL', plugin_dir_url(__FILE__));

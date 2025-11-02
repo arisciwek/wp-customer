@@ -4,7 +4,7 @@
 *
 * @package     WP_Customer
 * @subpackage  Validators/Branch
-* @version     1.0.11
+* @version     1.2.2
 * @author      arisciwek
 *
 * Path: src/Validators/Branch/BranchValidator.php
@@ -15,14 +15,38 @@
 *              Includes validasi permission dan ownership.
 *
 * Changelog:
+* 1.2.2 - 2025-11-02 (TODO-2190 Fix Agency Validation)
+* - Removed: agency_id and division_id validation from validateCreate()
+* - Reason: Agency/Division untuk assign inspector, bukan create branch
+* - Branch created without agency/division (assigned later via inspector)
+* - Fixed: Error "Agency ID wajib diisi" saat create branch
+*
+* 1.2.1 - 2025-11-02 (TODO-2190 Fix user_id Validation)
+* - Fixed: Removed user_id validation from validateForm()
+* - Reason: user_id created in controller BEFORE branch creation
+* - When validateCreate() runs, user_id doesn't exist yet
+* - Flow: validate data → create user → assign user_id → create branch
+*
+* 1.2.0 - 2025-11-02 (TODO-2190 Simplified Type Validation)
+* - Simplified: Type validation (removed pusat duplicate check)
+* - Type now hardcoded as 'cabang' in controller
+* - Pusat branch auto-created via AutoEntityCreator
+* - Only validates if type exists and is valid value
+*
+* 1.1.0 - 2025-11-02 (TODO-2190 Phone Validation)
+* - Added: Phone number validation (format 08xxxxxxxxxx)
+* - Pattern: ^08[0-9]{8,13}$ (08 followed by 8-13 digits)
+* - Total length: 10-15 digits
+* - Simplified from dual format (+62xxx or 08xxx) to single format (08xxx only)
+*
 * 1.0.0 - 2024-12-10
 * - Initial release
 * - Added create validation
 * - Added update validation
 * - Added delete validation
 * - Added permission validation
-* 
-* 
+*
+*
 */
 
 /**
@@ -216,7 +240,9 @@ class BranchValidator {
 
     /**
      * Validate branch data for creation
-     * Ensures agency_id and division_id are properly assigned based on province and regency
+     *
+     * NOTE: agency_id dan division_id TIDAK divalidasi saat create
+     * Agency/Division akan di-assign nanti saat assign inspector
      *
      * @param array $data Branch data to validate
      * @return array Array of validation errors
@@ -230,15 +256,9 @@ class BranchValidator {
             $errors = array_merge($errors, $form_errors);
         }
 
-        // Validate that agency_id and division_id are not null/empty for create
-        // This ensures the automatic assignment from province/regency worked
-        if (empty($data['agency_id'])) {
-            $errors['agency_id'] = __('Agency ID wajib diisi. Pastikan provinsi yang dipilih memiliki agency.', 'wp-customer');
-        }
-
-        if (empty($data['division_id'])) {
-            $errors['division_id'] = __('Division ID wajib diisi. Pastikan regency yang dipilih memiliki division dalam agency.', 'wp-customer');
-        }
+        // NOTE: agency_id dan division_id validation REMOVED
+        // Agency/Division bukan bagian dari branch creation
+        // Akan di-assign nanti melalui assign inspector functionality
 
         return $errors;
     }
@@ -269,25 +289,19 @@ class BranchValidator {
             }
         }
 
-        // Validasi type
+        // Validasi type (simplified - type sudah hardcoded di controller sebagai 'cabang')
+        // Pusat sudah auto-created via AutoEntityCreator, manual create hanya untuk cabang
         if (empty($data['type'])) {
-            $errors['type'] = __('Tipe cabang wajib dipilih.', 'wp-customer');
+            $errors['type'] = __('Tipe cabang wajib diisi.', 'wp-customer');
         }
         elseif (!in_array($data['type'], ['pusat', 'cabang'])) {
             $errors['type'] = __('Tipe cabang tidak valid.', 'wp-customer');
         }
-        elseif ($data['type'] === 'pusat' && !$id) {
-            // Untuk cabang baru dengan tipe pusat, periksa apakah sudah ada pusat
-            $existing_pusat = $this->branch_model->findPusatByCustomer($data['customer_id']);
-            if ($existing_pusat) {
-                $errors['type'] = __('Customer ini sudah memiliki kantor pusat.', 'wp-customer');
-            }
-        }
 
-        // Validasi user_id (required for AutoEntityCreator to create employee record)
-        if (empty($data['user_id'])) {
-            $errors['user_id'] = __('User ID wajib diisi untuk membuat employee record.', 'wp-customer');
-        }
+        // NOTE: user_id validation removed from validateForm()
+        // User ID dibuat di BranchController SEBELUM branch dibuat
+        // Jadi saat validateCreate() dipanggil, user_id belum ada
+        // Validasi user_id hanya dilakukan saat update (lihat validateUpdate)
 
         // Validasi provinsi_id (required for AutoEntityCreator)
         if (empty($data['provinsi_id'])) {
@@ -297,6 +311,16 @@ class BranchValidator {
         // Validasi regency_id (required for AutoEntityCreator)
         if (empty($data['regency_id'])) {
             $errors['regency_id'] = __('Kabupaten/Kota wajib dipilih.', 'wp-customer');
+        }
+
+        // Validasi phone (optional, tapi jika diisi harus format 08xxx)
+        if (!empty($data['phone'])) {
+            $phone = trim($data['phone']);
+
+            // Format: 08 diikuti 8-13 digit (total 10-15 digit)
+            if (!preg_match('/^08[0-9]{8,13}$/', $phone)) {
+                $errors['phone'] = __('Format telepon tidak valid. Gunakan format 08xxxxxxxxxx (08 diikuti 8-13 digit angka).', 'wp-customer');
+            }
         }
 
         return $errors;

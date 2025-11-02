@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Integrations
- * @version     1.1.0
+ * @version     1.3.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Integrations/BranchAccessFilter.php
@@ -21,9 +21,11 @@
  * - wp-agency works standalone without wp-customer
  *
  * Access Logic:
- * - Customer Admin/Branch Admin can only see branches from their own customer
+ * - ALL customer roles (customer_admin, customer_branch_admin, customer_employee):
+ *   Filter by customer_id only - see all branches in their customer
+ * - Division filtering is NOT for customer users (division is for agency users)
  * - User → CustomerEmployee → Customer → Branches
- * - If user not a customer employee, no filtering applied
+ * - If user not a customer employee, no filtering applied (agency/platform users)
  *
  * Dependencies:
  * - wp-agency plugin (provides hooks via NewCompanyDataTableModel)
@@ -31,11 +33,23 @@
  * - wp_app_customer_employees table (user context)
  *
  * Changelog:
- * 1.1.0 - 2025-11-01 (TODO-2183 Follow-up: Division Filtering for Branch Admin)
+ * 1.3.0 - 2025-11-02 (TODO-2190 Fix)
+ * - CRITICAL SIMPLIFICATION: Removed division_id filtering for customer roles
+ * - All customer roles now filter by customer_id only (unified access)
+ * - Removed: WordPress role checking (not needed - all customer roles have same access)
+ * - Removed: JOIN to branches table for division_id (not used by customer roles)
+ * - Division filtering is for agency users, not customer users
+ * - Simplified query: only SELECT customer_id, branch_id from employees table
+ *
+ * 1.2.0 - 2025-11-02 (TODO-2190)
+ * - CRITICAL FIX: Updated table alias from 'b' to dynamic alias via model->get_table_alias()
+ * - Now supports flexible table aliasing (cb, b, or any future alias)
+ * - Fallback to 'cb' if model doesn't have get_table_alias() method
+ * - Fixes "Unknown column 'b.customer_id'" SQL error
+ *
+ * 1.1.0 - 2025-11-01 (TODO-2183 Follow-up: Division Filtering) [REVERTED in 1.3.0]
  * - ADDED: Division-based filtering for customer_branch_admin role
- * - Branch admin: filters by customer_id AND division_id (stricter access)
- * - Customer admin: filters by customer_id only (broader access)
- * - Auto-detects user role based on branch_id and division_id presence
+ * - NOTE: This was later removed in 1.3.0 - division filtering is for agency, not customer
  *
  * 1.0.0 - 2025-11-01 (TODO-2183 Follow-up)
  * - Initial implementation
@@ -67,7 +81,10 @@ class BranchAccessFilter {
      * User → CustomerEmployee → Customer → Branches
      *
      * Access Logic:
-     * - If user is CustomerEmployee → filter to their customer_id only
+     * - ALL customer roles filter by customer_id only
+     * - customer_admin, customer_branch_admin, customer_employee: same access level
+     * - They see all branches in their customer (no division restriction)
+     * - Division filtering is for agency users, handled by wp-agency plugin
      * - If user is NOT CustomerEmployee → no filtering (Platform/Agency user)
      *
      * @param array $where Existing WHERE conditions
@@ -83,44 +100,33 @@ class BranchAccessFilter {
         error_log('[BranchAccessFilter] filter_branches_by_customer CALLED for user_id: ' . $user_id);
         error_log('[BranchAccessFilter] Incoming WHERE conditions: ' . print_r($where, true));
 
-        // Check if user is customer employee - get branch info for division filtering
+        // Get table alias from model (supports flexible aliasing)
+        $alias = method_exists($model, 'get_table_alias') ? $model->get_table_alias() : 'cb';
+        error_log('[BranchAccessFilter] Using table alias: ' . $alias);
+
+        // Check if user is customer employee
         $employee = $wpdb->get_row($wpdb->prepare(
-            "SELECT ce.*, ub.division_id as user_division_id
+            "SELECT ce.customer_id, ce.branch_id
              FROM {$wpdb->prefix}app_customer_employees ce
-             LEFT JOIN {$wpdb->prefix}app_customer_branches ub ON ce.branch_id = ub.id
              WHERE ce.user_id = %d",
             $user_id
         ));
 
-        // Not a customer employee, no filtering needed
+        // Not a customer employee, no filtering needed (agency user, platform staff, etc)
         if (!$employee) {
             error_log('[BranchAccessFilter] User is NOT a customer employee, skipping filter');
             return $where;
         }
 
-        error_log('[BranchAccessFilter] User IS customer employee (ID: ' . $employee->id . ')');
+        error_log('[BranchAccessFilter] User IS customer employee');
         error_log('[BranchAccessFilter] Customer ID: ' . $employee->customer_id);
 
-        // Check if user is branch admin (has specific branch_id and division_id)
-        $is_branch_admin = !empty($employee->branch_id) && !empty($employee->user_division_id);
+        // All customer roles (customer_admin, customer_branch_admin, customer_employee)
+        // filter by customer_id only - they see all branches in their customer
+        // Division filtering is for agency users, not customer users
+        $where[] = $wpdb->prepare("{$alias}.customer_id = %d", $employee->customer_id);
 
-        if ($is_branch_admin) {
-            // Branch admin: filter by customer_id AND division_id
-            error_log('[BranchAccessFilter] User is BRANCH ADMIN - filtering by division_id: ' . $employee->user_division_id);
-
-            $where[] = $wpdb->prepare('b.customer_id = %d', $employee->customer_id);
-            $where[] = $wpdb->prepare('b.division_id = %d', $employee->user_division_id);
-
-            error_log('[BranchAccessFilter] Added WHERE: b.customer_id = ' . $employee->customer_id);
-            error_log('[BranchAccessFilter] Added WHERE: b.division_id = ' . $employee->user_division_id);
-        } else {
-            // Customer admin: filter by customer_id only (existing logic)
-            error_log('[BranchAccessFilter] User is CUSTOMER ADMIN - filtering by customer_id only');
-
-            $where[] = $wpdb->prepare('b.customer_id = %d', $employee->customer_id);
-
-            error_log('[BranchAccessFilter] Added WHERE: b.customer_id = ' . $employee->customer_id);
-        }
+        error_log("[BranchAccessFilter] Added WHERE: {$alias}.customer_id = " . $employee->customer_id);
 
         error_log('[BranchAccessFilter] Final WHERE conditions: ' . print_r($where, true));
 

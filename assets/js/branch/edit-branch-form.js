@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS/Branch
- * @version     1.0.0
+ * @version     1.2.1
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/branch/edit-branch-form.js
@@ -13,13 +13,34 @@
  *              error handling, dan modal management.
  *              Terintegrasi dengan toast notifications.
  *
+ * Changelog:
+ * 1.2.1 - 2025-11-02 (TODO-2190 Fix Loading State on Error)
+ * - Fixed: setLoadingState(false) before return on validation error
+ * - Fixed: Removed duplicate setLoadingState(true)
+ * - Improved: Loading spinner no longer stuck on validation error
+ * - Modal tetap terbuka saat error untuk user perbaiki data
+ *
+ * 1.2.0 - 2025-11-02 (TODO-2190 Fix Modal Cascade)
+ * - Added: setupWilayahLoadingIndicator() for dynamic modal content
+ * - Added: loadInitialRegency() to load regency options on edit
+ * - Fixed: Pre-selected province/regency now properly loaded in modal
+ * - Dependencies: Added wilayah-select-handler-core to script dependencies
+ * - Manual AJAX call to get_regency_options for initial load
+ *
+ * 1.1.0 - 2025-11-02 (TODO-2190 Use Wilayah Cascade)
+ * - Changed: Removed manual trigger('change') on province select
+ * - Changed: Direct value assignment for province and regency
+ * - Now relies on: handleInitialRegencyLoad() from wilayah-select-handler-core.js
+ * - Benefits: No race condition, consistent with wilayah-indonesia behavior
+ *
  * Dependencies:
  * - jQuery
  * - jQuery Validation
  * - CustomerToast for notifications
  * - WIModal for confirmations
+ * - wilayah-select-handler-core.js (from wilayah-indonesia plugin)
  *
- * Last modified: 2024-12-10
+ * Last modified: 2025-11-02
  */
 (function($) {
     'use strict';
@@ -156,43 +177,85 @@
             this.form.find('[name="status"]').val(branch.status);
 
             // Province and Regency fields
+            // NOTE: Cascade handled by wilayah-select-handler-core.js
+            // which listens to handleInitialRegencyLoad() on modal open
             if (branch.provinsi_id) {
-                this.form.find('[name="provinsi_id"]').val(branch.provinsi_id).trigger('change');
-                
-                // Wait for province change to complete before setting regency
-                setTimeout(() => {
-                    if (branch.regency_id) {
-                        this.form.find('[name="regency_id"]').val(branch.regency_id);
-                    }
-                }, 500);
+                this.form.find('[name="provinsi_id"]').val(branch.provinsi_id);
+            }
+
+            if (branch.regency_id) {
+                this.form.find('[name="regency_id"]').val(branch.regency_id);
             }
 
             this.modal.find('.modal-header h3').text(`Edit Cabang: ${branch.name}`);
-        
+
             // Show modal with animation and trigger events
             this.modal.fadeIn(300, () => {
                 this.form.find('[name="name"]').focus();
                 $(document).trigger('branch:modalOpened');
-                
-                // Add additional trigger after modal is fully visible
-                setTimeout(() => {
-                    $(document).trigger('branch:modalFullyOpen');
-                }, 350);
+
+                // Setup wilayah select loading indicator and load initial regency
+                this.setupWilayahLoadingIndicator();
+                this.loadInitialRegency(branch.provinsi_id, branch.regency_id);
             });
-        if ($('#edit-branch-modal:visible').length) {
-            MapPicker.init('edit-branch-modal');
-        }
-        
-        // If map exists, update marker position
-        if (window.MapPicker && window.MapPicker.map) {
-            const lat = parseFloat(branch.latitude);
-            const lng = parseFloat(branch.longitude);
-            if (!isNaN(lat) && !isNaN(lng)) {
-                window.MapPicker.marker.setLatLng([lat, lng]);
-                window.MapPicker.map.setView([lat, lng]);
+        },
+
+        setupWilayahLoadingIndicator() {
+            // Add loading indicator after regency select if not exists
+            const $regency = this.form.find('.wilayah-regency-select');
+            if ($regency.length && !$regency.next('.wilayah-loading').length) {
+                const loadingText = (typeof wilayahData !== 'undefined' && wilayahData.texts)
+                    ? wilayahData.texts.loading
+                    : 'Memuat...';
+
+                $('<span>', {
+                    class: 'wilayah-loading',
+                    text: loadingText,
+                    style: 'display: none; margin-left: 10px; color: #999;'
+                }).insertAfter($regency);
             }
-        }
-    },
+        },
+
+        loadInitialRegency(provinceId, regencyId) {
+            if (!provinceId) return;
+
+            const $regency = this.form.find('.wilayah-regency-select');
+            if (!$regency.length) return;
+
+            // Show loading
+            $regency.prop('disabled', true);
+            $regency.next('.wilayah-loading').show();
+
+            // Load regency options via wilayah-indonesia AJAX
+            $.ajax({
+                url: wilayahData.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'get_regency_options',
+                    province_id: provinceId,
+                    nonce: wilayahData.nonce
+                },
+                success: (response) => {
+                    if (response.success) {
+                        $regency.html(response.data.html);
+
+                        // Restore the regency value after options loaded
+                        if (regencyId) {
+                            $regency.val(regencyId);
+                        }
+
+                        $regency.trigger('wilayah:loaded', [response.data]);
+                    }
+                },
+                error: (jqXHR, textStatus, errorThrown) => {
+                    console.error('Load regency error:', textStatus, errorThrown);
+                },
+                complete: () => {
+                    $regency.prop('disabled', false);
+                    $regency.next('.wilayah-loading').hide();
+                }
+            });
+        },
 
     initializeValidation() {
         this.form.validate({
@@ -299,26 +362,29 @@
         // Validate type change first
         try {
             const typeValidation = await this.validateBranchTypeChange(formData.type);
-            
-        if (!typeValidation.success) {
-            BranchToast.error(typeValidation.data?.message || 'Tipe cabang tidak dapat diubah.');
-            
-            const $typeSelect = this.form.find('[name="type"]');
-            $typeSelect.addClass('error');
-            
-            if (typeValidation.data?.original_type) {
-                $typeSelect.val(typeValidation.data.original_type);
+
+            if (!typeValidation.success) {
+                // Stop loading before showing error
+                this.setLoadingState(false);
+
+                BranchToast.error(typeValidation.data?.message || 'Tipe cabang tidak dapat diubah.');
+
+                const $typeSelect = this.form.find('[name="type"]');
+                $typeSelect.addClass('error');
+
+                if (typeValidation.data?.original_type) {
+                    $typeSelect.val(typeValidation.data.original_type);
+                }
+
+                // Remove error class after 2 seconds
+                setTimeout(() => {
+                    $typeSelect.removeClass('error');
+                }, 2000);
+
+                // Keep modal open - don't close
+                return;
             }
-            
-            // Remove error class after 2 seconds
-            setTimeout(() => {
-                $typeSelect.removeClass('error');
-            }, 2000);
-            
-            return;
-        }
             // If validation passes, proceed with update
-            this.setLoadingState(true);
 
             const response = await $.ajax({
                 url: wpCustomerData.ajaxUrl,

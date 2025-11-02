@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS/Branch
- * @version     1.1.0
+ * @version     1.1.1
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/branch/branch-datatable.js
@@ -18,6 +18,11 @@
  * - CustomerToast for notifications
  *
  * Changelog:
+ * 1.1.1 - 2025-11-02 (TODO-2191 Pattern Consistency)
+ * - Added e.stopPropagation() to .edit-branch handler
+ * - Now consistent with employee pattern
+ * - Prevents event bubbling to parent elements
+ *
  * 1.1.0 - 2024-12-10
  * - Added state management
  * - Added export functionality
@@ -85,6 +90,7 @@
                 })
                 .on('click', '.edit-branch', (e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     const id = $(e.currentTarget).data('id');
                     if (id && window.EditBranchForm) {
                         window.EditBranchForm.loadBranchData(id);

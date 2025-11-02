@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS/Branch
- * @version     1.0.0
+ * @version     1.2.1
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/branch/create-branch-form.js
@@ -13,13 +13,33 @@
  *              error handling, dan modal management.
  *              Terintegrasi dengan toast notifications.
  *
+ * Changelog:
+ * 1.2.1 - 2025-11-02 (TODO-2191 Pattern Consistency)
+ * - Fixed: Changed button selector from #add-branch-btn to .branch-add-btn
+ * - Now uses event delegation for lazy-loaded content
+ * - Gets customer_id from data-customer-id attribute
+ * - Consistent with employee pattern
+ *
+ * 1.2.0 - 2025-11-02 (TODO-2190 Fix Modal Cascade)
+ * - Added: setupWilayahLoadingIndicator() for dynamic modal content
+ * - Fixed: Loading indicator now added when modal opens
+ * - Dependencies: Added wilayah-select-handler-core to script dependencies
+ * - Now cascade works in modal (delegated events + manual loading indicator)
+ *
+ * 1.1.0 - 2025-11-02 (TODO-2190 Use Wilayah Cascade)
+ * - Removed: Custom province cascade handler (loadAvailableRegencies)
+ * - Removed: Custom AJAX action get_available_regencies
+ * - Now uses: wilayah-indonesia plugin cascade (wilayah-select-handler-core.js)
+ * - Benefits: Consistent with wilayah-indonesia, cache support, no duplication
+ *
  * Dependencies:
  * - jQuery
  * - jQuery Validation
  * - BranchToast for notifications
  * - WIModal for confirmations
+ * - wilayah-select-handler-core.js (from wilayah-indonesia plugin)
  *
- * Last modified: 2024-12-10
+ * Last modified: 2025-11-02
  */
 
 (function($) {
@@ -47,13 +67,12 @@
                 this.validateField(e.target);
             });
 
-            // Load regencies when province changes
-            this.form.on('change', '#create-branch-provinsi', (e) => {
-                this.loadAvailableRegencies($(e.target).val());
-            });
+            // NOTE: Province cascade now handled by wilayah-indonesia plugin
+            // using wilayah-select-handler-core.js - no custom handler needed
 
-            $('#add-branch-btn').on('click', () => {
-                const customerId = window.Customer?.currentId;
+            // Add branch button (in branches tab) - using class selector for lazy-loaded content
+            $(document).on('click', '.branch-add-btn', (e) => {
+                const customerId = $(e.currentTarget).data('customer-id') || window.Customer?.currentId;
                 if (customerId) {
                     this.showModal(customerId);
                 } else {
@@ -88,8 +107,27 @@
                     nameField.focus();
                 }
                 $(document).trigger('branch:modalOpened');
+
+                // Setup wilayah select loading indicator for this modal
+                this.setupWilayahLoadingIndicator();
             });
-     
+
+        },
+
+        setupWilayahLoadingIndicator() {
+            // Add loading indicator after regency select if not exists
+            const $regency = this.form.find('.wilayah-regency-select');
+            if ($regency.length && !$regency.next('.wilayah-loading').length) {
+                const loadingText = (typeof wilayahData !== 'undefined' && wilayahData.texts)
+                    ? wilayahData.texts.loading
+                    : 'Memuat...';
+
+                $('<span>', {
+                    class: 'wilayah-loading',
+                    text: loadingText,
+                    style: 'display: none; margin-left: 10px; color: #999;'
+                }).insertAfter($regency);
+            }
         },
 
         hideModal() {
@@ -289,45 +327,9 @@
             }
         },
 
-        async loadAvailableRegencies(provinsiId) {
-            const regencySelect = this.form.find('#create-branch-regency');
-
-            if (!provinsiId) {
-                regencySelect.html('<option value="">Pilih Kabupaten/Kota</option>');
-                return;
-            }
-
-            try {
-                regencySelect.prop('disabled', true);
-
-                const response = await $.ajax({
-                    url: wpCustomerData.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: 'get_available_regencies',
-                        nonce: wpCustomerData.nonce,
-                        provinsi_id: provinsiId
-                    }
-                });
-
-                if (response.success) {
-                    let options = '<option value="">Pilih Kabupaten/Kota</option>';
-                    response.data.forEach(regency => {
-                        options += `<option value="${regency.id}">${regency.name}</option>`;
-                    });
-                    regencySelect.html(options);
-                } else {
-                    BranchToast.error(response.data?.message || 'Gagal memuat data kabupaten/kota');
-                    regencySelect.html('<option value="">Pilih Kabupaten/Kota</option>');
-                }
-            } catch (error) {
-                console.error('Load regencies error:', error);
-                BranchToast.error('Gagal menghubungi server untuk memuat kabupaten/kota');
-                regencySelect.html('<option value="">Pilih Kabupaten/Kota</option>');
-            } finally {
-                regencySelect.prop('disabled', false);
-            }
-        },
+        // REMOVED: loadAvailableRegencies() method
+        // Cascade functionality now handled by wilayah-indonesia plugin
+        // via wilayah-select-handler-core.js using get_regency_options AJAX action
 
         resetForm() {
             if (!this.form || !this.form[0]) return;

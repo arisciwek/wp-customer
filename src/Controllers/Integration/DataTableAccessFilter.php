@@ -6,7 +6,16 @@
  * Filters query results based on user access permissions.
  *
  * @package WPCustomer\Controllers\Integration
+ * @version 1.1.0
  * @since 1.0.12
+ *
+ * Changelog:
+ * 1.1.0 - 2025-11-02 (TODO-2190)
+ * - Added: Config for customer_branches entity
+ * - Added: Config for customer_employees entity
+ * - Added: customer_admin role to entity_admin_roles for customer_branches
+ * - Added: customer_admin role to entity_admin_roles for customer_employees
+ * - customer_admin can now bypass filter to see all branches/employees in their customer
  */
 
 namespace WPCustomer\Controllers\Integration;
@@ -63,11 +72,23 @@ class DataTableAccessFilter {
      * @since 1.0.12
      */
     private function load_configs(): void {
-        // Default config for agency (from Schema: BranchesDB.php has agency_id)
+        // Default configs for entities with access control
         $default_configs = [
             'agency' => [
                 'hook' => 'wpapp_datatable_agencies_where',
                 'table_alias' => 'a',
+                'id_column' => 'id',
+                'priority' => 10
+            ],
+            'customer_branches' => [
+                'hook' => 'wpapp_datatable_customer_branches_where',
+                'table_alias' => 'cb',
+                'id_column' => 'id',
+                'priority' => 10
+            ],
+            'customer_employees' => [
+                'hook' => 'wpapp_datatable_customer_employees_where',
+                'table_alias' => 'ce',
                 'id_column' => 'id',
                 'priority' => 10
             ]
@@ -432,6 +453,12 @@ class DataTableAccessFilter {
             ],
             'customer' => [
                 'customer_admin',         // Customer Admin (owner/top level)
+            ],
+            'customer_branches' => [
+                'customer_admin',         // Customer Admin can see all branches in their customer
+            ],
+            'customer_employees' => [
+                'customer_admin',         // Customer Admin can see all employees in their customer
             ],
             // Add more entity-specific admin roles here as needed
         ];
