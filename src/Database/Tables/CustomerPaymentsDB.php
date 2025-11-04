@@ -86,4 +86,57 @@ class CustomerPaymentsDB {
             KEY payment_method (payment_method)
         ) $charset_collate;";
     }
+
+    /**
+     * Add foreign key constraints yang tidak didukung oleh dbDelta
+     * Harus dipanggil setelah tabel dibuat
+     */
+    public static function add_foreign_keys() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'app_customer_payments';
+
+        $constraints = [
+            // FK to app_customers
+            [
+                'name' => 'fk_payment_customer',
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_payment_customer
+                         FOREIGN KEY (customer_id)
+                         REFERENCES {$wpdb->prefix}app_customers(id)
+                         ON DELETE CASCADE"
+            ],
+            // FK to app_customer_branches (company_id is actually branch_id)
+            [
+                'name' => 'fk_payment_branch',
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_payment_branch
+                         FOREIGN KEY (company_id)
+                         REFERENCES {$wpdb->prefix}app_customer_branches(id)
+                         ON DELETE CASCADE"
+            ]
+        ];
+
+        foreach ($constraints as $constraint) {
+            // Check if constraint already exists
+            $constraint_exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+                 WHERE CONSTRAINT_SCHEMA = DATABASE()
+                 AND TABLE_NAME = %s
+                 AND CONSTRAINT_NAME = %s",
+                $table_name,
+                $constraint['name']
+            ));
+
+            // If constraint exists, drop it first
+            if ($constraint_exists > 0) {
+                $wpdb->query("ALTER TABLE {$table_name} DROP FOREIGN KEY `{$constraint['name']}`");
+            }
+
+            // Add foreign key constraint
+            $result = $wpdb->query($constraint['sql']);
+            if ($result === false) {
+                error_log("[CustomerPaymentsDB] Failed to add FK {$constraint['name']}: " . $wpdb->last_error);
+            }
+        }
+    }
 }

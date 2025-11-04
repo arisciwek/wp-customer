@@ -176,6 +176,10 @@ class WPCustomer {
         // Filter customer DataTable based on user's customer_employees association
         $customer_role_filter = new \WPCustomer\Integrations\CustomerRoleFilter();
 
+        // Agency customer filter - Province-based filtering for agency users
+        // Agency users only see customers with branches in their province
+        $agency_customer_filter = new \WPCustomer\Integrations\AgencyCustomerFilter();
+
         // TODO-2183: Agency access filter integration (cross-plugin with wp-agency)
         $agency_access_filter = new \WPCustomer\Integrations\AgencyAccessFilter();
 
@@ -224,7 +228,7 @@ class WPCustomer {
      */
     private function initControllers() {
         // Customer Controller
-        $this->customer_controller = new \WPCustomer\Controllers\CustomerController();
+        $this->customer_controller = new \WPCustomer\Controllers\Customer\CustomerController();
 
         // Employee Controller
         new \WPCustomer\Controllers\Employee\CustomerEmployeeController();

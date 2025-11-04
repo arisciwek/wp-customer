@@ -124,7 +124,7 @@ class BranchAccessFilter {
         // All customer roles (customer_admin, customer_branch_admin, customer_employee)
         // filter by customer_id only - they see all branches in their customer
         // Division filtering is for agency users, not customer users
-        $where[] = $wpdb->prepare("{$alias}.customer_id = %d", $employee->customer_id);
+        $where[] = sprintf("{$alias}.customer_id = %d", intval($employee->customer_id));
 
         error_log("[BranchAccessFilter] Added WHERE: {$alias}.customer_id = " . $employee->customer_id);
 

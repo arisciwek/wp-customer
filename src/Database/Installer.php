@@ -68,6 +68,15 @@ class Installer {
                 dbDelta($class::get_schema());
             }
 
+            // Add foreign key constraints (not supported by dbDelta)
+            foreach (self::$tables as $table) {
+                $class = self::$table_classes[$table];
+                if (method_exists($class, 'add_foreign_keys')) {
+                    self::debug("Adding foreign keys for {$table} table...");
+                    $class::add_foreign_keys();
+                }
+            }
+
             // Run migrations for existing installations
             self::runMigrations();
 
@@ -115,7 +124,7 @@ class Installer {
         }
 
         if (!$has_agency_id) {
-            $wpdb->query("ALTER TABLE {$table} ADD COLUMN agency_id bigint(20) UNSIGNED NOT NULL AFTER provinsi_id");
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN agency_id bigint(20) UNSIGNED NULL AFTER provinsi_id");
             self::debug("Added agency_id column to branches table");
         }
 
@@ -132,6 +141,22 @@ class Installer {
         if ($code_length < 20) {
             $wpdb->query("ALTER TABLE {$table} MODIFY COLUMN code varchar(20) NOT NULL");
             self::debug("Modified code column to varchar(20)");
+        }
+
+        // Migration: Change agency_id from NOT NULL to NULL (branch gets agency on assignment)
+        if ($has_agency_id) {
+            $agency_id_nullable = false;
+            foreach ($columns as $column) {
+                if ($column->Field === 'agency_id' && $column->Null === 'YES') {
+                    $agency_id_nullable = true;
+                    break;
+                }
+            }
+
+            if (!$agency_id_nullable) {
+                $wpdb->query("ALTER TABLE {$table} MODIFY COLUMN agency_id bigint(20) UNSIGNED NULL");
+                self::debug("Modified agency_id column to NULL (assigned on agency assignment)");
+            }
         }
 
         // Remove unique key for agency_id + inspector_id if exists (inspector can manage multiple branches)

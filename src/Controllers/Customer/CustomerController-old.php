@@ -7,7 +7,7 @@
 * @version     1.0.11
 * @author      arisciwek
 *
-* Path: /wp-customer/src/Controllers/CustomerController.php
+* Path: /wp-customer/src/Controllers/Customer/CustomerController.php
 *
 * Description: Controller untuk mengelola data customer.
 *              Menangani operasi CRUD dengan integrasi cache.
@@ -36,7 +36,7 @@
 * - Improved error handling dan feedback
 */
 
-namespace WPCustomer\Controllers;
+namespace WPCustomer\Controllers\Customer;
 
 use WPCustomer\Models\Customer\CustomerModel;
 use WPCustomer\Models\Branch\BranchModel;

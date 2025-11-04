@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Demo
- * @version     1.0.12
+ * @version     1.0.13
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Demo/Data/CustomerDemoData.php
@@ -17,6 +17,11 @@
  *              - Static ID enforcement via wp_customer_before_insert hook (TODO-3098)
  *
  * Changelog:
+ * 1.0.13 - 2025-11-04 (FIX: Use province_id instead of provinsi_code)
+ * - CRITICAL FIX: Changed getRandomProvinceWithAgency() to use ID-based JOIN
+ * - Updated JOIN condition: p.id = a.province_id (instead of p.code = a.provinsi_code)
+ * - Matches current AgenciesDB schema (ID-based FKs)
+ *
  * 1.0.12 - 2025-11-01 (TODO-3098)
  * - Updated createCustomerViaRuntimeFlow() to accept $static_id parameter
  * - Uses wp_customer_before_insert hook to force static customer IDs
@@ -474,10 +479,10 @@ class CustomerDemoData extends AbstractDemoData {
      * Get random province ID that has an agency
      */
     private function getRandomProvinceWithAgency(): int {
-        // Get all provinces that have agencies
+        // Get all provinces that have agencies (ID-based FK)
         $provinces_with_agency = $this->wpdb->get_col(
             "SELECT DISTINCT p.id FROM {$this->wpdb->prefix}wi_provinces p
-             INNER JOIN {$this->wpdb->prefix}app_agencies a ON p.code = a.provinsi_code"
+             INNER JOIN {$this->wpdb->prefix}app_agencies a ON p.id = a.province_id"
         );
 
         if (empty($provinces_with_agency)) {

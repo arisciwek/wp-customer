@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Branch
- * @version     1.0.12
+ * @version     1.0.13
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Branch/BranchModel.php
@@ -15,6 +15,14 @@
  *              Menyediakan metode untuk DataTables server-side.
  *
  * Changelog:
+ * 1.0.13 - 2025-11-04 (FIX: Use province_id instead of provinsi_code)
+ * - CRITICAL FIX: Changed getAgencyAndDivisionIds() from code-based to ID-based
+ * - Updated agency lookup: province_id instead of provinsi_code
+ * - Updated division lookup: regency_id instead of regency_code
+ * - Updated getInspectorId(): province_id instead of provinsi_code
+ * - Matches current AgenciesDB/DivisionsDB schema (ID-based FKs)
+ * - Fixes "Unknown column 'a.provinsi_code' in 'on clause'" error
+ *
  * 1.0.12 - 2025-11-01 (TODO-3098)
  * - Added 'wp_customer_branch_before_insert' filter hook in create() method
  * - Allows modification of insert data before database insertion
@@ -797,47 +805,31 @@ class BranchModel {
     public function getAgencyAndDivisionIds(int $provinsi_id, int $regency_id): array {
         global $wpdb;
 
-        // Get agency_id using logic from BranchDemoData::generateAgencyID()
-        $province_code = $wpdb->get_var($wpdb->prepare(
-            "SELECT code FROM {$wpdb->prefix}wi_provinces WHERE id = %d",
+        // Get agency_id by province_id (ID-based FK)
+        $agency_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}app_agencies WHERE province_id = %d LIMIT 1",
             $provinsi_id
         ));
 
-        if (!$province_code) {
-            throw new \Exception("Province not found for ID: {$provinsi_id}");
-        }
-
-        $agency_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}app_agencies WHERE provinsi_code = %s LIMIT 1",
-            $province_code
-        ));
-
         if (!$agency_id) {
-            throw new \Exception("Agency not found for province code: {$province_code}");
+            throw new \Exception("Agency not found for province ID: {$provinsi_id}");
         }
 
-        // Get division_id using logic from BranchDemoData::generateDivisionID() with fallback
-        $regency_code = $wpdb->get_var($wpdb->prepare(
-            "SELECT code FROM {$wpdb->prefix}wi_regencies WHERE id = %d",
+        // Get division_id by regency_id (ID-based FK) with fallback
+        $division_id = null;
+
+        // Find division with matching regency_id
+        $division_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}app_agency_divisions WHERE regency_id = %d LIMIT 1",
             $regency_id
         ));
 
-        $division_id = null;
-
-        if ($regency_code) {
-            // Find division with matching regency_code
+        // Fallback: find any division from the same province's agency
+        if (!$division_id) {
             $division_id = $wpdb->get_var($wpdb->prepare(
-                "SELECT id FROM {$wpdb->prefix}app_agency_divisions WHERE regency_code = %s LIMIT 1",
-                $regency_code
+                "SELECT id FROM {$wpdb->prefix}app_agency_divisions WHERE agency_id = %d LIMIT 1",
+                $agency_id
             ));
-
-            // Fallback: find any division from the same province's agency
-            if (!$division_id) {
-                $division_id = $wpdb->get_var($wpdb->prepare(
-                    "SELECT id FROM {$wpdb->prefix}app_agency_divisions WHERE agency_id = %d LIMIT 1",
-                    $agency_id
-                ));
-            }
         }
 
         return [
@@ -882,19 +874,10 @@ class BranchModel {
             }
         }
 
-        // Fallback: Get pengawas from province's agency
-        $province_code = $wpdb->get_var($wpdb->prepare(
-            "SELECT code FROM {$wpdb->prefix}wi_provinces WHERE id = %d",
-            $provinsi_id
-        ));
-
-        if (!$province_code) {
-            return null;
-        }
-
+        // Fallback: Get pengawas from province's agency (ID-based FK)
         $agency_id = $wpdb->get_var($wpdb->prepare(
-            "SELECT id FROM {$wpdb->prefix}app_agencies WHERE provinsi_code = %s LIMIT 1",
-            $province_code
+            "SELECT id FROM {$wpdb->prefix}app_agencies WHERE province_id = %d LIMIT 1",
+            $provinsi_id
         ));
 
         if (!$agency_id) {

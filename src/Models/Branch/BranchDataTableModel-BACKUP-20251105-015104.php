@@ -7,7 +7,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Branch
- * @version     2.0.0
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Branch/BranchDataTableModel.php
@@ -18,14 +18,6 @@
  *              Columns: Kode, Nama Cabang, Tipe, Email, Telepon, Status
  *
  * Changelog:
- * 2.0.0 - 2025-11-05
- * - ✅ REFACTORED: get_total_count() with QueryBuilder (48% reduction: 23 → 12 lines)
- * - ✅ FIXED: Single placeholder wpdb::prepare Notice (line 199, 205)
- * - ✅ Replaced wpdb::prepare with sprintf + intval/esc_sql
- * - ✅ Added QueryBuilder import
- * - ✅ Type-safe queries
- * - ✅ Backward compatible
- *
  * 1.1.0 - 2025-11-02 (TODO-2190)
  * - Changed table alias from 'b' to 'cb' (customer_branch) untuk avoid conflicts
  * - Added $table_alias property for flexible alias management
@@ -45,7 +37,6 @@
 namespace WPCustomer\Models\Branch;
 
 use WPAppCore\Models\DataTable\DataTableModel;
-use WPQB\QueryBuilder;
 
 defined('ABSPATH') || exit;
 
@@ -205,15 +196,13 @@ class BranchDataTableModel extends DataTableModel {
         // Filter by customer_id (required)
         if (isset($request_data['customer_id'])) {
             $customer_id = (int) $request_data['customer_id'];
-            // Use sprintf since customer_id is already cast to int
-            $where_conditions[] = sprintf("{$alias}.customer_id = %d", $customer_id);
+            $where_conditions[] = $wpdb->prepare("{$alias}.customer_id = %d", $customer_id);
         }
 
         // Filter by status (optional, from dropdown filter)
         if (isset($request_data['status_filter']) && !empty($request_data['status_filter'])) {
             $status = sanitize_text_field($request_data['status_filter']);
-            // Use esc_sql since status is already sanitized
-            $where_conditions[] = sprintf("{$alias}.status = '%s'", esc_sql($status));
+            $where_conditions[] = $wpdb->prepare("{$alias}.status = %s", $status);
         } else {
             // Default to active if no filter specified
             $where_conditions[] = "{$alias}.status = 'active'";
@@ -233,20 +222,10 @@ class BranchDataTableModel extends DataTableModel {
     }
 
     /**
-     * Get total count with filtering (REFACTORED WITH QueryBuilder)
+     * Get total count with filtering
      *
      * Helper method for dashboard statistics.
-     * Uses QueryBuilder for clean, type-safe queries.
-     *
-     * Before (Raw SQL - 23 lines):
-     * - Manual array manipulation for WHERE
-     * - String concatenation for SQL
-     * - Error-prone
-     *
-     * After (QueryBuilder - 12 lines):
-     * - Clean method chaining
-     * - Type-safe
-     * - Maintainable
+     * Reuses same filtering logic as DataTable.
      *
      * @param int $customer_id Customer ID to filter by
      * @param string $status_filter Status to filter (active/inactive/all)
@@ -254,20 +233,26 @@ class BranchDataTableModel extends DataTableModel {
      */
     public function get_total_count(int $customer_id, string $status_filter = 'active'): int {
         global $wpdb;
-        $alias = $this->table_alias;
 
-        // Build query with QueryBuilder
-        $query = QueryBuilder::table($wpdb->prefix . "app_customer_branches as {$alias}")
-            ->selectRaw("COUNT({$alias}.id) as total")
-            ->where("{$alias}.customer_id", $customer_id);
+        // Prepare request data for filtering
+        $request_data = [
+            'customer_id' => $customer_id,
+            'status_filter' => $status_filter
+        ];
 
-        // Apply status filter
-        if ($status_filter !== 'all' && !empty($status_filter)) {
-            $query->where("{$alias}.status", $status_filter);
+        // Build WHERE conditions using same logic as DataTable
+        $where_conditions = $this->filter_where([], $request_data, $this);
+
+        // Build count query
+        $where_sql = '';
+        if (!empty($where_conditions)) {
+            $where_sql = ' WHERE ' . implode(' AND ', $where_conditions);
         }
 
-        // Execute and return count
-        $result = $query->first();
-        return (int) ($result->total ?? 0);
+        $count_sql = "SELECT COUNT(b.id) as total
+                      FROM {$this->table}
+                      {$where_sql}";
+
+        return (int) $wpdb->get_var($count_sql);
     }
 }

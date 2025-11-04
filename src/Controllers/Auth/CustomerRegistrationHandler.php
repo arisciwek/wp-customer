@@ -30,7 +30,7 @@
 
 namespace WPCustomer\Controllers\Auth;
 
-use WPCustomer\Controllers\CustomerController;
+use WPCustomer\Controllers\Customer\CustomerController;
 use WPCustomer\Validators\CustomerValidator;
 
 defined('ABSPATH') || exit;

@@ -7,7 +7,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Employee
- * @version     2.0.0
+ * @version     1.2.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Employee/EmployeeDataTableModel.php
@@ -18,16 +18,6 @@
  *              Columns: Nama, Jabatan, Email, Telepon, Status
  *
  * Changelog:
- * 2.0.0 - 2025-11-05
- * - ✅ REFACTORED: get_total_count() with QueryBuilder (48% reduction: 23 → 12 lines)
- * - ✅ REFACTORED: get_total_count_global() with QueryBuilder (36% reduction: 28 → 18 lines)
- * - ✅ FIXED: Single placeholder wpdb::prepare Notice (4 locations: line 199, 205, 275, 281-284)
- * - ✅ Replaced wpdb::prepare with sprintf + intval/esc_sql
- * - ✅ Improved whereRaw for subquery (permission-based filtering)
- * - ✅ Added QueryBuilder import
- * - ✅ Type-safe queries
- * - ✅ Backward compatible
- *
  * 1.2.0 - 2025-01-02 (FIX: Class Mismatch with JS Handler)
  * - Fixed: Changed button class from .employee-edit-btn to .edit-employee
  * - Fixed: Changed button class from .employee-delete-btn to .delete-employee
@@ -54,7 +44,6 @@
 namespace WPCustomer\Models\Employee;
 
 use WPAppCore\Models\DataTable\DataTableModel;
-use WPQB\QueryBuilder;
 
 defined('ABSPATH') || exit;
 
@@ -207,15 +196,13 @@ class EmployeeDataTableModel extends DataTableModel {
         // Filter by customer_id (required)
         if (isset($request_data['customer_id'])) {
             $customer_id = (int) $request_data['customer_id'];
-            // Use sprintf since customer_id is already cast to int
-            $where_conditions[] = sprintf("{$alias}.customer_id = %d", $customer_id);
+            $where_conditions[] = $wpdb->prepare("{$alias}.customer_id = %d", $customer_id);
         }
 
         // Filter by status (optional, from dropdown filter)
         if (isset($request_data['status_filter']) && !empty($request_data['status_filter'])) {
             $status = sanitize_text_field($request_data['status_filter']);
-            // Use esc_sql since status is already sanitized
-            $where_conditions[] = sprintf("{$alias}.status = '%s'", esc_sql($status));
+            $where_conditions[] = $wpdb->prepare("{$alias}.status = %s", $status);
         } else {
             // Default to active if no filter specified
             $where_conditions[] = "{$alias}.status = 'active'";
@@ -235,20 +222,10 @@ class EmployeeDataTableModel extends DataTableModel {
     }
 
     /**
-     * Get total count with filtering (REFACTORED WITH QueryBuilder)
+     * Get total count with filtering
      *
      * Helper method for dashboard statistics.
-     * Uses QueryBuilder for clean, type-safe queries.
-     *
-     * Before (Raw SQL - 23 lines):
-     * - Manual array manipulation
-     * - String concatenation
-     * - Error-prone
-     *
-     * After (QueryBuilder - 12 lines):
-     * - Clean method chaining
-     * - Type-safe
-     * - Maintainable
+     * Reuses same filtering logic as DataTable.
      *
      * @param int $customer_id Customer ID to filter by
      * @param string $status_filter Status to filter (active/inactive/all)
@@ -256,67 +233,67 @@ class EmployeeDataTableModel extends DataTableModel {
      */
     public function get_total_count(int $customer_id, string $status_filter = 'active'): int {
         global $wpdb;
-        $alias = $this->table_alias;
 
-        // Build query with QueryBuilder
-        $query = QueryBuilder::table($wpdb->prefix . "app_customer_employees as {$alias}")
-            ->selectRaw("COUNT({$alias}.id) as total")
-            ->where("{$alias}.customer_id", $customer_id);
+        // Prepare request data for filtering
+        $request_data = [
+            'customer_id' => $customer_id,
+            'status_filter' => $status_filter
+        ];
 
-        // Apply status filter
-        if ($status_filter !== 'all' && !empty($status_filter)) {
-            $query->where("{$alias}.status", $status_filter);
+        // Build WHERE conditions using same logic as DataTable
+        $where_conditions = $this->filter_where([], $request_data, $this);
+
+        // Build count query
+        $where_sql = '';
+        if (!empty($where_conditions)) {
+            $where_sql = ' WHERE ' . implode(' AND ', $where_conditions);
         }
 
-        // Execute and return count
-        $result = $query->first();
-        return (int) ($result->total ?? 0);
+        $count_sql = "SELECT COUNT(e.id) as total
+                      FROM {$this->table}
+                      {$where_sql}";
+
+        return (int) $wpdb->get_var($count_sql);
     }
 
     /**
-     * Get total count (global - all customers) (REFACTORED WITH QueryBuilder)
+     * Get total count (global - all customers)
      *
      * For dashboard global statistics.
      * Includes permission-based filtering.
-     *
-     * Before (Raw SQL - 28 lines with 2x single placeholder prepare):
-     * - Manual array manipulation
-     * - String concatenation
-     * - wpdb::prepare Notice issues
-     *
-     * After (QueryBuilder - 18 lines):
-     * - Clean method chaining
-     * - Type-safe
-     * - No Notice errors
      *
      * @param string $status_filter Status to filter (active/inactive/all)
      * @return int Total count
      */
     public function get_total_count_global(string $status_filter = 'active'): int {
         global $wpdb;
-        $alias = $this->table_alias;
 
-        // Build base query
-        $query = QueryBuilder::table($wpdb->prefix . "app_customer_employees as {$alias}")
-            ->selectRaw("COUNT({$alias}.id) as total");
+        $where_conditions = [];
 
         // Filter by status
-        if ($status_filter !== 'all' && !empty($status_filter)) {
-            $query->where("{$alias}.status", $status_filter);
+        if ($status_filter !== 'all') {
+            $where_conditions[] = $wpdb->prepare('e.status = %s', $status_filter);
         }
 
         // Apply permission-based filtering (non-admin sees only their customers)
         if (!current_user_can('administrator')) {
             $user_id = get_current_user_id();
-            // Use whereRaw with subquery for IN clause
-            $query->whereRaw(
-                "{$alias}.customer_id IN (SELECT customer_id FROM {$wpdb->prefix}app_customer_employees WHERE user_id = ?)",
-                [$user_id]
+            $where_conditions[] = $wpdb->prepare(
+                "e.customer_id IN (SELECT customer_id FROM {$wpdb->prefix}app_customer_employees WHERE user_id = %d)",
+                $user_id
             );
         }
 
-        // Execute and return count
-        $result = $query->first();
-        return (int) ($result->total ?? 0);
+        // Build count query
+        $where_sql = '';
+        if (!empty($where_conditions)) {
+            $where_sql = ' WHERE ' . implode(' AND ', $where_conditions);
+        }
+
+        $count_sql = "SELECT COUNT(e.id) as total
+                      FROM {$this->table}
+                      {$where_sql}";
+
+        return (int) $wpdb->get_var($count_sql);
     }
 }

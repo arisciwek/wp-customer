@@ -12,7 +12,7 @@
 namespace WPCustomer\Controllers;
 
 use WPCustomer\Controllers\SettingsController;
-use WPCustomer\Controllers\CustomerController;
+use WPCustomer\Controllers\Customer\CustomerController;
 use WPCustomer\Controllers\Customer\CustomerDashboardController;
 use WPCustomer\Controllers\Company\CompanyController;
 use WPCustomer\Controllers\Company\CompanyInvoiceController;

@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Demo
- * @version     1.0.12
+ * @version     1.0.14
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Demo/BranchDemoData.php
@@ -57,6 +57,24 @@
  * 5. Track generated branch IDs
  *
  * Changelog:
+ * 1.0.14 - 2025-11-04 (FIX: Phone number format validation)
+ * - CRITICAL FIX: Updated generatePhone() to match validator requirements
+ * - Format: 08xxxxxxxxxx (08 followed by 8-13 digits, total 10-15 digits)
+ * - Uses real Indonesian mobile operator prefixes (Telkomsel, Indosat, XL, Three)
+ * - Generates random 8-11 digits after operator prefix
+ * - Fixes "Format telepon tidak valid" error during branch creation
+ * - Removes invalid formats: +62 prefix, landline numbers
+ *
+ * 1.0.13 - 2025-11-04 (FIX: Use province_id/regency_id instead of codes)
+ * - CRITICAL FIX: Changed all demo helper methods from code-based to ID-based
+ * - Updated generateAgencyID(): province_id instead of provinsi_code
+ * - Updated generateDivisionID(): regency_id instead of regency_code (2 locations)
+ * - Updated getRandomProvinceWithAgency(): p.id = a.province_id
+ * - Updated getRandomProvinceWithAgencyExcept(): p.id = a.province_id
+ * - Updated getRandomRegencyFromDivisionJurisdictions(): r.id = j.jurisdiction_regency_id
+ * - Matches current AgenciesDB/DivisionsDB/JurisdictionsDB schema (ID-based FKs)
+ * - Fixes demo data generation errors during branch creation
+ *
  * 1.0.12 - 2025-11-01 (TODO-3098)
  * - Updated createBranchViaRuntimeFlow() to support optional static ID parameter
  * - Uses wp_customer_branch_before_insert hook to force static IDs for cabang branches
@@ -961,18 +979,26 @@ class BranchDemoData extends AbstractDemoData {
     }
 
     private function generatePhone(): string {
-        $isMobile = rand(0, 1) === 1;
-        $prefix = rand(0, 1) ? '+62' : '0';
-        
-        if ($isMobile) {
-            // Mobile format: +62/0 8xx xxxxxxxx
-            return $prefix . '8' . rand(1, 9) . str_pad(rand(0, 99999999), 8, '0', STR_PAD_LEFT);
-        } else {
-            // Landline format: +62/0 xxx xxxxxxx
-            $areaCodes = ['21', '22', '24', '31', '711', '61', '411', '911']; // Jakarta, Bandung, Semarang, Surabaya, Palembang, etc
-            $areaCode = $areaCodes[array_rand($areaCodes)];
-            return $prefix . $areaCode . str_pad(rand(0, 9999999), 7, '0', STR_PAD_LEFT);
-        }
+        // Format: 08xxxxxxxxxx (08 diikuti 8-13 digit angka, total 10-15 digit)
+        // Contoh: 081234567890 (12 digit), 085678901234 (12 digit)
+
+        // Indonesian mobile operator prefixes after 08
+        $operators = [
+            '11', '12', '13', // Telkomsel (0811, 0812, 0813)
+            '21', '22', '23', // Indosat (0821, 0822, 0823)
+            '31', '32', '33', // XL (0831, 0832, 0833)
+            '51', '52', '53', // Indosat IM3 (0851, 0852, 0853)
+            '56', '57', '58', // Indosat (0856, 0857, 0858)
+            '95', '96', '97', '98', '99' // Three (0895, 0896, 0897, 0898, 0899)
+        ];
+
+        $operator = $operators[array_rand($operators)];
+
+        // Generate 8-11 more digits (total will be 10-13 digits: 08 + 2 operator + 8-11 random)
+        $remainingDigits = rand(8, 11);
+        $randomNumber = str_pad((string)rand(0, pow(10, $remainingDigits) - 1), $remainingDigits, '0', STR_PAD_LEFT);
+
+        return '08' . $operator . $randomNumber;
     }
 
     private function generateEmail($customer_name, $type): string {
@@ -1060,82 +1086,56 @@ class BranchDemoData extends AbstractDemoData {
     }
 
     /**
-     * Generate agency_id by province_id
+     * Generate agency_id by province_id (ID-based FK)
      */
     private function generateAgencyID($provinsi_id): int {
-        // Get province code from id
-        $province_code = $this->wpdb->get_var($this->wpdb->prepare(
-            "SELECT code FROM {$this->wpdb->prefix}wi_provinces WHERE id = %d",
+        // Find agency with matching province_id (ID-based FK)
+        $agency_id = $this->wpdb->get_var($this->wpdb->prepare(
+            "SELECT id FROM {$this->wpdb->prefix}app_agencies WHERE province_id = %d LIMIT 1",
             $provinsi_id
         ));
 
-        if (!$province_code) {
-            throw new \Exception("Province not found for ID: {$provinsi_id}");
-        }
-
-        // Find agency with matching provinsi_code
-        $agency_id = $this->wpdb->get_var($this->wpdb->prepare(
-            "SELECT id FROM {$this->wpdb->prefix}app_agencies WHERE provinsi_code = %s LIMIT 1",
-            $province_code
-        ));
-
         if (!$agency_id) {
-            throw new \Exception("Agency not found for province code: {$province_code}");
+            throw new \Exception("Agency not found for province ID: {$provinsi_id}");
         }
 
         return (int) $agency_id;
     }
 
     /**
-     * Generate division_id by regency_id
+     * Generate division_id by regency_id (ID-based FK)
      */
     private function generateDivisionID($regency_id): ?int {
-        // Get regency code from id
-        $regency_code = $this->wpdb->get_var($this->wpdb->prepare(
-            "SELECT code FROM {$this->wpdb->prefix}wi_regencies WHERE id = %d",
-            $regency_id
-        ));
-
-        if (!$regency_code) {
-            return null;
-        }
-
-        // Find division with matching regency_code
+        // Find division with matching regency_id (ID-based FK)
         $division_id = $this->wpdb->get_var($this->wpdb->prepare(
-            "SELECT id FROM {$this->wpdb->prefix}app_agency_divisions WHERE regency_code = %s LIMIT 1",
-            $regency_code
+            "SELECT id FROM {$this->wpdb->prefix}app_agency_divisions WHERE regency_id = %d LIMIT 1",
+            $regency_id
         ));
 
         if ($division_id) {
             return (int) $division_id;
         }
 
-        // Fallback: find any division from the same province
+        // Fallback: find any division from the same province (ID-based FK)
         $province_id = $this->wpdb->get_var($this->wpdb->prepare(
             "SELECT province_id FROM {$this->wpdb->prefix}wi_regencies WHERE id = %d",
             $regency_id
         ));
 
         if ($province_id) {
-            $province_code = $this->wpdb->get_var($this->wpdb->prepare(
-                "SELECT code FROM {$this->wpdb->prefix}wi_provinces WHERE id = %d",
+            // Find agency by province_id (ID-based FK)
+            $agency_id = $this->wpdb->get_var($this->wpdb->prepare(
+                "SELECT id FROM {$this->wpdb->prefix}app_agencies WHERE province_id = %d LIMIT 1",
                 $province_id
             ));
 
-            if ($province_code) {
-                $agency_id = $this->wpdb->get_var($this->wpdb->prepare(
-                    "SELECT id FROM {$this->wpdb->prefix}app_agencies WHERE provinsi_code = %s LIMIT 1",
-                    $province_code
+            if ($agency_id) {
+                $division_id = $this->wpdb->get_var($this->wpdb->prepare(
+                    "SELECT id FROM {$this->wpdb->prefix}app_agency_divisions WHERE agency_id = %d LIMIT 1",
+                    $agency_id
                 ));
 
-                if ($agency_id) {
-                    $division_id = $this->wpdb->get_var($this->wpdb->prepare(
-                        "SELECT id FROM {$this->wpdb->prefix}app_agency_divisions WHERE agency_id = %d LIMIT 1",
-                        $agency_id
-                    ));
-
-                    return $division_id ? (int) $division_id : null;
-                }
+                return $division_id ? (int) $division_id : null;
             }
         }
 
@@ -1191,10 +1191,10 @@ class BranchDemoData extends AbstractDemoData {
      * Get random province ID that has an agency, excluding a specific province
      */
     private function getRandomProvinceWithAgencyExcept(int $excluded_id): int {
-        // Get all provinces that have agencies, excluding the specified one
+        // Get all provinces that have agencies, excluding the specified one (ID-based FK)
         $provinces_with_agency = $this->wpdb->get_col($this->wpdb->prepare(
             "SELECT DISTINCT p.id FROM {$this->wpdb->prefix}wi_provinces p
-             INNER JOIN {$this->wpdb->prefix}app_agencies a ON p.code = a.provinsi_code
+             INNER JOIN {$this->wpdb->prefix}app_agencies a ON p.id = a.province_id
              WHERE p.id != %d",
             $excluded_id
         ));
@@ -1211,10 +1211,10 @@ class BranchDemoData extends AbstractDemoData {
      * Get random province ID that has an agency
      */
     private function getRandomProvinceWithAgency(): int {
-        // Get all provinces that have agencies
+        // Get all provinces that have agencies (ID-based FK)
         $provinces_with_agency = $this->wpdb->get_col(
             "SELECT DISTINCT p.id FROM {$this->wpdb->prefix}wi_provinces p
-             INNER JOIN {$this->wpdb->prefix}app_agencies a ON p.code = a.provinsi_code"
+             INNER JOIN {$this->wpdb->prefix}app_agencies a ON p.id = a.province_id"
         );
 
         if (empty($provinces_with_agency)) {
@@ -1250,12 +1250,12 @@ class BranchDemoData extends AbstractDemoData {
     }
 
     /**
-     * Get a random regency from a division's jurisdictions
+     * Get a random regency from a division's jurisdictions (ID-based FK)
      */
     private function getRandomRegencyFromDivisionJurisdictions(int $division_id): ?int {
         $regency_ids = $this->wpdb->get_col($this->wpdb->prepare(
             "SELECT r.id FROM {$this->wpdb->prefix}wi_regencies r
-             INNER JOIN {$this->wpdb->prefix}app_agency_jurisdictions j ON r.code = j.jurisdiction_code
+             INNER JOIN {$this->wpdb->prefix}app_agency_jurisdictions j ON r.id = j.jurisdiction_regency_id
              WHERE j.division_id = %d",
             $division_id
         ));

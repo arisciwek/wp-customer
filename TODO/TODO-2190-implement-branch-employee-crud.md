@@ -419,6 +419,141 @@ $(document).on('click', '.branch-delete-btn', function() {
 - ✅ All test cases pass
 
 ## Changelog
+
+### 2025-01-02 - CRITICAL FIX: Nested Entity URL Hash Collision
+**Issue Found & Fixed:**
+
+#### Problem 1: Button Class Mismatch (Employee DataTable)
+**Root Cause:**
+- PHP Model used: `.employee-edit-btn` and `.employee-delete-btn`
+- JS Handler expected: `.edit-employee` and `.delete-employee`
+- Result: Buttons tidak berfungsi karena class tidak match ❌
+
+**Fix Applied:**
+- Updated `EmployeeDataTableModel.php` v1.2.0
+- Changed button classes:
+  - `.employee-edit-btn` → `.edit-employee` ✅
+  - `.employee-delete-btn` → `.delete-employee` ✅
+
+**Files Modified:**
+- `src/Models/Employee/EmployeeDataTableModel.php` (v1.2.0)
+
+**Documentation:**
+- Created: `docs/EMPLOYEE-TAB-URL-FIX.md`
+
+---
+
+#### Problem 2: Row Click Triggers Panel (Nested Entity)
+**Root Cause:**
+- Clicking row in nested DataTable (employee/branch) triggered panel manager
+- URL changed from `#customer-123&tab=employees` to `#customer-5` ❌
+- Panel manager tidak distinguish parent vs nested DataTable
+
+**Impact:**
+```
+URL Before Click: page=wp-customer-v2#customer-123&tab=employees
+User clicks employee row (ID: 5)
+URL After Click: page=wp-customer-v2#customer-5 ❌ (WRONG!)
+Expected: URL should stay at #customer-123&tab=employees
+```
+
+**Fix Applied:**
+- Updated `wp-app-core/assets/js/datatable/wpapp-panel-manager.js` v1.1.1
+- Added nested entity prevention for row click handler:
+
+```javascript
+// DataTable row click
+$(document).on('click', '.wpapp-datatable tbody tr', function(e) {
+    // Ignore if clicking on action buttons
+    if ($(e.target).closest('.wpapp-actions').length > 0) {
+        return;
+    }
+
+    // ✅ NESTED ENTITY PREVENTION (v1.1.1)
+    const $row = $(this);
+    const isNested = $row.closest('.wpapp-tab-content').length > 0;
+
+    if (isNested) {
+        console.warn('[WPApp Panel] Nested entity row clicked - ignoring panel trigger');
+        return; // Don't trigger panel for nested entities
+    }
+
+    const entityId = $row.data('id');
+    if (entityId) {
+        self.openPanel(entityId);
+    }
+});
+```
+
+**Previous Fix (v1.1.0):**
+- Button click handler already had nested prevention
+- But row click handler was missing the check
+
+**Files Modified:**
+- `wp-app-core/assets/js/datatable/wpapp-panel-manager.js` (v1.1.1)
+
+**Documentation:**
+- Updated: `wp-app-core/docs/datatable/NESTED-ENTITY-URL-PATTERN.md`
+- Added row click prevention section
+- Updated testing checklist
+
+---
+
+#### Result After Fix:
+✅ **Button clicks in nested entity:** Ignored (with warning)
+✅ **Row clicks in nested entity:** Ignored (with warning)
+✅ **URL stability:** Tetap di `#customer-123&tab=employees`
+✅ **Edit/Delete buttons work:** Modal opens correctly
+✅ **No URL hash collision:** Nested entity ID tidak trigger panel
+
+---
+
+#### Testing Results:
+```
+✅ Test 1: Click edit employee button
+   → Modal opens
+   → URL: #customer-123&tab=employees (no change)
+
+✅ Test 2: Click delete employee button
+   → Confirmation modal opens
+   → URL: #customer-123&tab=employees (no change)
+
+✅ Test 3: Click employee row
+   → Nothing happens (expected behavior)
+   → Console warning appears
+   → URL: #customer-123&tab=employees (no change)
+
+✅ Test 4: Click branch row
+   → Nothing happens (expected behavior)
+   → Console warning appears
+   → URL: #customer-123&tab=branches (no change)
+```
+
+---
+
+#### Pattern Summary:
+**Parent Entity (Main DataTable):**
+- Row click → Opens panel ✅
+- Button click → Opens panel ✅
+- URL: `#customer-123`
+
+**Nested Entity (Tab DataTable):**
+- Row click → Ignored (with warning) ✅
+- Button click → Ignored (with warning) ✅
+- Edit button (`.edit-employee`) → Opens modal ✅
+- Delete button (`.delete-employee`) → Opens modal ✅
+- URL: `#customer-123&tab=employees` (stable) ✅
+
+---
+
+#### References:
+- `wp-customer/docs/EMPLOYEE-TAB-URL-FIX.md` - Employee fix documentation
+- `wp-app-core/docs/datatable/NESTED-ENTITY-URL-PATTERN.md` - Pattern guide
+- `wp-app-core/assets/js/datatable/wpapp-panel-manager.js` v1.1.1
+- `wp-customer/src/Models/Employee/EmployeeDataTableModel.php` v1.2.0
+
+---
+
 ### 2025-11-02
 - Created TODO-2190
 - Identified existing infrastructure

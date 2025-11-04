@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Tables
- * @version     1.0.12
+ * @version     1.0.13
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Tables/BranchesDB.php
@@ -17,19 +17,39 @@
  * Fields:
  * - id             : Primary key
  * - customer_id    : Foreign key ke customer
- * - code           : Format 
+ * - code           : Format
  * - name           : Nama branch
- * - type           : Tipe wilayah (cabang)
+ * - type           : Tipe wilayah (cabang/pusat)
+ * - nitku          : Nomor Identitas Tempat Kegiatan Usaha
+ * - postal_code    : Kode pos
+ * - latitude       : Koordinat lokasi
+ * - longitude      : Koordinat lokasi
+ * - address        : Alamat lengkap
+ * - phone          : Nomor telepon
+ * - email          : Email branch
  * - provinsi_id    : ID provinsi (required)
- * - regency_id     : ID cabang (required)
+ * - agency_id      : ID agency (nullable, diisi saat ada assignment)
+ * - regency_id     : ID kabupaten/kota (required)
+ * - division_id    : ID division agency (nullable, diisi saat ada assignment)
+ * - user_id        : ID user pemilik branch
+ * - inspector_id   : ID inspector dari agency (nullable, diisi saat ada assignment)
  * - created_by     : User ID pembuat
  * - created_at     : Timestamp pembuatan
  * - updated_at     : Timestamp update terakhir
+ * - status         : Status branch (active/inactive)
  *
  * Foreign Keys:
  * - customer_id    : REFERENCES app_customers(id) ON DELETE CASCADE
+ * - provinsi_id    : REFERENCES wi_provinces(id) ON DELETE SET NULL
+ * - regency_id     : REFERENCES wi_regencies(id) ON DELETE SET NULL
+ * - agency_id      : REFERENCES app_agencies(id) ON DELETE SET NULL
+ * - division_id    : REFERENCES app_agency_divisions(id) ON DELETE SET NULL
+ * - inspector_id   : REFERENCES app_agency_employees(id) ON DELETE SET NULL
  *
  * Changelog:
+ * 1.0.13 - 2025-01-04
+ * - Changed agency_id from NOT NULL to NULL (assigned when branch gets agency assignment)
+ *
  * 1.0.12 - 2025-11-02
  * - Changed provinsi_id from NULL to NOT NULL (required field)
  * - Changed regency_id from NULL to NOT NULL (required field)
@@ -77,7 +97,7 @@ class BranchesDB {
             phone varchar(20) NULL,
             email varchar(100) NULL,
             provinsi_id bigint(20) UNSIGNED NOT NULL,
-            agency_id bigint(20) UNSIGNED NOT NULL,
+            agency_id bigint(20) UNSIGNED NULL,
             regency_id bigint(20) UNSIGNED NOT NULL,
             division_id bigint(20) UNSIGNED NULL,
             user_id bigint(20) UNSIGNED NULL,
@@ -96,5 +116,94 @@ class BranchesDB {
             KEY postal_code_index (postal_code),
             KEY location_index (latitude, longitude)
         ) $charset_collate;";
+    }
+
+    /**
+     * Add foreign key constraints yang tidak didukung oleh dbDelta
+     * Harus dipanggil setelah tabel dibuat
+     */
+    public static function add_foreign_keys() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'app_customer_branches';
+
+        $constraints = [
+            // FK to app_customers
+            [
+                'name' => 'fk_branch_customer',
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_branch_customer
+                         FOREIGN KEY (customer_id)
+                         REFERENCES {$wpdb->prefix}app_customers(id)
+                         ON DELETE CASCADE"
+            ],
+            // FK to wi_provinces
+            [
+                'name' => 'fk_branch_province',
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_branch_province
+                         FOREIGN KEY (provinsi_id)
+                         REFERENCES {$wpdb->prefix}wi_provinces(id)
+                         ON DELETE RESTRICT"
+            ],
+            // FK to wi_regencies
+            [
+                'name' => 'fk_branch_regency',
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_branch_regency
+                         FOREIGN KEY (regency_id)
+                         REFERENCES {$wpdb->prefix}wi_regencies(id)
+                         ON DELETE RESTRICT"
+            ],
+            // FK to app_agencies (cross-plugin, nullable)
+            [
+                'name' => 'fk_branch_agency',
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_branch_agency
+                         FOREIGN KEY (agency_id)
+                         REFERENCES {$wpdb->prefix}app_agencies(id)
+                         ON DELETE SET NULL"
+            ],
+            // FK to app_agency_divisions (cross-plugin, nullable)
+            [
+                'name' => 'fk_branch_division',
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_branch_division
+                         FOREIGN KEY (division_id)
+                         REFERENCES {$wpdb->prefix}app_agency_divisions(id)
+                         ON DELETE SET NULL"
+            ],
+            // FK to app_agency_employees (cross-plugin, nullable)
+            [
+                'name' => 'fk_branch_inspector',
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_branch_inspector
+                         FOREIGN KEY (inspector_id)
+                         REFERENCES {$wpdb->prefix}app_agency_employees(id)
+                         ON DELETE SET NULL"
+            ]
+        ];
+
+        foreach ($constraints as $constraint) {
+            // Check if constraint already exists
+            $constraint_exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+                 WHERE CONSTRAINT_SCHEMA = DATABASE()
+                 AND TABLE_NAME = %s
+                 AND CONSTRAINT_NAME = %s",
+                $table_name,
+                $constraint['name']
+            ));
+
+            // If constraint exists, drop it first
+            if ($constraint_exists > 0) {
+                $wpdb->query("ALTER TABLE {$table_name} DROP FOREIGN KEY `{$constraint['name']}`");
+            }
+
+            // Add foreign key constraint
+            $result = $wpdb->query($constraint['sql']);
+            if ($result === false) {
+                error_log("[BranchesDB] Failed to add FK {$constraint['name']}: " . $wpdb->last_error);
+            }
+        }
     }
 }

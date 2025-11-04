@@ -90,4 +90,48 @@ class CustomerMembershipFeaturesDB {
             ) $charset_collate;";
     }
 
+    /**
+     * Add foreign key constraints yang tidak didukung oleh dbDelta
+     * Harus dipanggil setelah tabel dibuat
+     */
+    public static function add_foreign_keys() {
+        global $wpdb;
+        $table_features = $wpdb->prefix . 'app_customer_membership_features';
+        $table_groups = $wpdb->prefix . 'app_customer_membership_feature_groups';
+
+        $constraints = [
+            // FK to app_customer_membership_feature_groups
+            [
+                'name' => 'fk_membership_feature_group',
+                'sql' => "ALTER TABLE {$table_features}
+                         ADD CONSTRAINT fk_membership_feature_group
+                         FOREIGN KEY (group_id)
+                         REFERENCES {$table_groups}(id)
+                         ON DELETE CASCADE"
+            ]
+        ];
+
+        foreach ($constraints as $constraint) {
+            // Check if constraint already exists
+            $constraint_exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+                 WHERE CONSTRAINT_SCHEMA = DATABASE()
+                 AND TABLE_NAME = %s
+                 AND CONSTRAINT_NAME = %s",
+                $table_features,
+                $constraint['name']
+            ));
+
+            // If constraint exists, drop it first
+            if ($constraint_exists > 0) {
+                $wpdb->query("ALTER TABLE {$table_features} DROP FOREIGN KEY `{$constraint['name']}`");
+            }
+
+            // Add foreign key constraint
+            $result = $wpdb->query($constraint['sql']);
+            if ($result === false) {
+                error_log("[CustomerMembershipFeaturesDB] Failed to add FK {$constraint['name']}: " . $wpdb->last_error);
+            }
+        }
+    }
 }

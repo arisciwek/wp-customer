@@ -97,4 +97,84 @@ class CustomerInvoicesDB {
             KEY due_date (due_date)
         ) $charset_collate;";
     }
+
+    /**
+     * Add foreign key constraints yang tidak didukung oleh dbDelta
+     * Harus dipanggil setelah tabel dibuat
+     */
+    public static function add_foreign_keys() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'app_customer_invoices';
+
+        $constraints = [
+            // FK to app_customers
+            [
+                'name' => 'fk_invoice_customer',
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_invoice_customer
+                         FOREIGN KEY (customer_id)
+                         REFERENCES {$wpdb->prefix}app_customers(id)
+                         ON DELETE CASCADE"
+            ],
+            // FK to app_customer_branches (nullable)
+            [
+                'name' => 'fk_invoice_branch',
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_invoice_branch
+                         FOREIGN KEY (branch_id)
+                         REFERENCES {$wpdb->prefix}app_customer_branches(id)
+                         ON DELETE SET NULL"
+            ],
+            // FK to app_customer_memberships (nullable)
+            [
+                'name' => 'fk_invoice_membership',
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_invoice_membership
+                         FOREIGN KEY (membership_id)
+                         REFERENCES {$wpdb->prefix}app_customer_memberships(id)
+                         ON DELETE SET NULL"
+            ],
+            // FK to app_customer_membership_levels (from_level_id, nullable)
+            [
+                'name' => 'fk_invoice_from_level',
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_invoice_from_level
+                         FOREIGN KEY (from_level_id)
+                         REFERENCES {$wpdb->prefix}app_customer_membership_levels(id)
+                         ON DELETE SET NULL"
+            ],
+            // FK to app_customer_membership_levels (level_id, nullable)
+            [
+                'name' => 'fk_invoice_level',
+                'sql' => "ALTER TABLE {$table_name}
+                         ADD CONSTRAINT fk_invoice_level
+                         FOREIGN KEY (level_id)
+                         REFERENCES {$wpdb->prefix}app_customer_membership_levels(id)
+                         ON DELETE SET NULL"
+            ]
+        ];
+
+        foreach ($constraints as $constraint) {
+            // Check if constraint already exists
+            $constraint_exists = $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+                 WHERE CONSTRAINT_SCHEMA = DATABASE()
+                 AND TABLE_NAME = %s
+                 AND CONSTRAINT_NAME = %s",
+                $table_name,
+                $constraint['name']
+            ));
+
+            // If constraint exists, drop it first
+            if ($constraint_exists > 0) {
+                $wpdb->query("ALTER TABLE {$table_name} DROP FOREIGN KEY `{$constraint['name']}`");
+            }
+
+            // Add foreign key constraint
+            $result = $wpdb->query($constraint['sql']);
+            if ($result === false) {
+                error_log("[CustomerInvoicesDB] Failed to add FK {$constraint['name']}: " . $wpdb->last_error);
+            }
+        }
+    }
 }
