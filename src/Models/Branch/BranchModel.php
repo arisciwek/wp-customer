@@ -120,8 +120,12 @@ class BranchModel {
     }
 
     private function generateBranchCode(int $customer_id): string {
-        // Get customer code 
-        $customer = $this->customerModel->find($customer_id);
+        // Get customer code via direct query (avoid cache contract issue)
+        global $wpdb;
+        $customer = $wpdb->get_row($wpdb->prepare(
+            "SELECT code FROM {$wpdb->prefix}app_customers WHERE id = %d",
+            $customer_id
+        ));
         if (!$customer || empty($customer->code)) {
             throw new \Exception('Invalid customer code');
         }

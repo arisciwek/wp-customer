@@ -86,11 +86,13 @@ use WPCustomer\Models\Customer\CustomerModel;
 class BranchValidator {
     private $branch_model;
     private $customer_model;
+    private $customer_validator;
     private $relationCache = [];
 
     public function __construct() {
         $this->branch_model = new BranchModel();
         $this->customer_model = new CustomerModel();
+        $this->customer_validator = new \WPCustomer\Validators\CustomerValidator();
     }
 
     public function getUserRelation(int $branch_id): array {
@@ -200,14 +202,14 @@ class BranchValidator {
 
     public function canCreateBranch(int $customer_id): bool {
         $current_user_id = get_current_user_id();
-        
-        // Dapatkan relasi user dengan customer
-        $customer_relation = $this->customer_model->getUserRelation($customer_id);
-        
+
+        // Dapatkan relasi user dengan customer (now from CustomerValidator)
+        $customer_relation = $this->customer_validator->getUserRelation($customer_id);
+
         if ($customer_relation['is_admin']) return true;
         if ($customer_relation['is_customer_admin']) return true;
         if (current_user_can('add_customer_branch')) return true;
-        
+
         return apply_filters('wp_customer_can_create_branch', false, $customer_id, $current_user_id);
     }
 
@@ -283,7 +285,12 @@ class BranchValidator {
             $errors['customer_id'] = __('Customer wajib dipilih.', 'wp-customer');
         }
         else {
-            $customer = $this->customer_model->find($data['customer_id']);
+            // Direct query to avoid cache contract issue
+            global $wpdb;
+            $customer = $wpdb->get_row($wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}app_customers WHERE id = %d",
+                $data['customer_id']
+            ));
             if (!$customer) {
                 $errors['customer_id'] = __('Customer tidak ditemukan.', 'wp-customer');
             }
@@ -416,8 +423,13 @@ class BranchValidator {
             $errors['id'] = __('Cabang tidak ditemukan.', 'wp-customer');
             return $errors;
         }
-        
-        $customer = $this->customer_model->find($branch->customer_id);
+
+        // Direct query to avoid cache contract issue
+        global $wpdb;
+        $customer = $wpdb->get_row($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}app_customers WHERE id = %d",
+            $branch->customer_id
+        ));
         if (!$customer) {
             $errors['id'] = __('Customer tidak ditemukan.', 'wp-customer');
             return $errors;

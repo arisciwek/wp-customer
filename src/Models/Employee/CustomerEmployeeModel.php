@@ -195,9 +195,9 @@ public function create(array $data): ?int {
             WHERE e.id = %d
         ", $id));
 
-        // Cache the result
+        // Cache the result (expiry uses default from cache manager)
         if ($result) {
-            $this->cache->set('customer_employee', $result, $this->cache::getCacheExpiry(), $id);
+            $this->cache->set('customer_employee', $result, null, $id);
         }
 
         return $result;
@@ -968,7 +968,8 @@ public function create(array $data): ?int {
         $cache_key = 'customer_user_info';
         $cached_data = $this->cache->get($cache_key, $user_id);
 
-        if ($cached_data !== null) {
+        // TODO-2192 FIXED: Cache now returns false on miss (not null)
+        if ($cached_data !== false) {
             return $cached_data;
         }
 

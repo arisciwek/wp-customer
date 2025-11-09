@@ -34,7 +34,22 @@ class CustomerEmployeeValidator {
 
    public function __construct() {
        $this->employee_model = new CustomerEmployeeModel();
-       $this->customer_model = new CustomerModel(); 
+       $this->customer_model = new CustomerModel();
+   }
+
+   /**
+    * Find customer - using direct query to avoid cache contract issue
+    * TODO: Remove this workaround when wp-app-core cache contract is fixed
+    *
+    * @param int $customer_id Customer ID
+    * @return object|null Customer object or null
+    */
+   private function findCustomer(int $customer_id): ?object {
+       global $wpdb;
+       return $wpdb->get_row($wpdb->prepare(
+           "SELECT * FROM {$wpdb->prefix}app_customers WHERE id = %d",
+           $customer_id
+       ));
    }
 
    public function canViewEmployee($employee, $customer): bool {
@@ -67,7 +82,7 @@ class CustomerEmployeeValidator {
        $current_user_id = get_current_user_id();
 
        // Customer Owner Check
-       $customer = $this->customer_model->find($customer_id);
+       $customer = $this->findCustomer($customer_id);
        if ($customer && (int)$customer->user_id === (int)$current_user_id) {
            return true;
        }
@@ -157,7 +172,7 @@ class CustomerEmployeeValidator {
        if (empty($data['customer_id'])) {
            $errors['customer_id'] = __('ID Customer wajib diisi.', 'wp-customer');
        } else {
-           $customer = $this->customer_model->find($data['customer_id']);
+           $customer = $this->findCustomer($data['customer_id']);
            if (!$customer) {
                $errors['customer_id'] = __('Customer tidak ditemukan.', 'wp-customer');
            }
@@ -192,7 +207,7 @@ class CustomerEmployeeValidator {
        }
 
        // Get customer for permission check
-       $customer = $this->customer_model->find($employee->customer_id);
+       $customer = $this->findCustomer($employee->customer_id);
        if (!$customer) {
            $errors['customer'] = __('Customer tidak ditemukan.', 'wp-customer');
            return $errors;
@@ -231,7 +246,7 @@ class CustomerEmployeeValidator {
        }
 
        // Get customer for permission check
-       $customer = $this->customer_model->find($employee->customer_id);
+       $customer = $this->findCustomer($employee->customer_id);
        if (!$customer) {
            $errors['customer'] = __('Customer tidak ditemukan.', 'wp-customer');
            return $errors;
@@ -256,7 +271,7 @@ class CustomerEmployeeValidator {
        }
 
        // Get customer for permission check
-       $customer = $this->customer_model->find($employee->customer_id);
+       $customer = $this->findCustomer($employee->customer_id);
        if (!$customer) {
            $errors['customer'] = __('Customer tidak ditemukan.', 'wp-customer');
            return $errors;
@@ -413,7 +428,7 @@ class CustomerEmployeeValidator {
         if (empty($data['customer_id'])) {
             $errors['customer_id'] = __('Customer wajib dipilih.', 'wp-customer');
         } else {
-            $customer = $this->customer_model->find($data['customer_id']);
+            $customer = $this->findCustomer($data['customer_id']);
             if (!$customer) {
                 $errors['customer_id'] = __('Customer tidak ditemukan.', 'wp-customer');
             }
@@ -474,7 +489,7 @@ class CustomerEmployeeValidator {
             return $errors;
         }
 
-        $customer = $this->customer_model->find($employee->customer_id);
+        $customer = $this->findCustomer($employee->customer_id);
         if (!$customer) {
             $errors['customer'] = __('Customer tidak ditemukan.', 'wp-customer');
             return $errors;
@@ -566,7 +581,7 @@ class CustomerEmployeeValidator {
         }
 
         // Get customer data
-        $customer = $this->customer_model->find($customer_id);
+        $customer = $this->findCustomer($customer_id);
         if (!$customer) {
             return [
                 'has_access' => false,

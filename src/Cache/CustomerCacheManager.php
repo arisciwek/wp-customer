@@ -127,9 +127,11 @@ class CustomerCacheManager extends AbstractCacheManager {
      * Get customer from cache
      *
      * @param int $id Customer ID
-     * @return object|null Customer object or null
+     * @return object|false Customer object or FALSE if not found (cache miss)
      */
-    public function getCustomer(int $id): ?object {
+    public function getCustomer(int $id): object|false {
+        // TODO-2192 FIXED: Return false on cache miss (not null)
+        // This is required by AbstractCrudModel find() method
         return $this->get('customer', $id);
     }
 

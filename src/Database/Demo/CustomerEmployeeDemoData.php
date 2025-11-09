@@ -43,11 +43,14 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
 
     protected function validate(): bool {
         try {
+            // CRITICAL: Flush cache to avoid wp-app-core cache contract issue
+            wp_cache_flush();
+
             // 1. Validasi table exists
             $table_exists = $this->wpdb->get_var(
                 "SHOW TABLES LIKE '{$this->wpdb->prefix}app_customer_employees'"
             );
-            
+
             if (!$table_exists) {
                 throw new \Exception('Employee table does not exist');
             }
@@ -88,6 +91,9 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
         ini_set('max_execution_time', '300'); // 300 seconds = 5 minutes
 
         $this->debug('Starting employee data generation');
+
+        // CRITICAL: Flush cache again before generation to ensure validators work
+        wp_cache_flush();
 
         try {
             // Clear existing data via HOOK-based deletion (Task-2170)

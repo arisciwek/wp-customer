@@ -14,7 +14,7 @@
  *
  * Dependencies:
  * - jQuery
- * - wpAppModal (from wp-app-core)
+ * - WPModal (from wp-modal)
  * - wpAppCoreCustomer localized object
  *
  * Changelog:
@@ -77,15 +77,15 @@
         showAddModal() {
             console.log('[CustomerModal] Opening add customer modal...');
 
-            // Check if wpAppModal is available
-            if (typeof wpAppModal === 'undefined') {
-                console.error('[CustomerModal] wpAppModal not found!');
+            // Check if WPModal is available
+            if (typeof WPModal === 'undefined') {
+                console.error('[CustomerModal] WPModal not found!');
                 alert('Modal system not available. Please refresh the page.');
                 return;
             }
 
             // Show modal with form
-            wpAppModal.show({
+            WPModal.show({
                 type: 'form',
                 title: 'Add New Customer',
                 size: 'large',
@@ -119,15 +119,15 @@
         showEditModal(customerId) {
             console.log('[CustomerModal] Opening edit customer modal for ID:', customerId);
 
-            // Check if wpAppModal is available
-            if (typeof wpAppModal === 'undefined') {
-                console.error('[CustomerModal] wpAppModal not found!');
+            // Check if WPModal is available
+            if (typeof WPModal === 'undefined') {
+                console.error('[CustomerModal] WPModal not found!');
                 alert('Modal system not available. Please refresh the page.');
                 return;
             }
 
             // Show modal with form (mode=edit)
-            wpAppModal.show({
+            WPModal.show({
                 type: 'form',
                 title: 'Edit Customer',
                 size: 'large',
@@ -161,14 +161,14 @@
         showDeleteConfirm(customerId) {
             console.log('[CustomerModal] Showing delete confirm for customer ID:', customerId);
 
-            // Check if wpAppModal is available
-            if (typeof wpAppModal === 'undefined') {
-                console.error('[CustomerModal] wpAppModal not found!');
+            // Check if WPModal is available
+            if (typeof WPModal === 'undefined') {
+                console.error('[CustomerModal] WPModal not found!');
                 alert('Modal system not available. Please refresh the page.');
                 return;
             }
 
-            wpAppModal.confirm({
+            WPModal.confirm({
                 title: 'Delete Customer',
                 message: 'Are you sure you want to delete this customer? This action cannot be undone.',
                 confirmText: 'Delete',
@@ -278,7 +278,7 @@
             }
 
             // Show loading
-            wpAppModal.loading(true);
+            WPModal.loading(true);
 
             // Submit via AJAX
             $.ajax({
@@ -296,15 +296,15 @@
                         console.log('[CustomerModal] Customer ID from response:', customerId);
 
                         // Stop loading FIRST
-                        wpAppModal.loading(false);
+                        WPModal.loading(false);
 
                         // Hide modal immediately
-                        wpAppModal.hide();
+                        WPModal.hide();
 
                         // Small delay before showing notification to ensure modal is fully closed
                         setTimeout(() => {
                             // Show success notification
-                            wpAppModal.info({
+                            WPModal.info({
                                 infoType: 'success',
                                 title: 'Success',
                                 message: response.data.message || 'Customer saved successfully',
@@ -348,14 +348,14 @@
                         console.error('[CustomerModal] Save failed:', response);
 
                         // Stop loading
-                        wpAppModal.loading(false);
+                        WPModal.loading(false);
 
                         // DON'T close modal - show error message inside modal
                         this.showErrorInModal(response.data.message || 'Failed to save customer');
                     }
                 },
                 error: (xhr, status, error) => {
-                    wpAppModal.loading(false);
+                    WPModal.loading(false);
                     console.error('[CustomerModal] AJAX error:', error);
                     console.error('[CustomerModal] Status:', status);
                     console.error('[CustomerModal] XHR status:', xhr.status);
@@ -557,7 +557,7 @@
             console.log('[CustomerModal] Deleting customer ID:', customerId);
 
             // Show loading
-            wpAppModal.loading(true, 'Deleting customer...');
+            WPModal.loading(true, 'Deleting customer...');
 
             $.ajax({
                 url: wpAppCoreCustomer.ajaxurl,
@@ -568,13 +568,13 @@
                     nonce: wpAppCoreCustomer.nonce
                 },
                 success: (response) => {
-                    wpAppModal.loading(false);
+                    WPModal.loading(false);
 
                     if (response.success) {
                         console.log('[CustomerModal] Delete successful:', response);
 
                         // Show success notification
-                        wpAppModal.info({
+                        WPModal.info({
                             infoType: 'success',
                             title: 'Success',
                             message: response.data.message || 'Customer deleted successfully',
@@ -596,7 +596,7 @@
                         }, 500);
                     } else {
                         console.error('[CustomerModal] Delete failed:', response);
-                        wpAppModal.info({
+                        WPModal.info({
                             infoType: 'error',
                             title: 'Error',
                             message: response.data.message || 'Failed to delete customer',
@@ -605,10 +605,10 @@
                     }
                 },
                 error: (xhr, status, error) => {
-                    wpAppModal.loading(false);
+                    WPModal.loading(false);
                     console.error('[CustomerModal] Delete AJAX error:', error);
 
-                    wpAppModal.info({
+                    WPModal.info({
                         infoType: 'error',
                         title: 'Error',
                         message: 'Network error. Please try again.',

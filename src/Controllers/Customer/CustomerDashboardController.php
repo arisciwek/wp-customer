@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Controllers/Customer
- * @version     3.0.0
+ * @version     3.0.1
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Controllers/Customer/CustomerDashboardController.php
@@ -15,6 +15,16 @@
  *              Uses hook-based architecture untuk extensibility.
  *
  * Changelog:
+ * 3.0.1 - 2025-11-09
+ * - ARCHITECTURAL FIX: Implemented proper wp-datatable tab rendering pattern
+ * - Added template paths to tab registration (Direct Inclusion Pattern)
+ * - Created render_tabs_content() method to render all tabs in AJAX response
+ * - Updated handle_get_details() to return 'tabs' and 'title' in response
+ * - Removed deprecated wpdt_tab_content hooks (non-existent in wp-datatable)
+ * - Removed lazy-load tab handlers (tabs now render immediately with detail panel)
+ * - Updated all view paths: src/Views/customer/ → src/Views/admin/customer/
+ * - Result: Tabs now populate correctly when customer row is clicked
+ *
  * 3.0.0 - 2025-11-09 (TODO-2192: wp-datatable Integration)
  * - BREAKING: Removed dependency on AbstractDashboardController
  * - Migrated to wp-datatable DualPanel layout system
@@ -85,19 +95,10 @@ class CustomerDashboardController {
         add_action('wpdt_left_panel_content', [$this, 'render_datatable'], 10, 1);
         add_action('wpdt_statistics_content', [$this, 'render_statistics'], 10, 1);
 
-        // Register tab content hooks
-        add_action('wpdt_tab_content', [$this, 'render_info_tab'], 10, 3);
-        add_action('wpdt_tab_content', [$this, 'render_branches_tab'], 10, 3);
-        add_action('wpdt_tab_content', [$this, 'render_employees_tab'], 10, 3);
-
         // AJAX handlers - Dashboard
         add_action('wp_ajax_get_customer_datatable', [$this, 'handle_datatable']);
         add_action('wp_ajax_get_customer_details', [$this, 'handle_get_details']);
         add_action('wp_ajax_get_customer_stats_v2', [$this, 'handle_get_stats']);
-
-        // AJAX handlers - Lazy-load tabs
-        add_action('wp_ajax_load_customer_branches_tab', [$this, 'handle_load_branches_tab']);
-        add_action('wp_ajax_load_customer_employees_tab', [$this, 'handle_load_employees_tab']);
 
         // AJAX handlers - DataTables in tabs
         add_action('wp_ajax_get_customer_branches_datatable', [$this, 'handle_branches_datatable']);
@@ -139,9 +140,12 @@ class CustomerDashboardController {
      * Signal wp-datatable to use dual panel layout
      */
     public function signal_dual_panel($use): bool {
-        if (isset($_GET['page']) && $_GET['page'] === 'wp-customer') {
+        error_log('[CustomerDashboard] signal_dual_panel called, page=' . ($_GET['page'] ?? 'none'));
+        if (isset($_GET['page']) && $_GET['page'] === 'wp-customer-v2') {
+            error_log('[CustomerDashboard] Returning true for dual panel');
             return true;
         }
+        error_log('[CustomerDashboard] Returning false for dual panel');
         return $use;
     }
 
@@ -160,14 +164,17 @@ class CustomerDashboardController {
         return [
             'info' => [
                 'title' => __('Customer Information', 'wp-customer'),
+                'template' => WP_CUSTOMER_PATH . 'src/Views/admin/customer/tabs/info.php',
                 'priority' => 10
             ],
             'branches' => [
                 'title' => __('Cabang', 'wp-customer'),
+                'template' => WP_CUSTOMER_PATH . 'src/Views/admin/customer/tabs/branches.php',
                 'priority' => 20
             ],
             'employees' => [
                 'title' => __('Staff', 'wp-customer'),
+                'template' => WP_CUSTOMER_PATH . 'src/Views/admin/customer/tabs/employees.php',
                 'priority' => 30
             ]
         ];
@@ -185,10 +192,12 @@ class CustomerDashboardController {
             return;
         }
 
-        $view_file = WP_CUSTOMER_PATH . 'src/Views/admin/datatable/datatable.php';
+        $view_file = WP_CUSTOMER_PATH . 'src/Views/admin/customer/datatable/datatable.php';
 
         if (file_exists($view_file)) {
             include $view_file;
+        } else {
+            error_log('[CustomerDashboard] DataTable view file not found: ' . $view_file);
         }
     }
 
@@ -238,50 +247,36 @@ class CustomerDashboardController {
     // ========================================
 
     /**
-     * Render info tab content
+     * Render all tabs content and return as array
+     *
+     * @param object $customer Customer data
+     * @return array Associative array [tab_id => html_content]
      */
-    public function render_info_tab($tab_id, $entity, $data): void {
-        if ($entity !== 'customer' || $tab_id !== 'info') {
-            return;
+    private function render_tabs_content($customer): array {
+        error_log('[CustomerDashboard] render_tabs_content called');
+        error_log('[CustomerDashboard] Customer ID: ' . ($customer->id ?? 'NULL'));
+
+        $tabs = [];
+
+        // Get registered tabs
+        $registered_tabs = $this->register_tabs([], 'customer');
+        error_log('[CustomerDashboard] Registered tabs: ' . print_r(array_keys($registered_tabs), true));
+
+        // Render each tab
+        foreach ($registered_tabs as $tab_id => $tab_config) {
+            if (isset($tab_config['template']) && file_exists($tab_config['template'])) {
+                error_log("[CustomerDashboard] Rendering tab: {$tab_id}");
+                ob_start();
+                $data = $customer; // Make $data available to template
+                include $tab_config['template'];
+                $content = ob_get_clean();
+                $tabs[$tab_id] = $content;
+                error_log("[CustomerDashboard] Tab {$tab_id} rendered, length: " . strlen($content));
+            }
         }
 
-        $tab_file = WP_CUSTOMER_PATH . 'src/Views/customer/tabs/info.php';
-
-        if (file_exists($tab_file)) {
-            include $tab_file;
-        }
-    }
-
-    /**
-     * Render branches tab content
-     */
-    public function render_branches_tab($tab_id, $entity, $data): void {
-        if ($entity !== 'customer' || $tab_id !== 'branches') {
-            return;
-        }
-
-        $tab_file = WP_CUSTOMER_PATH . 'src/Views/customer/tabs/branches.php';
-
-        if (file_exists($tab_file)) {
-            $customer = $data;
-            include $tab_file;
-        }
-    }
-
-    /**
-     * Render employees tab content
-     */
-    public function render_employees_tab($tab_id, $entity, $data): void {
-        if ($entity !== 'customer' || $tab_id !== 'employees') {
-            return;
-        }
-
-        $tab_file = WP_CUSTOMER_PATH . 'src/Views/customer/tabs/employees.php';
-
-        if (file_exists($tab_file)) {
-            $customer = $data;
-            include $tab_file;
-        }
+        error_log('[CustomerDashboard] Total tabs rendered: ' . count($tabs));
+        return $tabs;
     }
 
     // ========================================
@@ -314,41 +309,61 @@ class CustomerDashboardController {
      * Handle get customer details AJAX
      */
     public function handle_get_details(): void {
+        error_log('[CustomerDashboard] handle_get_details called');
+        error_log('[CustomerDashboard] POST data: ' . print_r($_POST, true));
+
         if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
+            error_log('[CustomerDashboard] Nonce check failed');
             wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
             return;
         }
 
         if (!current_user_can('view_customer_list')) {
+            error_log('[CustomerDashboard] Permission denied');
             wp_send_json_error(['message' => __('Permission denied', 'wp-customer')]);
             return;
         }
 
         $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+        error_log('[CustomerDashboard] Customer ID: ' . $id);
 
         if (!$id) {
+            error_log('[CustomerDashboard] Invalid customer ID');
             wp_send_json_error(['message' => __('Invalid customer ID', 'wp-customer')]);
             return;
         }
 
         try {
+            // TODO-2192 FIXED in wp-app-core v1.0.1 - cache now returns false on miss
             $customer = $this->model->find($id);
 
             if (!$customer) {
+                error_log('[CustomerDashboard] Customer not found: ' . $id);
                 wp_send_json_error(['message' => __('Customer not found', 'wp-customer')]);
                 return;
             }
 
+            error_log('[CustomerDashboard] Customer found: ' . $customer->name);
+
             $membership = $this->model->getMembershipData($id);
             $access = $this->validator->validateAccess($id);
 
-            wp_send_json_success([
+            // Render tab content
+            $tabs = $this->render_tabs_content($customer);
+
+            $response = [
                 'customer' => $customer,
                 'membership' => $membership,
-                'access_type' => $access['access_type']
-            ]);
+                'access_type' => $access['access_type'],
+                'title' => $customer->name,
+                'tabs' => $tabs
+            ];
+
+            error_log('[CustomerDashboard] Sending success response with ' . count($tabs) . ' tabs');
+            wp_send_json_success($response);
 
         } catch (\Exception $e) {
+            error_log('[CustomerDashboard] Exception: ' . $e->getMessage());
             wp_send_json_error(['message' => $e->getMessage()]);
         }
     }
@@ -378,82 +393,6 @@ class CustomerDashboardController {
 
         } catch (\Exception $e) {
             wp_send_json_error(['message' => $e->getMessage()]);
-        }
-    }
-
-    // ========================================
-    // AJAX HANDLERS - LAZY-LOAD TABS
-    // ========================================
-
-    /**
-     * Handle lazy-load branches tab
-     */
-    public function handle_load_branches_tab(): void {
-        if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
-            wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
-            return;
-        }
-
-        $customer_id = isset($_POST['customer_id']) ? (int) $_POST['customer_id'] : 0;
-
-        if (!$customer_id) {
-            wp_send_json_error(['message' => __('Invalid customer ID', 'wp-customer')]);
-            return;
-        }
-
-        if (!current_user_can('view_customer_list')) {
-            wp_send_json_error(['message' => __('Permission denied', 'wp-customer')]);
-            return;
-        }
-
-        try {
-            ob_start();
-            $view_file = WP_CUSTOMER_PATH . 'src/Views/customer/partials/ajax-branches-datatable.php';
-            if (file_exists($view_file)) {
-                include $view_file;
-            }
-            $html = ob_get_clean();
-
-            wp_send_json_success(['html' => $html]);
-
-        } catch (\Exception $e) {
-            wp_send_json_error(['message' => __('Error loading branches', 'wp-customer')]);
-        }
-    }
-
-    /**
-     * Handle lazy-load employees tab
-     */
-    public function handle_load_employees_tab(): void {
-        if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
-            wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
-            return;
-        }
-
-        $customer_id = isset($_POST['customer_id']) ? (int) $_POST['customer_id'] : 0;
-
-        if (!$customer_id) {
-            wp_send_json_error(['message' => __('Invalid customer ID', 'wp-customer')]);
-            return;
-        }
-
-        if (!current_user_can('view_customer_list')) {
-            wp_send_json_error(['message' => __('Permission denied', 'wp-customer')]);
-            return;
-        }
-
-        try {
-            ob_start();
-            $view_file = WP_CUSTOMER_PATH . 'src/Views/customer/partials/ajax-employees-datatable.php';
-            if (file_exists($view_file)) {
-                include $view_file;
-            }
-            $html = ob_get_clean();
-
-            wp_send_json_success(['html' => $html]);
-
-        } catch (\Exception $e) {
-            wp_send_json_error(['message' => __('Error loading employees', 'wp-customer')]);
         }
     }
 
@@ -550,9 +489,9 @@ class CustomerDashboardController {
                     wp_die();
                 }
 
-                include WP_CUSTOMER_PATH . 'src/Views/customer/forms/edit-customer-form.php';
+                include WP_CUSTOMER_PATH . 'src/Views/admin/customer/forms/edit-customer-form.php';
             } else {
-                include WP_CUSTOMER_PATH . 'src/Views/customer/forms/create-customer-form.php';
+                include WP_CUSTOMER_PATH . 'src/Views/admin/customer/forms/create-customer-form.php';
             }
         } catch (\Exception $e) {
             echo '<p class="error">' . esc_html($e->getMessage()) . '</p>';

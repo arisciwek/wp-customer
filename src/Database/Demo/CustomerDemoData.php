@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Demo
- * @version     1.0.16
+ * @version     1.0.17
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Demo/Data/CustomerDemoData.php
@@ -163,8 +163,8 @@ class CustomerDemoData extends AbstractDemoData {
                 continue;
             }
 
-            // Trigger before delete hook manually
-            do_action('wp_customer_before_delete', $customer_id, $customer_data);
+            // Trigger before delete hook manually (correct hook name)
+            do_action('wp_customer_customer_before_delete', $customer_id, $customer_data);
 
             // Direct delete from database
             $result = $this->wpdb->delete(
@@ -175,8 +175,8 @@ class CustomerDemoData extends AbstractDemoData {
 
             if ($result !== false) {
                 $deleted_count++;
-                // Trigger after delete hook for cascade operations (hard delete mode)
-                do_action('wp_customer_deleted', $customer_id, $customer_data, true);
+                // Trigger after delete hook for cascade operations (hard delete mode, correct hook name)
+                do_action('wp_customer_customer_deleted', $customer_id, $customer_data, true);
             } else {
                 error_log("[CustomerDemoData] WARNING: Failed to delete customer ID {$customer_id}");
             }

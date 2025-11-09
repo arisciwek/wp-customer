@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Demo
- * @version     1.0.14
+ * @version     1.0.15
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Demo/BranchDemoData.php
@@ -57,6 +57,15 @@
  * 5. Track generated branch IDs
  *
  * Changelog:
+ * 1.0.15 - 2025-11-09 (FIX: wp-app-core cache contract issue)
+ * - CRITICAL FIX: Added wp_cache_flush() at start of validate()
+ * - CRITICAL FIX: Replace Model->find() with direct wpdb query (2 locations)
+ * - Reason: AbstractCacheManager returns null (not false) on cache miss
+ * - This causes find() to return null even when customer exists in database
+ * - Line 176-179: Direct query in validate() for customer check
+ * - Line 327-330: Direct query in generate() for customer check
+ * - Result: Branch demo data generation now works correctly
+ *
  * 1.0.14 - 2025-11-04 (FIX: Phone number format validation)
  * - CRITICAL FIX: Updated generatePhone() to match validator requirements
  * - Format: 08xxxxxxxxxx (08 followed by 8-13 digits, total 10-15 digits)
@@ -122,6 +131,10 @@ class BranchDemoData extends AbstractDemoData {
      */
         protected function validate(): bool {
             try {
+                // CRITICAL: Flush cache to avoid wp-app-core cache contract issue
+                // (AbstractCacheManager returns null vs false causing find() to fail)
+                wp_cache_flush();
+
                 // Get all active customer IDs from model
                 $this->customer_ids = $this->customerModel->getAllCustomerIds();
                 if (empty($this->customer_ids)) {
@@ -168,7 +181,11 @@ class BranchDemoData extends AbstractDemoData {
 
                 // 3. Validasi data wilayah untuk setiap customer
                 foreach ($this->customer_ids as $customer_id) {
-                    $customer = $this->customerModel->find($customer_id);
+                    // Direct query to avoid cache contract issue
+                    $customer = $this->wpdb->get_row($this->wpdb->prepare(
+                        "SELECT * FROM {$this->wpdb->prefix}app_customers WHERE id = %d",
+                        $customer_id
+                    ));
                     if (!$customer) {
                         throw new \Exception("Customer not found: {$customer_id}");
                     }
@@ -315,7 +332,11 @@ class BranchDemoData extends AbstractDemoData {
         try {
             // Get all active customers
             foreach ($this->customer_ids as $customer_id) {
-                $customer = $this->customerModel->find($customer_id);
+                // Direct query to avoid cache contract issue
+                $customer = $this->wpdb->get_row($this->wpdb->prepare(
+                    "SELECT * FROM {$this->wpdb->prefix}app_customers WHERE id = %d",
+                    $customer_id
+                ));
                 if (!$customer) {
                     $this->debug("Customer not found: {$customer_id}");
                     continue;

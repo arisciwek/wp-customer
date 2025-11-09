@@ -159,7 +159,7 @@ class WPCustomer {
 
         // Task-2165: Auto entity creation hooks
         $auto_entity_creator = new \WPCustomer\Handlers\AutoEntityCreator();
-        add_action('wp_customer_created', [$auto_entity_creator, 'handleCustomerCreated'], 10, 2);
+        add_action('wp_customer_customer_created', [$auto_entity_creator, 'handleCustomerCreated'], 10, 2);
         add_action('wp_customer_branch_created', [$auto_entity_creator, 'handleBranchCreated'], 10, 2);
 
         // Task-2167 Review-01: Branch deletion cleanup hooks
@@ -169,8 +169,8 @@ class WPCustomer {
 
         // Task-2168: Customer deletion cleanup hooks
         $customer_cleanup_handler = new \WPCustomer\Handlers\CustomerCleanupHandler();
-        add_action('wp_customer_before_delete', [$customer_cleanup_handler, 'handleBeforeDelete'], 10, 2);
-        add_action('wp_customer_deleted', [$customer_cleanup_handler, 'handleAfterDelete'], 10, 3);
+        add_action('wp_customer_customer_before_delete', [$customer_cleanup_handler, 'handleBeforeDelete'], 10, 2);
+        add_action('wp_customer_customer_deleted', [$customer_cleanup_handler, 'handleAfterDelete'], 10, 3);
 
         // Customer role-based filter (Review-01 from TODO-2187)
         // Filter customer DataTable based on user's customer_employees association

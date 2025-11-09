@@ -1,336 +1,140 @@
 /**
- * Customer DataTable Handler
+ * Customer DataTable
  *
  * @package     WP_Customer
- * @subpackage  Assets/JS/Components
- * @version     1.0.2
+ * @subpackage  Assets/JS/Customer
+ * @version     2.0.1
  * @author      arisciwek
  *
- * Path: /wp-customer/assets/js/components/customer-datatable.js
+ * Path: /wp-customer/assets/js/customer/customer-datatable.js
  *
- * Description: Komponen untuk mengelola DataTables customer.
- *              Menangani server-side processing, panel kanan,
- *              dan integrasi dengan komponen form terpisah.
- *
- * Form Integration:
- * - Create form handling sudah dipindahkan ke create-customer-form.js
- * - Component ini hanya menyediakan method refresh() untuk update table
- * - Event 'customer:created' digunakan sebagai trigger untuk refresh
+ * Description: Minimal DataTable initialization for Customer dashboard.
+ *              Compatible with wp-datatable dual-panel system.
+ *              DELEGATES all panel interactions to wp-datatable framework.
  *
  * Dependencies:
  * - jQuery
  * - DataTables library
- * - CustomerToast for notifications
- * - CreateCustomerForm for handling create operations
- * - EditCustomerForm for handling edit operations
+ * - wp-datatable panel-manager.js (handles all row/button clicks automatically)
  *
- * Related Files:
- * - create-customer-form.js: Handles create form submission
- * - edit-customer-form.js: Handles edit form submission
+ * How it works:
+ * 1. Initialize DataTable with server-side processing
+ * 2. Server returns DT_RowData with customer ID
+ * 3. DataTables automatically converts DT_RowData to data-* attributes on <tr>
+ * 4. wp-datatable panel-manager.js detects clicks on .wpdt-datatable rows
+ * 5. Panel opens automatically - NO custom code needed!
+ *
+ * Changelog:
+ * 2.0.1 - 2025-11-09
+ * - REMOVED: createdRow callback (unnecessary - DT_RowData handles this)
+ * - REMOVED: Custom click handlers (wp-datatable handles automatically)
+ * - REMOVED: registerDataTable call (panel-manager finds table by .wpdt-datatable class)
+ * - Actions column now uses server-side HTML with wpdt-panel-trigger class
+ * - TRUE minimal implementation - delegates everything to framework
+ *
+ * 2.0.0 - 2025-11-09
+ * - BREAKING: Complete rewrite for wp-datatable compatibility
+ * - Removed all custom panel handling
+ * - Removed dependencies on CustomerToast, Customer, etc
+ *
+ * 1.0.2 - Previous version
+ * - Complex custom implementation (deprecated)
  */
- (function($) {
-     'use strict';
 
-     const CustomerDataTable = {
-         table: null,
-         initialized: false,
-         currentHighlight: null,
+(function($) {
+    'use strict';
 
-         init() {
-             if (this.initialized) {
-                 return;
-             }
+    /**
+     * Initialize on document ready
+     */
+    $(document).ready(function() {
+        console.log('[Customer DataTable] Initializing...');
 
-             // Wait for dependencies
-             if (!window.Customer || !window.CustomerToast) {
-                 setTimeout(() => this.init(), 100);
-                 return;
-             }
+        var $table = $('#customer-datatable');
 
-             this.initialized = true;
-             this.initDataTable();
-             this.bindEvents();
-             this.handleInitialHash();
-         },
+        if ($table.length === 0) {
+            console.log('[Customer DataTable] Table element not found');
+            return;
+        }
 
-        initDataTable() {
-            if ($.fn.DataTable.isDataTable('#customers-table')) {
-                $('#customers-table').DataTable().destroy();
-            }
+        // Get nonce from wpdtConfig or wpCustomerConfig
+        var nonce = '';
+        if (typeof wpdtConfig !== 'undefined' && wpdtConfig.nonce) {
+            nonce = wpdtConfig.nonce;
+            console.log('[Customer DataTable] Using wpdtConfig.nonce');
+        } else if (typeof wpCustomerConfig !== 'undefined' && wpCustomerConfig.nonce) {
+            nonce = wpCustomerConfig.nonce;
+            console.log('[Customer DataTable] Using wpCustomerConfig.nonce');
+        } else {
+            console.error('[Customer DataTable] No nonce available!');
+        }
 
-            // Initialize clean table structure
-            $('#customers-table').empty().html(`
-                <thead>
-                    <tr>
-                        <th>Kode</th>
-                        <th>Nama Customer</th>
-                        <th>Admin</th>
-                        <th>Cabang</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            `);
-
-            this.table = $('#customers-table').DataTable({
-                processing: true,
-                serverSide: true,
-                ajax: {
-                    url: wpCustomerData.ajaxUrl,
-                    type: 'POST',
-                    data: (d) => {
-                        return {
-                            ...d,
-                            action: 'handle_customer_datatable',
-                            nonce: wpCustomerData.nonce
-                        };
-                    },
-                    error: (xhr, error, thrown) => {
-                        console.error('DataTables Error:', error);
-                        CustomerToast.error('Gagal memuat data customer');
-                    }
-                },
-                // Di bagian columns, tambahkan setelah kolom code
-                columns: [
-                    {
-                        data: 'code',
-                        title: 'Kode',
-                        width: '100px'
-                    },
-                    {
-                        data: 'name',
-                        title: 'Nama Customer'
-                    },
-                    {
-                        data: 'owner_name',
-                        title: 'Admin',
-                        defaultContent: '-'
-                    },
-                    {
-                        data: 'branch_count',
-                        title: 'Cabang',
-                        className: 'text-center',
-                        searchable: false,
-                        width: '40px'
-                    },
-                    {
-                        data: 'actions',
-                        title: 'Aksi',
-                        orderable: false,
-                        searchable: false,
-                        className: 'text-center nowrap'
-                    }
-                ],
-                order: [[0, 'asc']], // Default sort by code
-                pageLength: wpCustomerData.perPage || 10,
-                language: {
-                    "emptyTable": "Tidak ada data yang tersedia",
-                    "info": "Menampilkan _START_ hingga _END_ dari _TOTAL_ entri",
-                    "infoEmpty": "Menampilkan 0 hingga 0 dari 0 entri",
-                    "infoFiltered": "(disaring dari _MAX_ total entri)",
-                    "lengthMenu": "Tampilkan _MENU_ entri",
-                    "loadingRecords": "Memuat...",
-                    "processing": "Memproses...",
-                    "search": "Cari:",
-                    "zeroRecords": "Tidak ditemukan data yang sesuai",
-                    "paginate": {
-                        "first": "Pertama",
-                        "last": "Terakhir",
-                        "next": "Selanjutnya",
-                        "previous": "Sebelumnya"
-                    }
-                },
-                drawCallback: (settings) => {
-                    this.bindActionButtons();
-
-                    // Get current hash if any
-                    const hash = window.location.hash;
-                    if (hash && hash.startsWith('#')) {
-                        const id = hash.substring(1);
-                        if (id) {
-                            this.highlightRow(id);
+        // Initialize DataTable with server-side processing
+        var customerTable = $table.DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: ajaxurl,
+                type: 'POST',
+                data: function(d) {
+                    d.action = 'get_customer_datatable';
+                    d.nonce = nonce;
+                }
+            },
+            columns: [
+                { data: 'code', name: 'code' },
+                { data: 'name', name: 'name' },
+                { data: 'npwp', name: 'npwp' },
+                { data: 'nib', name: 'nib' },
+                {
+                    data: 'status',
+                    name: 'status',
+                    render: function(data, type, row) {
+                        if (data === 'active') {
+                            return '<span class="wpdt-badge wpdt-badge-success">Active</span>';
+                        } else {
+                            return '<span class="wpdt-badge wpdt-badge-danger">Inactive</span>';
                         }
                     }
                 },
-                createdRow: (row, data) => {
-                    $(row).attr('data-id', data.id);
+                {
+                    data: 'actions',
+                    name: 'actions',
+                    orderable: false,
+                    searchable: false
                 }
-            });
-        },
-
-         bindEvents() {
-             // Hash change event
-             $(window).off('hashchange.customerTable')
-                     .on('hashchange.customerTable', () => this.handleHashChange());
-
-             // CRUD event listeners
-             $(document).off('customer:created.datatable customer:updated.datatable customer:deleted.datatable')
-                       .on('customer:created.datatable customer:updated.datatable customer:deleted.datatable',
-                           () => this.refresh());
-         },
-
-         bindActionButtons() {
-             const $table = $('#customers-table');
-             $table.off('click', '.view-customer, .edit-customer, .delete-customer');
-
-             // View action
-             $table.on('click', '.view-customer', (e) => {
-                 const id = $(e.currentTarget).data('id');
-                 if (id) window.location.hash = id;
-
-                 // Reset tab ke details
-                 $('.tab-content').removeClass('active');
-                 $('#customer-details').addClass('active');
-                 $('.nav-tab').removeClass('nav-tab-active');
-                 $('.nav-tab[data-tab="customer-details"]').addClass('nav-tab-active');
-
-             });
-
-             // Edit action
-             $table.on('click', '.edit-customer', (e) => {
-                 e.preventDefault();
-                 const id = $(e.currentTarget).data('id');
-                 this.loadCustomerForEdit(id);
-             });
-
-             // Delete action
-             $table.on('click', '.delete-customer', (e) => {
-                 const id = $(e.currentTarget).data('id');
-                 this.handleDelete(id);
-             });
-         },
-
-         async loadCustomerForEdit(id) {
-            if (!id) return;
-
-            try {
-                console.log('Loading customer data for edit ID:', id); // Debug log
-
-                const response = await $.ajax({
-                    url: wpCustomerData.ajaxUrl,
-                    type: 'POST',
-                    data: {
-                        action: 'get_customer',
-                        id: id,
-                        nonce: wpCustomerData.nonce
-                    }
-                });
-
-                console.log('Response from get_customer:', response); // Debug response
-
-                if (response.success) {
-                    if (window.EditCustomerForm) {
-                        window.EditCustomerForm.showEditForm(response.data);
-                    } else {
-                        console.error('EditCustomerForm component not found'); // Debug component
-                        CustomerToast.error('Komponen form edit tidak tersedia');
-                    }
-                } else {
-                    console.error('Failed to load customer data:', response); // Debug error
-                    CustomerToast.error(response.data?.message || 'Gagal memuat data customer');
+            ],
+            order: [[0, 'desc']],
+            pageLength: 10,
+            language: {
+                processing: 'Processing...',
+                search: 'Search:',
+                lengthMenu: 'Show _MENU_ entries',
+                info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+                infoEmpty: 'Showing 0 to 0 of 0 entries',
+                zeroRecords: 'No matching records found',
+                emptyTable: 'No data available in table',
+                paginate: {
+                    first: 'First',
+                    previous: 'Previous',
+                    next: 'Next',
+                    last: 'Last'
                 }
-            } catch (error) {
-                console.error('Load customer error:', error);
-                CustomerToast.error('Gagal menghubungi server');
             }
-         },
+        });
 
-         async handleDelete(id) {
-             if (!id) return;
+        console.log('[Customer DataTable] DataTable initialized');
 
-             // Tampilkan modal konfirmasi dengan WIModal
-             WIModal.show({
-                 title: 'Konfirmasi Hapus',
-                 message: 'Yakin ingin menghapus customer ini? Aksi ini tidak dapat dibatalkan.',
-                 icon: 'trash',
-                 type: 'danger',
-                 confirmText: 'Hapus',
-                 confirmClass: 'button-danger',
-                 cancelText: 'Batal',
-                 onConfirm: async () => {
-                     try {
-                         const response = await $.ajax({
-                             url: wpCustomerData.ajaxUrl,
-                             type: 'POST',
-                             data: {
-                                 action: 'delete_customer',
-                                 id: id,
-                                 nonce: wpCustomerData.nonce
-                             }
-                         });
+        // Register DataTable instance to panel manager
+        // panel-manager.js might init before us, so we set it manually
+        if (window.wpdtPanelManager) {
+            window.wpdtPanelManager.dataTable = customerTable;
+            console.log('[Customer DataTable] Registered to panel manager');
+        } else {
+            console.warn('[Customer DataTable] Panel manager not found');
+        }
 
-                         if (response.success) {
-                             CustomerToast.success(response.data.message);
+        console.log('[Customer DataTable] Ready');
+    });
 
-                             // Clear hash if deleted customer is currently viewed
-                             if (window.location.hash === `#${id}`) {
-                                 window.location.hash = '';
-                             }
-
-                             this.refresh();
-                             $(document).trigger('customer:deleted');
-                         } else {
-                             CustomerToast.error(response.data?.message || 'Gagal menghapus customer');
-                         }
-                     } catch (error) {
-                         console.error('Delete customer error:', error);
-                         CustomerToast.error('Gagal menghubungi server');
-                     }
-                 }
-             });
-         },
-
-         handleHashChange() {
-             const hash = window.location.hash;
-             if (hash) {
-                 const id = hash.substring(1);
-                 if (id) {
-                     this.highlightRow(id);
-                 }
-             }
-         },
-
-         handleInitialHash() {
-             const hash = window.location.hash;
-             if (hash && hash.startsWith('#')) {
-                 this.handleHashChange();
-             }
-         },
-
-         highlightRow(id) {
-             if (this.currentHighlight) {
-                 $(`tr[data-id="${this.currentHighlight}"]`).removeClass('highlight');
-             }
-
-             const $row = $(`tr[data-id="${id}"]`);
-             if ($row.length) {
-                 $row.addClass('highlight');
-                 this.currentHighlight = id;
-
-                 // Scroll into view if needed
-                 const container = this.table.table().container();
-                 const rowTop = $row.position().top;
-                 const containerHeight = $(container).height();
-                 const scrollTop = $(container).scrollTop();
-
-                 if (rowTop < scrollTop || rowTop > scrollTop + containerHeight) {
-                     $row[0].scrollIntoView({behavior: 'smooth', block: 'center'});
-                 }
-             }
-         },
-
-         refresh() {
-             if (this.table) {
-                 this.table.ajax.reload(null, false);
-             }
-         }
-
-     };
-
-     // Initialize when document is ready
-     $(document).ready(() => {
-         window.CustomerDataTable = CustomerDataTable;
-         CustomerDataTable.init();
-     });
-
- })(jQuery);
+})(jQuery);

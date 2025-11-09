@@ -313,9 +313,9 @@ class CustomerDataTableModel extends DataTableModel {
     private function generate_action_buttons($row): string {
         $buttons = [];
 
-        // View button
+        // View button - uses wpdt-panel-trigger for wp-datatable integration
         $buttons[] = sprintf(
-            '<button type="button" class="button button-small wpapp-panel-trigger" data-id="%d" data-entity="customer" title="%s">
+            '<button type="button" class="button button-small wpdt-panel-trigger" data-id="%d" data-entity="customer" title="%s">
                 <span class="dashicons dashicons-visibility"></span>
             </button>',
             esc_attr($row->id),

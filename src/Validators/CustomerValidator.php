@@ -476,7 +476,8 @@ class CustomerValidator extends AbstractValidator {
         $cache_key = "customer_relation_{$customer_id}_{$current_user_id}";
         $cached_relation = $this->cache->get('customer_relation', $cache_key);
 
-        if ($cached_relation !== null) {
+        // TODO-2192 FIXED: Cache now returns false on miss (not null)
+        if ($cached_relation !== false) {
             $this->relationCache[$customer_id] = $cached_relation;
             return $cached_relation;
         }

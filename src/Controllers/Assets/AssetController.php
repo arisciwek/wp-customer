@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Controllers/Assets
- * @version     1.1.0
+ * @version     1.4.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Controllers/Assets/AssetController.php
@@ -15,6 +15,19 @@
  *              Inspired by wp-datatable dan wp-modal AssetController.
  *
  * Changelog:
+ * 1.4.0 - 2025-11-09
+ * - Added: customer-datatable.js enqueuing (minimal, no conflict)
+ * - NO inline scripts in PHP views (per user request)
+ * - Standalone JS file handles DataTable init + click events
+ * - Compatible with wp-datatable panel manager
+ *
+ * 1.3.0 - 2025-11-09 (REVERTED - inline scripts not preferred)
+ * - Pattern: Inline scripts in views + wp-datatable panel manager
+ *
+ * 1.2.0 - 2025-11-09 (REVERTED)
+ * - Added: Customer dashboard asset enqueuing (caused conflicts)
+ * - Fixes: Modal system (wpAppModal → WPModal migration)
+ *
  * 1.1.0 - 2025-11-09
  * - Added: Settings page asset enqueuing
  * - Added: Tab-specific styles and scripts for 6 settings tabs
@@ -106,15 +119,57 @@ class AssetController {
      * @return void
      */
     public function enqueue_admin_assets(): void {
+        error_log('[AssetController] enqueue_admin_assets called');
+
         $screen = get_current_screen();
         if (!$screen) {
+            error_log('[AssetController] No screen object');
             return;
+        }
+
+        error_log('[AssetController] Screen ID: ' . $screen->id);
+
+        // Customer Dashboard (main page)
+        if ($screen->id === 'toplevel_page_wp-customer-v2') {
+            error_log('[AssetController] Matched customer dashboard, calling enqueue_customer_dashboard_assets');
+            $this->enqueue_customer_dashboard_assets();
+        } else {
+            error_log('[AssetController] Screen ID did not match toplevel_page_wp-customer-v2');
         }
 
         // Settings page assets
         if ($screen->id === 'wp-customer_page_wp-customer-settings') {
             $this->enqueue_settings_assets();
         }
+    }
+
+    /**
+     * Enqueue customer dashboard assets
+     *
+     * @return void
+     */
+    private function enqueue_customer_dashboard_assets(): void {
+        error_log('[AssetController] Enqueuing customer dashboard assets');
+
+        // Enqueue minimal JS for DataTable initialization
+        // Dependency: jquery only (datatables will be loaded by wp-datatable BaseAssets)
+        wp_enqueue_script(
+            'customer-datatable',
+            WP_CUSTOMER_URL . 'assets/js/customer/customer-datatable.js',
+            ['jquery'],
+            $this->version,
+            false  // Load in header instead of footer
+        );
+
+        error_log('[AssetController] customer-datatable.js enqueued with dependencies: jquery, datatables');
+
+        // Localize script with nonce
+        wp_localize_script('customer-datatable', 'wpCustomerConfig', [
+            'nonce' => wp_create_nonce('wpdt_nonce'),
+            'ajaxUrl' => admin_url('admin-ajax.php')
+        ]);
+
+        error_log('[AssetController] wpCustomerConfig localized');
     }
 
     /**
