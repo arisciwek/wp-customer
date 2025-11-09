@@ -7,7 +7,7 @@
  * @version     2.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Models/Customer/CustomerDataTableModel-WithQueryBuilder.php
+ * Path: /wp-customer/src/Models/Customer/CustomerDataTableModel.php
  *
  * Description: REFACTORED DataTable model untuk server-side processing customer.
  *              Menggunakan WP-QB QueryBuilder untuk query yang lebih clean.

@@ -56,13 +56,13 @@ class MenuManager {
             30
         );
 
-        // Menu WP Customer V2 (NEW - Centralized DataTable)
+        // Menu WP Customer V2 (NEW - wp-datatable DualPanel)
         add_menu_page(
             __('Customer V2', 'wp-customer'),
             __('Customer V2', 'wp-customer'),
             'view_customer_list',
             'wp-customer-v2',
-            [$this->customer_dashboard_controller, 'renderDashboard'],
+            [$this->customer_dashboard_controller, 'render'],
             'dashicons-businessperson',
             30.5
         );

@@ -1,563 +1,184 @@
 <?php
 /**
- * Cache Management Class
+ * Customer Cache Manager
  *
  * @package     WP_Customer
  * @subpackage  Cache
- * @version     1.0.11
+ * @version     1.0.0
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Cache/CacheManager.php
+ * Path: /wp-customer/src/Cache/CustomerCacheManager.php
  *
- * Description: Manager untuk menangani caching data customer.
- *              Menggunakan WordPress Object Cache API.
- *              Includes cache untuk:
- *              - Single customer/branch/employee data
- *              - Lists (customer/branch/employee)
- *              - Statistics
- *              - Relations
+ * Description: Cache manager untuk Customer entity.
+ *              Extends AbstractCacheManager dari wp-app-core.
+ *              Handles caching untuk customer data, relations, dan DataTable.
  *
- * Cache Groups:
- * - wp_customer: Grup utama untuk semua cache
- * 
- * Cache Keys:
- * - customer_{id}: Data single customer
- * - customer_list: Daftar semua customer
- * - customer_stats: Statistik customer
- * - customer_branch_{id}: Data single branch
- * - customer_branch_list: Daftar semua branch
- * - customer_branch_stats: Statistik branch
- * - customer_employee_{id}: Data single employee
- * - customer_employee_list: Daftar semua employee
- * - customer_employee_stats: Statistik employee
- * - user_customers_{user_id}: Relasi user-customer
- * 
- * Dependencies:
- * - WordPress Object Cache API
- * 
  * Changelog:
- * 3.0.0 - 2024-01-31
- * - Added branch caching support
- * - Added employee caching support
- * - Extended cache key management
- * - Added statistics caching for all entities
- * 
- * 2.0.0 - 2024-01-20
- * - Added customer statistics cache
- * - Added user-customer relations cache
- * - Added cache group invalidation
- * - Enhanced cache key management
- * - Improved cache expiry handling
- * 
- * 1.0.0 - 2024-12-03
- * - Initial implementation
- * - Basic customer data caching
- * - List caching functionality
+ * 1.0.0 - 2025-01-08
+ * - Initial implementation (Task-2191)
+ * - Extends AbstractCacheManager
+ * - Implements 5 abstract methods
+ * - Cache expiry: 12 hours (default)
+ * - Cache group: wp_customer
  */
-/**
- * Cache Management Class
- * 
- * @package     WP_Customer
- * @subpackage  Cache
- */
+
 namespace WPCustomer\Cache;
 
-class CustomerCacheManager {
+use WPAppCore\Cache\Abstract\AbstractCacheManager;
 
-    // Cache keys
-    private const CACHE_GROUP = 'wp_customer';
-    private const CACHE_EXPIRY = 12 * HOUR_IN_SECONDS;
+defined('ABSPATH') || exit;
 
-    // Cache keys for customers
-    private const KEY_CUSTOMER = 'customer';
-    private const KEY_CUSTOMER_LIST = 'customer_list';
-    private const KEY_CUSTOMER_STATS = 'customer_stats';
-    private const KEY_USER_CUSTOMERS = 'user_customers';
-
-    // Cache keys for branches
-    private const KEY_CUSTOMER_BRANCH_LIST = 'customer_branch_list';
-    private const KEY_CUSTOMER_BRANCH = 'customer_branch';
-    private const KEY_CUSTOMER_BRANCH_STATS = 'customer_branch_stats';
-    private const KEY_USER_CUSTOMER_BRANCHES = 'user_customer_branches';
-
-    // Cache keys for employees
-    private const KEY_CUSTOMER_EMPLOYEE = 'customer_employee';
-    private const KEY_CUSTOMER_EMPLOYEE_LIST = 'customer_employee_list';
-    private const KEY_CUSTOMER_EMPLOYEE_STATS = 'customer_employee_stats';
-    private const KEY_USER_CUSTOMER_EMPLOYEES = 'user_customer_employees';
-
-    // Getter methods for external access to constants
-    public static function getCacheGroup(): string {
-        return self::CACHE_GROUP;
-    }
-
-    public static function getCacheExpiry(): int {
-        return self::CACHE_EXPIRY;
-    }
-
-    public static function getCacheKey(string $type): string {
-        $constants = [
-            'customer' => self::KEY_CUSTOMER,
-            'customer_list' => self::KEY_CUSTOMER_LIST,
-            'customer_stats' => self::KEY_CUSTOMER_STATS,
-            'user_customers' => self::KEY_USER_CUSTOMERS,
-            'customer_branch' => self::KEY_CUSTOMER_BRANCH,
-            'customer_branch_list' => self::KEY_CUSTOMER_BRANCH_LIST,
-            'customer_branch_stats' => self::KEY_CUSTOMER_BRANCH_STATS,
-            'user_customer_branches' => self::KEY_USER_CUSTOMER_BRANCHES,
-            'customer_employee' => self::KEY_CUSTOMER_EMPLOYEE,
-            'customer_employee_list' => self::KEY_CUSTOMER_EMPLOYEE_LIST,
-            'customer_employee_stats' => self::KEY_CUSTOMER_EMPLOYEE_STATS,
-            'user_customer_employees' => self::KEY_USER_CUSTOMER_EMPLOYEES,
-        ];
-
-        return $constants[$type] ?? '';
-    }
+class CustomerCacheManager extends AbstractCacheManager {
 
     /**
-     * Generates valid cache key based on components
+     * Singleton instance
      */
-    private function generateKey(string ...$components): string {
-        // Filter out empty components
-        $validComponents = array_filter($components, function($component) {
-            return !empty($component) && is_string($component);
-        });
-        
-        if (empty($validComponents)) {
-            // Instead of returning empty key or default key, throw exception
-            //throw new \InvalidArgumentException('Cache key cannot be generated from empty components');
-
-            // error_log('Cache key cannot be generated from empty components : '. print_r($validComponents));
- 
-            return 'default_' . md5(serialize($components));
-        }
-
-        // Join with underscore and ensure valid length
-        $key = implode('_', $validComponents);
-        
-        // WordPress has a key length limit of 172 characters
-        if (strlen($key) > 172) {
-            $key = substr($key, 0, 140) . '_' . md5($key);
-        }
-        
-        return $key;
-    }
+    private static $instance = null;
 
     /**
-     * Get value from cache with validation
-     */
-    public function get(string $type, ...$keyComponents) {
-        $key = $this->generateKey($type, ...$keyComponents);
-
-        $result = wp_cache_get($key, self::CACHE_GROUP);
-
-        if ($result === false) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Cache miss - Key: {$key}");
-            }
-            return null;
-        }
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Cache hit - Key: {$key}");
-        }
-
-        return $result;
-    }
-
-    /**
-     * Set value in cache with validation
-     */
-    public function set(string $type, $value, int $expiry = null, ...$keyComponents): bool {
-        try {
-            $key = $this->generateKey($type, ...$keyComponents);
-
-            if ($expiry === null) {
-                $expiry = self::CACHE_EXPIRY;
-            }
-
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Setting cache - Key: {$key}, Type: {$type}, Expiry: {$expiry}s");
-            }
-
-            return wp_cache_set($key, $value, self::CACHE_GROUP, $expiry);
-        } catch (\InvalidArgumentException $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Cache set failed: " . $e->getMessage());
-            }
-            return false;
-        }
-    }
-
-    /**
-     * Delete value from cache
-     */
-    public function delete(string $type, ...$keyComponents): bool {
-        $key = $this->generateKey($type, ...$keyComponents);
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log("Deleting cache - Key: {$key}, Type: {$type}");
-        }
-
-        return wp_cache_delete($key, self::CACHE_GROUP);
-    }
-
-    /**
-     * Check if key exists in cache
-     */
-    public function exists(string $type, ...$keyComponents): bool {
-        $key = $this->generateKey($type, ...$keyComponents);
-        return wp_cache_get($key, self::CACHE_GROUP) !== false;
-    }
-
-    /**
-     * Get cached DataTable data
-     */
-    public function getDataTableCache(
-        string $context,
-        string $access_type,
-        int $start,
-        int $length,
-        string $search,
-        string $orderColumn,
-        string $orderDir,
-        ?array $additionalParams = null
-    ) {
-        // Disable caching for company_list to ensure fresh data after inspector assignments
-        if ($context === 'company_list') {
-            return null;
-        }
-
-        // Validate required parameters
-        if (empty($context) || !$access_type || !is_numeric($start) || !is_numeric($length)) {
-            $this->debug_log('Invalid parameters in getDataTableCache');
-            return null;
-        }
-
-        try {
-            // Build components untuk kunci cache
-            $components = [
-                $context,         // context specific (agency_list, division_list, etc)
-                (string)$access_type,
-                'start_' . (string)$start,
-                'length_' . (string)$length,
-                md5($search),
-                (string)$orderColumn,
-                (string)$orderDir
-            ];
-
-            // Add additional parameters if provided
-            if ($additionalParams) {
-                foreach ($additionalParams as $key => $value) {
-                    $components[] = $key . '_' . md5(serialize($value));
-                }
-            }
-
-            // Gunakan 'datatable' sebagai type, components lainnya sebagai komponen kunci
-            return $this->get('datatable', ...$components);
-
-        } catch (\Exception $e) {
-            $this->debug_log("Error getting datatable data for context {$context}: " . $e->getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Set DataTable data in cache
-     */
-    public function setDataTableCache(
-        string $context,
-        string $access_type,
-        int $start,
-        int $length,
-        string $search,
-        string $orderColumn,
-        string $orderDir,
-        $data,
-        ?array $additionalParams = null
-    ) {
-        // Disable caching for company_list to ensure fresh data after inspector assignments
-        if ($context === 'company_list') {
-            return true;
-        }
-
-        // Validate required parameters
-        if (empty($context) || !$access_type || !is_numeric($start) || !is_numeric($length)) {
-            $this->debug_log('Invalid parameters in setDataTableCache');
-            return false;
-        }
-
-        // Build components untuk kunci cache - SAMA PERSIS dengan getDataTableCache
-        $components = [
-            $context,         // context specific (agency_list, division_list, etc)
-            (string)$access_type,
-            'start_' . (string)$start,
-            'length_' . (string)$length,
-            md5($search),
-            (string)$orderColumn,
-            (string)$orderDir
-        ];
-
-        // Add additional parameters if provided - SAMA PERSIS dengan getDataTableCache
-        if ($additionalParams) {
-            foreach ($additionalParams as $key => $value) {
-                $components[] = $key . '_' . md5(serialize($value));
-            }
-        }
-
-        // Gunakan 'datatable' sebagai type (sama dengan getDataTableCache)
-        return $this->set('datatable', $data, 2 * MINUTE_IN_SECONDS, ...$components);
-    }
-
-    /**
-     * Perbaikan untuk invalidateDataTableCache() di AgencyCacheManager
-     */
-    public function invalidateDataTableCache(string $context, ?array $filters = null): bool {
-        try {
-            if (empty($context)) {
-                $this->debug_log('Invalid context in invalidateDataTableCache');
-                return false;
-            }
-
-            // Log invalidation attempt
-            $this->debug_log(sprintf(
-                'Attempting to invalidate DataTable cache - Context: %s, Filters: %s',
-                $context,
-                $filters ? json_encode($filters) : 'none'
-            ));
-
-            // Periksa apakah grup cache ada dan dapat diakses
-            global $wp_object_cache;
-            if (!isset($wp_object_cache->cache[self::CACHE_GROUP]) || empty($wp_object_cache->cache[self::CACHE_GROUP])) {
-                $this->debug_log('Cache group not found or empty - no action needed');
-                return true; // Tidak perlu invalidasi jika tidak ada cache
-            }
-
-            // Base components for cache key
-            $components = ['datatable', $context];
-            
-            // If we have filters, create filter-specific invalidation
-            if ($filters) {
-                foreach ($filters as $key => $value) {
-                    $components[] = sprintf('%s_%s', $key, md5(serialize($value)));
-                }
-                
-                $key = $this->generateKey(...$components);
-                $result = wp_cache_delete($key, self::CACHE_GROUP);
-                
-                $this->debug_log(sprintf(
-                    'Invalidated filtered cache for context %s with filters. Result: %s',
-                    $context,
-                    $result ? 'success' : 'failed'
-                ));
-                
-                return true; // Anggap sukses karena tidak ada cache yang perlu dihapus
-            }
-
-            // If no filters, do a broader invalidation using prefix
-            $prefix = implode('_', $components);
-            $result = $this->deleteByPrefix($prefix);
-
-            $this->debug_log(sprintf(
-                'Invalidated all cache entries for context %s. Result: %s',
-                $context,
-                $result ? 'success' : 'failed'
-            ));
-
-            return true; // Anggap sukses karena tidak ada yang perlu dihapus
-
-        } catch (\Exception $e) {
-            $this->debug_log('Error in invalidateDataTableCache: ' . $e->getMessage());
-            return false;
-        }
-    }
-
-    /**
-     * Improved version of deleteByPrefix
-     */
-    private function deleteByPrefix(string $prefix): bool {
-        global $wp_object_cache;
-        
-        // Jika grup tidak ada, tidak ada yang perlu dihapus
-        if (!isset($wp_object_cache->cache[self::CACHE_GROUP])) {
-            $this->debug_log('Cache group not found - nothing to delete');
-            return true;
-        }
-        
-        // Jika grup kosong, tidak ada yang perlu dihapus
-        if (empty($wp_object_cache->cache[self::CACHE_GROUP])) {
-            $this->debug_log('Cache group empty - nothing to delete');
-            return true;
-        }
-        
-        $deleted = 0;
-        $keys = array_keys($wp_object_cache->cache[self::CACHE_GROUP]);
-        
-        foreach ($keys as $key) {
-            if (strpos($key, $prefix) === 0) {
-                $result = wp_cache_delete($key, self::CACHE_GROUP);
-                if ($result) $deleted++;
-            }
-        }
-        
-        $this->debug_log(sprintf('Deleted %d keys with prefix %s', $deleted, $prefix));
-        return true;
-    }
-
-    /**
-     * Helper method to generate cache key for DataTable
-     * 
-     * @param string $context The DataTable context
-     * @param array $components Additional key components
-     * @return string The generated cache key
-     */
-    private function generateDataTableCacheKey(string $context, array $components): string {
-        $key_parts = ['datatable', $context];
-        
-        foreach ($components as $component) {
-            if (is_scalar($component)) {
-                $key_parts[] = (string)$component;
-            } else {
-                $key_parts[] = md5(serialize($component));
-            }
-        }
-        
-        return implode('_', $key_parts);
-    }
-
-    /**
-     * Logger method for debugging cache operations
-     * 
-     * @param string $message The message to log
-     * @param mixed $data Optional data to include in log
-     */
-    private function debug_log(string $message, $data = null): void {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log(sprintf(
-                '[CacheManager] %s %s',
-                $message,
-                $data ? '| Data: ' . print_r($data, true) : ''
-            ));
-        }
-    }
-
-    // Method untuk invalidate cache saat ada update
-    public function invalidateCustomerCache(int $id): void {
-        $this->delete('customer_detail', $id);
-        $this->delete('customer_branch_count', $id);
-        $this->delete('customer', $id);
-        // Clear customer list cache
-        $this->delete('customer_total_count', get_current_user_id());
-
-        // Clear datatable cache untuk semua access_type
-        // Karena customer data berubah, semua user dengan access_type berbeda
-        // perlu melihat data yang fresh
-        $this->invalidateDataTableCache('customer_list');
-    }
-
-    /**
-     * Clear all caches in group
-     * Alias method to maintain backward compatibility
-     * 
-     * @return bool True if cache was cleared successfully
-     */
-    public function clearAllCaches(): bool {
-        return $this->clearAll();
-    }
-
-/**
-     * Clear cache - now public untuk support BranchModel cleanup
+     * Get singleton instance
      *
-     * @param string|null $type Optional cache type to clear specific pattern
-     * @return bool
+     * @return CustomerCacheManager
      */
-    public function clearCache(string $type = null): bool {
-        try {
-            global $wp_object_cache;
+    public static function getInstance(): CustomerCacheManager {
+        if (null === self::$instance) {
+            self::$instance = new self();
+        }
+        return self::$instance;
+    }
 
-            // Check if using default WordPress object cache
-            if (isset($wp_object_cache->cache[self::CACHE_GROUP])) {
-                if (is_array($wp_object_cache->cache[self::CACHE_GROUP])) {
-                    foreach (array_keys($wp_object_cache->cache[self::CACHE_GROUP]) as $key) {
-                        // If type specified, only clear keys matching that type
-                        if ($type === null || strpos($key, $type) === 0) {
-                            wp_cache_delete($key, self::CACHE_GROUP);
-                        }
-                    }
-                }
-                if ($type === null) {
-                    unset($wp_object_cache->cache[self::CACHE_GROUP]);
-                }
-                return true;
-            }
+    // ========================================
+    // IMPLEMENT ABSTRACT METHODS (5 required)
+    // ========================================
 
-            // Alternative approach for external cache plugins
-            if (function_exists('wp_cache_flush_group')) {
-                // Some caching plugins provide group-level flush
-                return wp_cache_flush_group(self::CACHE_GROUP);
-            }
+    /**
+     * Get cache group name
+     *
+     * @return string
+     */
+    protected function getCacheGroup(): string {
+        return 'wp_customer';
+    }
 
-            // Fallback method - iteratively clear known cache keys
-            $known_types = [
-                'customer',
-                'customer_list',
-                'customer_total_count',
-                'customer_membership',
-            'membership',
-            'customer_branch',
-            'customer_branch_list',
-            'customer_employee',
-            'customer_employee_list',
+    /**
+     * Get cache expiry time
+     *
+     * @return int Cache expiry in seconds (12 hours)
+     */
+    protected function getCacheExpiry(): int {
+        return 12 * HOUR_IN_SECONDS;
+    }
+
+    /**
+     * Get entity name
+     *
+     * @return string
+     */
+    protected function getEntityName(): string {
+        return 'customer';
+    }
+
+    /**
+     * Get cache keys mapping
+     *
+     * @return array
+     */
+    protected function getCacheKeys(): array {
+        return [
+            'customer' => 'customer',
+            'customer_list' => 'customer_list',
+            'customer_stats' => 'customer_stats',
+            'customer_total_count' => 'customer_total_count',
+            'customer_relation' => 'customer_relation',
+            'branch_count' => 'branch_count',
+            'customer_ids' => 'customer_ids',
+            'code_exists' => 'code_exists',
+            'name_exists' => 'name_exists',
+            'user_customers' => 'user_customers'
+        ];
+    }
+
+    /**
+     * Get known cache types for fallback clearing
+     *
+     * @return array
+     */
+    protected function getKnownCacheTypes(): array {
+        return [
+            'customer',
+            'customer_list',
+            'customer_stats',
+            'customer_total_count',
+            'customer_relation',
+            'branch_count',
+            'customer_ids',
+            'code_exists',
+            'name_exists',
+            'user_customers',
             'datatable'
         ];
-
-        foreach ($known_types as $type) {
-            if ($cached_keys = wp_cache_get($type . '_keys', self::CACHE_GROUP)) {
-                if (is_array($cached_keys)) {
-                    foreach ($cached_keys as $key) {
-                        wp_cache_delete($key, self::CACHE_GROUP);
-                    }
-                }
-            }
-        }
-
-        // Also clear the master key list
-        wp_cache_delete('cache_keys', self::CACHE_GROUP);
-
-        return true;
-
-    } catch (\Exception $e) {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Error clearing cache: ' . $e->getMessage());
-        }
-        return false;
     }
-}
 
-/**
- * Clear all caches in group with enhanced error handling
- * 
- * @return bool True if cache was cleared successfully
- */
-public function clearAll(): bool {
-    try {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Attempting to clear all caches in group: ' . self::CACHE_GROUP);
-        }
+    // ========================================
+    // CUSTOM CACHE METHODS (Entity-specific)
+    // ========================================
 
-        $result = $this->clearCache();
-
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Cache clear result: ' . ($result ? 'success' : 'failed'));
-        }
-
-        return $result;
-    } catch (\Exception $e) {
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('Error in clearAll(): ' . $e->getMessage());
-        }
-        return false;
+    /**
+     * Get customer from cache
+     *
+     * @param int $id Customer ID
+     * @return object|null Customer object or null
+     */
+    public function getCustomer(int $id): ?object {
+        return $this->get('customer', $id);
     }
-}
 
+    /**
+     * Set customer in cache
+     *
+     * @param int $id Customer ID
+     * @param object $customer Customer data
+     * @param int|null $expiry Optional custom expiry
+     * @return bool
+     */
+    public function setCustomer(int $id, object $customer, ?int $expiry = null): bool {
+        return $this->set('customer', $customer, $expiry, $id);
+    }
+
+    /**
+     * Invalidate customer cache
+     *
+     * Clears all cache related to a specific customer:
+     * - Customer entity
+     * - DataTable cache
+     * - Relation cache
+     * - Stats cache
+     *
+     * @param int $id Customer ID
+     * @return void
+     */
+    public function invalidateCustomerCache(int $id): void {
+        // Clear customer entity cache
+        $this->delete('customer', $id);
+
+        // Clear relation cache for this customer
+        $this->clearCache('customer_relation');
+
+        // Clear DataTable cache
+        $this->invalidateDataTableCache('customer_list');
+
+        // Clear stats cache
+        $this->clearCache('customer_stats');
+        $this->clearCache('customer_total_count');
+
+        // Clear branch count cache
+        $this->delete('branch_count', $id);
+
+        // Clear customer IDs cache
+        $this->delete('customer_ids', 'active');
+
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("[CustomerCacheManager] Invalidated all cache for customer {$id}");
+        }
+    }
 }

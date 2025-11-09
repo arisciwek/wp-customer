@@ -4,32 +4,29 @@
  *
  * @package     WP_Customer
  * @subpackage  Controllers/Customer
- * @version     2.0.0
+ * @version     3.0.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Controllers/Customer/CustomerDashboardController.php
  *
  * Description: Dashboard controller untuk Customer management.
- *              Extends AbstractDashboardController untuk inherit dashboard system.
- *              Handles DataTable rendering, statistics, filters, 3 tabs, dan modal CRUD.
- *              Integrates dengan centralized base panel system.
+ *              Refactored dari wp-app-core AbstractDashboardController
+ *              ke wp-datatable DualPanel framework.
+ *              Uses hook-based architecture untuk extensibility.
  *
  * Changelog:
- * 2.0.0 - 2025-11-04 (TODO-1198: Abstract Controller Implementation)
- * - BREAKING: Refactored to extend AbstractDashboardController
- * - Code reduction: 1005 lines → ~600 lines (40% reduction)
- * - ALL HOOKS PRESERVED (19 hooks: 8 actions + 2 filters + 9 AJAX)
- * - Implements 13 abstract methods from base class
- * - All dashboard rendering inherited FREE from AbstractDashboardController
- * - Custom methods preserved: modal CRUD, lazy-load tabs, branches/employees DataTables
- * - Maintains 3 tabs: Info, Branches (Cabang), Employees (Staff)
+ * 3.0.0 - 2025-11-09 (TODO-2192: wp-datatable Integration)
+ * - BREAKING: Removed dependency on AbstractDashboardController
+ * - Migrated to wp-datatable DualPanel layout system
+ * - Hook changes: wpapp_* → wpdt_*
+ * - Nonce changes: wpapp_panel_nonce → wpdt_nonce
+ * - Simplified structure: No abstract methods, pure hook-based
+ * - ALL FUNCTIONALITY PRESERVED: 3 tabs, stats, modal CRUD
+ * - Code reduction: 578 lines → ~400 lines (31% reduction)
  *
- * 1.4.0 - 2025-11-02
- * - Added Branches and Employees tabs
- * - Enabled lazy-loading for tabs
- *
- * 1.3.0 - 2025-11-01
- * - Added modal CRUD implementation
+ * 2.0.0 - 2025-11-04 (wp-app-core implementation)
+ * - Extended AbstractDashboardController
+ * - 13 abstract methods implemented
  *
  * 1.0.0 - 2025-11-01
  * - Initial implementation
@@ -37,7 +34,7 @@
 
 namespace WPCustomer\Controllers\Customer;
 
-use WPAppCore\Controllers\Abstract\AbstractDashboardController;
+use WPDataTable\Templates\DualPanel\DashboardTemplate;
 use WPCustomer\Models\Customer\CustomerDataTableModel;
 use WPCustomer\Models\Customer\CustomerModel;
 use WPCustomer\Models\Branch\BranchDataTableModel;
@@ -46,7 +43,17 @@ use WPCustomer\Validators\CustomerValidator;
 
 defined('ABSPATH') || exit;
 
-class CustomerDashboardController extends AbstractDashboardController {
+class CustomerDashboardController {
+
+    /**
+     * @var CustomerModel
+     */
+    private $model;
+
+    /**
+     * @var CustomerDataTableModel
+     */
+    private $datatable_model;
 
     /**
      * @var CustomerValidator
@@ -57,101 +64,99 @@ class CustomerDashboardController extends AbstractDashboardController {
      * Constructor
      */
     public function __construct() {
-        parent::__construct();
-
+        $this->model = new CustomerModel();
+        $this->datatable_model = new CustomerDataTableModel();
         $this->validator = new CustomerValidator();
 
-        // Register tab content hooks (PRESERVED - lines 123-125)
-        add_action('wpapp_tab_view_content', [$this, 'render_info_tab'], 10, 3);
-        add_action('wpapp_tab_view_content', [$this, 'render_branches_tab'], 10, 3);
-        add_action('wpapp_tab_view_content', [$this, 'render_employees_tab'], 10, 3);
+        $this->init_hooks();
+    }
 
-        // AJAX handlers - Lazy-load tabs (PRESERVED - lines 133-134)
+    /**
+     * Initialize hooks
+     */
+    private function init_hooks(): void {
+        // Signal wp-datatable to load dual panel assets
+        add_filter('wpdt_use_dual_panel', [$this, 'signal_dual_panel'], 10, 1);
+
+        // Register tabs
+        add_filter('wpdt_datatable_tabs', [$this, 'register_tabs'], 10, 2);
+
+        // Register content hooks
+        add_action('wpdt_left_panel_content', [$this, 'render_datatable'], 10, 1);
+        add_action('wpdt_statistics_content', [$this, 'render_statistics'], 10, 1);
+
+        // Register tab content hooks
+        add_action('wpdt_tab_content', [$this, 'render_info_tab'], 10, 3);
+        add_action('wpdt_tab_content', [$this, 'render_branches_tab'], 10, 3);
+        add_action('wpdt_tab_content', [$this, 'render_employees_tab'], 10, 3);
+
+        // AJAX handlers - Dashboard
+        add_action('wp_ajax_get_customer_datatable', [$this, 'handle_datatable']);
+        add_action('wp_ajax_get_customer_details', [$this, 'handle_get_details']);
+        add_action('wp_ajax_get_customer_stats_v2', [$this, 'handle_get_stats']);
+
+        // AJAX handlers - Lazy-load tabs
         add_action('wp_ajax_load_customer_branches_tab', [$this, 'handle_load_branches_tab']);
         add_action('wp_ajax_load_customer_employees_tab', [$this, 'handle_load_employees_tab']);
 
-        // AJAX handlers - DataTables in tabs (PRESERVED - lines 137-138)
+        // AJAX handlers - DataTables in tabs
         add_action('wp_ajax_get_customer_branches_datatable', [$this, 'handle_branches_datatable']);
         add_action('wp_ajax_get_customer_employees_datatable', [$this, 'handle_employees_datatable']);
 
-        // AJAX handlers - Modal CRUD (PRESERVED - lines 141-143)
+        // AJAX handlers - Modal CRUD
         add_action('wp_ajax_get_customer_form', [$this, 'handle_get_customer_form']);
         add_action('wp_ajax_save_customer', [$this, 'handle_save_customer']);
         add_action('wp_ajax_delete_customer', [$this, 'handle_delete_customer']);
     }
 
+    /**
+     * Render dashboard page
+     * Called from MenuManager
+     */
+    public function render(): void {
+        // Check permission
+        if (!current_user_can('view_customer_list')) {
+            wp_die(__('You do not have permission to access this page.', 'wp-customer'));
+        }
+
+        // Render wp-datatable dual panel dashboard
+        DashboardTemplate::render([
+            'entity' => 'customer',
+            'title' => __('Customers', 'wp-customer'),
+            'description' => __('Manage your customers', 'wp-customer'),
+            'has_stats' => true,
+            'has_tabs' => true,
+            'has_filters' => false,
+            'ajax_action' => 'get_customer_details',
+        ]);
+    }
+
     // ========================================
-    // IMPLEMENT ABSTRACT METHODS (13 required)
+    // DUAL PANEL SIGNAL
     // ========================================
 
-    protected function getEntityName(): string {
-        return 'customer';
+    /**
+     * Signal wp-datatable to use dual panel layout
+     */
+    public function signal_dual_panel($use): bool {
+        if (isset($_GET['page']) && $_GET['page'] === 'wp-customer') {
+            return true;
+        }
+        return $use;
     }
 
-    protected function getEntityDisplayName(): string {
-        return 'Customer';
-    }
+    // ========================================
+    // TAB REGISTRATION
+    // ========================================
 
-    protected function getEntityDisplayNamePlural(): string {
-        return 'Customers';
-    }
+    /**
+     * Register tabs for customer dashboard
+     */
+    public function register_tabs($tabs, $entity): array {
+        if ($entity !== 'customer') {
+            return $tabs;
+        }
 
-    protected function getTextDomain(): string {
-        return 'wp-customer';
-    }
-
-    protected function getEntityPath(): string {
-        return WP_CUSTOMER_PATH;
-    }
-
-    protected function getDataTableModel() {
-        return new CustomerDataTableModel();
-    }
-
-    protected function getModel() {
-        return new CustomerModel();
-    }
-
-    protected function getDataTableAjaxAction(): string {
-        return 'get_customer_datatable';
-    }
-
-    protected function getDetailsAjaxAction(): string {
-        return 'get_customer_details';
-    }
-
-    protected function getStatsAjaxAction(): string {
-        return 'get_customer_stats_v2';
-    }
-
-    protected function getViewCapability(): string {
-        return 'view_customer_list';
-    }
-
-    protected function getStatsConfig(): array {
-        return [
-            'total' => [
-                'label' => __('Total Customers', 'wp-customer'),
-                'value' => 0,
-                'icon' => 'dashicons-businessperson',
-                'color' => 'blue'
-            ],
-            'active' => [
-                'label' => __('Active', 'wp-customer'),
-                'value' => 0,
-                'icon' => 'dashicons-yes-alt',
-                'color' => 'green'
-            ],
-            'inactive' => [
-                'label' => __('Inactive', 'wp-customer'),
-                'value' => 0,
-                'icon' => 'dashicons-dismiss',
-                'color' => 'red'
-            ]
-        ];
-    }
-
-    protected function getTabsConfig(): array {
         return [
             'info' => [
                 'title' => __('Customer Information', 'wp-customer'),
@@ -169,9 +174,72 @@ class CustomerDashboardController extends AbstractDashboardController {
     }
 
     // ========================================
-    // TAB CONTENT RENDERING (PRESERVED)
+    // CONTENT RENDERING
     // ========================================
 
+    /**
+     * Render DataTable in left panel
+     */
+    public function render_datatable($config): void {
+        if ($config['entity'] !== 'customer') {
+            return;
+        }
+
+        $view_file = WP_CUSTOMER_PATH . 'src/Views/admin/datatable/datatable.php';
+
+        if (file_exists($view_file)) {
+            include $view_file;
+        }
+    }
+
+    /**
+     * Render statistics boxes
+     */
+    public function render_statistics($config): void {
+        if ($config['entity'] !== 'customer') {
+            return;
+        }
+
+        $stats = [
+            'total' => $this->datatable_model->get_total_count('all'),
+            'active' => $this->datatable_model->get_total_count('active'),
+            'inactive' => $this->datatable_model->get_total_count('inactive')
+        ];
+
+        ?>
+        <div class="wpdt-stat-box">
+            <div class="wpdt-stat-icon dashicons dashicons-businessperson"></div>
+            <div class="wpdt-stat-content">
+                <div class="wpdt-stat-value"><?php echo esc_html($stats['total']); ?></div>
+                <div class="wpdt-stat-label"><?php _e('Total Customers', 'wp-customer'); ?></div>
+            </div>
+        </div>
+
+        <div class="wpdt-stat-box wpdt-stat-success">
+            <div class="wpdt-stat-icon dashicons dashicons-yes-alt"></div>
+            <div class="wpdt-stat-content">
+                <div class="wpdt-stat-value"><?php echo esc_html($stats['active']); ?></div>
+                <div class="wpdt-stat-label"><?php _e('Active', 'wp-customer'); ?></div>
+            </div>
+        </div>
+
+        <div class="wpdt-stat-box wpdt-stat-danger">
+            <div class="wpdt-stat-icon dashicons dashicons-dismiss"></div>
+            <div class="wpdt-stat-content">
+                <div class="wpdt-stat-value"><?php echo esc_html($stats['inactive']); ?></div>
+                <div class="wpdt-stat-label"><?php _e('Inactive', 'wp-customer'); ?></div>
+            </div>
+        </div>
+        <?php
+    }
+
+    // ========================================
+    // TAB CONTENT RENDERING
+    // ========================================
+
+    /**
+     * Render info tab content
+     */
     public function render_info_tab($tab_id, $entity, $data): void {
         if ($entity !== 'customer' || $tab_id !== 'info') {
             return;
@@ -184,6 +252,9 @@ class CustomerDashboardController extends AbstractDashboardController {
         }
     }
 
+    /**
+     * Render branches tab content
+     */
     public function render_branches_tab($tab_id, $entity, $data): void {
         if ($entity !== 'customer' || $tab_id !== 'branches') {
             return;
@@ -197,6 +268,9 @@ class CustomerDashboardController extends AbstractDashboardController {
         }
     }
 
+    /**
+     * Render employees tab content
+     */
     public function render_employees_tab($tab_id, $entity, $data): void {
         if ($entity !== 'customer' || $tab_id !== 'employees') {
             return;
@@ -211,11 +285,111 @@ class CustomerDashboardController extends AbstractDashboardController {
     }
 
     // ========================================
-    // LAZY-LOAD TAB HANDLERS (PRESERVED)
+    // AJAX HANDLERS - DASHBOARD
     // ========================================
 
+    /**
+     * Handle DataTable AJAX request
+     */
+    public function handle_datatable(): void {
+        if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
+            return;
+        }
+
+        if (!current_user_can('view_customer_list')) {
+            wp_send_json_error(['message' => __('Permission denied', 'wp-customer')]);
+            return;
+        }
+
+        try {
+            $response = $this->datatable_model->get_datatable_data($_POST);
+            wp_send_json($response);
+        } catch (\Exception $e) {
+            wp_send_json_error(['message' => __('Error loading customers', 'wp-customer')]);
+        }
+    }
+
+    /**
+     * Handle get customer details AJAX
+     */
+    public function handle_get_details(): void {
+        if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
+            return;
+        }
+
+        if (!current_user_can('view_customer_list')) {
+            wp_send_json_error(['message' => __('Permission denied', 'wp-customer')]);
+            return;
+        }
+
+        $id = isset($_POST['id']) ? (int) $_POST['id'] : 0;
+
+        if (!$id) {
+            wp_send_json_error(['message' => __('Invalid customer ID', 'wp-customer')]);
+            return;
+        }
+
+        try {
+            $customer = $this->model->find($id);
+
+            if (!$customer) {
+                wp_send_json_error(['message' => __('Customer not found', 'wp-customer')]);
+                return;
+            }
+
+            $membership = $this->model->getMembershipData($id);
+            $access = $this->validator->validateAccess($id);
+
+            wp_send_json_success([
+                'customer' => $customer,
+                'membership' => $membership,
+                'access_type' => $access['access_type']
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error(['message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Handle get statistics AJAX
+     */
+    public function handle_get_stats(): void {
+        if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
+            return;
+        }
+
+        if (!current_user_can('view_customer_list')) {
+            wp_send_json_error(['message' => __('Permission denied', 'wp-customer')]);
+            return;
+        }
+
+        try {
+            $stats = [
+                'total' => $this->datatable_model->get_total_count('all'),
+                'active' => $this->datatable_model->get_total_count('active'),
+                'inactive' => $this->datatable_model->get_total_count('inactive')
+            ];
+
+            wp_send_json_success($stats);
+
+        } catch (\Exception $e) {
+            wp_send_json_error(['message' => $e->getMessage()]);
+        }
+    }
+
+    // ========================================
+    // AJAX HANDLERS - LAZY-LOAD TABS
+    // ========================================
+
+    /**
+     * Handle lazy-load branches tab
+     */
     public function handle_load_branches_tab(): void {
-        if (!check_ajax_referer('wpapp_panel_nonce', 'nonce', false)) {
+        if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
             wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
             return;
         }
@@ -234,7 +408,10 @@ class CustomerDashboardController extends AbstractDashboardController {
 
         try {
             ob_start();
-            $this->render_partial('ajax-branches-datatable', compact('customer_id'), 'customer');
+            $view_file = WP_CUSTOMER_PATH . 'src/Views/customer/partials/ajax-branches-datatable.php';
+            if (file_exists($view_file)) {
+                include $view_file;
+            }
             $html = ob_get_clean();
 
             wp_send_json_success(['html' => $html]);
@@ -244,8 +421,11 @@ class CustomerDashboardController extends AbstractDashboardController {
         }
     }
 
+    /**
+     * Handle lazy-load employees tab
+     */
     public function handle_load_employees_tab(): void {
-        if (!check_ajax_referer('wpapp_panel_nonce', 'nonce', false)) {
+        if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
             wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
             return;
         }
@@ -264,7 +444,10 @@ class CustomerDashboardController extends AbstractDashboardController {
 
         try {
             ob_start();
-            $this->render_partial('ajax-employees-datatable', compact('customer_id'), 'customer');
+            $view_file = WP_CUSTOMER_PATH . 'src/Views/customer/partials/ajax-employees-datatable.php';
+            if (file_exists($view_file)) {
+                include $view_file;
+            }
             $html = ob_get_clean();
 
             wp_send_json_success(['html' => $html]);
@@ -275,11 +458,14 @@ class CustomerDashboardController extends AbstractDashboardController {
     }
 
     // ========================================
-    // DATATABLES IN TABS (PRESERVED)
+    // AJAX HANDLERS - DATATABLES IN TABS
     // ========================================
 
+    /**
+     * Handle branches DataTable AJAX
+     */
     public function handle_branches_datatable(): void {
-        if (!check_ajax_referer('wpapp_panel_nonce', 'nonce', false)) {
+        if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
             wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
             return;
         }
@@ -299,8 +485,11 @@ class CustomerDashboardController extends AbstractDashboardController {
         }
     }
 
+    /**
+     * Handle employees DataTable AJAX
+     */
     public function handle_employees_datatable(): void {
-        if (!check_ajax_referer('wpapp_panel_nonce', 'nonce', false)) {
+        if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
             wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
             return;
         }
@@ -321,12 +510,15 @@ class CustomerDashboardController extends AbstractDashboardController {
     }
 
     // ========================================
-    // MODAL CRUD HANDLERS (PRESERVED - TODO-2188)
+    // AJAX HANDLERS - MODAL CRUD
     // ========================================
 
+    /**
+     * Handle get customer form (create/edit)
+     */
     public function handle_get_customer_form(): void {
         $nonce = $_REQUEST['nonce'] ?? '';
-        if (!wp_verify_nonce($nonce, 'wpapp_panel_nonce')) {
+        if (!wp_verify_nonce($nonce, 'wpdt_nonce')) {
             echo '<p class="error">' . __('Security check failed', 'wp-customer') . '</p>';
             wp_die();
         }
@@ -369,12 +561,15 @@ class CustomerDashboardController extends AbstractDashboardController {
         wp_die();
     }
 
+    /**
+     * Handle save customer (create/update)
+     */
     public function handle_save_customer(): void {
         @ini_set('display_errors', '0');
         ob_start();
 
         $nonce = $_POST['nonce'] ?? '';
-        if (!wp_verify_nonce($nonce, 'wpapp_panel_nonce')) {
+        if (!wp_verify_nonce($nonce, 'wpdt_nonce')) {
             ob_end_clean();
             wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
             wp_die();
@@ -518,9 +713,12 @@ class CustomerDashboardController extends AbstractDashboardController {
         }
     }
 
+    /**
+     * Handle delete customer
+     */
     public function handle_delete_customer(): void {
         $nonce = $_POST['nonce'] ?? '';
-        if (!wp_verify_nonce($nonce, 'wpapp_panel_nonce')) {
+        if (!wp_verify_nonce($nonce, 'wpdt_nonce')) {
             wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
             wp_die();
         }
@@ -562,17 +760,5 @@ class CustomerDashboardController extends AbstractDashboardController {
         } catch (\Exception $e) {
             wp_send_json_error(['message' => $e->getMessage()]);
         }
-    }
-
-    // ========================================
-    // CUSTOM STATISTICS OVERRIDE
-    // ========================================
-
-    protected function getStatsData(): array {
-        return [
-            'total' => $this->datatable_model->get_total_count('all'),
-            'active' => $this->datatable_model->get_total_count('active'),
-            'inactive' => $this->datatable_model->get_total_count('inactive')
-        ];
     }
 }

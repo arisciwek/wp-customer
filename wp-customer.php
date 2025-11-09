@@ -105,11 +105,15 @@ class WPCustomer {
         require_once WP_CUSTOMER_PATH . 'includes/class-role-manager.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-activator.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-deactivator.php';
-        require_once WP_CUSTOMER_PATH . 'includes/class-dependencies.php';
+        // Note: class-dependencies.php replaced by AssetController
         require_once WP_CUSTOMER_PATH . 'includes/class-init-hooks.php';
         require_once WP_CUSTOMER_PATH . 'includes/class-upgrade.php';
 
         $this->loader = new WP_Customer_Loader();
+
+        // Initialize AssetController
+        $asset_controller = \WPCustomer\Controllers\Assets\AssetController::get_instance();
+        $asset_controller->init();
 
         // Initialize Settings Controller with AJAX handlers
         $settings_controller = new \WPCustomer\Controllers\SettingsController();
@@ -131,16 +135,12 @@ class WPCustomer {
         // Run upgrade check on admin_init (fixes duplicate wp_capabilities, etc.)
         $this->loader->add_action('admin_init', 'WP_Customer_Upgrade', 'check_and_upgrade');
 
-        // Initialize dependencies
-        $dependencies = new WP_Customer_Dependencies($this->plugin_name, $this->version);
+        // Note: Asset loading now handled by AssetController (initialized in includeDependencies)
 
-        // Register asset hooks
-        $this->loader->add_action('admin_enqueue_scripts', $dependencies, 'enqueue_styles');
-        $this->loader->add_action('admin_enqueue_scripts', $dependencies, 'enqueue_scripts');
-
-        // Initialize menu
+        // Initialize menu - call init() directly instead of via loader
+        // to ensure admin_menu hook is registered in time
         $menu_manager = new \WPCustomer\Controllers\MenuManager($this->plugin_name, $this->version);
-        $this->loader->add_action('init', $menu_manager, 'init');
+        $menu_manager->init();
 
         // Initialize controllers
         $this->initControllers();

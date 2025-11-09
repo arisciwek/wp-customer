@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Demo
- * @version     1.0.16
+ * @version     1.0.13
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Demo/Data/CustomerDemoData.php
@@ -14,29 +14,9 @@
  *              - Integrasi dengan WordPress user
  *              - Data wilayah dari Provinces/Regencies
  *              - Validasi dan tracking data unik
- *              - Static ID enforcement via wp_customer_customer_before_insert hook (TODO-3098)
+ *              - Static ID enforcement via wp_customer_before_insert hook (TODO-3098)
  *
  * Changelog:
- * 1.0.16 - 2025-11-09 (FIX: Hook name mismatch)
- * - CRITICAL FIX: Updated hook name from 'wp_customer_before_insert' to 'wp_customer_customer_before_insert'
- * - Reason: AbstractCrudModel uses pattern "{plugin}_{entity}_before_insert"
- * - Pattern: wp_customer (plugin) + customer (entity) = wp_customer_customer_before_insert
- * - Updated in: add_filter(), remove_all_filters() (2 places), docblock comments
- * - Result: Static ID enforcement now works correctly via hook
- *
- * 1.0.15 - 2025-11-09 (FIX: wp-app-core cache contract issue - COMPLETE)
- * - CRITICAL FIX: Direct wpdb delete instead of Model delete in cleanup
- * - Root cause: AbstractCacheManager returns null (not false) on cache miss
- * - This breaks AbstractCrudModel find() which expects false for cache miss
- * - Added wp_cache_flush() at cleanup start
- * - Fixed hook parameters: fetch customer_data before triggering hooks
- * - Result: Cleanup works perfectly on multiple runs
- *
- * 1.0.14 - 2025-11-09 (FIX: Cleanup rollback issue)
- * - CRITICAL FIX: Commit cleanup immediately before generation
- * - Prevents cleanup rollback when generation fails
- * - Cleanup is now permanent even if subsequent validation fails
- *
  * 1.0.13 - 2025-11-04 (FIX: Use province_id instead of provinsi_code)
  * - CRITICAL FIX: Changed getRandomProvinceWithAgency() to use ID-based JOIN
  * - Updated JOIN condition: p.id = a.province_id (instead of p.code = a.provinsi_code)
@@ -44,7 +24,7 @@
  *
  * 1.0.12 - 2025-11-01 (TODO-3098)
  * - Updated createCustomerViaRuntimeFlow() to accept $static_id parameter
- * - Uses wp_customer_customer_before_insert hook to force static customer IDs
+ * - Uses wp_customer_before_insert hook to force static customer IDs
  * - Uses wp_customer_branch_before_insert hook to force static branch pusat IDs
  * - Fixes ID overlap issue between pusat (auto-increment) and cabang (static)
  * - Fixes duplicate employee email on regeneration (explicit cleanup in generate())
@@ -94,105 +74,6 @@ class CustomerDemoData extends AbstractDemoData {
         parent::__construct();
         $this->customer_users = CustomerUsersData::$data;
         $this->customerValidator = new CustomerValidator();
-    }
-
-    /**
-     * Override run() to cleanup BEFORE parent transaction
-     */
-    public function run() {
-        // Ensure models are initialized
-        $this->initModels();
-
-        // IMPORTANT: Cleanup BEFORE transaction to prevent rollback
-        if ($this->isDevelopmentMode() && $this->shouldClearData()) {
-            $this->cleanupDemoData();
-        }
-
-        // Now call parent run() which starts transaction and calls generate()
-        return parent::run();
-    }
-
-    /**
-     * Cleanup demo data (executed BEFORE transaction)
-     */
-    private function cleanupDemoData(): void {
-        error_log("[CustomerDemoData] === PRE-TRANSACTION Cleanup - Deleting existing demo customers ===");
-
-        // 0. CRITICAL: Flush all caches first (fix for cache null vs false issue)
-        wp_cache_flush();
-        error_log("[CustomerDemoData] Flushed all caches");
-
-        // 1. Enable hard delete temporarily
-        $original_settings = get_option('wp_customer_general_options', []);
-        $cleanup_settings = array_merge($original_settings, ['enable_hard_delete_branch' => true]);
-        update_option('wp_customer_general_options', $cleanup_settings);
-        error_log("[CustomerDemoData] Temporarily enabled hard delete mode");
-
-        // 2. Get existing demo customers
-        $demo_customers = $this->wpdb->get_col(
-            "SELECT id FROM {$this->wpdb->prefix}app_customers WHERE reg_type = 'generate'"
-        );
-        error_log("[CustomerDemoData] Found " . count($demo_customers) . " demo customers to clean");
-
-        // 3. Delete auto-created employees first
-        if (!empty($demo_customers)) {
-            $customer_ids_str = implode(',', array_map('intval', $demo_customers));
-            $deleted_employees = $this->wpdb->query(
-                "DELETE FROM {$this->wpdb->prefix}app_customer_employees
-                 WHERE customer_id IN ({$customer_ids_str})"
-            );
-            error_log("[CustomerDemoData] Deleted {$deleted_employees} auto-created employees");
-        }
-
-        // 4. Delete customers directly via wpdb
-        // NOTE: Cannot use Model->delete() due to wp-app-core cache contract issue
-        // (AbstractCacheManager returns null on cache miss, breaking find() in delete())
-        $deleted_count = 0;
-        foreach ($demo_customers as $customer_id) {
-            // Fetch customer data for hook
-            $customer_data = $this->wpdb->get_row(
-                $this->wpdb->prepare(
-                    "SELECT * FROM {$this->wpdb->prefix}app_customers WHERE id = %d",
-                    $customer_id
-                ),
-                ARRAY_A
-            );
-
-            if (!$customer_data) {
-                error_log("[CustomerDemoData] WARNING: Customer ID {$customer_id} not found, skipping");
-                continue;
-            }
-
-            // Trigger before delete hook manually
-            do_action('wp_customer_before_delete', $customer_id, $customer_data);
-
-            // Direct delete from database
-            $result = $this->wpdb->delete(
-                $this->wpdb->prefix . 'app_customers',
-                ['id' => $customer_id],
-                ['%d']
-            );
-
-            if ($result !== false) {
-                $deleted_count++;
-                // Trigger after delete hook for cascade operations (hard delete mode)
-                do_action('wp_customer_deleted', $customer_id, $customer_data, true);
-            } else {
-                error_log("[CustomerDemoData] WARNING: Failed to delete customer ID {$customer_id}");
-            }
-        }
-        error_log("[CustomerDemoData] Deleted {$deleted_count} demo customers (hooks triggered for cascade)");
-
-        // 5. Clean up demo users
-        $userGenerator = new WPUserGenerator();
-        $user_ids_to_delete = array_column($this->customer_users, 'id');
-        $deleted_users = $userGenerator->deleteUsers($user_ids_to_delete);
-        error_log("[CustomerDemoData] Cleaned up {$deleted_users} demo users");
-
-        // 6. Restore original settings
-        update_option('wp_customer_general_options', $original_settings);
-        error_log("[CustomerDemoData] Restored original hard delete setting");
-        error_log("[CustomerDemoData] === Cleanup completed BEFORE transaction ===");
     }
 
     /**
@@ -265,7 +146,7 @@ class CustomerDemoData extends AbstractDemoData {
      * 3. Hook 'wp_customer_created' - auto-creates branch pusat
      *
      * Demo-specific behavior via hook:
-     * - Hooks into 'wp_customer_customer_before_insert' to force static ID
+     * - Hooks into 'wp_customer_before_insert' to force static ID
      * - Removes hook after creation to not affect other operations
      *
      * @since 1.0.12 (TODO-3098)
@@ -296,7 +177,7 @@ class CustomerDemoData extends AbstractDemoData {
             error_log("[CustomerDemoData] ✓ Validation passed");
 
             // 2. Hook to force static ID for customer (demo-specific behavior)
-            add_filter('wp_customer_customer_before_insert', function($insert_data, $original_data) use ($static_id) {
+            add_filter('wp_customer_before_insert', function($insert_data, $original_data) use ($static_id) {
                 global $wpdb;
 
                 // Delete existing record with static ID if exists (idempotent)
@@ -349,7 +230,7 @@ class CustomerDemoData extends AbstractDemoData {
             $customer_id = $this->customerModel->create($customer_data);
 
             // Remove hooks after use (don't affect subsequent operations)
-            remove_all_filters('wp_customer_customer_before_insert');
+            remove_all_filters('wp_customer_before_insert');
             remove_all_filters('wp_customer_branch_before_insert');
 
             if (!$customer_id) {
@@ -369,7 +250,7 @@ class CustomerDemoData extends AbstractDemoData {
 
         } catch (\Exception $e) {
             // Clean up hooks on error
-            remove_all_filters('wp_customer_customer_before_insert');
+            remove_all_filters('wp_customer_before_insert');
             remove_all_filters('wp_customer_branch_before_insert');
             error_log("[CustomerDemoData] ERROR in createCustomerViaRuntimeFlow: " . $e->getMessage());
             throw $e;
@@ -382,15 +263,109 @@ class CustomerDemoData extends AbstractDemoData {
             return;
         }
 
-        // Cleanup already done in run() BEFORE transaction
-        // Just proceed with generation
+        // Inisialisasi WPUserGenerator
+        $userGenerator = new WPUserGenerator();
+
+        // IMPORTANT: Clean up OUTSIDE transaction to prevent rollback
+        // This ensures cleanup is permanent even if generation fails
+        if ($this->shouldClearData()) {
+            $this->cleanupDemoData();
+        }
+    }
+
+    /**
+     * Cleanup demo data (separated from generate to avoid transaction rollback)
+     */
+    private function cleanupDemoData(): void {
+        error_log("[CustomerDemoData] === Cleanup mode enabled - Deleting existing demo customers via HOOK ===");
+
+        // 1. Enable hard delete temporarily
+        $original_settings = get_option('wp_customer_general_options', []);
+        $cleanup_settings = array_merge($original_settings, ['enable_hard_delete_branch' => true]);
+        update_option('wp_customer_general_options', $cleanup_settings);
+        error_log("[CustomerDemoData] Temporarily enabled hard delete mode");
+
+        // 2. Get existing demo customers
+        $demo_customers = $this->wpdb->get_col(
+            "SELECT id FROM {$this->wpdb->prefix}app_customers WHERE reg_type = 'generate'"
+        );
+        error_log("[CustomerDemoData] Found " . count($demo_customers) . " demo customers to clean");
+
+        // 2b. Delete auto-created employees first (TODO-3098 fix)
+        // Employees auto-created via wp_customer_branch_created hook need manual cleanup
+        if (!empty($demo_customers)) {
+            $customer_ids_str = implode(',', array_map('intval', $demo_customers));
+            $deleted_employees = $this->wpdb->query(
+                "DELETE FROM {$this->wpdb->prefix}app_customer_employees
+                 WHERE customer_id IN ({$customer_ids_str})"
+            );
+            error_log("[CustomerDemoData] Deleted {$deleted_employees} auto-created employees");
+        }
+
+        // 3. Delete via Model (triggers HOOK → cascade to branches)
+        $deleted_count = 0;
+        foreach ($demo_customers as $customer_id) {
+            if ($this->customerModel->delete($customer_id)) {
+                $deleted_count++;
+            }
+        }
+        error_log("[CustomerDemoData] Deleted {$deleted_count} demo customers (branches cascaded via HOOK)");
+
+        // 4. Restore original settings
+        update_option('wp_customer_general_options', $original_settings);
+        error_log("[CustomerDemoData] Restored original hard delete setting");
+
+        // 5. Clean up demo users
+        $userGenerator = new WPUserGenerator();
+        $user_ids_to_delete = array_column($this->customer_users, 'id');
+        $deleted_users = $userGenerator->deleteUsers($user_ids_to_delete);
+        error_log("[CustomerDemoData] Cleaned up {$deleted_users} existing demo users");
+        $this->debug("Cleaned up {$deleted_count} customers and {$deleted_users} users before generation");
+
+        // Now continue with generation in parent's transaction
+        $this->generateCustomers();
+    }
+
+    /**
+     * Generate customers (called after cleanup)
+     */
+    private function generateCustomers(): void {
         $userGenerator = new WPUserGenerator();
 
         foreach (self::$customers as $customer) {
             try {
-                // Cleanup already deleted old customers in run() - safe to proceed
+                // 1. Check if customer already exists
+                $existing_customer = $this->wpdb->get_var($this->wpdb->prepare(
+                    "SELECT id FROM {$this->wpdb->prefix}app_customers WHERE id = %d",
+                    $customer['id']
+                ));
 
-                // 1. Create WP User for customer admin
+            // 4. Restore original settings
+            update_option('wp_customer_general_options', $original_settings);
+            error_log("[CustomerDemoData] Restored original hard delete setting");
+
+            // 5. Clean up demo users
+            $user_ids_to_delete = array_column($this->customer_users, 'id');
+            $deleted_users = $userGenerator->deleteUsers($user_ids_to_delete);
+            error_log("[CustomerDemoData] Cleaned up {$deleted_users} existing demo users");
+            $this->debug("Cleaned up {$deleted_count} customers and {$deleted_users} users before generation");
+        }
+
+        foreach (self::$customers as $customer) {
+            try {
+                // 1. Check if customer already exists
+                $existing_customer = $this->wpdb->get_var($this->wpdb->prepare(
+                    "SELECT id FROM {$this->wpdb->prefix}app_customers WHERE id = %d",
+                    $customer['id']
+                ));
+
+                if ($existing_customer && !$this->shouldClearData()) {
+                    $this->debug("Customer ID {$customer['id']} already exists, skipping...");
+                    continue;
+                }
+                // If shouldClearData is true, existing customers are already deleted by cleanup above
+
+                // 2. Cek dan buat WP User jika belum ada
                 error_log("[CustomerDemoData] === Processing Customer ID: {$customer['id']} - {$customer['name']} ===");
 
                 // Ambil data user dari static array
