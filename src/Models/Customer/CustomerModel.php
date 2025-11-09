@@ -327,7 +327,8 @@ class CustomerModel extends AbstractCrudModel {
     public function getBranchCount(int $id): int {
         // Check cache first
         $cached_count = $this->cache->get('branch_count', $id);
-        if ($cached_count !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached_count !== false) {
             return (int) $cached_count;
         }
 

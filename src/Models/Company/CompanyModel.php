@@ -50,7 +50,8 @@ class CompanyModel {
     public function getBranchWithLatestMembership($id) {
         // Check cache first
         $cached_result = $this->cache->get('customer_branch_membership', $id);
-        if ($cached_result !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached_result !== false) {
             return $cached_result;
         }
 

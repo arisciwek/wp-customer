@@ -180,7 +180,8 @@ class InspectorCompaniesAccess {
         $cache_key = "is_inspector_{$user_id}";
         $cached = $this->cache->get('inspector_access', $cache_key);
 
-        if ($cached !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached !== false) {
             return (bool) $cached;
         }
 
@@ -219,7 +220,8 @@ class InspectorCompaniesAccess {
         $cache_key = "inspector_assignments_{$user_id}";
         $cached = $this->cache->get('inspector_assignments', $cache_key);
 
-        if ($cached !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached !== false) {
             return (bool) $cached;
         }
 
@@ -252,7 +254,8 @@ class InspectorCompaniesAccess {
         $cache_key = "inspector_assigned_{$user_id}_{$company_id}";
         $cached = $this->cache->get('inspector_company_access', $cache_key);
 
-        if ($cached !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached !== false) {
             return (bool) $cached;
         }
 

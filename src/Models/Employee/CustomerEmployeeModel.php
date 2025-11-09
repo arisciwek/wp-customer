@@ -178,7 +178,8 @@ public function create(array $data): ?int {
         // Check cache first
         $cached_employee = $this->cache->get('customer_employee', $id);
 
-        if ($cached_employee !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached_employee !== false) {
             return $cached_employee;
         }
 

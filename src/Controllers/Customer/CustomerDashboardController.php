@@ -100,6 +100,9 @@ class CustomerDashboardController {
         add_action('wp_ajax_get_customer_details', [$this, 'handle_get_details']);
         add_action('wp_ajax_get_customer_stats_v2', [$this, 'handle_get_stats']);
 
+        // AJAX handlers - Tab lazy loading
+        add_action('wp_ajax_load_customer_branches_tab', [$this, 'handle_load_branches_tab']);
+
         // AJAX handlers - DataTables in tabs
         add_action('wp_ajax_get_customer_branches_datatable', [$this, 'handle_branches_datatable']);
         add_action('wp_ajax_get_customer_employees_datatable', [$this, 'handle_employees_datatable']);
@@ -445,6 +448,53 @@ class CustomerDashboardController {
 
         } catch (\Exception $e) {
             wp_send_json_error(['message' => __('Error loading employees', 'wp-customer')]);
+        }
+    }
+
+    // ========================================
+    // AJAX HANDLERS - TAB LAZY LOADING
+    // ========================================
+
+    /**
+     * Handle lazy load branches tab content
+     * Called by wp-datatable tab-manager.js on first tab click
+     */
+    public function handle_load_branches_tab(): void {
+        if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
+            return;
+        }
+
+        if (!current_user_can('view_customer_list')) {
+            wp_send_json_error(['message' => __('Permission denied', 'wp-customer')]);
+            return;
+        }
+
+        $customer_id = isset($_POST['customer_id']) ? intval($_POST['customer_id']) : 0;
+
+        if (!$customer_id) {
+            wp_send_json_error(['message' => __('Customer ID required', 'wp-customer')]);
+            return;
+        }
+
+        try {
+            // Get customer data for context
+            $customer = $this->model->find($customer_id);
+
+            if (!$customer) {
+                wp_send_json_error(['message' => __('Customer not found', 'wp-customer')]);
+                return;
+            }
+
+            // Render branches tab content with DataTable
+            ob_start();
+            include WP_CUSTOMER_PATH . 'src/Views/admin/customer/tabs/partials/branches-content.php';
+            $html = ob_get_clean();
+
+            wp_send_json_success(['html' => $html]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error(['message' => __('Error loading branches tab', 'wp-customer')]);
         }
     }
 

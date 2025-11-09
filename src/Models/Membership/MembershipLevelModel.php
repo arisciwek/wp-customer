@@ -284,7 +284,8 @@ class MembershipLevelModel {
     public function getLevel(int $id): ?object {
         // Check cache
         $cached = $this->cache->get('customer_membership_level', $id);
-        if ($cached !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached !== false) {
             return $cached;
         }
 

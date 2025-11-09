@@ -89,12 +89,10 @@ class MembershipFeatureModel {
     public function getActiveGroupsAndFeatures() {
         // Coba ambil dari cache dulu
         $cached_data = $this->cache_manager->get('membership_groups_features');
-        if ($cached_data !== null) {
-            error_log('Data diambil dari cache');
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached_data !== false) {
             return $cached_data;
         }
-        
-        error_log('Cache miss - mengambil dari database');
         
         // Jika tidak ada cache, ambil dari database
         $data = [];

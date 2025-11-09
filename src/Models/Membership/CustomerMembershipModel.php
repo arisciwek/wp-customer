@@ -92,7 +92,8 @@ class CustomerMembershipModel {
     public function getAllLevels(): array {
         // Check cache first
         $cached = $this->cache->get('customer_membership_levels', 'all');
-        if ($cached !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached !== false) {
             return $cached;
         }
 
@@ -115,7 +116,8 @@ class CustomerMembershipModel {
     public function getLevel(int $id): ?object {
         // Check cache
         $cached = $this->cache->get('customer_membership_level', $id);
-        if ($cached !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached !== false) {
             return $cached;
         }
 
@@ -264,7 +266,8 @@ class CustomerMembershipModel {
     public function getUserMembershipLevel(int $user_id): ?int {
         // Check cache
         $cached = $this->cache->get('user_customer_membership_level', $user_id);
-        if ($cached !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached !== false) {
             return $cached;
         }
 

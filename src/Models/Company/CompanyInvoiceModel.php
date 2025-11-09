@@ -109,7 +109,8 @@ class CompanyInvoiceModel {
 
         $cache_key = "invoice_{$id}";
         $cached = $this->cache->get('invoice', $cache_key);
-        if ($cached !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached !== false) {
             return $cached;
         }
 
@@ -390,7 +391,8 @@ class CompanyInvoiceModel {
 
         // Check cache first
         $cached_count = $this->cache->get('customer_unpaid_invoice_count', $customer_id);
-        if ($cached_count !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached_count !== false) {
             return (int) $cached_count;
         }
 

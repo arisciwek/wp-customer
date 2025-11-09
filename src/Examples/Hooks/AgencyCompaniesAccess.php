@@ -266,7 +266,8 @@ class AgencyCompaniesAccess {
         $cache_key = "is_agency_employee_{$user_id}";
         $cached = $this->cache->get('agency_access', $cache_key);
 
-        if ($cached !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached !== false) {
             return (bool) $cached;
         }
 
@@ -297,7 +298,8 @@ class AgencyCompaniesAccess {
         $cache_key = "agency_employee_{$user_id}";
         $cached = $this->cache->get('agency_employee', $cache_key);
 
-        if ($cached !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached !== false) {
             return $cached;
         }
 
@@ -326,7 +328,8 @@ class AgencyCompaniesAccess {
         $cache_key = "division_jurisdictions_{$division_id}";
         $cached = $this->cache->get('division_jurisdiction', $cache_key);
 
-        if ($cached !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached !== false) {
             return $cached;
         }
 
@@ -356,7 +359,8 @@ class AgencyCompaniesAccess {
         $cache_key = "company_access_{$user_id}_{$company_id}";
         $cached = $this->cache->get('company_access', $cache_key);
 
-        if ($cached !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached !== false) {
             return (bool) $cached;
         }
 

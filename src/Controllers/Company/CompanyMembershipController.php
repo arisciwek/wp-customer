@@ -144,7 +144,8 @@ class CompanyMembershipController {
             // Try to get from cache first
             $cache_key = "membership_status_{$company_id}";
             $cached_data = $this->cache->get('company_membership', $cache_key);
-            if ($cached_data !== null) {
+            // TODO-2192 FIXED: Cache returns false on miss
+            if ($cached_data !== false) {
                 wp_send_json_success($cached_data);
                 return;
             }
@@ -376,7 +377,8 @@ class CompanyMembershipController {
             // Try to get from cache first
             $cache_key = "upgrade_options_{$company_id}_{$period_months}";
             $cached_data = $this->cache->get('customer_membership', $cache_key);
-            if ($cached_data !== null) {
+            // TODO-2192 FIXED: Cache returns false on miss
+            if ($cached_data !== false) {
                 wp_send_json_success($cached_data);
                 return;
             }

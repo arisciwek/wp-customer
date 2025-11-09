@@ -534,7 +534,8 @@ class CompanyMembershipModel {
     public function getActiveEmployeeCount(int $company_id): int {
         // Check cache first
         $cached_count = $this->cache->get('active_customer_employee_count', $company_id);
-        if ($cached_count !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached_count !== false) {
             return (int) $cached_count;
         }
 
@@ -592,7 +593,8 @@ class CompanyMembershipModel {
 
         // Check cache first
         $cached_count = $this->cache->get('customer_active_customer_branch_count', $customer_id);
-        if ($cached_count !== null) {
+        // TODO-2192 FIXED: Cache returns false on miss
+        if ($cached_count !== false) {
             return (int) $cached_count;
         }
 

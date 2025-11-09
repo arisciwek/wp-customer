@@ -119,22 +119,14 @@ class AssetController {
      * @return void
      */
     public function enqueue_admin_assets(): void {
-        error_log('[AssetController] enqueue_admin_assets called');
-
         $screen = get_current_screen();
         if (!$screen) {
-            error_log('[AssetController] No screen object');
             return;
         }
 
-        error_log('[AssetController] Screen ID: ' . $screen->id);
-
         // Customer Dashboard (main page)
         if ($screen->id === 'toplevel_page_wp-customer-v2') {
-            error_log('[AssetController] Matched customer dashboard, calling enqueue_customer_dashboard_assets');
             $this->enqueue_customer_dashboard_assets();
-        } else {
-            error_log('[AssetController] Screen ID did not match toplevel_page_wp-customer-v2');
         }
 
         // Settings page assets
@@ -149,8 +141,6 @@ class AssetController {
      * @return void
      */
     private function enqueue_customer_dashboard_assets(): void {
-        error_log('[AssetController] Enqueuing customer dashboard assets');
-
         // Enqueue minimal JS for DataTable initialization
         // Dependency: jquery only (datatables will be loaded by wp-datatable BaseAssets)
         wp_enqueue_script(
@@ -161,15 +151,20 @@ class AssetController {
             false  // Load in header instead of footer
         );
 
-        error_log('[AssetController] customer-datatable.js enqueued with dependencies: jquery, datatables');
+        // Enqueue branches DataTable (for branches tab)
+        wp_enqueue_script(
+            'branches-datatable',
+            WP_CUSTOMER_URL . 'assets/js/customer/branches-datatable.js',
+            ['jquery', 'customer-datatable'],
+            $this->version,
+            false
+        );
 
-        // Localize script with nonce
+        // Localize script with nonce (shared by all DataTables)
         wp_localize_script('customer-datatable', 'wpCustomerConfig', [
             'nonce' => wp_create_nonce('wpdt_nonce'),
             'ajaxUrl' => admin_url('admin-ajax.php')
         ]);
-
-        error_log('[AssetController] wpCustomerConfig localized');
     }
 
     /**

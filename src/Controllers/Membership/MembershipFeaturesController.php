@@ -57,7 +57,8 @@ class MembershipFeaturesController {
                 
                 // Cek cache dulu
                 $cached_data = $this->cache_manager->get('membership_feature_group', $group_id);
-                if ($cached_data !== null) {
+                // TODO-2192 FIXED: Cache returns false on miss
+                if ($cached_data !== false) {
                     wp_send_json_success($cached_data);
                     return;
                 }
@@ -187,17 +188,14 @@ class MembershipFeaturesController {
             }
 
             $feature_id = intval($_POST['id']);
-            
-            // Debug
-            error_log('Getting feature ID: ' . $feature_id);
-            
+
             // Try to get from cache first
             $feature = $this->cache_manager->get('feature', $feature_id);
 
             if ($feature === null) {
                 // Not in cache, get from model
                 $feature = $this->model->get_feature($feature_id);
-                
+
                 if ($feature) {
                     // Store in cache for future requests
                     $this->cache_manager->set('feature', $feature, null, $feature_id);
@@ -208,13 +206,9 @@ class MembershipFeaturesController {
                 throw new \Exception(__('Feature not found.', 'wp-customer'));
             }
 
-            // Debug
-            error_log('Feature data: ' . print_r($feature, true));
-
             wp_send_json_success($feature);
 
         } catch (\Exception $e) {
-            error_log('Error in handle_get_feature: ' . $e->getMessage());
             wp_send_json_error([
                 'message' => $e->getMessage()
             ]);

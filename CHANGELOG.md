@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **TODO-2192 Cache System Integration**: Fixed all cache miss checks to use `!== false` instead of `!== null`
+  - Updated 21 files across Models, Controllers, and Integrations
+  - Ensures compatibility with wp-app-core AbstractCacheManager v1.0.1
+  - Affects: AgencyCompaniesAccess, InspectorCompaniesAccess, all Model cache checks
+
+### Changed
+- **AssetController Cleanup**: Removed all debug logging statements for production readiness
+- **MembershipFeatureModel Cleanup**: Removed cache debug logs
+- **MembershipFeaturesController Cleanup**: Removed debug logging from handle_get_feature()
+
+### Dependencies
+- **wp-app-core v1.0.1**: Requires updated AbstractCacheManager with false return on cache miss
+- **wp-datatable**: Auto-refresh now handled by framework, removed duplicate wpapp-datatable-auto-refresh.js
+
 ## [v1.0.9] - 2025-01-14
 
 ### Added
