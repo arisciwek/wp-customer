@@ -4,17 +4,28 @@
  *
  * @package     WP_Customer
  * @subpackage  Validators/Employee
- * @version     1.0.11
+ * @version     2.0.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Validators/Employee/CustomerEmployeeValidator.php
  *
  * Description: Validator untuk operasi CRUD Employee.
+ *              Extends AbstractValidator dari wp-app-core.
+ *              Handles form validation dan permission checks.
  *              Memastikan semua input data valid sebelum diproses model.
- *              Menyediakan validasi untuk create, update, dan delete.
- *              Includes validasi permission dan ownership.
  *
  * Changelog:
+ * 2.0.0 - 2025-11-09 (TODO-2194: CRUD Refactoring)
+ * - BREAKING: Refactored to extend AbstractValidator
+ * - Implements 13 abstract methods
+ * - Uses EmployeeCacheManager (not CustomerCacheManager)
+ * - Preserved: All custom validation logic
+ * - Preserved: Department validation (finance, operation, legal, purchase)
+ * - Preserved: validateAccess() for employee list filtering
+ * - Preserved: All permission methods (canViewEmployee, canEditEmployee, etc.)
+ * - Custom validation: Email uniqueness, phone format, department validation
+ * - Permission logic: Owner-based + capability-based hierarchy
+ *
  * 1.0.0 - 2024-01-12
  * - Initial release
  * - Added create validation
@@ -25,353 +36,138 @@
 
 namespace WPCustomer\Validators\Employee;
 
+use WPAppCore\Validators\Abstract\AbstractValidator;
 use WPCustomer\Models\Employee\CustomerEmployeeModel;
 use WPCustomer\Models\Customer\CustomerModel;
+use WPCustomer\Cache\EmployeeCacheManager;
 
-class CustomerEmployeeValidator {
-   private $employee_model;
-   private $customer_model;
+defined('ABSPATH') || exit;
 
-   public function __construct() {
-       $this->employee_model = new CustomerEmployeeModel();
-       $this->customer_model = new CustomerModel();
-   }
-
-   /**
-    * Find customer - using direct query to avoid cache contract issue
-    * TODO: Remove this workaround when wp-app-core cache contract is fixed
-    *
-    * @param int $customer_id Customer ID
-    * @return object|null Customer object or null
-    */
-   private function findCustomer(int $customer_id): ?object {
-       global $wpdb;
-       return $wpdb->get_row($wpdb->prepare(
-           "SELECT * FROM {$wpdb->prefix}app_customers WHERE id = %d",
-           $customer_id
-       ));
-   }
-
-   public function canViewEmployee($employee, $customer): bool {
-       $current_user_id = get_current_user_id();
-
-       // Customer Owner Check
-       if ((int)$customer->user_id === (int)$current_user_id) {
-           return true;
-       }
-
-       // Customer Branch Admin Check
-       if ($this->isCustomerBranchAdmin($current_user_id, $employee->branch_id)) {
-           return true;
-       }
-
-       // Staff Check (dari CustomerEmployees)
-       if ($this->isStaffMember($current_user_id, $employee->branch_id)) {
-           return true;
-       }
-
-       // System Admin Check
-       if (current_user_can('view_customer_employee_detail')) {
-           return true;
-       }
-
-       return apply_filters('wp_customer_can_view_customer_employee', false, $employee, $customer, $current_user_id);
-   }
-
-   public function canCreateEmployee($customer_id, $branch_id): bool {
-       $current_user_id = get_current_user_id();
-
-       // Customer Owner Check
-       $customer = $this->findCustomer($customer_id);
-       if ($customer && (int)$customer->user_id === (int)$current_user_id) {
-           return true;
-       }
-
-       // Customer Branch Admin Check dengan add_customer_employee capability
-       if ($this->isCustomerBranchAdmin($current_user_id, $branch_id) && current_user_can('add_customer_employee')) {
-           return true;
-       }
-
-       // System Admin Check
-       if (current_user_can('add_customer_employee')) {
-           return true;
-       }
-
-       return apply_filters('wp_customer_can_create_customer_employee', false, $customer_id, $branch_id, $current_user_id);
-   }
-
-   public function canEditEmployee($employee, $customer): bool {
-       $current_user_id = get_current_user_id();
-
-       // Customer Owner Check
-       if ((int)$customer->user_id === (int)$current_user_id) {
-           return true;
-       }
-
-       // Customer Branch Admin Check
-       if ($this->isCustomerBranchAdmin($current_user_id, $employee->branch_id) &&
-           current_user_can('edit_own_customer_employee')) {
-           return true;
-       }
-
-       // Creator Check
-       if ((int)$employee->created_by === (int)$current_user_id &&
-           current_user_can('edit_own_customer_employee')) {
-           return true;
-       }
-
-       // System Admin Check
-       if (current_user_can('edit_all_customer_employees')) {
-           return true;
-       }
-
-       return apply_filters('wp_customer_can_edit_customer_employee', false, $employee, $customer, $current_user_id);
-   }
-
-   public function canDeleteEmployee($employee, $customer): bool {
-       $current_user_id = get_current_user_id();
-
-       // Customer Owner Check
-       if ((int)$customer->user_id === (int)$current_user_id) {
-           return true;
-       }
-
-       // Customer Branch Admin Check
-       if ($this->isCustomerBranchAdmin($current_user_id, $employee->branch_id) &&
-           current_user_can('delete_customer_employee')) {
-           return true;
-       }
-
-       // Creator Check
-       if ((int)$employee->created_by === (int)$current_user_id &&
-           current_user_can('delete_customer_employee')) {
-           return true;
-       }
-
-       // System Admin Check
-       if (current_user_can('delete_customer_employee')) {
-           return true;
-       }
-
-       return false;
-   }
-
-   public function validateCreate(array $data): array {
-       $errors = [];
-
-       // Permission check
-       if (!$this->canCreateEmployee($data['customer_id'], $data['branch_id'])) {
-           $errors['permission'] = __('Anda tidak memiliki izin untuk menambah karyawan.', 'wp-customer');
-           return $errors;
-       }
-
-       // Basic data validation
-       $errors = array_merge($errors, $this->validateBasicData($data));
-
-       // Customer ID validation
-       if (empty($data['customer_id'])) {
-           $errors['customer_id'] = __('ID Customer wajib diisi.', 'wp-customer');
-       } else {
-           $customer = $this->findCustomer($data['customer_id']);
-           if (!$customer) {
-               $errors['customer_id'] = __('Customer tidak ditemukan.', 'wp-customer');
-           }
-       }
-
-       // Branch ID validation
-       if (empty($data['branch_id'])) {
-           $errors['branch_id'] = __('ID Cabang wajib diisi.', 'wp-customer');
-       }
-
-       // Email uniqueness
-       if (!empty($data['email']) && $this->employee_model->existsByEmail($data['email'])) {
-           $errors['email'] = __('Email sudah digunakan.', 'wp-customer');
-       }
-
-       // Department validation
-       if (!$this->hasAtLeastOneDepartment($data)) {
-           $errors['department'] = __('Minimal satu departemen harus dipilih.', 'wp-customer');
-       }
-
-       return $errors;
-   }
-
-   public function validateUpdate(array $data, int $id): array {
-       $errors = [];
-
-       // Check if employee exists
-       $employee = $this->employee_model->find($id);
-       if (!$employee) {
-           $errors['id'] = __('Karyawan tidak ditemukan.', 'wp-customer');
-           return $errors;
-       }
-
-       // Get customer for permission check
-       $customer = $this->findCustomer($employee->customer_id);
-       if (!$customer) {
-           $errors['customer'] = __('Customer tidak ditemukan.', 'wp-customer');
-           return $errors;
-       }
-
-       // Permission check
-       if (!$this->canEditEmployee($employee, $customer)) {
-           $errors['permission'] = __('Anda tidak memiliki izin untuk mengedit karyawan ini.', 'wp-customer');
-           return $errors;
-       }
-
-       // Basic data validation
-       $errors = array_merge($errors, $this->validateBasicData($data));
-
-       // Email uniqueness (excluding current ID)
-       if (!empty($data['email']) && $this->employee_model->existsByEmail($data['email'], $id)) {
-           $errors['email'] = __('Email sudah digunakan.', 'wp-customer');
-       }
-
-       // Department validation on update
-       if (!$this->hasAtLeastOneDepartment($data)) {
-           $errors['department'] = __('Minimal satu departemen harus dipilih.', 'wp-customer');
-       }
-
-       return $errors;
-   }
-
-   public function validateDelete(int $id): array {
-       $errors = [];
-
-       // Check if employee exists
-       $employee = $this->employee_model->find($id);
-       if (!$employee) {
-           $errors['id'] = __('Karyawan tidak ditemukan.', 'wp-customer');
-           return $errors;
-       }
-
-       // Get customer for permission check
-       $customer = $this->findCustomer($employee->customer_id);
-       if (!$customer) {
-           $errors['customer'] = __('Customer tidak ditemukan.', 'wp-customer');
-           return $errors;
-       }
-
-       // Permission check
-       if (!$this->canDeleteEmployee($employee, $customer)) {
-           $errors['permission'] = __('Anda tidak memiliki izin untuk menghapus karyawan ini.', 'wp-customer');
-       }
-
-       return $errors;
-   }
-
-   public function validateView(int $id): array {
-       $errors = [];
-
-       // Check if employee exists
-       $employee = $this->employee_model->find($id);
-       if (!$employee) {
-           $errors['id'] = __('Karyawan tidak ditemukan.', 'wp-customer');
-           return $errors;
-       }
-
-       // Get customer for permission check
-       $customer = $this->findCustomer($employee->customer_id);
-       if (!$customer) {
-           $errors['customer'] = __('Customer tidak ditemukan.', 'wp-customer');
-           return $errors;
-       }
-
-       // Permission check
-       if (!$this->canViewEmployee($employee, $customer)) {
-           $errors['permission'] = __('Anda tidak memiliki izin untuk melihat detail karyawan ini.', 'wp-customer');
-       }
-
-       return $errors;
-   }
-
-   private function validateBasicData(array $data): array {
-       $errors = [];
-
-       // Name validation
-       $name = trim(sanitize_text_field($data['name'] ?? ''));
-       if (empty($name)) {
-           $errors['name'] = __('Nama karyawan wajib diisi.', 'wp-customer');
-       } elseif (mb_strlen($name) > 100) {
-           $errors['name'] = __('Nama karyawan maksimal 100 karakter.', 'wp-customer');
-       }
-
-       // Email validation
-       $email = sanitize_email($data['email'] ?? '');
-       if (empty($email)) {
-           $errors['email'] = __('Email wajib diisi.', 'wp-customer');
-       } elseif (!is_email($email)) {
-           $errors['email'] = __('Format email tidak valid.', 'wp-customer');
-       }
-
-       // Position validation
-       $position = trim(sanitize_text_field($data['position'] ?? ''));
-       if (empty($position)) {
-           $errors['position'] = __('Jabatan wajib diisi.', 'wp-customer');
-       } elseif (mb_strlen($position) > 100) {
-           $errors['position'] = __('Jabatan maksimal 100 karakter.', 'wp-customer');
-       }
-
-       // Phone validation (optional)
-       if (!empty($data['phone'])) {
-           $phone = trim(sanitize_text_field($data['phone']));
-           if (mb_strlen($phone) > 20) {
-               $errors['phone'] = __('Nomor telepon maksimal 20 karakter.', 'wp-customer');
-           } elseif (!preg_match('/^[0-9\+\-\(\)\s]*$/', $phone)) {
-               $errors['phone'] = __('Format nomor telepon tidak valid.', 'wp-customer');
-           }
-       }
-
-       return $errors;
-   }
+class CustomerEmployeeValidator extends AbstractValidator {
 
     /**
-     * Get access type from relation
-     * 
-     * Determines the user's access level based on their relationship with the employee/customer.
-     * Priority order: admin > customer_admin > customer_branch_admin > staff > none
-     *
-     * @param array $relation User relation array with boolean flags
-     * @return string Access type (admin, customer_admin, customer_branch_admin, staff, or none)
+     * @var CustomerEmployeeModel
      */
-    private function getAccessType(array $relation): string {
-        // Check in priority order
-        if ($relation['is_admin'] ?? false) {
-            return 'admin';
-        }
+    private $employee_model;
 
-        if ($relation['is_customer_admin'] ?? false) {
-            return 'customer_admin';
-        }
+    /**
+     * @var CustomerModel
+     */
+    private $customer_model;
 
-        if ($relation['is_customer_branch_admin'] ?? false) {
-            return 'customer_branch_admin';
-        }
+    /**
+     * @var EmployeeCacheManager
+     */
+    private $cache;
 
-        if ($relation['is_customer_employee'] ?? false) {
-            return 'staff';
-        }
+    /**
+     * Relation cache (in-memory)
+     * Must be protected array (same as parent AbstractValidator)
+     */
+    protected array $relationCache = [];
 
-        return 'none';
+    /**
+     * Constructor
+     */
+    public function __construct() {
+        $this->employee_model = new CustomerEmployeeModel();
+        $this->customer_model = new CustomerModel();
+        $this->cache = EmployeeCacheManager::getInstance();
+    }
+
+    // ========================================
+    // IMPLEMENT ABSTRACT METHODS (13 required)
+    // ========================================
+
+    /**
+     * Get entity name
+     *
+     * @return string
+     */
+    protected function getEntityName(): string {
+        return 'employee';
     }
 
     /**
-     * Validate form data for employee
-     * 
-     * Performs comprehensive validation of employee form fields including:
-     * - Name (required, max 100 chars)
-     * - Email (required, valid format, unique per customer)
-     * - Position (required, max 100 chars)
-     * - Phone (optional, max 20 chars, valid format)
-     * - Branch ID (required, exists)
-     * - Customer ID (required, exists)
-     * - At least one department selected
-     * 
-     * @param array $data Employee data to validate
-     * @param int|null $id Employee ID (null for create, set for update)
-     * @return array Array of validation errors (empty if valid)
+     * Get entity display name
+     *
+     * @return string
      */
-    public function validateForm(array $data, ?int $id = null): array {
+    protected function getEntityDisplayName(): string {
+        return 'Employee';
+    }
+
+    /**
+     * Get text domain
+     *
+     * @return string
+     */
+    protected function getTextDomain(): string {
+        return 'wp-customer';
+    }
+
+    /**
+     * Get model instance
+     *
+     * @return CustomerEmployeeModel
+     */
+    protected function getModel() {
+        return $this->employee_model;
+    }
+
+    /**
+     * Get create capability
+     *
+     * @return string
+     */
+    protected function getCreateCapability(): string {
+        return 'add_customer_employee';
+    }
+
+    /**
+     * Get view capabilities
+     *
+     * @return array
+     */
+    protected function getViewCapabilities(): array {
+        return ['view_customer_employee_list', 'view_own_customer_employee', 'view_customer_employee_detail'];
+    }
+
+    /**
+     * Get update capabilities
+     *
+     * @return array
+     */
+    protected function getUpdateCapabilities(): array {
+        return ['edit_all_customer_employees', 'edit_own_customer_employee'];
+    }
+
+    /**
+     * Get delete capability
+     *
+     * @return string
+     */
+    protected function getDeleteCapability(): string {
+        return 'delete_customer_employee';
+    }
+
+    /**
+     * Get list capability
+     *
+     * @return string
+     */
+    protected function getListCapability(): string {
+        return 'view_customer_employee_list';
+    }
+
+    /**
+     * Validate form fields (implements abstract method)
+     *
+     * @param array $data Data to validate
+     * @param int|null $id Entity ID (for update)
+     * @return array Errors (empty if valid)
+     */
+    protected function validateFormFields(array $data, ?int $id = null): array {
         $errors = [];
 
         // Name validation
@@ -400,7 +196,7 @@ class CustomerEmployeeValidator {
             $errors['position'] = __('Jabatan maksimal 100 karakter.', 'wp-customer');
         }
 
-        // Phone validation (optional)
+        // Phone validation (optional, but must be valid format if provided)
         if (!empty($data['phone'])) {
             $phone = trim(sanitize_text_field($data['phone']));
             if (mb_strlen($phone) > 20) {
@@ -443,12 +239,215 @@ class CustomerEmployeeValidator {
     }
 
     /**
+     * Check view permission (implements abstract method)
+     *
+     * @param array $relation User relation
+     * @return bool
+     */
+    protected function checkViewPermission(array $relation): bool {
+        if ($relation['is_admin']) return true;
+        if ($relation['is_customer_admin']) return true;
+        if ($relation['is_customer_branch_admin']) return true;
+        if ($relation['is_customer_employee'] && current_user_can('view_own_customer_employee')) return true;
+
+        // Platform role check (wp-app-core integration)
+        if (current_user_can('view_customer_employee_detail')) return true;
+
+        return false;
+    }
+
+    /**
+     * Check update permission (implements abstract method)
+     *
+     * @param array $relation User relation
+     * @return bool
+     */
+    protected function checkUpdatePermission(array $relation): bool {
+        if ($relation['is_admin']) return true;
+        if ($relation['is_customer_admin']) return true;
+        if ($relation['is_customer_branch_admin'] && current_user_can('edit_own_customer_employee')) return true;
+        if ($relation['is_creator'] && current_user_can('edit_own_customer_employee')) return true;
+
+        // Platform role check (wp-app-core integration)
+        if (current_user_can('edit_all_customer_employees')) return true;
+
+        return false;
+    }
+
+    /**
+     * Check delete permission (implements abstract method)
+     *
+     * @param array $relation User relation
+     * @return bool
+     */
+    protected function checkDeletePermission(array $relation): bool {
+        if ($relation['is_admin'] && current_user_can('delete_customer_employee')) return true;
+        if ($relation['is_customer_admin']) return true;
+        if ($relation['is_customer_branch_admin'] && current_user_can('delete_customer_employee')) return true;
+        if ($relation['is_creator'] && current_user_can('delete_customer_employee')) return true;
+
+        // Platform role check (wp-app-core integration)
+        if (current_user_can('delete_customer_employee')) return true;
+
+        return apply_filters('wp_customer_can_delete_customer_employee', false, $relation);
+    }
+
+    // ========================================
+    // CUSTOM VALIDATION METHODS
+    // ========================================
+
+    /**
+     * Validate create operation
+     *
+     * @param array $data Data to validate
+     * @return array Errors (empty if valid)
+     */
+    public function validateCreate(array $data): array {
+        $errors = [];
+
+        // Permission check
+        if (!$this->canCreateEmployee($data['customer_id'], $data['branch_id'])) {
+            $errors['permission'] = __('Anda tidak memiliki izin untuk menambah karyawan.', 'wp-customer');
+            return $errors;
+        }
+
+        // Run general form validation
+        $form_errors = $this->validateFormFields($data);
+        if (!empty($form_errors)) {
+            $errors = array_merge($errors, $form_errors);
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Validate update operation
+     *
+     * @param array $data Data to validate
+     * @param int $id Entity ID
+     * @return array Errors (empty if valid)
+     */
+    public function validateUpdate(array $data, int $id): array {
+        $errors = [];
+
+        // Check if employee exists
+        $employee = $this->employee_model->find($id);
+        if (!$employee) {
+            $errors['id'] = __('Karyawan tidak ditemukan.', 'wp-customer');
+            return $errors;
+        }
+
+        // Get customer for permission check
+        $customer = $this->findCustomer($employee->customer_id);
+        if (!$customer) {
+            $errors['customer'] = __('Customer tidak ditemukan.', 'wp-customer');
+            return $errors;
+        }
+
+        // Permission check
+        if (!$this->canEditEmployee($employee, $customer)) {
+            $errors['permission'] = __('Anda tidak memiliki izin untuk mengedit karyawan ini.', 'wp-customer');
+            return $errors;
+        }
+
+        // Run general form validation
+        $form_errors = $this->validateFormFields($data, $id);
+        if (!empty($form_errors)) {
+            $errors = array_merge($errors, $form_errors);
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Validate delete operation
+     *
+     * @param int $id Entity ID
+     * @return array Errors (empty if valid)
+     */
+    public function validateDelete(int $id): array {
+        $errors = [];
+
+        // Check if employee exists
+        $employee = $this->employee_model->find($id);
+        if (!$employee) {
+            $errors['id'] = __('Karyawan tidak ditemukan.', 'wp-customer');
+            return $errors;
+        }
+
+        // Get customer for permission check
+        $customer = $this->findCustomer($employee->customer_id);
+        if (!$customer) {
+            $errors['customer'] = __('Customer tidak ditemukan.', 'wp-customer');
+            return $errors;
+        }
+
+        // Permission check
+        if (!$this->canDeleteEmployee($employee, $customer)) {
+            $errors['permission'] = __('Anda tidak memiliki izin untuk menghapus karyawan ini.', 'wp-customer');
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Validate view operation
+     *
+     * @param int $id Entity ID
+     * @return array Errors (empty if valid)
+     */
+    public function validateView(int $id): array {
+        $errors = [];
+
+        // Check if employee exists
+        $employee = $this->employee_model->find($id);
+        if (!$employee) {
+            $errors['id'] = __('Karyawan tidak ditemukan.', 'wp-customer');
+            return $errors;
+        }
+
+        // Get customer for permission check
+        $customer = $this->findCustomer($employee->customer_id);
+        if (!$customer) {
+            $errors['customer'] = __('Customer tidak ditemukan.', 'wp-customer');
+            return $errors;
+        }
+
+        // Permission check
+        if (!$this->canViewEmployee($employee, $customer)) {
+            $errors['permission'] = __('Anda tidak memiliki izin untuk melihat detail karyawan ini.', 'wp-customer');
+        }
+
+        return $errors;
+    }
+
+    /**
+     * Validate form data for employee
+     *
+     * Performs comprehensive validation of employee form fields including:
+     * - Name (required, max 100 chars)
+     * - Email (required, valid format, unique per customer)
+     * - Position (required, max 100 chars)
+     * - Phone (optional, max 20 chars, valid format)
+     * - Branch ID (required, exists)
+     * - Customer ID (required, exists)
+     * - At least one department selected
+     *
+     * @param array $data Employee data to validate
+     * @param int|null $id Employee ID (null for create, set for update)
+     * @return array Array of validation errors (empty if valid)
+     */
+    public function validateForm(array $data, ?int $id = null): array {
+        return $this->validateFormFields($data, $id);
+    }
+
+    /**
      * Validate permission for employee action
-     * 
+     *
      * Checks if current user has permission to perform the specified action.
      * Handles both creation (without ID) and other actions (with ID).
      * Validates action-specific permissions and checks employee/customer existence.
-     * 
+     *
      * @param string $action Action to validate (create, view, update, delete)
      * @param int|null $id Employee ID (required for all actions except create)
      * @return array Array of validation errors (empty if valid)
@@ -461,7 +460,7 @@ class CustomerEmployeeValidator {
             if (isset($_POST['customer_id']) && isset($_POST['branch_id'])) {
                 $customer_id = (int)$_POST['customer_id'];
                 $branch_id = (int)$_POST['branch_id'];
-                
+
                 if (!$this->canCreateEmployee($customer_id, $branch_id)) {
                     $errors['permission'] = __('Anda tidak memiliki izin untuk menambah karyawan.', 'wp-customer');
                 }
@@ -524,8 +523,9 @@ class CustomerEmployeeValidator {
 
     /**
      * Validate access for given customer and branch
-     * 
-     * FIXED: Now properly checks admin capabilities FIRST before checking other relations.
+     *
+     * CRITICAL: This method is used for employee list filtering.
+     * Checks admin capabilities FIRST before checking other relations.
      * This ensures admin users are always detected as 'admin' access_type.
      *
      * @param int $customer_id Customer ID (0 for general access validation)
@@ -629,46 +629,301 @@ class CustomerEmployeeValidator {
         ];
     }
 
-   private function hasAtLeastOneDepartment(array $data): bool {
-       return ($data['finance'] ?? false) || 
-              ($data['operation'] ?? false) || 
-              ($data['legal'] ?? false) || 
-              ($data['purchase'] ?? false);
-   }
+    // ========================================
+    // PERMISSION CHECKING METHODS
+    // ========================================
 
-   private function isCustomerBranchAdmin($user_id, $branch_id): bool {
-       global $wpdb;
-       return (bool)$wpdb->get_var($wpdb->prepare(
-           "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches 
-            WHERE id = %d AND user_id = %d",
-           $branch_id, $user_id
-       ));
-   }
+    /**
+     * Check if user can view employee
+     *
+     * @param object $employee Employee object
+     * @param object $customer Customer object
+     * @return bool
+     */
+    public function canViewEmployee($employee, $customer): bool {
+        $current_user_id = get_current_user_id();
 
-   private function isStaffMember($user_id, $branch_id): bool {
-       global $wpdb;
-       return (bool)$wpdb->get_var($wpdb->prepare(
-           "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees
-            WHERE user_id = %d AND branch_id = %d AND status = 'active'",
-           $user_id, $branch_id
-       ));
-   }
+        // Customer Owner Check
+        if ((int)$customer->user_id === (int)$current_user_id) {
+            return true;
+        }
 
-   /**
-    * Check if user is staff member of any branch in given customer
-    *
-    * @param int $user_id User ID to check
-    * @param int $customer_id Customer ID to check against
-    * @return bool True if user is staff member of this customer
-    */
-   private function isStaffMemberOfCustomer($user_id, $customer_id): bool {
-       global $wpdb;
-       return (bool)$wpdb->get_var($wpdb->prepare(
-           "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees
-            WHERE user_id = %d AND customer_id = %d AND status = 'active'",
-           $user_id, $customer_id
-       ));
-   }
-   
-   
+        // Customer Branch Admin Check
+        if ($this->isCustomerBranchAdmin($current_user_id, $employee->branch_id)) {
+            return true;
+        }
+
+        // Staff Check (dari CustomerEmployees)
+        if ($this->isStaffMember($current_user_id, $employee->branch_id)) {
+            return true;
+        }
+
+        // System Admin Check
+        if (current_user_can('view_customer_employee_detail')) {
+            return true;
+        }
+
+        return apply_filters('wp_customer_can_view_customer_employee', false, $employee, $customer, $current_user_id);
+    }
+
+    /**
+     * Check if user can create employee
+     *
+     * @param int $customer_id Customer ID
+     * @param int $branch_id Branch ID
+     * @return bool
+     */
+    public function canCreateEmployee($customer_id, $branch_id): bool {
+        $current_user_id = get_current_user_id();
+
+        // Customer Owner Check
+        $customer = $this->findCustomer($customer_id);
+        if ($customer && (int)$customer->user_id === (int)$current_user_id) {
+            return true;
+        }
+
+        // Customer Branch Admin Check dengan add_customer_employee capability
+        if ($this->isCustomerBranchAdmin($current_user_id, $branch_id) && current_user_can('add_customer_employee')) {
+            return true;
+        }
+
+        // System Admin Check
+        if (current_user_can('add_customer_employee')) {
+            return true;
+        }
+
+        return apply_filters('wp_customer_can_create_customer_employee', false, $customer_id, $branch_id, $current_user_id);
+    }
+
+    /**
+     * Check if user can edit employee
+     *
+     * @param object $employee Employee object
+     * @param object $customer Customer object
+     * @return bool
+     */
+    public function canEditEmployee($employee, $customer): bool {
+        $current_user_id = get_current_user_id();
+
+        // Customer Owner Check
+        if ((int)$customer->user_id === (int)$current_user_id) {
+            return true;
+        }
+
+        // Customer Branch Admin Check
+        if ($this->isCustomerBranchAdmin($current_user_id, $employee->branch_id) &&
+            current_user_can('edit_own_customer_employee')) {
+            return true;
+        }
+
+        // Creator Check
+        if ((int)$employee->created_by === (int)$current_user_id &&
+            current_user_can('edit_own_customer_employee')) {
+            return true;
+        }
+
+        // System Admin Check
+        if (current_user_can('edit_all_customer_employees')) {
+            return true;
+        }
+
+        return apply_filters('wp_customer_can_edit_customer_employee', false, $employee, $customer, $current_user_id);
+    }
+
+    /**
+     * Check if user can delete employee
+     *
+     * @param object $employee Employee object
+     * @param object $customer Customer object
+     * @return bool
+     */
+    public function canDeleteEmployee($employee, $customer): bool {
+        $current_user_id = get_current_user_id();
+
+        // Customer Owner Check
+        if ((int)$customer->user_id === (int)$current_user_id) {
+            return true;
+        }
+
+        // Customer Branch Admin Check
+        if ($this->isCustomerBranchAdmin($current_user_id, $employee->branch_id) &&
+            current_user_can('delete_customer_employee')) {
+            return true;
+        }
+
+        // Creator Check
+        if ((int)$employee->created_by === (int)$current_user_id &&
+            current_user_can('delete_customer_employee')) {
+            return true;
+        }
+
+        // System Admin Check
+        if (current_user_can('delete_customer_employee')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    // ========================================
+    // HELPER METHODS
+    // ========================================
+
+    /**
+     * Find customer - using direct query to avoid cache contract issue
+     * TODO: Remove this workaround when wp-app-core cache contract is fixed
+     *
+     * @param int $customer_id Customer ID
+     * @return object|null Customer object or null
+     */
+    private function findCustomer(int $customer_id): ?object {
+        global $wpdb;
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}app_customers WHERE id = %d",
+            $customer_id
+        ));
+    }
+
+    /**
+     * Check if at least one department is selected
+     *
+     * @param array $data Form data
+     * @return bool
+     */
+    private function hasAtLeastOneDepartment(array $data): bool {
+        return ($data['finance'] ?? false) ||
+               ($data['operation'] ?? false) ||
+               ($data['legal'] ?? false) ||
+               ($data['purchase'] ?? false);
+    }
+
+    /**
+     * Check if user is customer branch admin
+     *
+     * @param int $user_id User ID
+     * @param int $branch_id Branch ID
+     * @return bool
+     */
+    private function isCustomerBranchAdmin($user_id, $branch_id): bool {
+        global $wpdb;
+        return (bool)$wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches
+             WHERE id = %d AND user_id = %d",
+            $branch_id, $user_id
+        ));
+    }
+
+    /**
+     * Check if user is staff member of given branch
+     *
+     * @param int $user_id User ID
+     * @param int $branch_id Branch ID
+     * @return bool
+     */
+    private function isStaffMember($user_id, $branch_id): bool {
+        global $wpdb;
+        return (bool)$wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees
+             WHERE user_id = %d AND branch_id = %d AND status = 'active'",
+            $user_id, $branch_id
+        ));
+    }
+
+    /**
+     * Check if user is staff member of any branch in given customer
+     *
+     * @param int $user_id User ID to check
+     * @param int $customer_id Customer ID to check against
+     * @return bool True if user is staff member of this customer
+     */
+    private function isStaffMemberOfCustomer($user_id, $customer_id): bool {
+        global $wpdb;
+        return (bool)$wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_employees
+             WHERE user_id = %d AND customer_id = %d AND status = 'active'",
+            $user_id, $customer_id
+        ));
+    }
+
+    /**
+     * Get access type from relation
+     *
+     * Determines the user's access level based on their relationship with the employee/customer.
+     * Priority order: admin > customer_admin > customer_branch_admin > staff > none
+     *
+     * @param array $relation User relation array with boolean flags
+     * @return string Access type (admin, customer_admin, customer_branch_admin, staff, or none)
+     */
+    private function getAccessType(array $relation): string {
+        // Check in priority order
+        if ($relation['is_admin'] ?? false) {
+            return 'admin';
+        }
+
+        if ($relation['is_customer_admin'] ?? false) {
+            return 'customer_admin';
+        }
+
+        if ($relation['is_customer_branch_admin'] ?? false) {
+            return 'customer_branch_admin';
+        }
+
+        if ($relation['is_customer_employee'] ?? false) {
+            return 'staff';
+        }
+
+        return 'none';
+    }
+
+    /**
+     * Sanitize input data
+     *
+     * @param array $data Input data
+     * @return array Sanitized data
+     */
+    public function sanitizeInput(array $data): array {
+        $sanitized = [];
+
+        if (isset($data['name'])) {
+            $sanitized['name'] = trim(sanitize_text_field($data['name']));
+        }
+
+        if (isset($data['email'])) {
+            $sanitized['email'] = sanitize_email($data['email']);
+        }
+
+        if (isset($data['position'])) {
+            $sanitized['position'] = trim(sanitize_text_field($data['position']));
+        }
+
+        if (isset($data['phone'])) {
+            $sanitized['phone'] = trim(sanitize_text_field($data['phone']));
+        }
+
+        if (isset($data['customer_id'])) {
+            $sanitized['customer_id'] = intval($data['customer_id']);
+        }
+
+        if (isset($data['branch_id'])) {
+            $sanitized['branch_id'] = intval($data['branch_id']);
+        }
+
+        return $sanitized;
+    }
+
+    /**
+     * Clear relation cache
+     *
+     * @param int|null $employee_id Employee ID (null for all)
+     * @return void
+     */
+    public function clearCache(?int $employee_id = null): void {
+        if ($employee_id) {
+            unset($this->relationCache[$employee_id]);
+        } else {
+            $this->relationCache = [];
+        }
+
+        $this->cache->clearCache('employee_relation');
+    }
 }

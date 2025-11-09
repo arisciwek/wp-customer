@@ -1,389 +1,228 @@
 <?php
 /**
- * Customer Employee Model Class
+ * Customer Employee Model
  *
  * @package     WP_Customer
  * @subpackage  Models/Employee
- * @version     1.0.12
+ * @version     2.0.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Employee/CustomerEmployeeModel.php
  *
- * Description: Model untuk mengelola data karyawan customer di database.
- *              Handles operasi CRUD dengan caching terintegrasi.
- *              Includes query optimization dan data formatting.
- *              Menyediakan metode untuk DataTables server-side.
+ * Description: CRUD model untuk Employee entity.
+ *              Extends AbstractCrudModel dari wp-app-core.
+ *              Handles create, read, update, delete operations.
+ *              All CRUD operations INHERITED from AbstractCrudModel.
+ *
+ * Separation of Concerns:
+ * - CustomerEmployeeModel: CRUD operations only
+ * - EmployeeDataTableModel: DataTable server-side processing only
+ * - EmployeeValidator: Validation only
+ * - CustomerEmployeeController: HTTP request handling only
  *
  * Changelog:
- * 1.0.12 - 2025-11-01 (TODO-3098)
- * - Added 'wp_customer_employee_before_insert' filter hook in create() method
- * - Allows modification of insert data before database insertion
- * - Use cases: demo data (static IDs), migration, data sync, testing
- * - Added dynamic format array handling for 'id' field injection
- * - Pattern consistent with CustomerModel and BranchModel (TODO-3098)
+ * 2.0.0 - 2025-11-09 (TODO-Employee-CRUD: Refactoring)
+ * - BREAKING: Refactored to extend AbstractCrudModel
+ * - CRUD methods INHERITED: find(), create(), update(), delete()
+ * - Implements 8 abstract methods
+ * - Custom methods: getUserInfo(), getByCustomer(), getByBranch(), etc.
+ * - Removed: Duplicate CRUD code
+ * - Uses: EmployeeCacheManager (not CustomerCacheManager)
  *
- * 1.1.0 - 2025-01-18
- * - REFACTOR: getUserInfo() now handles ALL user types (employee, owner, branch admin, fallback)
- * - Added: getEmployeeInfo() private method (extracted from getUserInfo)
- * - Added: getCustomerOwnerInfo() private method (moved from Integration class)
- * - Added: getBranchAdminInfo() private method (moved from Integration class)
- * - Added: getFallbackInfo() private method (moved from Integration class)
- * - Improved: All business logic now in Model (separation of concerns)
- * - Improved: Consistent with wp-agency pattern (single delegation point)
- * - Added: Cache invalidation for customer_user_info in update/delete/changeStatus
- * - Benefits: Cleaner architecture, more maintainable, testable
- *
- * 1.0.0 - 2024-01-12
- * - Initial implementation
- * - Added core CRUD operations
- * - Added DataTables integration
- * - Added cache support
+ * Previous version: CustomerEmployeeModel-OLD-*.php (backup)
  */
 
 namespace WPCustomer\Models\Employee;
 
-use WPCustomer\Cache\CustomerCacheManager;
+use WPAppCore\Models\Crud\AbstractCrudModel;
+use WPCustomer\Cache\EmployeeCacheManager;
+use WPCustomer\Models\Customer\CustomerModel;
 
-class CustomerEmployeeModel {
-    private $table;
-    private $customer_table;
-    private $branch_table;
-    private $cache; // Tambahkan properti cache
+defined('ABSPATH') || exit;
 
-    // Add class constant for valid status values
-    private const VALID_STATUSES = ['active', 'inactive'];
-
-    public function __construct() {
-        global $wpdb;
-        $this->table = $wpdb->prefix . 'app_customer_employees';
-        $this->customer_table = $wpdb->prefix . 'app_customers';
-        $this->branch_table = $wpdb->prefix . 'app_customer_branches';
-        $this->cache = new CustomerCacheManager();
-    }
-
-public function create(array $data): ?int {
-    global $wpdb;
-
-    $insertData = [
-        'customer_id' => $data['customer_id'],  // Ambil customer_id dari data
-        'branch_id' => $data['branch_id'],
-        'user_id' => $data['user_id'] ?? get_current_user_id(), // Use provided user_id or current user as fallback
-        'name' => $data['name'],
-        'position' => $data['position'],
-        'finance' => $data['finance'],
-        'operation' => $data['operation'],
-        'legal' => $data['legal'],
-        'purchase' => $data['purchase'],
-        'keterangan' => $data['keterangan'],
-        'email' => $data['email'],
-        'phone' => $data['phone'],
-        'created_by' => $data['created_by'] ?? get_current_user_id(), // Allow override for demo data
-        'created_at' => current_time('mysql'),
-        'updated_at' => current_time('mysql'),
-        'status' => $data['status'] ?? 'active'
-    ];
+class CustomerEmployeeModel extends AbstractCrudModel {
 
     /**
-     * Filter insert data before database insertion
-     *
-     * Allows modification of employee data before it's inserted into the database.
-     * Useful for:
-     * - Demo data: Force static IDs for predictable test data
-     * - Migration: Import employees with preserved IDs from external system
-     * - Data sync: Synchronize with external system maintaining same IDs
-     * - Testing: Unit tests with predictable IDs
-     *
-     * @since 1.0.12 (TODO-3098)
-     * @param array $insertData Prepared data ready for $wpdb->insert
-     * @param array $data Original input data
+     * Cache keys constants
      */
-    $insertData = apply_filters('wp_customer_employee_before_insert', $insertData, $data);
+    private const KEY_EMPLOYEE = 'customer_employee';
 
-    // Prepare format array
-    $format = [
-        '%d', // customer_id
-        '%d', // branch_id
-        '%d', // user_id
-        '%s', // name
-        '%s', // position
-        '%d', // finance
-        '%d', // operation
-        '%d', // legal
-        '%d', // purchase
-        '%s', // keterangan
-        '%s', // email
-        '%s', // phone
-        '%d', // created_by
-        '%s', // created_at
-        '%s', // updated_at
-        '%s'  // status
-    ];
+    /**
+     * Valid status values
+     */
+    private const VALID_STATUSES = ['active', 'inactive'];
 
-    // If 'id' was added by filter, rebuild format array dynamically
-    if (isset($insertData['id']) && !isset($data['id'])) {
-        $format = [];
-        foreach ($insertData as $key => $value) {
-            switch ($key) {
-                case 'id':
-                case 'customer_id':
-                case 'branch_id':
-                case 'user_id':
-                case 'finance':
-                case 'operation':
-                case 'legal':
-                case 'purchase':
-                case 'created_by':
-                    $format[] = '%d';
-                    break;
-                default:
-                    $format[] = '%s';
-                    break;
-            }
-        }
+    /**
+     * Related models
+     */
+    private CustomerModel $customerModel;
+
+    /**
+     * Constructor
+     */
+    public function __construct() {
+        parent::__construct(EmployeeCacheManager::getInstance());
+        $this->customerModel = new CustomerModel();
     }
 
-    $result = $wpdb->insert(
-        $this->table,
-        $insertData,
-        $format
-    );
+    // ========================================
+    // IMPLEMENT ABSTRACT METHODS (8 required)
+    // ========================================
 
-    if ($result === false) {
-        return null;
-    }
-
-    $employee_id = (int) $wpdb->insert_id;
-
-    // Comprehensive cache invalidation for new employee
-    if ($employee_id && isset($data['customer_id'])) {
-        $this->cache->delete('active_customer_employee_count', (string)$data['customer_id']);
-
-        // Invalidate DataTable cache for all access types
-        $this->invalidateAllDataTableCache('customer_employee_list', (int)$data['customer_id']);
-    }
-
-    // Fire HOOK: wp_customer_employee_created (Task-2170)
-    // Allows external plugins to react to employee creation
-    // Example: Send welcome email, create default permissions, notify managers
-    if ($employee_id) {
-        do_action('wp_customer_employee_created', $employee_id, $data);
-    }
-
-    return $employee_id;
-}
-
-    public function find(int $id): ?object {
+    /**
+     * Get database table name
+     *
+     * @return string
+     */
+    protected function getTableName(): string {
         global $wpdb;
-
-        // Check cache first
-        $cached_employee = $this->cache->get('customer_employee', $id);
-
-        // TODO-2192 FIXED: Cache returns false on miss
-        if ($cached_employee !== false) {
-            return $cached_employee;
-        }
-
-        // Query database if not cached
-        $result = $wpdb->get_row($wpdb->prepare("
-            SELECT e.*,
-                   c.name as customer_name,
-                   b.name as branch_name,
-                   u.display_name as created_by_name
-            FROM {$this->table} e
-            LEFT JOIN {$this->customer_table} c ON e.customer_id = c.id
-            LEFT JOIN {$this->branch_table} b ON e.branch_id = b.id
-            LEFT JOIN {$wpdb->users} u ON e.created_by = u.ID
-            WHERE e.id = %d
-        ", $id));
-
-        // Cache the result (expiry uses default from cache manager)
-        if ($result) {
-            $this->cache->set('customer_employee', $result, null, $id);
-        }
-
-        return $result;
+        return $wpdb->prefix . 'app_customer_employees';
     }
 
-    public function update(int $id, array $data): bool {
-        global $wpdb;
+    /**
+     * Get format map for wpdb operations
+     *
+     * @return array Format map (field => format)
+     */
+    protected function getFormatMap(): array {
+        return [
+            'id' => '%d',
+            'customer_id' => '%d',
+            'branch_id' => '%d',
+            'user_id' => '%d',
+            'name' => '%s',
+            'position' => '%s',
+            'finance' => '%d',
+            'operation' => '%d',
+            'legal' => '%d',
+            'purchase' => '%d',
+            'keterangan' => '%s',
+            'email' => '%s',
+            'phone' => '%s',
+            'status' => '%s',
+            'created_by' => '%d',
+            'updated_by' => '%d',
+            'created_at' => '%s',
+            'updated_at' => '%s'
+        ];
+    }
 
-        // Only include status in update if it's provided and valid
-        $updateData = [
+    /**
+     * Get cache method name prefix
+     *
+     * @return string
+     */
+    protected function getCacheKey(): string {
+        return 'Employee';
+    }
+
+    /**
+     * Get entity name
+     *
+     * @return string
+     */
+    protected function getEntityName(): string {
+        return 'employee';
+    }
+
+    /**
+     * Get plugin prefix for hooks
+     *
+     * @return string
+     */
+    protected function getPluginPrefix(): string {
+        return 'wp_customer';
+    }
+
+    /**
+     * Get allowed fields for update operations
+     *
+     * @return array
+     */
+    protected function getAllowedFields(): array {
+        return [
+            'customer_id',
+            'branch_id',
+            'user_id',
+            'name',
+            'position',
+            'finance',
+            'operation',
+            'legal',
+            'purchase',
+            'keterangan',
+            'email',
+            'phone',
+            'status'
+        ];
+    }
+
+    /**
+     * Prepare insert data from request
+     *
+     * @param array $data Raw request data
+     * @return array Prepared insert data
+     */
+    protected function prepareInsertData(array $data): array {
+        return [
+            'customer_id' => $data['customer_id'],
+            'branch_id' => $data['branch_id'],
+            'user_id' => $data['user_id'] ?? get_current_user_id(),
             'name' => $data['name'],
             'position' => $data['position'],
-            'finance' => $data['finance'],
-            'operation' => $data['operation'],
-            'legal' => $data['legal'],
-            'purchase' => $data['purchase'],
-            'keterangan' => $data['keterangan'],
+            'finance' => $data['finance'] ?? 0,
+            'operation' => $data['operation'] ?? 0,
+            'legal' => $data['legal'] ?? 0,
+            'purchase' => $data['purchase'] ?? 0,
+            'keterangan' => $data['keterangan'] ?? '',
             'email' => $data['email'],
-            'phone' => $data['phone'],
-            'branch_id' => $data['branch_id'],
+            'phone' => $data['phone'] ?? '',
+            'status' => $data['status'] ?? 'active',
+            'created_by' => $data['created_by'] ?? get_current_user_id(),
+            'created_at' => current_time('mysql'),
             'updated_at' => current_time('mysql')
         ];
-
-        $format = [
-            '%s', // name
-            '%s', // position
-            '%d', // finance
-            '%d', // operation
-            '%d', // legal
-            '%d', // purchase
-            '%s', // keterangan
-            '%s', // email
-            '%s', // phone
-            '%d', // branch_id
-            '%s'  // updated_at
-        ];
-
-        // Add status to update data if provided and valid
-        if (isset($data['status']) && in_array($data['status'], self::VALID_STATUSES)) {
-            $updateData['status'] = $data['status'];
-            $format[] = '%s'; // status
-        }
-
-        $result = $wpdb->update(
-            $this->table,
-            $updateData,
-            ['id' => $id],
-            $format,
-            ['%d']
-        );
-
-	    if ($result === false) {
-		error_log('Update customer employee error: ' . $wpdb->last_error);
-		return false;
-	    }
-
-	    // Get employee data untuk customer_id - AFTER update
-	    $employee = $this->find($id);
-	    if ($employee && $employee->customer_id) {
-		// ✓ FIXED: Invalidate ALL employee cache keys
-		$this->cache->delete('customer_employee', $id);
-		$this->cache->delete('customer_employee_count', (string)$employee->customer_id);
-		$this->cache->delete('active_customer_employee_count', (string)$employee->customer_id);
-
-		// Invalidate getUserInfo cache (for admin bar)
-		if ($employee->user_id) {
-		    $this->cache->delete('customer_user_info', $employee->user_id);
-		}
-
-		// Invalidate DataTable cache for all access types
-		$this->invalidateAllDataTableCache('customer_employee_list', (int)$employee->customer_id);
-
-		// Fire HOOK: wp_customer_employee_updated (Task-2170)
-		// Allows external plugins to react to employee updates
-		// Example: Sync changes to external systems, update permissions
-		do_action('wp_customer_employee_updated', $id, $data, $employee);
-	    }
-
-        return true;
     }
 
-	/**
-	 * Delete employee with HOOK support
-	 *
-	 * Task-2170: Added soft/hard delete logic + HOOKs
-	 * - Fires wp_customer_employee_before_delete HOOK
-	 * - Performs soft delete (status='inactive') or hard delete (actual DELETE)
-	 * - Fires wp_customer_employee_deleted HOOK
-	 * - EmployeeCleanupHandler handles cache invalidation via HOOK
-	 *
-	 * @param int $id Employee ID to delete
-	 * @return bool True on success, false on failure
-	 *
-	 * @since 1.1.0 Added HOOK support (Task-2170)
-	 */
-	public function delete(int $id): bool {
-	    global $wpdb;
+    /**
+     * Prepare update data from request
+     *
+     * @param array $data Raw request data
+     * @return array Prepared update data
+     */
+    protected function prepareUpdateData(array $data): array {
+        $updateData = [];
 
-	    // 1. Get employee data BEFORE deletion for HOOK
-	    $employee = $this->find($id);
-	    if (!$employee) {
-		return false;
-	    }
+        // Only update fields that are present in request
+        $allowed = $this->getAllowedFields();
 
-	    // 2. Convert to array for HOOK
-	    $employee_data = [
-		'id' => $employee->id,
-		'customer_id' => $employee->customer_id,
-		'branch_id' => $employee->branch_id,
-		'user_id' => $employee->user_id,
-		'name' => $employee->name,
-		'position' => $employee->position,
-		'email' => $employee->email,
-		'phone' => $employee->phone,
-		'finance' => $employee->finance,
-		'operation' => $employee->operation,
-		'legal' => $employee->legal,
-		'purchase' => $employee->purchase,
-		'keterangan' => $employee->keterangan,
-		'status' => $employee->status,
-		'created_by' => $employee->created_by,
-		'created_at' => $employee->created_at,
-		'updated_at' => $employee->updated_at
-	    ];
+        foreach ($allowed as $field) {
+            if (isset($data[$field])) {
+                $updateData[$field] = $data[$field];
+            }
+        }
 
-	    // 3. Fire before delete HOOK (Task-2170)
-	    // For validation, logging, pre-deletion notifications
-	    do_action('wp_customer_employee_before_delete', $id, $employee_data);
+        $updateData['updated_at'] = current_time('mysql');
+        $updateData['updated_by'] = get_current_user_id();
 
-	    // 4. Check hard delete setting (same setting as Branch/Customer for consistency)
-	    $settings = get_option('wp_customer_general_options', []);
-	    $is_hard_delete = isset($settings['enable_hard_delete_branch']) &&
-			     $settings['enable_hard_delete_branch'] === true;
+        return $updateData;
+    }
 
-	    // 5. Perform delete (soft or hard)
-	    if ($is_hard_delete) {
-		// Hard delete - actual DELETE from database
-		$result = $wpdb->delete(
-		    $this->table,
-		    ['id' => $id],
-		    ['%d']
-		);
-	    } else {
-		// Soft delete - status = 'inactive'
-		$result = $wpdb->update(
-		    $this->table,
-		    [
-			'status' => 'inactive',
-			'updated_at' => current_time('mysql')
-		    ],
-		    ['id' => $id],
-		    ['%s', '%s'],
-		    ['%d']
-		);
-	    }
+    // ========================================
+    // CUSTOM METHODS (Business Logic)
+    // ========================================
 
-	    // 6. Fire after delete HOOK and handle cleanup (Task-2170)
-	    if ($result !== false) {
-		// Fire HOOK - EmployeeCleanupHandler handles cache invalidation
-		do_action('wp_customer_employee_deleted', $id, $employee_data, $is_hard_delete);
-
-		// Direct cache invalidation (in addition to HOOK handler)
-		$this->cache->delete('customer_employee', $id);
-		$this->cache->delete('customer_employee_count', (string)$employee_data['customer_id']);
-		$this->cache->delete('active_customer_employee_count', (string)$employee_data['customer_id']);
-
-		// Invalidate getUserInfo cache (for admin bar)
-		if ($employee->user_id) {
-		    $this->cache->delete('customer_user_info', $employee->user_id);
-		}
-
-		// Invalidate DataTable cache for all access types
-		$this->invalidateAllDataTableCache('customer_employee_list', (int)$employee_data['customer_id']);
-
-		return true;
-	    }
-
-	    return false;
-	}
-
-
+    /**
+     * Check if email exists
+     *
+     * @param string $email Email to check
+     * @param int|null $excludeId Exclude this ID (for update)
+     * @return bool
+     */
     public function existsByEmail(string $email, ?int $excludeId = null): bool {
         global $wpdb;
 
-        $sql = "SELECT EXISTS (SELECT 1 FROM {$this->table} WHERE email = %s";
+        $sql = "SELECT EXISTS (SELECT 1 FROM {$this->getTableName()} WHERE email = %s";
         $params = [$email];
 
         if ($excludeId) {
@@ -396,520 +235,104 @@ public function create(array $data): ?int {
         return (bool) $wpdb->get_var($wpdb->prepare($sql, $params));
     }
 
-    public function getDataTableData(int $customer_id, int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
-        global $wpdb;
-
-        // Get access_type from CustomerModel::getUserRelation (same as Branch tab)
-        $customerModel = new \WPCustomer\Models\Customer\CustomerModel();
-        $relation = $customerModel->getUserRelation($customer_id);
-        $access_type = $relation['access_type'];
-
-        // Ensure orderDir lowercase for cache key consistency
-        $orderDir = strtolower($orderDir);
-
-        // Check cache first
-        $cached_result = $this->cache->getDataTableCache(
-            'customer_employee_list',
-            $access_type,
-            $start,
-            $length,
-            $search,
-            $orderColumn,
-            $orderDir,
-            ['customer_id' => $customer_id]
-        );
-
-        if ($cached_result) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("CustomerEmployeeModel cache hit for DataTable - Key: customer_employee_list_{$access_type}");
-            }
-            return $cached_result;
-        }
-
-        error_log('=== Start Debug Employee DataTable Query ===');
-        error_log('Customer ID: ' . $customer_id);
-        error_log('Access Type: ' . $access_type);
-        error_log('Start: ' . $start);
-        error_log('Length: ' . $length);
-        error_log('Search: ' . $search);
-        error_log('Order Column: ' . $orderColumn);
-        error_log('Order Direction: ' . $orderDir);
-
-        // Base query parts
-        $select = "SELECT SQL_CALC_FOUND_ROWS e.*, 
-                         b.name as branch_name,
-                         u.display_name as created_by_name";
-        $from = " FROM {$this->table} e";
-        $join = " LEFT JOIN {$this->branch_table} b ON e.branch_id = b.id
-                  LEFT JOIN {$wpdb->users} u ON e.created_by = u.ID";
-        $where = " WHERE e.customer_id = %d";
-        $params = [$customer_id];
-
-        // Add branch filtering for employees and branch admins
-        $current_user_id = get_current_user_id();
-
-        // Check if user is employee or branch admin
-        $employee_info = $wpdb->get_row($wpdb->prepare(
-            "SELECT branch_id FROM {$this->table}
-             WHERE user_id = %d AND status = 'active'",
-            $current_user_id
-        ));
-
-        $customer_branch_admin_info = $wpdb->get_row($wpdb->prepare(
-            "SELECT id FROM {$this->branch_table}
-             WHERE user_id = %d",
-            $current_user_id
-        ));
-
-        // Apply branch filtering for non-admins
-        if (!current_user_can('edit_all_customer_employees')) {
-            if ($employee_info && $employee_info->branch_id) {
-                // Employee - only see employees in same branch
-                $where .= " AND e.branch_id = %d";
-                $params[] = $employee_info->branch_id;
-                error_log("Applied employee branch filter: branch_id = {$employee_info->branch_id}");
-            } elseif ($customer_branch_admin_info && $customer_branch_admin_info->id) {
-                // Customer Branch Admin - only see employees in their managed branch
-                $where .= " AND e.branch_id = %d";
-                $params[] = $customer_branch_admin_info->id;
-                error_log("Applied customer branch admin filter: branch_id = {$customer_branch_admin_info->id}");
-            }
-        }
-
-        error_log('Initial Query Parts:');
-        error_log('Select: ' . $select);
-        error_log('From: ' . $from);
-        error_log('Join: ' . $join);
-        error_log('Where: ' . $where);
-
-        // Add search if provided
-        if (!empty($search)) {
-            $where .= " AND (e.name LIKE %s OR e.department LIKE %s)";
-            $search_param = '%' . $wpdb->esc_like($search) . '%';
-            $params = array_merge($params, [$search_param, $search_param, $search_param, $search_param]);
-            error_log('Search Where Clause Added: ' . $where);
-            error_log('Search Parameters: ' . print_r($params, true));
-        }
-
-        // Validate order column
-        $validColumns = ['name', 'department', 'branch_name', 'status'];
-        if (!in_array($orderColumn, $validColumns)) {
-            $orderColumn = 'name';
-        }
-        error_log('Validated Order Column: ' . $orderColumn);
-
-        // Map frontend column to actual column
-        $orderColumnMap = [
-            'name' => 'e.name',
-            'department' => 'e.department',
-            'branch_name' => 'b.name',
-            'status' => 'e.status'
-        ];
-
-        $orderColumn = $orderColumnMap[$orderColumn] ?? 'e.name';
-        error_log('Mapped Order Column: ' . $orderColumn);
-
-        // Validate order direction
-        $orderDir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
-        error_log('Validated Order Direction: ' . $orderDir);
-
-        // Build order clause
-        $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
-        error_log('Order Clause: ' . $order);
-
-        // Add limit
-        $limit = $wpdb->prepare(" LIMIT %d, %d", $start, $length);
-        error_log('Limit Clause: ' . $limit);
-
-        // Complete query
-        $sql = $select . $from . $join . $where . $order . $limit;
-
-        // Log the final query with parameters
-        $final_query = $wpdb->prepare($sql, $params);
-        error_log('Final Complete Query: ' . $final_query);
-
-        // Get paginated results
-        $results = $wpdb->get_results($final_query);
-        
-        if ($results === null) {
-            error_log('Query Error: ' . $wpdb->last_error);
-            throw new \Exception($wpdb->last_error);
-        }
-
-        error_log('Query Results Count: ' . count($results));
-
-        // Get total filtered count
-        $filtered = $wpdb->get_var("SELECT FOUND_ROWS()");
-        error_log('Filtered Count: ' . $filtered);
-
-        // Get total count for customer
-        $total_query = $wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->table} WHERE customer_id = %d",
-            $customer_id
-        );
-        error_log('Total Count Query: ' . $total_query);
-        
-        $total = $wpdb->get_var($total_query);
-        error_log('Total Count: ' . $total);
-
-        error_log('Results Data Sample: ' . print_r(array_slice($results, 0, 1), true));
-        error_log('=== End Debug Employee DataTable Query ===');
-
-        $result = [
-            'data' => $results,
-            'total' => (int) $total,
-            'filtered' => (int) $filtered
-        ];
-
-        // Set cache with 2 minute duration - use lowercase orderDir
-        $this->cache->setDataTableCache(
-            'customer_employee_list',
-            $access_type,
-            $start,
-            $length,
-            $search,
-            $orderColumn,
-            $orderDir,
-            $result,
-            ['customer_id' => $customer_id]
-        );
-
-        return $result;
-    }
-
     /**
-     * Get total employee count based on user permission with access_type filtering
+     * Get employees by customer ID
      *
-     * @param int|null $customer_id Optional customer ID for filtering
-     * @return int Total number of employees
+     * @param int $customer_id Customer ID
+     * @return array Array of employee objects
      */
-    public function getTotalCount(?int $customer_id = null): int {
+    public function getByCustomer(int $customer_id): array {
         global $wpdb;
 
-        error_log('=== Debug CustomerEmployeeModel getTotalCount ===');
-        error_log('User ID: ' . get_current_user_id());
-        error_log('Customer ID param: ' . ($customer_id ?? 'null'));
-
-        // Get user relation from CustomerModel to determine access
-        $customerModel = new \WPCustomer\Models\Customer\CustomerModel();
-        $relation = $customerModel->getUserRelation(0);
-        $access_type = $relation['access_type'];
-
-        error_log('Access type: ' . $access_type);
-        error_log('Is admin: ' . ($relation['is_admin'] ? 'yes' : 'no'));
-        error_log('Is customer admin: ' . ($relation['is_customer_admin'] ? 'yes' : 'no'));
-        error_log('Is customer branch admin: ' . ($relation['is_customer_branch_admin'] ? 'yes' : 'no'));
-        error_log('Is employee: ' . ($relation['is_customer_employee'] ? 'yes' : 'no'));
-
-        // Base query parts
-        $select = "SELECT SQL_CALC_FOUND_ROWS e.*";
-        $from = " FROM {$this->table} e";
-        $join = " LEFT JOIN {$this->branch_table} b ON e.branch_id = b.id
-                  LEFT JOIN {$this->customer_table} c ON e.customer_id = c.id";
-
-        // Default where clause
-        $where = " WHERE 1=1";
-        $params = [];
-
-        // Add customer_id filter if provided
-        if ($customer_id) {
-            $where .= " AND e.customer_id = %d";
-            $params[] = $customer_id;
-            error_log('Added customer filter: customer_id = ' . $customer_id);
-        }
-
-        // Apply filtering based on access type
-        if ($relation['is_admin']) {
-            // Administrator - see all employees
-            error_log('User is admin - no additional restrictions');
-        }
-        elseif ($access_type === 'platform') {
-            // Platform users (from wp-app-core) - see all employees
-            // No additional restrictions (same as admin)
-            // Access controlled via WordPress capabilities (view_customer_employee_detail)
-            error_log('User is platform - no additional restrictions');
-        }
-        elseif ($relation['is_customer_admin']) {
-            // Customer Admin - see all employees under their customer
-            $where .= " AND c.user_id = %d";
-            $params[] = get_current_user_id();
-            error_log('Added customer admin restriction');
-        }
-        elseif ($relation['is_customer_branch_admin']) {
-            // Customer Branch Admin - only see employees in their managed branch
-            $branch_id = $wpdb->get_var($wpdb->prepare(
-                "SELECT id FROM {$this->branch_table}
-                 WHERE user_id = %d LIMIT 1",
-                get_current_user_id()
-            ));
-
-            if ($branch_id) {
-                $where .= " AND e.branch_id = %d";
-                $params[] = $branch_id;
-                error_log('Added customer branch admin restriction for branch: ' . $branch_id);
-            } else {
-                $where .= " AND 1=0"; // No branch found
-                error_log('Customer branch admin has no branch - blocking access');
-            }
-        }
-        elseif ($relation['is_customer_employee']) {
-            // Employee - only see employees in the same branch
-            $employee_branch = $wpdb->get_var($wpdb->prepare(
-                "SELECT branch_id FROM {$this->table}
-                 WHERE user_id = %d AND status = 'active' LIMIT 1",
-                get_current_user_id()
-            ));
-
-            if ($employee_branch) {
-                $where .= " AND e.branch_id = %d";
-                $params[] = $employee_branch;
-                error_log('Added employee restriction for branch: ' . $employee_branch);
-            } else {
-                $where .= " AND 1=0"; // No branch found
-                error_log('Employee has no branch - blocking access');
-            }
-        }
-        else {
-            // No access
-            $where .= " AND 1=0";
-            error_log('User has no access - blocking all');
-        }
-
-        // Complete query
-        $query = $select . $from . $join . $where;
-        $final_query = !empty($params) ? $wpdb->prepare($query, $params) : $query;
-
-        error_log('Final Query: ' . $final_query);
-
-        // Execute query
-        $wpdb->get_results($final_query);
-
-        // Get total and log
-        $total = (int) $wpdb->get_var("SELECT FOUND_ROWS()");
-        error_log('Total count result: ' . $total);
-        error_log('=== End Debug ===');
-
-        return $total;
+        return $wpdb->get_results($wpdb->prepare("
+            SELECT e.*,
+                   b.name as branch_name,
+                   u.display_name as created_by_name
+            FROM {$this->getTableName()} e
+            LEFT JOIN {$wpdb->prefix}app_customer_branches b ON e.branch_id = b.id
+            LEFT JOIN {$wpdb->users} u ON e.created_by = u.ID
+            WHERE e.customer_id = %d
+            ORDER BY e.name ASC
+        ", $customer_id));
     }
 
     /**
-     * Get employees by branch
+     * Get employees by branch ID
+     *
+     * @param int $branch_id Branch ID
+     * @return array Array of employee objects
      */
     public function getByBranch(int $branch_id): array {
         global $wpdb;
 
         return $wpdb->get_results($wpdb->prepare("
             SELECT e.*
-            FROM {$this->table} e
+            FROM {$this->getTableName()} e
             WHERE e.branch_id = %d
             ORDER BY e.name ASC
         ", $branch_id));
     }
 
-
-    // Add method to validate status
+    /**
+     * Validate status
+     *
+     * @param string $status Status to validate
+     * @return bool
+     */
     public function isValidStatus(string $status): bool {
         return in_array($status, self::VALID_STATUSES);
     }
 
-    // Update changeStatus method to validate status
-
-	public function changeStatus(int $id, string $status): bool {
-	    if (!$this->isValidStatus($status)) {
-		return false;
-	    }
-
-	    // Get employee data BEFORE status change for cache invalidation
-	    $employee = $this->find($id);
-	    if (!$employee) {
-		return false;
-	    }
-
-	    $customer_id = $employee->customer_id;
-
-	    global $wpdb;
-	    $result = $wpdb->update(
-		$this->table,
-		[
-		    'status' => $status,
-		    'updated_at' => current_time('mysql')
-		],
-		['id' => $id],
-		['%s', '%s'],
-		['%d']
-	    );
-
-	    if ($result !== false) {
-		// ✓ FIXED: Invalidate ALL employee cache keys
-		$this->cache->delete('customer_employee', $id);
-		$this->cache->delete('customer_employee_count', (string)$customer_id);
-		$this->cache->delete('active_customer_employee_count', (string)$customer_id);
-
-		// Invalidate getUserInfo cache (for admin bar)
-		if ($employee->user_id) {
-		    $this->cache->delete('customer_user_info', $employee->user_id);
-		}
-
-		// Invalidate DataTable cache for all access types
-		$this->invalidateAllDataTableCache('customer_employee_list', (int)$customer_id);
-	    }
-
-	    return $result !== false;
-	}
-
-
     /**
-     * Get employees in batches for efficient processing
-     * This helps when dealing with large datasets
-     */
-    public function getInBatches(int $customer_id, int $batch_size = 1000): \Generator {
-        global $wpdb;
-        
-        $offset = 0;
-        
-        while (true) {
-            $results = $wpdb->get_results($wpdb->prepare("
-                SELECT e.*, 
-                       b.name as branch_name,
-                       u.display_name as created_by_name
-                FROM {$this->table} e
-                LEFT JOIN {$this->branch_table} b ON e.branch_id = b.id
-                LEFT JOIN {$wpdb->users} u ON e.created_by = u.ID
-                WHERE e.customer_id = %d
-                LIMIT %d OFFSET %d
-            ", $customer_id, $batch_size, $offset));
-            
-            if (empty($results)) {
-                break;
-            }
-            
-            yield $results;
-            
-            $offset += $batch_size;
-            
-            if (count($results) < $batch_size) {
-                break;
-            }
-        }
-    }
-
-    /**
-     * Bulk update employees
-     * Useful for mass status changes or department updates
-     */
-    public function bulkUpdate(array $ids, array $data): int {
-        global $wpdb;
-
-        $validFields = [
-            'branch_id',
-            'status',
-            'finance',
-            'operation',
-            'legal',
-            'purchase'
-        ];
-
-        // Filter only valid fields
-        $updateData = array_intersect_key($data, array_flip($validFields));
-
-        if (empty($updateData)) {
-            return 0;
-        }
-
-        $sql = "UPDATE {$this->table} SET ";
-        $updates = [];
-        $values = [];
-
-        foreach ($updateData as $field => $value) {
-            $updates[] = "{$field} = %s";
-            $values[] = $value;
-        }
-
-        $sql .= implode(', ', $updates);
-        $sql .= " WHERE id IN (" . implode(',', array_map('intval', $ids)) . ")";
-
-        // Add updated_at timestamp
-        $sql .= ", updated_at = %s";
-        $values[] = current_time('mysql');
-
-        return $wpdb->query($wpdb->prepare($sql, $values));
-    }
-
-    /**
-     * Invalidate DataTable cache for all access types
+     * Change employee status
      *
-     * Since cache keys use access_type as component, we need to invalidate
-     * all possible access types when data changes
-     *
-     * @param string $context The DataTable context (e.g., 'customer_employee_list')
-     * @param int $customer_id The customer ID to invalidate cache for
-     * @return void
+     * @param int $id Employee ID
+     * @param string $status New status
+     * @return bool
      */
-    private function invalidateAllDataTableCache(string $context, int $customer_id): void {
-        try {
-            $cache_group = 'wp_customer';
-            $customer_hash = md5(serialize($customer_id));
-
-            // List of all possible access types
-            $access_types = [
-                'admin',
-                'customer_admin',
-                'customer_branch_admin',
-                'customer_employee',
-                'none'
-            ];
-
-            // Possible pagination/ordering variations to try
-            $starts = [0, 10, 20, 30, 40, 50];
-            $lengths = [10, 25, 50, 100];
-            $orders = ['asc', 'desc'];
-            $columns = ['name', 'department', 'branch_name', 'status'];
-
-            $deleted = 0;
-
-            // Brute force delete all possible cache key combinations
-            foreach ($access_types as $access_type) {
-                foreach ($starts as $start) {
-                    foreach ($lengths as $length) {
-                        foreach ($orders as $orderDir) {
-                            foreach ($columns as $orderColumn) {
-                                // Try with empty search
-                                $components = [
-                                    $context,
-                                    $access_type,
-                                    "start_{$start}",
-                                    "length_{$length}",
-                                    md5(''), // empty search
-                                    $orderColumn,
-                                    $orderDir,
-                                    "customer_id_{$customer_hash}"
-                                ];
-
-                                $key = $this->cache->delete('datatable', ...$components);
-                                if ($key) $deleted++;
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Invalidated $deleted DataTable cache entries for context=$context, customer_id=$customer_id (brute force method)");
-            }
-        } catch (\Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log("Error in invalidateAllDataTableCache: " . $e->getMessage());
-            }
+    public function changeStatus(int $id, string $status): bool {
+        if (!$this->isValidStatus($status)) {
+            return false;
         }
+
+        // Get employee data BEFORE status change for cache invalidation
+        $employee = $this->find($id);
+        if (!$employee) {
+            return false;
+        }
+
+        $customer_id = $employee->customer_id;
+
+        global $wpdb;
+        $result = $wpdb->update(
+            $this->getTableName(),
+            [
+                'status' => $status,
+                'updated_at' => current_time('mysql')
+            ],
+            ['id' => $id],
+            ['%s', '%s'],
+            ['%d']
+        );
+
+        if ($result !== false) {
+            // Invalidate cache
+            $this->invalidateCache($id, $customer_id);
+        }
+
+        return $result !== false;
     }
 
     /**
-     * Ambil data lengkap employee berdasarkan user_id
+     * Get employee by user ID
+     *
+     * @param int $user_id User ID
+     * @return array|null Employee data or null
      */
-    public function getByUserId($user_id) {
+    public function getByUserId(int $user_id): ?array {
         global $wpdb;
 
-        $table_employees = "{$wpdb->prefix}app_customer_employees";
+        $table_employees = $this->getTableName();
         $table_branches  = "{$wpdb->prefix}app_customer_branches";
         $table_customers = "{$wpdb->prefix}app_customers";
         $table_users     = "{$wpdb->prefix}users";
@@ -928,31 +351,13 @@ public function create(array $data): ?int {
             LIMIT 1
         ", $user_id);
 
-         // Debug: tampilkan query SQL ke error_log
-         error_log('=== [CustomerEmployeeModel] SQL Query ===');
-         error_log($query);
-
-
-        $result = $wpdb->get_row($query, ARRAY_A);
-
-        // Debug hasil query
-        if (defined('WP_DEBUG') && WP_DEBUG === true) {
-            error_log('Query Result: ' . print_r($result, true));
-        }
-
-        return $result;
+        return $wpdb->get_row($query, ARRAY_A);
     }
 
     /**
      * Get comprehensive user information for admin bar integration
      *
-     * This method retrieves complete user data including:
-     * - Customer Employee information
-     * - Customer details (code, name, npwp, nib, status)
-     * - Branch details (code, name, type, nitku, address, phone, email, postal_code, latitude, longitude)
-     * - Membership details (level_id, status, period_months, start_date, end_date, price_paid, payment_status, payment_method, payment_date)
-     * - User email and capabilities
-     *
+     * Retrieves complete user data including employee, customer, branch, and membership info.
      * Tries multiple user types in order:
      * 1. Employee (most common)
      * 2. Customer owner
@@ -961,21 +366,17 @@ public function create(array $data): ?int {
      *
      * @param int $user_id WordPress user ID
      * @return array|null Array of user info or null if not found
-     *
-     * @version     1.0.11 - Refactored to handle all user types (employee, owner, branch admin)
      */
     public function getUserInfo(int $user_id): ?array {
         // Try to get from cache first
-        $cache_key = 'customer_user_info';
+        $cache_key = 'user_info';
         $cached_data = $this->cache->get($cache_key, $user_id);
 
-        // TODO-2192 FIXED: Cache now returns false on miss (not null)
         if ($cached_data !== false) {
             return $cached_data;
         }
 
-        // TODO-2176: Single query optimization
-        // Replace sequential queries (employee → owner → branch admin → fallback) with 1 optimized query
+        // Single optimized query (TODO-2176)
         global $wpdb;
 
         $query = $wpdb->prepare("
@@ -1215,235 +616,6 @@ public function create(array $data): ?int {
     }
 
     /**
-     * Get employee user information
-     *
-     * @param int $user_id WordPress user ID
-     * @return array|null Employee info or null if not an employee
-     */
-    private function getEmployeeInfo(int $user_id): ?array {
-        global $wpdb;
-
-        // Single comprehensive query to get ALL user data
-        // This query JOINs employees, customers, branches, memberships, users, and usermeta
-        $user_data = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM (
-                SELECT
-                    e.*,
-                    MAX(c.code) AS customer_code,
-                    MAX(c.name) AS customer_name,
-                    MAX(c.npwp) AS customer_npwp,
-                    MAX(c.nib) AS customer_nib,
-                    MAX(c.status) AS customer_status,
-                    MAX(b.code) AS branch_code,
-                    MAX(b.name) AS branch_name,
-                    MAX(b.type) AS branch_type,
-                    MAX(b.nitku) AS branch_nitku,
-                    MAX(b.address) AS branch_address,
-                    MAX(b.phone) AS branch_phone,
-                    MAX(b.email) AS branch_email,
-                    MAX(b.postal_code) AS branch_postal_code,
-                    MAX(b.latitude) AS branch_latitude,
-                    MAX(b.longitude) AS branch_longitude,
-                    MAX(cm.level_id) AS membership_level_id,
-                    MAX(cm.status) AS membership_status,
-                    MAX(cm.period_months) AS membership_period_months,
-                    MAX(cm.start_date) AS membership_start_date,
-                    MAX(cm.end_date) AS membership_end_date,
-                    MAX(cm.price_paid) AS membership_price_paid,
-                    MAX(cm.payment_status) AS membership_payment_status,
-                    MAX(cm.payment_method) AS membership_payment_method,
-                    MAX(cm.payment_date) AS membership_payment_date,
-                    u.user_login,
-                    u.user_nicename,
-                    u.user_email,
-                    u.user_url,
-                    u.user_registered,
-                    u.user_status,
-                    u.display_name,
-                    MAX(um.meta_value) AS capabilities,
-                    MAX(CASE WHEN um2.meta_key = 'first_name' THEN um2.meta_value END) AS first_name,
-                    MAX(CASE WHEN um2.meta_key = 'last_name' THEN um2.meta_value END) AS last_name,
-                    MAX(CASE WHEN um2.meta_key = 'description' THEN um2.meta_value END) AS description
-                FROM
-                    {$wpdb->prefix}app_customer_employees e
-                INNER JOIN
-                    {$wpdb->prefix}app_customers c ON e.customer_id = c.id
-                INNER JOIN
-                    {$wpdb->prefix}app_customer_branches b ON e.branch_id = b.id
-                LEFT JOIN
-                    {$wpdb->prefix}app_customer_memberships cm ON cm.customer_id = e.customer_id
-                    AND cm.branch_id = e.branch_id
-                    AND cm.status = 'active'
-                INNER JOIN
-                    {$wpdb->users} u ON e.user_id = u.ID
-                INNER JOIN
-                    {$wpdb->usermeta} um ON u.ID = um.user_id AND um.meta_key = '{$wpdb->prefix}capabilities'
-                LEFT JOIN
-                    {$wpdb->usermeta} um2 ON u.ID = um2.user_id
-                    AND um2.meta_key IN ('first_name', 'last_name', 'description')
-                WHERE
-                    e.user_id = %d
-                    AND e.status = 'active'
-                GROUP BY
-                    e.id,
-                    e.user_id,
-                    u.ID,
-                    u.user_login,
-                    u.user_nicename,
-                    u.user_email,
-                    u.user_url,
-                    u.user_registered,
-                    u.user_status,
-                    u.display_name
-            ) AS subquery
-            GROUP BY
-                subquery.id
-            LIMIT 1",
-            $user_id
-        ));
-
-        if (!$user_data || !$user_data->branch_name) {
-            return null;
-        }
-
-        // Build result array
-        $result = [
-            'entity_name' => $user_data->customer_name,
-            'entity_code' => $user_data->customer_code,
-            'customer_id' => $user_data->customer_id,
-            'customer_npwp' => $user_data->customer_npwp,
-            'customer_nib' => $user_data->customer_nib,
-            'customer_status' => $user_data->customer_status,
-            'branch_id' => $user_data->branch_id,
-            'branch_code' => $user_data->branch_code,
-            'branch_name' => $user_data->branch_name,
-            'branch_type' => $user_data->branch_type,
-            'branch_nitku' => $user_data->branch_nitku,
-            'branch_address' => $user_data->branch_address,
-            'branch_phone' => $user_data->branch_phone,
-            'branch_email' => $user_data->branch_email,
-            'branch_postal_code' => $user_data->branch_postal_code,
-            'branch_latitude' => $user_data->branch_latitude,
-            'branch_longitude' => $user_data->branch_longitude,
-            'membership_level_id' => $user_data->membership_level_id,
-            'membership_status' => $user_data->membership_status,
-            'membership_period_months' => $user_data->membership_period_months,
-            'membership_start_date' => $user_data->membership_start_date,
-            'membership_end_date' => $user_data->membership_end_date,
-            'membership_price_paid' => $user_data->membership_price_paid,
-            'membership_payment_status' => $user_data->membership_payment_status,
-            'membership_payment_method' => $user_data->membership_payment_method,
-            'membership_payment_date' => $user_data->membership_payment_date,
-            'position' => $user_data->position,
-            'user_email' => $user_data->user_email,
-            'capabilities' => $user_data->capabilities,
-            'relation_type' => 'customer_employee',
-            'icon' => '🏢'
-        ];
-
-        // Add role names dynamically from capabilities
-        // Use AdminBarModel for generic capability parsing
-        $admin_bar_model = new \WPAppCore\Models\AdminBarModel();
-
-        $result['role_names'] = $admin_bar_model->getRoleNamesFromCapabilities(
-            $user_data->capabilities,
-            call_user_func(['WP_Customer_Role_Manager', 'getRoleSlugs']),
-            ['WP_Customer_Role_Manager', 'getRoleName']
-        );
-
-        // Add permission names list
-        // IMPORTANT: Use WP_User->allcaps to get ACTUAL permissions (including inherited from roles)
-        // Not from wp_usermeta which only contains role assignments!
-        $permission_model = new \WPCustomer\Models\Settings\PermissionModel();
-        $result['permission_names'] = $admin_bar_model->getPermissionNamesFromUserId(
-            $user_id,
-            call_user_func(['WP_Customer_Role_Manager', 'getRoleSlugs']),
-            $permission_model->getAllCapabilities()
-        );
-
-        return $result;
-    }
-
-    /**
-     * Get customer owner user information
-     *
-     * @param int $user_id WordPress user ID
-     * @return array|null Customer owner info or null if not a customer owner
-     */
-    private function getCustomerOwnerInfo(int $user_id): ?array {
-        global $wpdb;
-
-        $customer = $wpdb->get_row($wpdb->prepare(
-            "SELECT c.id, c.name as customer_name, c.code as customer_code
-             FROM {$wpdb->prefix}app_customers c
-             WHERE c.user_id = %d",
-            $user_id
-        ));
-
-        if (!$customer) {
-            return null;
-        }
-
-        // User is a customer owner, get their main branch
-        $branch = $wpdb->get_row($wpdb->prepare(
-            "SELECT b.id, b.name, b.type
-             FROM {$wpdb->prefix}app_customer_branches b
-             WHERE b.customer_id = %d
-             AND b.type = 'pusat'
-             ORDER BY b.id ASC
-             LIMIT 1",
-            $customer->id
-        ));
-
-        if (!$branch) {
-            return null;
-        }
-
-        return [
-            'branch_id' => $branch->id,
-            'branch_name' => $branch->name,
-            'branch_type' => $branch->type,
-            'entity_name' => $customer->customer_name,
-            'entity_code' => $customer->customer_code,
-            'relation_type' => 'owner',
-            'icon' => '🏢'
-        ];
-    }
-
-    /**
-     * Get branch admin user information
-     *
-     * @param int $user_id WordPress user ID
-     * @return array|null Branch admin info or null if not a branch admin
-     */
-    private function getBranchAdminInfo(int $user_id): ?array {
-        global $wpdb;
-
-        $customer_branch_admin = $wpdb->get_row($wpdb->prepare(
-            "SELECT b.id, b.name, b.type, b.customer_id,
-                    c.name as customer_name, c.code as customer_code
-             FROM {$wpdb->prefix}app_customer_branches b
-             LEFT JOIN {$wpdb->prefix}app_customers c ON b.customer_id = c.id
-             WHERE b.user_id = %d",
-            $user_id
-        ));
-
-        if (!$customer_branch_admin) {
-            return null;
-        }
-
-        return [
-            'branch_id' => $customer_branch_admin->id,
-            'branch_name' => $customer_branch_admin->name,
-            'branch_type' => $customer_branch_admin->type,
-            'entity_name' => $customer_branch_admin->customer_name,
-            'entity_code' => $customer_branch_admin->customer_code,
-            'relation_type' => 'branch_admin',
-            'icon' => '🏢'
-        ];
-    }
-
-    /**
      * Get fallback user information for users with customer role but no entity link
      *
      * @param int $user_id WordPress user ID
@@ -1488,5 +660,260 @@ public function create(array $data): ?int {
         ];
     }
 
-}
+    /**
+     * Get total employee count based on user permission
+     *
+     * @param int|null $customer_id Optional customer ID for filtering
+     * @return int Total number of employees
+     */
+    public function getTotalCount(?int $customer_id = null): int {
+        global $wpdb;
 
+        // Get user relation from CustomerModel to determine access
+        $relation = $this->customerModel->getUserRelation(0);
+        $access_type = $relation['access_type'];
+
+        // Base query parts
+        $select = "SELECT COUNT(*) ";
+        $from = " FROM {$this->getTableName()} e";
+        $join = " LEFT JOIN {$wpdb->prefix}app_customer_branches b ON e.branch_id = b.id
+                  LEFT JOIN {$wpdb->prefix}app_customers c ON e.customer_id = c.id";
+
+        // Default where clause
+        $where = " WHERE 1=1";
+        $params = [];
+
+        // Add customer_id filter if provided
+        if ($customer_id) {
+            $where .= " AND e.customer_id = %d";
+            $params[] = $customer_id;
+        }
+
+        // Apply filtering based on access type
+        if ($relation['is_admin']) {
+            // Administrator - see all employees
+        }
+        elseif ($access_type === 'platform') {
+            // Platform users (from wp-app-core) - see all employees
+        }
+        elseif ($relation['is_customer_admin']) {
+            // Customer Admin - see all employees under their customer
+            $where .= " AND c.user_id = %d";
+            $params[] = get_current_user_id();
+        }
+        elseif ($relation['is_customer_branch_admin']) {
+            // Customer Branch Admin - only see employees in their managed branch
+            $branch_id = $wpdb->get_var($wpdb->prepare(
+                "SELECT id FROM {$wpdb->prefix}app_customer_branches
+                 WHERE user_id = %d LIMIT 1",
+                get_current_user_id()
+            ));
+
+            if ($branch_id) {
+                $where .= " AND e.branch_id = %d";
+                $params[] = $branch_id;
+            } else {
+                $where .= " AND 1=0"; // No branch found
+            }
+        }
+        elseif ($relation['is_customer_employee']) {
+            // Employee - only see employees in the same branch
+            $employee_branch = $wpdb->get_var($wpdb->prepare(
+                "SELECT branch_id FROM {$this->getTableName()}
+                 WHERE user_id = %d AND status = 'active' LIMIT 1",
+                get_current_user_id()
+            ));
+
+            if ($employee_branch) {
+                $where .= " AND e.branch_id = %d";
+                $params[] = $employee_branch;
+            } else {
+                $where .= " AND 1=0"; // No branch found
+            }
+        }
+        else {
+            // No access
+            $where .= " AND 1=0";
+        }
+
+        // Complete query
+        $query = $select . $from . $join . $where;
+        $final_query = !empty($params) ? $wpdb->prepare($query, $params) : $query;
+
+        return (int) $wpdb->get_var($final_query);
+    }
+
+    /**
+     * Get DataTable data for employees
+     *
+     * NOTE: This is a compatibility method for backward compatibility with old controller
+     * Use EmployeeDataTableModel for new implementations
+     *
+     * @param int $customer_id Customer ID
+     * @param int $start Offset
+     * @param int $length Limit
+     * @param string $search Search term
+     * @param string $orderColumn Order column
+     * @param string $orderDir Order direction
+     * @return array DataTable result
+     */
+    public function getDataTableData(int $customer_id, int $start, int $length, string $search, string $orderColumn, string $orderDir): array {
+        global $wpdb;
+
+        // Get access_type from CustomerModel::getUserRelation (same as Branch tab)
+        $relation = $this->customerModel->getUserRelation($customer_id);
+        $access_type = $relation['access_type'];
+
+        // Ensure orderDir lowercase for cache key consistency
+        $orderDir = strtolower($orderDir);
+
+        // Check cache first
+        $cached_result = $this->cache->getDataTableCache(
+            'customer_employee_list',
+            $access_type,
+            $start,
+            $length,
+            $search,
+            $orderColumn,
+            $orderDir,
+            ['customer_id' => $customer_id]
+        );
+
+        if ($cached_result) {
+            return $cached_result;
+        }
+
+        // Base query parts
+        $select = "SELECT SQL_CALC_FOUND_ROWS e.*,
+                         b.name as branch_name,
+                         u.display_name as created_by_name";
+        $from = " FROM {$this->getTableName()} e";
+        $join = " LEFT JOIN {$wpdb->prefix}app_customer_branches b ON e.branch_id = b.id
+                  LEFT JOIN {$wpdb->users} u ON e.created_by = u.ID";
+        $where = " WHERE e.customer_id = %d";
+        $params = [$customer_id];
+
+        // Add branch filtering for employees and branch admins
+        $current_user_id = get_current_user_id();
+
+        // Check if user is employee or branch admin
+        $employee_info = $wpdb->get_row($wpdb->prepare(
+            "SELECT branch_id FROM {$this->getTableName()}
+             WHERE user_id = %d AND status = 'active'",
+            $current_user_id
+        ));
+
+        $customer_branch_admin_info = $wpdb->get_row($wpdb->prepare(
+            "SELECT id FROM {$wpdb->prefix}app_customer_branches
+             WHERE user_id = %d",
+            $current_user_id
+        ));
+
+        // Apply branch filtering for non-admins
+        if (!current_user_can('edit_all_customer_employees')) {
+            if ($employee_info && $employee_info->branch_id) {
+                // Employee - only see employees in same branch
+                $where .= " AND e.branch_id = %d";
+                $params[] = $employee_info->branch_id;
+            } elseif ($customer_branch_admin_info && $customer_branch_admin_info->id) {
+                // Customer Branch Admin - only see employees in their managed branch
+                $where .= " AND e.branch_id = %d";
+                $params[] = $customer_branch_admin_info->id;
+            }
+        }
+
+        // Add search if provided
+        if (!empty($search)) {
+            $where .= " AND (e.name LIKE %s OR e.position LIKE %s OR e.email LIKE %s OR e.phone LIKE %s)";
+            $search_param = '%' . $wpdb->esc_like($search) . '%';
+            $params = array_merge($params, [$search_param, $search_param, $search_param, $search_param]);
+        }
+
+        // Validate order column
+        $validColumns = ['name', 'position', 'branch_name', 'status'];
+        if (!in_array($orderColumn, $validColumns)) {
+            $orderColumn = 'name';
+        }
+
+        // Map frontend column to actual column
+        $orderColumnMap = [
+            'name' => 'e.name',
+            'position' => 'e.position',
+            'branch_name' => 'b.name',
+            'status' => 'e.status'
+        ];
+
+        $orderColumn = $orderColumnMap[$orderColumn] ?? 'e.name';
+
+        // Validate order direction
+        $orderDir = strtoupper($orderDir) === 'DESC' ? 'DESC' : 'ASC';
+
+        // Build order clause
+        $order = " ORDER BY " . esc_sql($orderColumn) . " " . esc_sql($orderDir);
+
+        // Add limit
+        $limit = $wpdb->prepare(" LIMIT %d, %d", $start, $length);
+
+        // Complete query
+        $sql = $select . $from . $join . $where . $order . $limit;
+
+        // Get paginated results
+        $results = $wpdb->get_results($wpdb->prepare($sql, $params));
+
+        if ($results === null) {
+            throw new \Exception($wpdb->last_error);
+        }
+
+        // Get total filtered count
+        $filtered = $wpdb->get_var("SELECT FOUND_ROWS()");
+
+        // Get total count for customer
+        $total = $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$this->getTableName()} WHERE customer_id = %d",
+            $customer_id
+        ));
+
+        $result = [
+            'data' => $results,
+            'total' => (int) $total,
+            'filtered' => (int) $filtered
+        ];
+
+        // Set cache with 2 minute duration
+        $this->cache->setDataTableCache(
+            'customer_employee_list',
+            $access_type,
+            $start,
+            $length,
+            $search,
+            $orderColumn,
+            $orderDir,
+            $result,
+            ['customer_id' => $customer_id]
+        );
+
+        return $result;
+    }
+
+    // ========================================
+    // CACHE INVALIDATION
+    // ========================================
+
+    /**
+     * Invalidate employee cache after CUD operations
+     * Called automatically by AbstractCrudModel
+     *
+     * @param int $id Employee ID
+     * @param mixed ...$additional_keys Additional cache keys to clear
+     * @return void
+     */
+    protected function invalidateCache(int $id, ...$additional_keys): void {
+        // Get customer_id if provided in additional_keys
+        $customer_id = $additional_keys[0] ?? null;
+
+        // Use EmployeeCacheManager's invalidation method
+        /** @var EmployeeCacheManager $cache */
+        $cache = $this->cache;
+        $cache->invalidateEmployeeCache($id, $customer_id);
+    }
+}

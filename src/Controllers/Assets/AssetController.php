@@ -160,6 +160,15 @@ class AssetController {
             false
         );
 
+        // Enqueue employees DataTable (for employees tab)
+        wp_enqueue_script(
+            'employees-datatable',
+            WP_CUSTOMER_URL . 'assets/js/customer/employees-datatable.js',
+            ['jquery', 'customer-datatable'],
+            $this->version,
+            false
+        );
+
         // Localize script with nonce (shared by all DataTables)
         wp_localize_script('customer-datatable', 'wpCustomerConfig', [
             'nonce' => wp_create_nonce('wpdt_nonce'),

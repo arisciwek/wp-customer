@@ -85,8 +85,10 @@ class EmployeeDataTableModel extends DataTableModel {
             $this->table_alias . '.phone'
         ];
 
-        // No joins needed for employees
-        $this->base_joins = [];
+        // JOIN to branches table for branch_name
+        $this->base_joins = [
+            "LEFT JOIN {$wpdb->prefix}app_customer_branches AS branches ON {$this->table_alias}.branch_id = branches.id"
+        ];
 
         // Base WHERE for customer filtering
         $this->base_where = [];
@@ -109,7 +111,13 @@ class EmployeeDataTableModel extends DataTableModel {
             "{$alias}.phone as phone",
             "{$alias}.status as status",
             "{$alias}.id as id",
-            "{$alias}.customer_id as customer_id"
+            "{$alias}.customer_id as customer_id",
+            "{$alias}.branch_id as branch_id",
+            "{$alias}.finance as finance",
+            "{$alias}.operation as operation",
+            "{$alias}.legal as legal",
+            "{$alias}.purchase as purchase",
+            "branches.name as branch_name"
         ];
     }
 
@@ -132,18 +140,28 @@ class EmployeeDataTableModel extends DataTableModel {
             );
         }
 
+        // Format department badges
+        $department_badges = $this->generate_department_badges([
+            'finance' => (bool)($row->finance ?? false),
+            'operation' => (bool)($row->operation ?? false),
+            'legal' => (bool)($row->legal ?? false),
+            'purchase' => (bool)($row->purchase ?? false)
+        ]);
+
         return [
             'DT_RowId' => 'employee-' . ($row->id ?? 0),
             'DT_RowData' => [
                 'id' => $row->id ?? 0,
                 'customer_id' => $row->customer_id ?? 0,
+                'branch_id' => $row->branch_id ?? 0,
                 'status' => $row->status ?? 'active',
                 'entity' => 'employee'
             ],
             'name' => esc_html($row->name ?? ''),
             'position' => esc_html($row->position ?? '-'),
+            'department' => $department_badges,
             'email' => esc_html($row->email ?? '-'),
-            'phone' => esc_html($row->phone ?? '-'),
+            'branch_name' => esc_html($row->branch_name ?? '-'),
             'status' => $status_badge,
             'actions' => $this->generate_action_buttons($row)
         ];
@@ -187,6 +205,35 @@ class EmployeeDataTableModel extends DataTableModel {
         }
 
         return implode(' ', $buttons);
+    }
+
+    /**
+     * Generate department badges HTML
+     *
+     * @param array $departments Department flags ['finance' => true, 'operation' => false, etc.]
+     * @return string HTML badges
+     */
+    private function generate_department_badges(array $departments): string {
+        $badges = [];
+
+        $department_labels = [
+            'finance' => __('Finance', 'wp-customer'),
+            'operation' => __('Operation', 'wp-customer'),
+            'legal' => __('Legal', 'wp-customer'),
+            'purchase' => __('Purchase', 'wp-customer')
+        ];
+
+        foreach ($department_labels as $key => $label) {
+            if (!empty($departments[$key])) {
+                $badges[] = sprintf(
+                    '<span class="department-badge department-%s">%s</span>',
+                    esc_attr($key),
+                    esc_html($label)
+                );
+            }
+        }
+
+        return !empty($badges) ? implode(' ', $badges) : '<span class="text-muted">-</span>';
     }
 
     /**
