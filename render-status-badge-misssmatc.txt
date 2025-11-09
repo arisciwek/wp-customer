@@ -1,0 +1,306 @@
+
+> pada DataTable company semua status inactve, tetapi di panel kanan statusnya active 
+
+● Ada inconsistency antara DataTable view dan Detail panel! Mari kita debug ini. Kemungkinan masalahnya di format_row() atau di detail panel view.
+
+  Mari cek dulu DataTableModel:
+
+● Read(src/Models/Company/CompanyDataTableModel.php)
+  ⎿  Read 40 lines
+
+● Model terlihat OK. Sekarang cek info-content.php di detail panel:
+
+● Read(src/Views/admin/company/tabs/partials/info-content.php)
+  ⎿  Read 20 lines
+
+● Code logic nya sama. Mari cek database value langsung:
+
+● Bash(wp db query "SELECT id, code, name, status FROM wp_app_customer_branches LIMIT 5" --path=/home/mkt01/Public/wppm/public_html)
+  ⎿  id	code	name	status                                         
+     12	0959UV43-18	PT Maju Bersama Cabang Kabupaten Sukabumi	active
+     13	0959UV43-74	PT Maju Bersama Cabang Kabupaten Serang	active
+     … +3 lines (ctrl+o to expand)
+
+● Database menunjukkan status active, tapi DataTable menampilkan inactive! Ini berarti ada masalah di query atau format_row. Mari cek query SQL nya:
+
+● Bash(tail -100 /home/mkt01/Public/wppm/public_html/wp-content/debug.log | grep -A 5 "DataTable.*Query")
+  ⎿  No matches found
+
+● Bash(tail -200 /home/mkt01/Public/wppm/public_html/wp-content/debug.log | grep "company")
+  ⎿  No matches found
+
+● Mari cek langsung di Model apakah ada filter atau hook yang override status:
+
+● Read(src/Models/Company/CompanyDataTableModel.php)
+  ⎿  Read 95 lines
+
+● Mari cek apakah ada default value yang salah di base_where atau filter_where:
+
+● Read(src/Models/Company/CompanyDataTableModel.php)
+  ⎿  Read 50 lines
+
+● KETEMU! Line 202-203: Default filter hanya menampilkan status = 'active', tapi badge nya salah karena... tunggu, ini aneh. Filter sudah benar (hanya tampilkan active), tapi badge menampilkan "inactive".
+
+  Kemungkinan ada CSS issue atau JavaScript yang override. Mari cek langsung di browser - bisa screenshot atau inspect element badge di DataTable untuk melihat actual HTML dan class nya?
+
+  Atau coba test manual query dulu:
+
+● Bash(wp db query "SELECT id, code, name, status FROM wp_app_customer_branches WHERE status = 'active' LIMIT 3" --path=/home/mkt01/Public/wppm/public_html)
+  ⎿  id	code	name	status                                           
+     12	0959UV43-18	PT Maju Bersama Cabang Kabupaten Sukabumi	active
+     13	0959UV43-74	PT Maju Bersama Cabang Kabupaten Serang	active
+     14	0959UV43-56	PT Maju Bersama Cabang Kota Jakarta Selatan	active
+
+● Data memang active. Bisa cek di browser:
+  1. Inspect element pada status badge di DataTable
+  2. Lihat class nya: status-active atau status-inactive?
+  3. Paste HTML badge tersebut
+
+  Atau coba debug dengan menambahkan log di format_row():
+
+● Update(src/Models/Company/CompanyDataTableModel.php)
+  ⎿  Updated src/Models/Company/CompanyDataTableModel.php with 5 additions                                                       
+       105            // Format status badge
+       106            $status_badge = '';
+       107            if (isset($row->status)) {
+       108 +              // Debug log
+       109 +              error_log('[CompanyDataTable] Row ID: ' . $row->id . ' Status: ' . $row->status);
+       110 +  
+       111                $badge_class = $row->status === 'active' ? 'status-active' : 'status-inactive';
+       112                $status_text = $row->status === 'active' ? __('Active', 'wp-customer') : __('Inactive', 'wp-customer');
+       113                $status_badge = sprintf(
+     ...
+       112                    $badge_class,
+       113                    $status_text
+       114                );
+       115 +  
+       116 +              error_log('[CompanyDataTable] Badge class: ' . $badge_class . ' Badge text: ' . $status_text);
+       117            }
+       118    
+       119            return [
+
+● Sekarang refresh DataTable dan check debug.log:
+
+● Bash(tail -30 /home/mkt01/Public/wppm/public_html/wp-content/debug.log | grep "CompanyDataTable")
+  ⎿  No matches found
+
+● Belum ada log, mungkin cache atau belum di-refresh. Coba inspect element langsung di browser pada badge status:
+
+  1. Buka halaman Company
+  2. Klik kanan pada badge "Inactive" di DataTable
+  3. Inspect Element
+  4. Copy HTML-nya dan paste ke sini
+
+  Atau coba screenshot badge tersebut dan elemen HTML-nya untuk kita analisa.
+
+> [Image #1] 
+
+● Perfect! Saya lihat masalahnya sekarang. Di screenshot:
+
+  DataTable (kiri): Status "Inactive" (text saja, tanpa badge styling)
+  Detail Panel (kanan): Status badge hijau "Active"
+
+  Ini berarti:
+  1. Data dari database memang active ✅
+  2. Badge di detail panel benar ✅
+  3. Badge di DataTable hilang CSS-nya ❌
+
+  Masalahnya adalah di DataTable status column tidak ter-render sebagai badge. Mari cek JavaScript render function:
+
+● Read(assets/js/company/company-datatable.js)
+  ⎿  Read 25 lines
+
+● JavaScript render function terlihat OK. Tapi masalahnya adalah Model sudah mengirim HTML badge, lalu JavaScript juga render badge. Jadi ada double rendering!
+
+  Model line 113-117 mengirim:
+  'status' => $status_badge // HTML: <span class="status-badge status-active">Active</span>
+
+  JavaScript line 104-110 expects string 'active' tapi menerima HTML badge, jadi condition data === 'active' gagal!
+
+  Solusi: Hapus JavaScript render function, karena Model sudah mengirim HTML badge:
+
+● Update(assets/js/company/company-datatable.js)
+  ⎿  Updated assets/js/company/company-datatable.js with 1 addition and 8 removals                            
+       100                    {
+       101                        data: 'status',
+       102                        name: 'status',
+       103 -                      responsivePriority: 1,  // Always visible
+       104 -                      render: function(data, type, row) {
+       105 -                          if (data === 'active') {
+       106 -                              return '<span class="wpdt-badge wpdt-badge-success">Active</span>';
+       107 -                          } else {
+       108 -                              return '<span class="wpdt-badge wpdt-badge-danger">Inactive</span>';
+       109 -                          }
+       110 -                      }
+       103 +                      responsivePriority: 1  // Always visible (no render, Model sends HTML badge)
+       104                    },
+       105                    {
+       106                        data: 'actions',
+
+● Perfect! Sekarang hapus juga debug log yang tadi kita tambahkan:
+
+● Update(src/Models/Company/CompanyDataTableModel.php)
+  ⎿  Updated src/Models/Company/CompanyDataTableModel.php with 5 removals                                                        
+       105            // Format status badge
+       106            $status_badge = '';
+       107            if (isset($row->status)) {
+       108 -              // Debug log
+       109 -              error_log('[CompanyDataTable] Row ID: ' . $row->id . ' Status: ' . $row->status);
+       110 -  
+       108                $badge_class = $row->status === 'active' ? 'status-active' : 'status-inactive';
+       109                $status_text = $row->status === 'active' ? __('Active', 'wp-customer') : __('Inactive', 'wp-customer');
+       110                $status_badge = sprintf(
+     ...
+       115                    $badge_class,
+       116                    $status_text
+       117                );
+       118 -  
+       119 -              error_log('[CompanyDataTable] Badge class: ' . $badge_class . ' Badge text: ' . $status_text);
+       118            }
+       119    
+       120            return [
+
+● Selesai! Sekarang refresh halaman Company dan status badge seharusnya muncul dengan benar (hijau untuk Active).
+
+  Penjelasan masalah:
+  - ❌ Double rendering: Model PHP mengirim HTML badge, JavaScript juga mencoba render badge
+  - ❌ JavaScript condition gagal: data === 'active' expect string, tapi dapat HTML <span>...</span>
+  - ✅ Solusi: Hapus JavaScript render function, biarkan Model yang handle badge HTML
+
+  Silakan test sekarang!
+
+> jadi yag dipakai darimana sekarang PHP atau JS ? 
+
+● Sekarang yang dipakai adalah PHP (Model) untuk render badge HTML.
+
+  🎯 Best Practice: Server-Side Rendering untuk HTML
+
+  ✅ Gunakan PHP (Model) untuk:
+
+  - HTML yang kompleks (badges, buttons, icons)
+  - Data yang sudah final dari database
+  - Styling dengan class CSS
+
+  Contoh saat ini (Company Status):
+  // Model PHP mengirim HTML lengkap
+  'status' => '<span class="status-badge status-active">Active</span>'
+
+  // JavaScript hanya display (no render function)
+  { data: 'status', name: 'status' }
+
+  ---
+  ✅ Gunakan JavaScript (render function) untuk:
+
+  - Transformasi data yang simple (format angka, tanggal)
+  - Logic yang bergantung pada row data lain
+  - Dynamic behavior based on client-side state
+
+  Contoh kapan pakai JS render:
+  // Format currency
+  {
+      data: 'price',
+      render: function(data) {
+          return 'Rp ' + parseInt(data).toLocaleString('id-ID');
+      }
+  }
+
+  // Conditional logic berdasarkan multiple fields
+  {
+      data: 'stock',
+      render: function(data, type, row) {
+          if (row.stock < row.minimum_stock) {
+              return '<span class="text-danger">' + data + '</span>';
+          }
+          return data;
+      }
+  }
+
+  ---
+  📋 Decision Matrix
+
+  | Scenario                                     | Use PHP      | Use JavaScript                    |
+  |----------------------------------------------|--------------|-----------------------------------|
+  | Status badge dengan class CSS                | ✅ YES        | ❌ NO                              |
+  | Action buttons (View/Edit/Delete)            | ✅ YES        | ❌ NO                              |
+  | Format currency dari raw number              | ❌ NO         | ✅ YES                             |
+  | Format date dari timestamp                   | ✅ YES (PHP)  | ⚠️ Maybe (JS untuk relative time) |
+  | Conditional styling based on 1 field         | ✅ YES        | ⚠️ Either OK                      |
+  | Conditional styling based on multiple fields | ❌ NO         | ✅ YES                             |
+  | Complex HTML with data attributes            | ✅ YES        | ❌ NO                              |
+  | Simple text transformation                   | ⚠️ Either OK | ⚠️ Either OK                      |
+
+  ---
+  💡 Kenapa PHP lebih baik untuk HTML kompleks?
+
+  1. Performance
+
+  // ✅ PHP: 1x render di server
+  'status' => '<span class="badge">Active</span>'
+
+  // ❌ JS: N x render di browser (untuk setiap row)
+  render: function(data) {
+      return '<span class="badge">' + data + '</span>';
+  }
+
+  2. Security
+
+  // ✅ PHP: Proper escaping
+  sprintf('<span>%s</span>', esc_html($text))
+
+  // ⚠️ JS: Risk of XSS jika tidak careful
+  return '<span>' + data + '</span>'; // Potential XSS
+
+  3. Maintainability
+
+  // ✅ Semua badge logic di 1 tempat (Model)
+  $badge = $this->format_status_badge($status);
+
+  // ❌ Logic terbagi 2: PHP query + JS render
+
+  ---
+  🔍 Summary untuk Company DataTable
+
+  Yang kita perbaiki:
+
+  ❌ SEBELUM (Double rendering):
+  // Model.php
+  'status' => '<span class="status-badge">Active</span>' // Kirim HTML
+
+  // company-datatable.js
+  render: function(data) {
+      // ❌ Expect 'active' string, dapat HTML!
+      if (data === 'active') { ... }
+  }
+
+  ✅ SESUDAH (Single rendering):
+  // Model.php
+  'status' => '<span class="status-badge status-active">Active</span>' // Kirim HTML
+
+  // company-datatable.js
+  { data: 'status', name: 'status' } // ✅ Langsung display HTML dari server
+
+  ---
+  📝 Rule of Thumb
+
+  Gunakan PHP jika:
+  - Output sudah bisa ditentukan dari database
+  - Butuh HTML dengan CSS classes
+  - Butuh proper escaping untuk security
+
+  Gunakan JavaScript jika:
+  - Perlu transformasi real-time
+  - Logic depends on client state
+  - Need to access multiple row fields
+
+  Untuk status badge: ✅ PHP is the winner!
+
+> di DataTable wp-customer juga cek 
+
+● Baik! Mari cek Customer DataTable apakah ada masalah yang sama:
+
+● Search(pattern: "data.*status.*render", path: "assets/js/customer", output_mode: "content")
+  ⎿  Found 0 lines 
+  ⎿  Interrupted · What should Claude do instead?
+
+
+

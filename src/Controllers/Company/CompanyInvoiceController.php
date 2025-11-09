@@ -4,19 +4,29 @@
  *
  * @package     WP_Customer
  * @subpackage  Controllers/Company
- * @version     1.0.11
+ * @version     1.0.12
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Controllers/Company/CompanyInvoiceController.php
  *
- * Description: Controller untuk mengelola operasi terkait invoice customer:
+ * Description: Controller untuk mengelola CRUD operations invoice customer:
  *              - View invoice list dan details
  *              - Create, update, delete invoices
  *              - Mark invoices as paid
  *              - Invoice status management
+ *              - Payment operations
  *              Includes permission validation dan error handling.
  *
+ * NOTE: DataTable dan Statistics handlers dipindahkan ke CompanyInvoiceDashboardController
+ *       untuk menghindari konflik AJAX handlers dengan DualPanel framework.
+ *
  * Changelog:
+ * 1.0.12 - 2025-11-09 (TODO-2196)
+ * - Removed: handle_company_invoice_datatable AJAX handler (moved to DashboardController)
+ * - Removed: get_company_invoice_stats AJAX handler (moved to DashboardController)
+ * - Fixed: AJAX handler conflicts with CompanyInvoiceDashboardController
+ * - Reason: Separation of concerns - CRUD vs Dashboard operations
+ *
  * 1.0.8 - 2025-10-18 (Task-2162 Review-03)
  * - Added branch_name to payment proof response
  * - Query branch name from wp_app_customer_branches table
@@ -99,7 +109,7 @@ class CompanyInvoiceController {
         $this->cache = new CustomerCacheManager();
         $this->validator = new CompanyInvoiceValidator();
 
-        // Register AJAX endpoints
+        // Register AJAX endpoints for CRUD operations
         add_action('wp_ajax_get_company_invoices', [$this, 'getInvoices']);
         add_action('wp_ajax_get_company_invoice_details', [$this, 'getInvoiceDetails']);
         add_action('wp_ajax_create_company_invoice', [$this, 'createInvoice']);
@@ -107,13 +117,13 @@ class CompanyInvoiceController {
         add_action('wp_ajax_delete_company_invoice', [$this, 'deleteInvoice']);
         add_action('wp_ajax_mark_invoice_paid', [$this, 'markInvoicePaid']);
         add_action('wp_ajax_get_unpaid_invoices', [$this, 'getUnpaidInvoices']);
-
-        // Register DataTable and panel handlers
-        add_action('wp_ajax_handle_company_invoice_datatable', [$this, 'handleDataTableRequest']);
-        add_action('wp_ajax_get_company_invoice_stats', [$this, 'getStatistics']);
         add_action('wp_ajax_get_company_invoice_payments', [$this, 'getCompanyInvoicePayments']);
         add_action('wp_ajax_handle_invoice_payment', [$this, 'handle_invoice_payment']);
         add_action('wp_ajax_get_invoice_payment_proof', [$this, 'getInvoicePaymentProof']);
+
+        // NOTE: DataTable and Stats handlers removed - now handled by CompanyInvoiceDashboardController
+        // - handle_company_invoice_datatable -> CompanyInvoiceDashboardController
+        // - get_company_invoice_stats -> CompanyInvoiceDashboardController
     }
 
     /**
@@ -690,90 +700,8 @@ class CompanyInvoiceController {
     /**
      * Handle DataTable AJAX request
      */
-    public function handleDataTableRequest() {
-        try {
-            // Verify nonce
-            if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
-                throw new \Exception('Invalid nonce');
-            }
-
-            // Validate access using validator
-            $access_check = $this->validator->canViewInvoiceList();
-            if (is_wp_error($access_check)) {
-                throw new \Exception($access_check->get_error_message());
-            }
-
-            // Get DataTable parameters
-            $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
-            $start = isset($_POST['start']) ? intval($_POST['start']) : 0;
-            $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
-            $search = isset($_POST['search']['value']) ? sanitize_text_field($_POST['search']['value']) : '';
-            $orderColumnIndex = isset($_POST['order'][0]['column']) ? intval($_POST['order'][0]['column']) : 0;
-            $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'desc';
-
-            // Map column index to field name
-            $columns = ['invoice_number', 'company_name', 'amount', 'status', 'created_at'];
-            $orderColumn = $columns[$orderColumnIndex] ?? 'created_at';
-
-            // Get payment status filters
-            $filterPending = isset($_POST['filter_pending']) ? intval($_POST['filter_pending']) : 1;
-            $filterPaid = isset($_POST['filter_paid']) ? intval($_POST['filter_paid']) : 0;
-            $filterPendingPayment = isset($_POST['filter_pending_payment']) ? intval($_POST['filter_pending_payment']) : 0;
-            $filterCancelled = isset($_POST['filter_cancelled']) ? intval($_POST['filter_cancelled']) : 0;
-
-            // Get data from model
-            $result = $this->invoice_model->getDataTableData([
-                'start' => $start,
-                'length' => $length,
-                'search' => $search,
-                'order_column' => $orderColumn,
-                'order_dir' => $orderDir,
-                'filter_pending' => $filterPending,
-                'filter_paid' => $filterPaid,
-                'filter_pending_payment' => $filterPendingPayment,
-                'filter_cancelled' => $filterCancelled
-            ]);
-
-            wp_send_json([
-                'draw' => $draw,
-                'recordsTotal' => $result['total'],
-                'recordsFiltered' => $result['filtered'],
-                'data' => $result['data']
-            ]);
-
-        } catch (\Exception $e) {
-            wp_send_json_error([
-                'message' => $e->getMessage()
-            ], 400);
-        }
-    }
-
-    /**
-     * Get invoice statistics for dashboard
-     */
-    public function getStatistics() {
-        try {
-            // Verify nonce
-            if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
-                throw new \Exception('Invalid nonce');
-            }
-
-            // Validate access using validator
-            $access_check = $this->validator->canViewInvoiceStats();
-            if (is_wp_error($access_check)) {
-                throw new \Exception($access_check->get_error_message());
-            }
-
-            $stats = $this->invoice_model->getStatistics();
-
-            wp_send_json_success($stats);
-
-        } catch (\Exception $e) {
-            wp_send_json_error([
-                'message' => $e->getMessage()
-            ], 400);
-        }
-    }
+    // REMOVED: handleDataTableRequest() - moved to CompanyInvoiceDashboardController
+    // REMOVED: getStatistics() - moved to CompanyInvoiceDashboardController
 
     /**
      * Get company invoice payments for payment info tab

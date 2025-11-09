@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Controllers/Assets
- * @version     1.4.0
+ * @version     1.5.1
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Controllers/Assets/AssetController.php
@@ -15,6 +15,17 @@
  *              Inspired by wp-datatable dan wp-modal AssetController.
  *
  * Changelog:
+ * 1.5.1 - 2025-11-09 (TODO-2196)
+ * - Added: company-invoice-style.css enqueuing
+ * - CSS includes invoice info grid styles (moved from PHP template)
+ * - Clean separation: no inline CSS/JS in PHP templates
+ *
+ * 1.5.0 - 2025-11-09 (TODO-2196)
+ * - Added: company-invoice-datatable.js enqueuing
+ * - Added: enqueue_company_invoice_dashboard_assets() method
+ * - Screen ID: toplevel_page_company-invoices
+ * - Compatible with wp-datatable panel manager
+ *
  * 1.4.0 - 2025-11-09
  * - Added: customer-datatable.js enqueuing (minimal, no conflict)
  * - NO inline scripts in PHP views (per user request)
@@ -125,8 +136,18 @@ class AssetController {
         }
 
         // Customer Dashboard (main page)
-        if ($screen->id === 'toplevel_page_wp-customer-v2') {
+        if ($screen->id === 'toplevel_page_wp-customer') {
             $this->enqueue_customer_dashboard_assets();
+        }
+
+        // Company Dashboard (main page)
+        if ($screen->id === 'toplevel_page_perusahaan') {
+            $this->enqueue_company_dashboard_assets();
+        }
+
+        // Company Invoice Dashboard (main page - TODO-2196)
+        if ($screen->id === 'toplevel_page_company-invoices') {
+            $this->enqueue_company_invoice_dashboard_assets();
         }
 
         // Settings page assets
@@ -171,6 +192,69 @@ class AssetController {
 
         // Localize script with nonce (shared by all DataTables)
         wp_localize_script('customer-datatable', 'wpCustomerConfig', [
+            'nonce' => wp_create_nonce('wpdt_nonce'),
+            'ajaxUrl' => admin_url('admin-ajax.php')
+        ]);
+    }
+
+    /**
+     * Enqueue company dashboard assets
+     *
+     * @return void
+     */
+    private function enqueue_company_dashboard_assets(): void {
+        // Enqueue minimal JS for DataTable initialization
+        // Dependency: jquery only (datatables will be loaded by wp-datatable BaseAssets)
+        wp_enqueue_script(
+            'company-datatable',
+            WP_CUSTOMER_URL . 'assets/js/company/company-datatable.js',
+            ['jquery'],
+            $this->version,
+            false  // Load in header instead of footer
+        );
+
+        // Enqueue employees DataTable (for staff tab)
+        wp_enqueue_script(
+            'company-employees-datatable',
+            WP_CUSTOMER_URL . 'assets/js/company/company-employees-datatable.js',
+            ['jquery', 'company-datatable'],
+            $this->version,
+            false
+        );
+
+        // Localize script with nonce (shared by all DataTables)
+        wp_localize_script('company-datatable', 'wpCompanyConfig', [
+            'nonce' => wp_create_nonce('wpdt_nonce'),
+            'ajaxUrl' => admin_url('admin-ajax.php')
+        ]);
+    }
+
+    /**
+     * Enqueue company invoice dashboard assets
+     *
+     * @return void
+     */
+    private function enqueue_company_invoice_dashboard_assets(): void {
+        // Enqueue styles
+        wp_enqueue_style(
+            'company-invoice-style',
+            WP_CUSTOMER_URL . 'assets/css/company/company-invoice-style.css',
+            [],
+            $this->version
+        );
+
+        // Enqueue minimal JS for DataTable initialization
+        // Dependency: jquery only (datatables will be loaded by wp-datatable BaseAssets)
+        wp_enqueue_script(
+            'company-invoice-datatable',
+            WP_CUSTOMER_URL . 'assets/js/company-invoice/company-invoice-datatable.js',
+            ['jquery'],
+            $this->version,
+            false  // Load in header instead of footer
+        );
+
+        // Localize script with nonce
+        wp_localize_script('company-invoice-datatable', 'wpCompanyInvoiceConfig', [
             'nonce' => wp_create_nonce('wpdt_nonce'),
             'ajaxUrl' => admin_url('admin-ajax.php')
         ]);

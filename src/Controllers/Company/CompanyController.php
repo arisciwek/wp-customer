@@ -5,17 +5,26 @@
  *
  * @package     WP_Customer
  * @subpackage  Controllers/Company
- * @version     1.0.11
+ * @version     1.0.12
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Controllers/Company/CompanyController.php
  *
- * Description: Controller untuk menampilkan data perusahaan.
+ * Description: Controller untuk CRUD operations data perusahaan (branch).
  *              Menangani view operations dengan integrasi cache.
  *              Includes validasi akses dan permission checks.
- *              Menyediakan endpoints untuk DataTables server-side.
+ *              Membership-related handlers forwarded ke CompanyMembershipController.
+ *
+ * NOTE: DataTable dan Statistics handlers dipindahkan ke CompanyDashboardController
+ *       untuk menghindari konflik AJAX handlers dengan DualPanel framework.
  *
  * Changelog:
+ * 1.0.12 - 2025-11-09 (TODO-2195)
+ * - Removed: handle_company_datatable AJAX handler (moved to CompanyDashboardController)
+ * - Removed: get_company_stats AJAX handler (moved to CompanyDashboardController)
+ * - Fixed: AJAX handler conflicts with CompanyDashboardController
+ * - Reason: Separation of concerns - CRUD vs Dashboard operations
+ *
  * 1.0.0 - 2024-02-09
  * - Initial version
  * - Added view functionality
@@ -59,11 +68,13 @@ class CompanyController {
         $this->log_file = WP_CUSTOMER_PATH . self::DEFAULT_LOG_FILE;
         $this->initLogDirectory();
 
-        // Register AJAX handlers
-        add_action('wp_ajax_handle_company_datatable', [$this, 'handleDataTableRequest']);
+        // Register AJAX handlers for CRUD operations
         add_action('wp_ajax_get_company', [$this, 'show']);
         add_action('wp_ajax_validate_company_access', [$this, 'validateCompanyAccess']);
-        add_action('wp_ajax_get_company_stats', [$this, 'getStats']);
+
+        // NOTE: DataTable and Stats handlers removed - now handled by CompanyDashboardController
+        // - handle_company_datatable -> CompanyDashboardController
+        // - get_company_stats -> CompanyDashboardController
 
         // Register membership AJAX handlers - forwarding to membership controller
         add_action('wp_ajax_get_company_membership_status', [$this, 'get_company_membership_status']);    
@@ -179,78 +190,8 @@ class CompanyController {
     /**
      * Handle DataTable AJAX request
      */
-    public function handleDataTableRequest() {
-        try {
-            if (!check_ajax_referer('wp_customer_nonce', 'nonce', false)) {
-                throw new \Exception('Security check failed');
-            }
-
-            // Get parameters
-            $draw = isset($_POST['draw']) ? intval($_POST['draw']) : 1;
-            $start = isset($_POST['start']) ? intval($_POST['start']) : 0;
-            $length = isset($_POST['length']) ? intval($_POST['length']) : 10;
-            $search = isset($_POST['search']['value']) ? sanitize_text_field($_POST['search']['value']) : '';
-            $filterAktif = isset($_POST['filter_aktif']) ? intval($_POST['filter_aktif']) : 1;
-            $filterTidakAktif = isset($_POST['filter_tidak_aktif']) ? intval($_POST['filter_tidak_aktif']) : 0;
-
-            // Order parameters
-            $orderColumn = isset($_POST['order'][0]['column']) && isset($_POST['columns'][$_POST['order'][0]['column']]['data'])
-                ? sanitize_text_field($_POST['columns'][$_POST['order'][0]['column']]['data'])
-                : 'name';
-            $orderDir = isset($_POST['order'][0]['dir']) ? sanitize_text_field($_POST['order'][0]['dir']) : 'asc';
-
-            $access = $this->branchValidator->validateAccess(0);
-
-            // Get fresh data
-            $result = $this->model->getDataTableData($start, $length, $search, $orderColumn, $orderDir, $filterAktif, $filterTidakAktif);
-            if (!$result) {
-                throw new \Exception('Failed to fetch company data');
-            }
-
-            // Format response
-            $response = [
-                'draw' => $draw,
-                'recordsTotal' => $result['total'],
-                'recordsFiltered' => $result['filtered'],
-                'data' => array_map(function($company) {
-                    return [
-                        'id' => $company->id,
-                        'code' => esc_html($company->code),
-                        'name' => esc_html($company->name),
-                        'type' => esc_html($company->type),
-                        'level_name' => esc_html($company->level_name ?? '-'),
-                        'agency_name' => esc_html($company->agency_name ?? '-'),
-                        'division_name' => esc_html($company->division_name ?? '-'),
-                        'inspector_name' => esc_html($company->inspector_name ?? '-'),
-                        'actions' => $this->generateActionButtons($company)
-                    ];
-                }, $result['data'])
-            ];
-
-            wp_send_json($response);
-
-        } catch (\Exception $e) {
-            $this->debug_log('DataTable error: ' . $e->getMessage());
-            wp_send_json_error([
-                'message' => $e->getMessage()
-            ]);
-        }
-    }
-
-    /**
-     * Generate action buttons for DataTable
-     */
-    private function generateActionButtons($company): string {
-        if (!current_user_can('view_customer_branch_list')) {
-            return '';
-        }
-
-        return sprintf(
-            '<button type="button" class="button view-company" data-id="%d">' .
-            '<i class="dashicons dashicons-visibility"></i></button>',
-            $company->id
-        );
-    }
+    // REMOVED: handleDataTableRequest() - moved to CompanyDashboardController
+    // REMOVED: generateActionButtons() - moved to CompanyDashboardController
 
     /**
      * Render main page template with enhanced debugging
@@ -341,44 +282,5 @@ class CompanyController {
         }
     }
 
-    /**
-     * Get company statistics
-     * Endpoint: wp_ajax_get_company_stats
-     *
-     * @return void Response is sent as JSON
-     */
-    public function getStats() {
-        try {
-            check_ajax_referer('wp_customer_nonce', 'nonce');
-
-            // Validate user permissions
-            if (!current_user_can('view_customer_branch_list')) {
-                throw new \Exception('Anda tidak memiliki izin untuk melihat data ini');
-            }
-
-            // Get statistics from model
-            $total_companies = $this->model->getTotalCount();
-
-            // Build response data
-            $stats = [
-                'total_companies' => $total_companies
-            ];
-
-            // Filter stats (allowing other modules to add stats)
-            $stats = apply_filters('wp_company_stats_data', $stats);
-
-            // Add to cache for faster access later
-            $this->cache->set('company_stats', $stats, 120);
-
-            // Log and send response
-            $this->debug_log("Stats loaded: " . print_r($stats, true));
-            wp_send_json_success($stats);
-
-        } catch (\Exception $e) {
-            $this->debug_log("Error in getStats(): " . $e->getMessage());
-            wp_send_json_error([
-                'message' => $e->getMessage()
-            ]);
-        }
-    }
+    // REMOVED: getStats() - moved to CompanyDashboardController
 }

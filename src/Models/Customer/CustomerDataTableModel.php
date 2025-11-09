@@ -102,6 +102,7 @@ class CustomerDataTableModel extends DataTableModel {
             'c.name as name',
             'c.npwp as npwp',
             'c.nib as nib',
+            'c.status as status',
             'b.email as email'
         ];
     }
@@ -115,6 +116,18 @@ class CustomerDataTableModel extends DataTableModel {
      * @return array Formatted row data
      */
     protected function format_row($row): array {
+        // Format status badge
+        $status_badge = '';
+        if (isset($row->status)) {
+            $badge_class = $row->status === 'active' ? 'status-active' : 'status-inactive';
+            $status_text = $row->status === 'active' ? __('Active', 'wp-customer') : __('Inactive', 'wp-customer');
+            $status_badge = sprintf(
+                '<span class="status-badge %s">%s</span>',
+                $badge_class,
+                $status_text
+            );
+        }
+
         return [
             'DT_RowId' => 'customer-' . $row->id,
             'DT_RowData' => [
@@ -125,6 +138,7 @@ class CustomerDataTableModel extends DataTableModel {
             'name' => esc_html($row->name),
             'npwp' => esc_html($row->npwp ?? '-'),
             'nib' => esc_html($row->nib ?? '-'),
+            'status' => $status_badge,
             'email' => esc_html($row->email ?? '-'),
             'actions' => $this->generate_action_buttons($row)
         ];
@@ -146,7 +160,7 @@ class CustomerDataTableModel extends DataTableModel {
         // Status filter
         $status_filter = isset($_POST['status_filter'])
             ? sanitize_text_field($_POST['status_filter'])
-            : 'aktif';
+            : 'active';
 
         if ($status_filter !== 'all') {
             // Use esc_sql since status_filter is already sanitized and from controlled values
@@ -176,10 +190,10 @@ class CustomerDataTableModel extends DataTableModel {
      *
      * IMPORTANT: Still applies wpapp_datatable_customers_where filter!
      *
-     * @param string $status_filter Status to filter (aktif/nonaktif/all)
+     * @param string $status_filter Status to filter (active/inactive/all)
      * @return int Total count
      */
-    public function get_total_count(string $status_filter = 'aktif'): int {
+    public function get_total_count(string $status_filter = 'active'): int {
         global $wpdb;
 
         // Build base query with QueryBuilder
@@ -290,8 +304,8 @@ class CustomerDataTableModel extends DataTableModel {
      * @return string HTML badge
      */
     private function format_status_badge(string $status): string {
-        $badge_class = $status === 'aktif' ? 'success' : 'error';
-        $status_text = $status === 'aktif'
+        $badge_class = $status === 'active' ? 'success' : 'error';
+        $status_text = $status === 'active'
             ? __('Active', 'wp-customer')
             : __('Inactive', 'wp-customer');
 

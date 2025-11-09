@@ -241,7 +241,7 @@ class WPCustomer {
 
         // Company Controllers
         new \WPCustomer\Controllers\Company\CompanyMembershipController();
-        new \WPCustomer\Controllers\Company\CompanyInvoiceController();
+        new \WPCustomer\Controllers\Company\CompanyInvoiceController(); // CRUD operations only
 
         // Integration Controllers (Hook-based Cross-Plugin Integration)
         // OLD CODE - Commented out (replaced by generic framework TODO-2179)

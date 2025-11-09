@@ -1,0 +1,244 @@
+<?php
+/**
+ * Company DataTable Model
+ *
+ * Handles server-side DataTable processing for companies.
+ * Extends DataTableModel from wp-app-core.
+ *
+ * @package     WP_Customer
+ * @subpackage  Models/Company
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/src/Models/Company/CompanyDataTableModel.php
+ *
+ * Description: Server-side DataTable model untuk menampilkan daftar
+ *              companies (branches) dengan row click support untuk
+ *              wp-datatable DualPanel framework.
+ *              Includes View button dengan wpdt-panel-trigger class.
+ *
+ * Changelog:
+ * 1.0.0 - 2025-11-09 (TODO-2195)
+ * - Initial implementation for Company dashboard
+ * - Based on BranchDataTableModel but with View button
+ * - View button has wpdt-panel-trigger class for dual panel
+ * - Filters companies only (no customer_id filter)
+ * - Columns: Code, Name, Type, Email, Phone, Status, Actions
+ */
+
+namespace WPCustomer\Models\Company;
+
+use WPAppCore\Models\DataTable\DataTableModel;
+use WPQB\QueryBuilder;
+
+defined('ABSPATH') || exit;
+
+class CompanyDataTableModel extends DataTableModel {
+
+    /**
+     * Table alias for JOINs
+     * @var string
+     */
+    protected $table_alias = 'comp';
+
+    /**
+     * Constructor
+     * Setup table and columns configuration
+     */
+    public function __construct() {
+        parent::__construct();
+
+        global $wpdb;
+        $this->table = $wpdb->prefix . 'app_customer_branches ' . $this->table_alias;
+        $this->index_column = $this->table_alias . '.id';
+
+        // Define searchable columns
+        $this->searchable_columns = [
+            $this->table_alias . '.code',
+            $this->table_alias . '.name',
+            $this->table_alias . '.email',
+            $this->table_alias . '.phone'
+        ];
+
+        // No joins needed
+        $this->base_joins = [];
+
+        // Base WHERE for filtering
+        $this->base_where = [];
+
+        // Hook to add dynamic WHERE conditions
+        add_filter($this->get_filter_hook('where'), [$this, 'filter_where'], 10, 3);
+    }
+
+    /**
+     * Get columns for SELECT clause
+     *
+     * @return array Column definitions
+     */
+    protected function get_columns(): array {
+        $alias = $this->table_alias;
+        return [
+            "{$alias}.code as code",
+            "{$alias}.name as name",
+            "{$alias}.type as type",
+            "{$alias}.email as email",
+            "{$alias}.phone as phone",
+            "{$alias}.status as status",
+            "{$alias}.id as id",
+            "{$alias}.customer_id as customer_id"
+        ];
+    }
+
+    /**
+     * Format row data for DataTable output
+     *
+     * @param object $row Database row
+     * @return array Formatted row data
+     */
+    protected function format_row($row): array {
+        // Format type display
+        $type_display = '';
+        if (isset($row->type)) {
+            $type_display = $row->type === 'pusat' ? 'Pusat' : 'Cabang';
+        }
+
+        // Format status badge
+        $status_badge = '';
+        if (isset($row->status)) {
+            $badge_class = $row->status === 'active' ? 'status-active' : 'status-inactive';
+            $status_text = $row->status === 'active' ? __('Active', 'wp-customer') : __('Inactive', 'wp-customer');
+            $status_badge = sprintf(
+                '<span class="status-badge %s">%s</span>',
+                $badge_class,
+                $status_text
+            );
+        }
+
+        return [
+            'DT_RowId' => 'company-' . ($row->id ?? 0),
+            'DT_RowData' => [
+                'id' => $row->id ?? 0,
+                'customer_id' => $row->customer_id ?? 0,
+                'status' => $row->status ?? 'active',
+                'entity' => 'company'
+            ],
+            'code' => esc_html($row->code ?? ''),
+            'name' => esc_html($row->name ?? ''),
+            'type' => esc_html($type_display),
+            'email' => esc_html($row->email ?? '-'),
+            'phone' => esc_html($row->phone ?? '-'),
+            'status' => $status_badge,
+            'actions' => $this->generate_action_buttons($row)
+        ];
+    }
+
+    /**
+     * Generate action buttons for company row
+     *
+     * @param object $row Company data
+     * @return string HTML buttons
+     */
+    private function generate_action_buttons($row): string {
+        $buttons = [];
+
+        // View button (ALWAYS shown for detail panel trigger)
+        $buttons[] = sprintf(
+            '<button type="button" class="button button-small wpdt-panel-trigger" data-id="%d" data-entity="company" title="%s">
+                <span class="dashicons dashicons-visibility"></span>
+            </button>',
+            esc_attr($row->id),
+            esc_attr__('View Details', 'wp-customer')
+        );
+
+        // Edit button (shown for users with edit permission)
+        if (current_user_can('manage_options') ||
+            current_user_can('edit_all_customer_branches') ||
+            current_user_can('edit_own_customer_branch')) {
+            $buttons[] = sprintf(
+                '<button type="button" class="button button-small company-edit-btn" data-id="%d" title="%s">
+                    <span class="dashicons dashicons-edit"></span>
+                </button>',
+                esc_attr($row->id),
+                esc_attr__('Edit Company', 'wp-customer')
+            );
+        }
+
+        // Delete button (shown for users with delete permission)
+        if (current_user_can('manage_options') ||
+            current_user_can('delete_all_customer_branches') ||
+            current_user_can('delete_own_customer_branch')) {
+            $buttons[] = sprintf(
+                '<button type="button" class="button button-small company-delete-btn" data-id="%d" title="%s">
+                    <span class="dashicons dashicons-trash"></span>
+                </button>',
+                esc_attr($row->id),
+                esc_attr__('Delete Company', 'wp-customer')
+            );
+        }
+
+        return implode(' ', $buttons);
+    }
+
+    /**
+     * Filter WHERE conditions
+     *
+     * Hooked to: wpapp_datatable_company_where
+     * Filters by status from request data (optional)
+     *
+     * @param array $where_conditions Current WHERE conditions
+     * @param array $request_data DataTables request data
+     * @param DataTableModel $model Model instance
+     * @return array Modified WHERE conditions
+     */
+    public function filter_where($where_conditions, $request_data, $model): array {
+        global $wpdb;
+        $alias = $this->table_alias;
+
+        // Filter by status (optional, from dropdown filter)
+        if (isset($request_data['status_filter']) && !empty($request_data['status_filter'])) {
+            $status = sanitize_text_field($request_data['status_filter']);
+            $where_conditions[] = sprintf("{$alias}.status = '%s'", esc_sql($status));
+        } else {
+            // Default to active if no filter specified
+            $where_conditions[] = "{$alias}.status = 'active'";
+        }
+
+        return $where_conditions;
+    }
+
+    /**
+     * Get table alias
+     *
+     * @return string Table alias for JOIN operations
+     */
+    public function get_table_alias(): string {
+        return $this->table_alias;
+    }
+
+    /**
+     * Get total count with filtering
+     *
+     * Helper method for dashboard statistics.
+     * Uses QueryBuilder for clean, type-safe queries.
+     *
+     * @param string $status_filter Status to filter (active/inactive/all)
+     * @return int Total count
+     */
+    public function get_total_count(string $status_filter = 'active'): int {
+        global $wpdb;
+        $alias = $this->table_alias;
+
+        // Build query with QueryBuilder
+        $query = QueryBuilder::table($wpdb->prefix . "app_customer_branches as {$alias}")
+            ->selectRaw("COUNT({$alias}.id) as total");
+
+        // Apply status filter
+        if ($status_filter !== 'all' && !empty($status_filter)) {
+            $query->where("{$alias}.status", $status_filter);
+        }
+
+        // Execute and return count
+        $result = $query->first();
+        return (int) ($result->total ?? 0);
+    }
+}

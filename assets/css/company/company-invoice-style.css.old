@@ -1,0 +1,631 @@
+/**
+ * Company Invoice Page Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS
+ * @version     1.2.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/company/company-invoice-style.css
+ *
+ * Description: Custom styles untuk halaman Company Invoice.
+ *              Includes styling untuk dashboard, right panel,
+ *              tabs, payment modal, dan komponen lainnya.
+ *              Responsive design dengan mobile support.
+ *              DataTable styles moved to company-invoice-datatable-style.css
+ *
+ * Dependencies:
+ * - WordPress admin styles
+ * - Custom company styles
+ * - company-invoice-datatable-style.css (for DataTable)
+ *
+ * Changelog:
+ * 1.2.0 - 2025-01-17 (Review-06)
+ * - Added payment modal styles (.wp-customer-modal)
+ * - Added modal header, body, footer styles
+ * - Added payment summary styles
+ * - Added payment history table styles
+ * - Added badge styles (success, warning, danger)
+ * - Fixed modal z-index to 999999 for proper layering
+ * - Added form elements styling for modal
+ *
+ * 1.1.0 - 2025-01-10
+ * - Moved DataTable styles to separate file
+ * - Cleaned up structure
+ *
+ * 1.0.0 - 2024-12-25
+ * - Initial version
+ * - Added dashboard styling
+ * - Added DataTable customizations
+ * - Added panel styling
+ * - Added responsive design
+ */
+
+/* Dashboard Container */
+.wp-company-invoice-dashboard {
+    margin: 20px 0;
+}
+
+.wi-stats-container {
+    display: flex;
+    gap: 20px;
+    margin: 15px 0;
+}
+
+.wi-stat-box {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    padding: 15px 20px;
+    border-radius: 4px;
+    flex: 1;
+    text-align: center;
+}
+
+.wi-stat-box h3 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.wi-stat-number {
+    font-size: 24px;
+    font-weight: bold;
+    color: #2271b1;
+    margin: 10px 0 0;
+}
+
+/* Main Content Area */
+.wp-company-invoice-content-area {
+    margin-top: 20px;
+}
+
+.wp-company-invoice-container {
+    display: flex;
+    gap: 20px;
+    position: relative;
+}
+
+/* Left Panel */
+.wp-company-invoice-left-panel {
+    width: 100%;
+    transition: width 0.3s ease;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+}
+
+.wp-company-invoice-container.with-right-panel .wp-company-invoice-left-panel {
+    width: 45%;
+}
+
+.wi-panel-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #ccd0d4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 50px;
+}
+
+.wi-panel-header h2 {
+    margin: 0;
+    font-size: 1.3em;
+}
+
+.wi-panel-content {
+    padding: 20px;
+}
+
+/* Status Badges */
+.invoice-status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.invoice-status-pending {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.invoice-status-paid {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.invoice-status-pending-payment {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.invoice-status-cancelled {
+    background: #e2e3e5;
+    color: #383d41;
+    border: 1px solid #d6d8db;
+}
+
+/* Action Buttons */
+.invoice-action-btn {
+    display: inline-block;
+    padding: 6px 12px;
+    margin: 0 2px;
+    border: 1px solid #007cba;
+    border-radius: 3px;
+    background: #007cba;
+    color: #fff;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.invoice-action-btn:hover {
+    background: #005a87;
+    border-color: #005a87;
+    color: #fff;
+}
+
+.invoice-action-btn.view-payment {
+    background: #28a745;
+    border-color: #28a745;
+}
+
+.invoice-action-btn.view-payment:hover {
+    background: #1e7e34;
+    border-color: #1e7e34;
+}
+
+/* Right Panel */
+.wp-company-invoice-right-panel {
+    width: 55%;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    display: none;
+}
+
+.wp-company-invoice-right-panel.visible {
+    display: block;
+}
+
+.wp-company-invoice-panel-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #ccd0d4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 50px;
+}
+
+.wp-company-invoice-panel-header h2 {
+    margin: 0;
+    font-size: 1.3em;
+}
+
+.wp-company-invoice-close-panel {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0 5px;
+}
+
+.wp-company-invoice-close-panel:hover {
+    color: #d63638;
+}
+
+.wp-company-invoice-panel-content {
+    padding: 20px;
+}
+
+/* Tab Navigation */
+.nav-tab-wrapper {
+    margin: 0 0 20px;
+    border-bottom: 1px solid #ccd0d4;
+}
+
+.nav-tab {
+    border: 1px solid #ccd0d4;
+    border-bottom: none;
+    background: #dcdcde;
+    color: #50575e;
+    text-decoration: none;
+}
+
+.nav-tab.nav-tab-active {
+    background: #fff;
+    border-bottom-color: #fff;
+    color: #1d2327;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* Invoice Details */
+.invoice-detail-row {
+    margin-bottom: 15px;
+}
+
+.invoice-detail-label {
+    font-weight: 600;
+    color: #23282d;
+    margin-bottom: 5px;
+    font-size: 14px;
+}
+
+.invoice-detail-value {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Payment Info */
+.payment-info-section {
+    margin-bottom: 20px;
+}
+
+.payment-info-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #23282d;
+    margin-bottom: 10px;
+}
+
+.payment-record {
+    border: 1px solid #e5e5e5;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 10px;
+    background: #f8f9fa;
+}
+
+.payment-record:last-child {
+    margin-bottom: 0;
+}
+
+.payment-amount {
+    font-size: 18px;
+    font-weight: 700;
+    color: #28a745;
+    margin-bottom: 5px;
+}
+
+.payment-date {
+    color: #666;
+    font-size: 14px;
+}
+
+/* Loading States */
+.invoice-loading {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.invoice-loading-spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007cba;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Hidden State */
+.hidden {
+    display: none !important;
+}
+
+/* Payment Modal */
+.wp-customer-modal {
+    display: none;
+    position: fixed;
+    z-index: 999999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.wp-customer-modal .modal-content {
+    background-color: #fff;
+    margin: 5% auto;
+    padding: 0;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.wp-customer-modal .modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #ccd0d4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f6f7f7;
+}
+
+.wp-customer-modal .modal-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.wp-customer-modal .modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    line-height: 1;
+    color: #666;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+}
+
+.wp-customer-modal .modal-close:hover {
+    color: #d63638;
+}
+
+.wp-customer-modal .modal-body {
+    padding: 20px;
+}
+
+.wp-customer-modal .payment-details {
+    margin: 20px 0;
+}
+
+.wp-customer-modal .form-row {
+    margin-bottom: 15px;
+}
+
+.wp-customer-modal .form-row label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #1d2327;
+}
+
+.wp-customer-modal .form-row select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #8c8f94;
+    border-radius: 3px;
+    font-size: 14px;
+}
+
+.wp-customer-modal .confirmation-notice {
+    background: #f0f6fc;
+    border-left: 4px solid #2271b1;
+    padding: 12px;
+    margin: 15px 0;
+    border-radius: 3px;
+}
+
+.wp-customer-modal .confirmation-notice p {
+    margin: 0;
+    font-size: 13px;
+    color: #1d2327;
+}
+
+.wp-customer-modal .modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #ccd0d4;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: #f6f7f7;
+}
+
+.wp-customer-modal .modal-footer .button {
+    margin: 0;
+}
+
+.wp-customer-modal .modal-cancel {
+    background: #f6f7f7;
+    border-color: #8c8f94;
+    color: #2c3338;
+}
+
+.wp-customer-modal .modal-cancel:hover {
+    background: #f0f0f1;
+    border-color: #8c8f94;
+    color: #2c3338;
+}
+
+.wp-customer-modal .modal-confirm {
+    background: #2271b1;
+    border-color: #2271b1;
+    color: #fff;
+}
+
+.wp-customer-modal .modal-confirm:hover {
+    background: #135e96;
+    border-color: #135e96;
+    color: #fff;
+}
+
+.wp-customer-modal .modal-confirm:disabled {
+    background: #f0f0f1 !important;
+    border-color: #dcdcde !important;
+    color: #a7aaad !important;
+    cursor: not-allowed;
+}
+
+/* Payment Summary */
+.payment-summary {
+    background: #f6f7f7;
+    border: 1px solid #ccd0d4;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+
+.payment-summary p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+
+.payment-summary strong {
+    color: #1d2327;
+}
+
+/* Payment History Table */
+#payment-history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+#payment-history-table thead th {
+    background: #f6f7f7;
+    border-bottom: 2px solid #ccd0d4;
+    padding: 10px;
+    text-align: left;
+    font-weight: 600;
+    color: #1d2327;
+    font-size: 13px;
+}
+
+#payment-history-table tbody td {
+    padding: 10px;
+    border-bottom: 1px solid #e5e5e5;
+    font-size: 13px;
+    color: #50575e;
+}
+
+#payment-history-table tbody tr:hover {
+    background: #f6f7f7;
+}
+
+#payment-history-table .text-center {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
+
+/* Badge Styles */
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.badge-warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.badge-danger {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* No Payments Message */
+.no-payments {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    padding: 20px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .wp-company-invoice-container {
+        flex-direction: column;
+    }
+
+    .wp-company-invoice-right-panel {
+        width: 100%;
+        max-height: none;
+    }
+
+    .wi-invoice-stats-container {
+        flex-direction: column;
+    }
+
+    .wi-invoice-stat-box {
+        min-width: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .wi-invoice-panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .wp-company-invoice-panel-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    #company-invoices-table thead th,
+    #company-invoices-table tbody td {
+        padding: 8px 10px;
+        font-size: 14px;
+    }
+
+    .invoice-action-btn {
+        padding: 4px 8px;
+        font-size: 11px;
+    }
+}
+
+/* Print Styles */
+@media print {
+    .wp-company-invoice-dashboard,
+    .wi-invoice-panel-header,
+    .wp-company-invoice-panel-header {
+        display: none;
+    }
+
+    .wp-company-invoice-container {
+        flex-direction: column;
+    }
+
+    .wp-company-invoice-left-panel,
+    .wp-company-invoice-right-panel {
+        box-shadow: none;
+        border: 1px solid #000;
+    }
+}

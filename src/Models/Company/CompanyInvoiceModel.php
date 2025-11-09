@@ -61,6 +61,7 @@ namespace WPCustomer\Models\Company;
 use WPCustomer\Cache\CustomerCacheManager;
 use WPCustomer\Models\Customer\CustomerModel;
 use WPCustomer\Models\Company\CompanyModel;
+use WPCustomer\Validators\CustomerValidator;
 
 class CompanyInvoiceModel {
     /**
@@ -88,6 +89,12 @@ class CompanyInvoiceModel {
     private $company_model;
 
     /**
+     * Customer validator instance
+     * @var CustomerValidator
+     */
+    private $validator;
+
+    /**
      * Constructor
      */
     public function __construct() {
@@ -96,6 +103,7 @@ class CompanyInvoiceModel {
         $this->cache = new CustomerCacheManager();
         $this->customer_model = new CustomerModel();
         $this->company_model = new CompanyModel();
+        $this->validator = new CustomerValidator();
     }
 
     /**
@@ -511,8 +519,8 @@ class CompanyInvoiceModel {
         error_log('=== Debug CompanyInvoiceModel getDataTableData ===');
         error_log('User ID: ' . get_current_user_id());
 
-        // Get user relation from CustomerModel to determine access
-        $relation = $this->customer_model->getUserRelation(0);
+        // Get user relation from CustomerValidator to determine access
+        $relation = $this->validator->getUserRelation(0);
         $access_type = $relation['access_type'];
 
         error_log('Access type: ' . $access_type);
@@ -688,8 +696,8 @@ class CompanyInvoiceModel {
         error_log('=== Debug CompanyInvoiceModel getStatistics ===');
         error_log('User ID: ' . get_current_user_id());
 
-        // Get user relation from CustomerModel to determine access
-        $relation = $this->customer_model->getUserRelation(0);
+        // Get user relation from CustomerValidator to determine access
+        $relation = $this->validator->getUserRelation(0);
         $access_type = $relation['access_type'];
 
         error_log('Access type: ' . $access_type);
@@ -796,8 +804,8 @@ class CompanyInvoiceModel {
         error_log('=== Debug CompanyInvoiceModel getTotalCount ===');
         error_log('User ID: ' . get_current_user_id());
 
-        // Get user relation from CustomerModel to determine access
-        $relation = $this->customer_model->getUserRelation(0);
+        // Get user relation from CustomerValidator to determine access
+        $relation = $this->validator->getUserRelation(0);
         $access_type = $relation['access_type'];
 
         error_log('Access type: ' . $access_type);

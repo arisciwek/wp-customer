@@ -1,248 +1,162 @@
 /**
- * Company DataTable Handler
+ * Company DataTable
  *
  * @package     WP_Customer
- * @subpackage  Assets/JS/Components
+ * @subpackage  Assets/JS/Company
  * @version     1.0.0
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/company/company-datatable.js
  *
- * Description: Komponen untuk mengelola DataTables company.
- *              Menangani server-side processing dan panel kanan.
- *              Terintegrasi dengan Company main script.
+ * Description: Minimal DataTable initialization for Company dashboard.
+ *              Compatible with wp-datatable dual-panel system.
+ *              DELEGATES all panel interactions to wp-datatable framework.
  *
  * Dependencies:
  * - jQuery
  * - DataTables library
- * - CustomerToast for notifications
+ * - wp-datatable panel-manager.js (handles all row/button clicks automatically)
+ *
+ * How it works:
+ * 1. Initialize DataTable with server-side processing
+ * 2. Server returns DT_RowData with company ID
+ * 3. DataTables automatically converts DT_RowData to data-* attributes on <tr>
+ * 4. wp-datatable panel-manager.js detects clicks on .wpdt-datatable rows
+ * 5. Panel opens automatically - NO custom code needed!
+ *
+ * Changelog:
+ * 1.0.0 - 2025-11-09 (TODO-2195)
+ * - Initial implementation following customer-datatable.js pattern
+ * - TRUE minimal implementation - delegates everything to framework
+ * - Columns: Code, Name, Type, Email, Phone, Status, Actions
  */
 
 (function($) {
     'use strict';
 
-    const CompanyDataTable = {
-        table: null,
-        initialized: false,
-        currentHighlight: null,
+    /**
+     * Initialize on document ready
+     */
+    $(document).ready(function() {
+        console.log('[Company DataTable] Initializing...');
 
-        init() {
-            if (this.initialized) {
-                return;
-            }
+        var $table = $('#company-datatable');
 
-            // Wait for dependencies
-            if (!window.Company || !window.CustomerToast) {
-                setTimeout(() => this.init(), 100);
-                return;
-            }
-
-            this.initialized = true;
-            this.initDataTable();
-            this.bindEvents();
-            this.handleInitialHash();
-        },
-
-        initDataTable() {
-            if ($.fn.DataTable.isDataTable('#companies-table')) {
-                $('#companies-table').DataTable().destroy();
-            }
-
-            // Initialize clean table structure
-            $('#companies-table').empty().html(`
-                <thead>
-                    <tr>
-                        <th>Kode</th>
-                        <th>Nama Perusahaan</th>
-                        <th>Tipe</th>
-                        <th>Level</th>
-                        <th>Disnaker</th>
-                        <th>Unit Kerja</th>
-                        <th>Pengawas</th>
-                        <th>Aksi</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            `);
-
-            this.table = $('#companies-table').DataTable({
-                processing: true,
-                serverSide: true,
-                ajax: {
-                    url: wpCustomerData.ajaxUrl,
-                    type: 'POST',
-                    data: (d) => {
-                        return {
-                            ...d,
-                            action: 'handle_company_datatable',
-                            nonce: wpCustomerData.nonce,
-                            filter_aktif: $('#filter-aktif').is(':checked') ? 1 : 0,
-                            filter_tidak_aktif: $('#filter-tidak-aktif').is(':checked') ? 1 : 0
-                        };
-                    },
-                    error: (xhr, error, thrown) => {
-                        console.error('DataTables Error:', error);
-                        CustomerToast.error('Gagal memuat data perusahaan');
-                    }
-                },
-                columns: [
-                    {
-                        data: 'code',
-                        title: 'Kode',
-                        width: '100px'
-                    },
-                    {
-                        data: 'name',
-                        title: 'Nama Perusahaan'
-                    },
-                    {
-                        data: 'type',
-                        title: 'Tipe',
-                        width: '80px'
-                    },
-                    {
-                        data: 'level_name',
-                        title: 'Level',
-                        width: '100px',
-                        defaultContent: '-'
-                    },
-                    {
-                        data: 'agency_name',
-                        title: 'Disnaker',
-                        width: '120px',
-                        defaultContent: '-'
-                    },
-                    {
-                        data: 'division_name',
-                        title: 'Unit Kerja',
-                        width: '120px',
-                        defaultContent: '-'
-                    },
-                    {
-                        data: 'inspector_name',
-                        title: 'Pengawas',
-                        width: '120px',
-                        defaultContent: '-'
-                    },
-                    {
-                        data: 'actions',
-                        title: 'Aksi',
-                        orderable: false,
-                        searchable: false,
-                        className: 'text-center nowrap',
-                        width: '50px'
-                    }
-                ],
-                order: [[0, 'asc']], // Default sort by code
-                pageLength: wpCustomerData.perPage || 10,
-                language: {
-                    "emptyTable": "Tidak ada data yang tersedia",
-                    "info": "Menampilkan _START_ hingga _END_ dari _TOTAL_ entri",
-                    "infoEmpty": "Menampilkan 0 hingga 0 dari 0 entri",
-                    "infoFiltered": "(disaring dari _MAX_ total entri)",
-                    "lengthMenu": "Tampilkan _MENU_ entri",
-                    "loadingRecords": "Memuat...",
-                    "processing": "Memproses...",
-                    "search": "Cari:",
-                    "zeroRecords": "Tidak ditemukan data yang sesuai",
-                    "paginate": {
-                        "first": "Pertama",
-                        "last": "Terakhir",
-                        "next": "Selanjutnya",
-                        "previous": "Sebelumnya"
-                    }
-                },
-                drawCallback: (settings) => {
-                    this.bindActionButtons();
-
-                    // Get current hash if any
-                    const hash = window.location.hash;
-                    if (hash && hash.startsWith('#')) {
-                        const id = hash.substring(1);
-                        if (id) {
-                            this.highlightRow(id);
-                        }
-                    }
-                },
-                createdRow: (row, data) => {
-                    $(row).attr('data-id', data.id);
-                }
-            });
-        },
-
-        bindEvents() {
-            // Hash change event
-            $(window).off('hashchange.companyTable')
-                    .on('hashchange.companyTable', () => this.handleHashChange());
-
-            // Reload button event
-            $('#reload-companies').off('click').on('click', () => this.refresh());
-
-            // Filter events
-            $('#filter-aktif, #filter-tidak-aktif').off('change').on('change', () => this.refresh());
-        },
-
-        bindActionButtons() {
-            const $table = $('#companies-table');
-            $table.off('click', '.view-company');
-
-            // View action
-            $table.on('click', '.view-company', (e) => {
-                const id = $(e.currentTarget).data('id');
-                if (id) window.location.hash = id;
-            });
-        },
-
-        handleHashChange() {
-            const hash = window.location.hash;
-            if (hash) {
-                const id = hash.substring(1);
-                if (id) {
-                    this.highlightRow(id);
-                }
-            }
-        },
-
-        handleInitialHash() {
-            const hash = window.location.hash;
-            if (hash && hash.startsWith('#')) {
-                this.handleHashChange();
-            }
-        },
-
-        highlightRow(id) {
-            if (this.currentHighlight) {
-                $(`tr[data-id="${this.currentHighlight}"]`).removeClass('highlight');
-            }
-
-            const $row = $(`tr[data-id="${id}"]`);
-            if ($row.length) {
-                $row.addClass('highlight');
-                this.currentHighlight = id;
-
-                // Scroll into view if needed
-                const container = this.table.table().container();
-                const rowTop = $row.position().top;
-                const containerHeight = $(container).height();
-                const scrollTop = $(container).scrollTop();
-
-                if (rowTop < scrollTop || rowTop > scrollTop + containerHeight) {
-                    $row[0].scrollIntoView({behavior: 'smooth', block: 'center'});
-                }
-            }
-        },
-
-        refresh() {
-            if (this.table) {
-                this.table.ajax.reload(null, false);
-            }
+        if ($table.length === 0) {
+            console.log('[Company DataTable] Table element not found');
+            return;
         }
-    };
 
-    // Initialize when document is ready
-    $(document).ready(() => {
-        window.CompanyDataTable = CompanyDataTable;
-        CompanyDataTable.init();
+        // Get nonce from wpdtConfig or wpCompanyConfig
+        var nonce = '';
+        if (typeof wpdtConfig !== 'undefined' && wpdtConfig.nonce) {
+            nonce = wpdtConfig.nonce;
+            console.log('[Company DataTable] Using wpdtConfig.nonce');
+        } else if (typeof wpCompanyConfig !== 'undefined' && wpCompanyConfig.nonce) {
+            nonce = wpCompanyConfig.nonce;
+            console.log('[Company DataTable] Using wpCompanyConfig.nonce');
+        } else {
+            console.error('[Company DataTable] No nonce available!');
+        }
+
+        // Initialize DataTable with server-side processing
+        var companyTable = $table.DataTable({
+            processing: true,
+            serverSide: true,
+            ajax: {
+                url: ajaxurl,
+                type: 'POST',
+                data: function(d) {
+                    d.action = 'get_company_datatable';
+                    d.nonce = nonce;
+                }
+            },
+            columns: [
+                {
+                    data: 'code',
+                    name: 'code',
+                    responsivePriority: 1  // Always visible
+                },
+                {
+                    data: 'name',
+                    name: 'name',
+                    responsivePriority: 1  // Always visible
+                },
+                {
+                    data: 'type',
+                    name: 'type',
+                    responsivePriority: 2  // Hide when panel opens
+                },
+                {
+                    data: 'email',
+                    name: 'email',
+                    responsivePriority: 3  // Hide when panel opens (lower priority)
+                },
+                {
+                    data: 'phone',
+                    name: 'phone',
+                    responsivePriority: 2  // Hide when panel opens
+                },
+                {
+                    data: 'status',
+                    name: 'status',
+                    responsivePriority: 1  // Always visible (no render, Model sends HTML badge)
+                },
+                {
+                    data: 'actions',
+                    name: 'actions',
+                    orderable: false,
+                    searchable: false,
+                    responsivePriority: 1  // Always visible (actions always needed)
+                }
+            ],
+            createdRow: function(row, data, dataIndex) {
+                // Copy DT_RowData to row attributes for panel-manager.js
+                if (data.DT_RowData) {
+                    $(row).attr('data-id', data.DT_RowData.id);
+                    $(row).attr('data-entity', data.DT_RowData.entity);
+                    $(row).attr('data-customer-id', data.DT_RowData.customer_id);
+                    $(row).attr('data-status', data.DT_RowData.status);
+                }
+            },
+            order: [[0, 'desc']],
+            pageLength: 10,
+            language: {
+                processing: 'Processing...',
+                search: 'Search:',
+                lengthMenu: 'Show _MENU_ entries',
+                info: 'Showing _START_ to _END_ of _TOTAL_ entries',
+                infoEmpty: 'Showing 0 to 0 of 0 entries',
+                zeroRecords: 'No matching records found',
+                emptyTable: 'No data available in table',
+                paginate: {
+                    first: 'First',
+                    previous: 'Previous',
+                    next: 'Next',
+                    last: 'Last'
+                }
+            }
+        });
+
+        console.log('[Company DataTable] DataTable initialized');
+
+        // Register DataTable instance to panel manager
+        // panel-manager.js might init before us, so we set it manually
+        if (window.wpdtPanelManager) {
+            window.wpdtPanelManager.dataTable = companyTable;
+            console.log('[Company DataTable] Registered to panel manager');
+        } else {
+            console.warn('[Company DataTable] Panel manager not found, will retry...');
+            // Retry after a short delay
+            setTimeout(function() {
+                if (window.wpdtPanelManager) {
+                    window.wpdtPanelManager.dataTable = companyTable;
+                    console.log('[Company DataTable] Registered to panel manager (delayed)');
+                }
+            }, 500);
+        }
+
+        console.log('[Company DataTable] Ready');
     });
 
 })(jQuery);

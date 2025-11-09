@@ -15,28 +15,31 @@ use WPCustomer\Controllers\SettingsController;
 use WPCustomer\Controllers\Customer\CustomerController;
 use WPCustomer\Controllers\Customer\CustomerDashboardController;
 use WPCustomer\Controllers\Company\CompanyController;
+use WPCustomer\Controllers\Company\CompanyDashboardController;
 use WPCustomer\Controllers\Company\CompanyInvoiceController;
-use WPCustomer\Controllers\Companies\CompaniesController;
+use WPCustomer\Controllers\Company\CompanyInvoiceDashboardController;
 
 class MenuManager {
     private $plugin_name;
     private $version;
     private $settings_controller;
     private $customer_controller;
-    private $customer_dashboard_controller;  // NEW: CustomerDashboardController for centralized DataTable
-    private $company_controller;  // Tambah property untuk CompanyController
-    private $company_invoice_controller;  // Tambah property untuk CompanyInvoiceController
-    private $companies_controller;  // Tambah property untuk CompaniesController
+    private $customer_dashboard_controller;  // CustomerDashboardController for DualPanel
+    private $company_controller;  // CompanyController (OLD - will be deprecated)
+    private $company_dashboard_controller;  // CompanyDashboardController for DualPanel
+    // private $company_invoice_controller;  // CompanyInvoiceController (instantiated in wp-customer.php, not here)
+    private $company_invoice_dashboard_controller;  // CompanyInvoiceDashboardController for DualPanel (NEW)
 
     public function __construct($plugin_name, $version) {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
         $this->settings_controller = new SettingsController();
         $this->customer_controller = new CustomerController();
-        $this->customer_dashboard_controller = new CustomerDashboardController();  // NEW: Inisialisasi CustomerDashboardController
-        $this->company_controller = new CompanyController();  // Inisialisasi CompanyController
-        $this->company_invoice_controller = new CompanyInvoiceController();  // Inisialisasi CompanyInvoiceController
-        $this->companies_controller = new CompaniesController();  // Inisialisasi CompaniesController
+        $this->customer_dashboard_controller = new CustomerDashboardController();
+        $this->company_controller = new CompanyController();  // OLD - keeping for reference
+        $this->company_dashboard_controller = new CompanyDashboardController();  // NEW: DualPanel
+        // $this->company_invoice_controller = new CompanyInvoiceController();  // Already instantiated in wp-customer.php
+        $this->company_invoice_dashboard_controller = new CompanyInvoiceDashboardController();  // NEW: DualPanel (TODO-2196)
     }
 
     public function init() {
@@ -45,59 +48,37 @@ class MenuManager {
     }
 
     public function registerMenus() {
-        // Menu WP Customer (OLD)
+        // Menu WP Customer (wp-datatable DualPanel - refactored from V2)
         add_menu_page(
             __('WP Customer', 'wp-customer'),
             __('WP Customer', 'wp-customer'),
             'view_customer_list',
             'wp-customer',
-            [$this->customer_controller, 'renderMainPage'],
+            [$this->customer_dashboard_controller, 'render'],
             'dashicons-businessperson',
             30
         );
 
-        // Menu WP Customer V2 (NEW - wp-datatable DualPanel)
-        add_menu_page(
-            __('Customer V2', 'wp-customer'),
-            __('Customer V2', 'wp-customer'),
-            'view_customer_list',
-            'wp-customer-v2',
-            [$this->customer_dashboard_controller, 'render'],
-            'dashicons-businessperson',
-            30.5
-        );
-
-        // Menu WP Perusahaan
+        // Menu WP Perusahaan (wp-datatable DualPanel - refactored)
         add_menu_page(
             __('WP Perusahaan', 'wp-customer'),
             __('WP Perusahaan', 'wp-customer'),
             'view_customer_branch_list',
-            'perusahaan',  // Unique menu slug untuk perusahaan
-            [$this->company_controller, 'renderMainPage'],
+            'perusahaan',
+            [$this->company_dashboard_controller, 'render'],
             'dashicons-building',
             31
         );
 
-        // Menu WP Invoice Membership
+        // Menu WP Invoice Membership (wp-datatable DualPanel - TODO-2196)
         add_menu_page(
             __('Invoice Membership', 'wp-customer'),
             __('Invoice Membership', 'wp-customer'),
-            'view_customer_membership_invoice_list',
-            'invoice_perusahaan',  // Unique menu slug untuk invoice perusahaan
-            [$this->company_invoice_controller, 'render_page'],
+            'view_customer_membership_invoice_list',  // Invoice-specific capability
+            'company-invoices',  // NEW: Changed slug for DualPanel
+            [$this->company_invoice_dashboard_controller, 'render'],
             'dashicons-media-spreadsheet',
             32
-        );
-
-        // Menu Companies (Perusahaan-2)
-        add_menu_page(
-            __('Perusahaan-2', 'wp-customer'),
-            __('🏢 Perusahaan-2', 'wp-customer'),
-            'view_customer_branch_list',
-            'wp-customer-companies',
-            [$this->companies_controller, 'render_page'],
-            'dashicons-store',
-            33
         );
 
         // Submenu Settings

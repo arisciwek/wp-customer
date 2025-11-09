@@ -145,7 +145,7 @@ class CustomerDashboardController {
      */
     public function signal_dual_panel($use): bool {
         error_log('[CustomerDashboard] signal_dual_panel called, page=' . ($_GET['page'] ?? 'none'));
-        if (isset($_GET['page']) && $_GET['page'] === 'wp-customer-v2') {
+        if (isset($_GET['page']) && $_GET['page'] === 'wp-customer') {
             error_log('[CustomerDashboard] Returning true for dual panel');
             return true;
         }

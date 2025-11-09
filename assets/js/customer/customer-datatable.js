@@ -88,14 +88,8 @@
                 { data: 'nib', name: 'nib' },
                 {
                     data: 'status',
-                    name: 'status',
-                    render: function(data, type, row) {
-                        if (data === 'active') {
-                            return '<span class="wpdt-badge wpdt-badge-success">Active</span>';
-                        } else {
-                            return '<span class="wpdt-badge wpdt-badge-danger">Inactive</span>';
-                        }
-                    }
+                    name: 'status'
+                    // No render function - Model sends HTML badge
                 },
                 {
                     data: 'actions',
