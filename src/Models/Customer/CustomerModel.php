@@ -28,7 +28,7 @@
 
 namespace WPCustomer\Models\Customer;
 
-use WPAppCore\Models\Crud\AbstractCrudModel;
+use WPAppCore\Models\Abstract\AbstractCrudModel;
 use WPCustomer\Cache\CustomerCacheManager;
 
 defined('ABSPATH') || exit;

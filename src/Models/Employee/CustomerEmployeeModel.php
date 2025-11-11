@@ -34,7 +34,7 @@
 
 namespace WPCustomer\Models\Employee;
 
-use WPAppCore\Models\Crud\AbstractCrudModel;
+use WPAppCore\Models\Abstract\AbstractCrudModel;
 use WPCustomer\Cache\EmployeeCacheManager;
 use WPCustomer\Models\Customer\CustomerModel;
 

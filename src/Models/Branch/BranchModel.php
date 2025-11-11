@@ -35,7 +35,7 @@
 
 namespace WPCustomer\Models\Branch;
 
-use WPAppCore\Models\Crud\AbstractCrudModel;
+use WPAppCore\Models\Abstract\AbstractCrudModel;
 use WPCustomer\Cache\BranchCacheManager;
 use WPCustomer\Models\Customer\CustomerModel;
 
