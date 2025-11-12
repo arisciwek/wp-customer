@@ -266,11 +266,19 @@ class AssetController {
      * @return void
      */
     private function enqueue_settings_assets(): void {
-        // Main settings styles
+        // SHARED: Load base settings styles from wp-app-core
         wp_enqueue_style(
-            'wp-customer-settings',
-            WP_CUSTOMER_URL . 'assets/css/settings/settings-style.css',
+            'wpapp-settings-base',
+            WP_APP_CORE_PLUGIN_URL . 'assets/css/settings/settings-style.css',
             [],
+            WP_APP_CORE_VERSION
+        );
+
+        // CUSTOM: Load wp-customer-specific customizations
+        wp_enqueue_style(
+            'wp-customer-settings-style',
+            WP_CUSTOMER_URL . 'assets/css/settings/customer-settings-style.css',
+            ['wpapp-settings-base'], // Depends on shared base
             $this->version
         );
 
@@ -304,13 +312,25 @@ class AssetController {
             true
         );
 
+        // SHARED: Load base settings script from wp-app-core
         wp_enqueue_script(
-            'wp-customer-settings',
-            WP_CUSTOMER_URL . 'assets/js/settings/settings-script.js',
-            ['jquery', 'wp-modal', 'wp-customer-toast'], // Add wp-modal for WPModal.confirm()
-            $this->version,
+            'wpapp-settings-base',
+            WP_APP_CORE_PLUGIN_URL . 'assets/js/settings/settings-script.js',
+            ['jquery', 'wp-modal'],
+            WP_APP_CORE_VERSION,
             true
         );
+
+        // CUSTOM: Load wp-customer-specific script (if needed for customizations)
+        // Currently not needed as shared script handles all functionality
+        // Uncomment if custom behavior is required:
+        // wp_enqueue_script(
+        //     'wp-customer-settings-script',
+        //     WP_CUSTOMER_URL . 'assets/js/settings/customer-settings-script.js',
+        //     ['wpapp-settings-base', 'wp-customer-toast'],
+        //     $this->version,
+        //     true
+        // );
 
         // Tab-specific scripts
         $this->enqueue_settings_tab_scripts($current_tab);
@@ -324,14 +344,8 @@ class AssetController {
      */
     private function enqueue_settings_tab_styles(string $current_tab): void {
         switch ($current_tab) {
-            case 'permissions':
-                wp_enqueue_style(
-                    'wp-customer-permissions-tab',
-                    WP_CUSTOMER_URL . 'assets/css/settings/permissions-tab-style.css',
-                    ['wp-customer-settings'],
-                    $this->version
-                );
-                break;
+            // REMOVED: 'permissions' case - now handled by CustomerPermissionsController
+            // via AbstractPermissionsController->enqueueAssets() which loads shared assets from wp-app-core
 
             case 'general':
                 wp_enqueue_style(
@@ -388,27 +402,10 @@ class AssetController {
      */
     private function enqueue_settings_tab_scripts(string $current_tab): void {
         switch ($current_tab) {
-            case 'permissions':
-                wp_enqueue_script(
-                    'wp-customer-permissions-tab',
-                    WP_CUSTOMER_URL . 'assets/js/settings/customer-permissions-tab-script.js',
-                    ['jquery', 'wp-customer-settings', 'wp-customer-toast'],
-                    $this->version,
-                    true
-                );
-
-                wp_localize_script('wp-customer-permissions-tab', 'wpCustomerData', [
-                    'ajaxUrl' => admin_url('admin-ajax.php'),
-                    'nonce' => wp_create_nonce('wp_customer_reset_permissions'),
-                    'i18n' => [
-                        'resetConfirmTitle' => __('Reset Permissions?', 'wp-customer'),
-                        'resetConfirmMessage' => __('This will restore all permissions to their default settings. This action cannot be undone.', 'wp-customer'),
-                        'resetConfirmButton' => __('Reset Permissions', 'wp-customer'),
-                        'resetting' => __('Resetting...', 'wp-customer'),
-                        'cancelButton' => __('Cancel', 'wp-customer')
-                    ]
-                ]);
-                break;
+            // REMOVED: 'permissions' case - now handled by CustomerPermissionsController
+            // via AbstractPermissionsController->enqueueAssets() which loads:
+            // - shared JS from wp-app-core (permission-matrix.js)
+            // - localized script data (wpappPermissions object)
 
             case 'general':
                 wp_localize_script('wp-customer-settings', 'wpCustomerData', [

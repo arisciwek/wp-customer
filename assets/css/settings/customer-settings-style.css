@@ -1,0 +1,63 @@
+/**
+ * Customer Settings Custom Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Settings
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/settings/customer-settings-style.css
+ *
+ * Description: Custom styles ONLY for wp-customer plugin.
+ *              Base styles loaded from wp-app-core/assets/css/settings/settings-style.css
+ *              This file contains only wp-customer-specific additions and overrides.
+ *
+ * Dependencies:
+ * - wp-app-core/assets/css/settings/settings-style.css (loaded first)
+ *
+ * Changelog:
+ * 1.0.0 - 2025-01-13 (TODO-2200)
+ * - Initial creation from settings-style.css v2.1.0
+ * - Extracted only wp-customer-specific styles
+ * - Removed duplicates that exist in wp-app-core shared assets
+ * - Renamed from settings-custom.css to customer-settings-style.css
+ */
+
+/* ========================================
+   WP-CUSTOMER SPECIFIC CUSTOMIZATIONS
+   ======================================== */
+
+/* Global Settings Layout - wp-customer specific width */
+.settings-wrapper {
+    margin: 20px 20px 0 0;
+    max-width: 1200px;
+}
+
+/* Additional Form Utilities */
+.form-table th {
+    width: 200px;
+}
+
+/* Customer-specific utility classes */
+.hidden {
+    display: none !important;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Permissions Section Spacing */
+.permissions-section {
+    padding-bottom: 80px; /* Space for sticky footer */
+}
+
+/* Customer-specific color overrides (if any) */
+/* Add your custom color schemes here */
+
+/* Customer-specific responsive adjustments */
+@media screen and (max-width: 782px) {
+    .settings-wrapper {
+        margin: 10px;
+    }
+}

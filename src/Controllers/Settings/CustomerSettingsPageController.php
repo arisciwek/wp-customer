@@ -27,6 +27,7 @@ namespace WPCustomer\Controllers\Settings;
 
 use WPCustomer\Controllers\Settings\CustomerGeneralSettingsController;
 use WPCustomer\Controllers\Settings\InvoicePaymentSettingsController;
+use WPCustomer\Controllers\Settings\CustomerPermissionsController;
 
 defined('ABSPATH') || exit;
 
@@ -39,6 +40,7 @@ class CustomerSettingsPageController {
         $this->controllers = [
             'general' => new CustomerGeneralSettingsController(),
             'invoice-payment' => new InvoicePaymentSettingsController(),
+            'permissions' => new CustomerPermissionsController(),
             // 'membership' => new CustomerMembershipSettingsController(), // TODO: Create this controller
             // Add more tabs here as needed
         ];
@@ -234,6 +236,7 @@ class CustomerSettingsPageController {
         $allowed_tabs = [
             'general' => 'tab-general.php',
             'invoice-payment' => 'tab-invoice-payment.php',
+            'permissions' => 'tab-permissions.php',
             'membership' => 'tab-membership.php',
             // Add more tabs here as needed
         ];
@@ -299,6 +302,7 @@ class CustomerSettingsPageController {
         return [
             'general' => __('General', 'wp-customer'),
             'invoice-payment' => __('Invoice & Payment', 'wp-customer'),
+            'permissions' => __('Permissions', 'wp-customer'),
             'membership' => __('Membership', 'wp-customer'),
             // Add more tabs here as needed
         ];

@@ -220,7 +220,7 @@ $current_config = $tab_config[$current_tab] ?? $tab_config['general'];
     ?>
     <p class="submit" style="margin: 0;">
         <button type="submit"
-                id="wpc-settings-save"
+                id="wpapp-settings-save"
                 class="button button-primary"
                 data-current-tab="<?php echo esc_attr($current_tab); ?>"
                 data-form-id="<?php echo esc_attr($current_config['form_id']); ?>">
@@ -229,7 +229,7 @@ $current_config = $tab_config[$current_tab] ?? $tab_config['general'];
 
         <?php if (!empty($current_config['reset_action'])): ?>
         <button type="button"
-                id="wpc-settings-reset"
+                id="wpapp-settings-reset"
                 class="button button-secondary"
                 data-current-tab="<?php echo esc_attr($current_tab); ?>"
                 data-form-id="<?php echo esc_attr($current_config['form_id']); ?>"
