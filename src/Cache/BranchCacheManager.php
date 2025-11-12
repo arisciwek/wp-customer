@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Cache
- * @version     1.0.0
+ * @version     1.0.1
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Cache/BranchCacheManager.php
@@ -19,6 +19,13 @@
  * - Both extend AbstractCacheManager
  *
  * Changelog:
+ * 1.0.1 - 2025-01-13 (TODO-2199)
+ * - Review against AbstractCacheManager v1.0.1
+ * - Verified all abstract methods implemented correctly
+ * - Added branch_stats and branch_employees cache keys
+ * - Confirmed 2-hour expiry appropriate for dynamic branch data
+ * - Ready for use in BranchModel
+ *
  * 1.0.0 - 2025-11-09 (TODO-2193: Cache Refactoring)
  * - Initial implementation
  * - Extends AbstractCacheManager
@@ -93,10 +100,12 @@ class BranchCacheManager extends AbstractCacheManager {
         return [
             'branch' => 'branch',
             'branch_list' => 'branch_list',
+            'branch_stats' => 'branch_stats',
             'branch_by_customer' => 'branch_by_customer',
             'branch_pusat' => 'branch_pusat',
             'branch_count' => 'branch_count',
             'branch_relation' => 'branch_relation',
+            'branch_employees' => 'branch_employees',
             'branch_ids' => 'branch_ids',
             'code_exists' => 'code_exists',
             'name_exists' => 'name_exists',
@@ -113,10 +122,12 @@ class BranchCacheManager extends AbstractCacheManager {
         return [
             'branch',
             'branch_list',
+            'branch_stats',
             'branch_by_customer',
             'branch_pusat',
             'branch_count',
             'branch_relation',
+            'branch_employees',
             'branch_ids',
             'code_exists',
             'name_exists',

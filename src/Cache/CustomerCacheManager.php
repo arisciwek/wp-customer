@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Cache
- * @version     1.0.0
+ * @version     1.0.1
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Cache/CustomerCacheManager.php
@@ -14,8 +14,15 @@
  *              Handles caching untuk customer data, relations, dan DataTable.
  *
  * Changelog:
- * 1.0.0 - 2025-01-08
- * - Initial implementation (Task-2191)
+ * 1.0.1 - 2025-01-13 (TODO-2199)
+ * - Review against AbstractCacheManager v1.0.1
+ * - Added cache keys: customer_by_code, customer_hierarchy, customer_branches
+ * - Added helper methods: getCustomerByCode, invalidateAllCustomerCache
+ * - Verified TODO-2192 fix (return false on cache miss)
+ * - Ready to use as template for other cache managers
+ *
+ * 1.0.0 - 2025-01-08 (Task-2191)
+ * - Initial implementation
  * - Extends AbstractCacheManager
  * - Implements 5 abstract methods
  * - Cache expiry: 12 hours (default)
@@ -90,6 +97,9 @@ class CustomerCacheManager extends AbstractCacheManager {
             'customer_stats' => 'customer_stats',
             'customer_total_count' => 'customer_total_count',
             'customer_relation' => 'customer_relation',
+            'customer_by_code' => 'customer_by_code',
+            'customer_hierarchy' => 'customer_hierarchy',
+            'customer_branches' => 'customer_branches',
             'branch_count' => 'branch_count',
             'customer_ids' => 'customer_ids',
             'code_exists' => 'code_exists',
@@ -110,6 +120,9 @@ class CustomerCacheManager extends AbstractCacheManager {
             'customer_stats',
             'customer_total_count',
             'customer_relation',
+            'customer_by_code',
+            'customer_hierarchy',
+            'customer_branches',
             'branch_count',
             'customer_ids',
             'code_exists',
@@ -179,8 +192,52 @@ class CustomerCacheManager extends AbstractCacheManager {
         // Clear customer IDs cache
         $this->delete('customer_ids', 'active');
 
+        // Clear hierarchy cache
+        $this->clearCache('customer_hierarchy');
+
+        // Clear branches cache
+        $this->clearCache('customer_branches');
+
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log("[CustomerCacheManager] Invalidated all cache for customer {$id}");
         }
+    }
+
+    /**
+     * Get customer by code from cache
+     *
+     * @param string $code Customer code
+     * @return object|false Customer object or FALSE if not found
+     */
+    public function getCustomerByCode(string $code): object|false {
+        return $this->get('customer_by_code', $code);
+    }
+
+    /**
+     * Set customer by code in cache
+     *
+     * @param string $code Customer code
+     * @param object $customer Customer data
+     * @param int|null $expiry Optional custom expiry
+     * @return bool
+     */
+    public function setCustomerByCode(string $code, object $customer, ?int $expiry = null): bool {
+        return $this->set('customer_by_code', $customer, $expiry, $code);
+    }
+
+    /**
+     * Invalidate ALL customer caches
+     *
+     * Clears all customer-related cache in the group.
+     * Use with caution - this clears everything.
+     *
+     * @return bool
+     */
+    public function invalidateAllCustomerCache(): bool {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            error_log("[CustomerCacheManager] Invalidating ALL customer caches");
+        }
+
+        return $this->clearAll();
     }
 }
