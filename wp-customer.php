@@ -115,9 +115,9 @@ class WPCustomer {
         $asset_controller = \WPCustomer\Controllers\Assets\AssetController::get_instance();
         $asset_controller->init();
 
-        // Initialize Settings Controller with AJAX handlers
-        $settings_controller = new \WPCustomer\Controllers\SettingsController();
-        $settings_controller->init();
+        // Note: Settings controllers initialized in MenuManager
+        // - OLD SettingsController: Legacy AJAX handlers
+        // - NEW CustomerSettingsPageController: Standardized settings (TODO-2198)
     }
 
     /**

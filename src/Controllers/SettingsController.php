@@ -136,24 +136,8 @@ class SettingsController {
     }
 
     public function register_settings() {
-        // General Settings
-        register_setting(
-            'wp_customer_settings',
-            'wp_customer_settings',
-            array(
-                'sanitize_callback' => [$this, 'sanitize_settings'],
-                'default' => array(
-                    'datatables_page_length' => 25,
-                    'enable_cache' => 0,
-                    'cache_duration' => 3600,
-                    'enable_debug' => 0,
-                    'enable_pusher' => 0,
-                    'pusher_app_key' => '',
-                    'pusher_app_secret' => '',
-                    'pusher_cluster' => 'ap1'
-                )
-            )
-        );
+        // NOTE: wp_customer_settings registration moved to CustomerGeneralSettingsController (TODO-2198)
+        // This controller now only handles legacy AJAX and other settings
 
         // Development Settings
         register_setting(

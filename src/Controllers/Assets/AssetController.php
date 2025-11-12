@@ -307,7 +307,7 @@ class AssetController {
         wp_enqueue_script(
             'wp-customer-settings',
             WP_CUSTOMER_URL . 'assets/js/settings/settings-script.js',
-            ['jquery', 'wp-customer-toast'],
+            ['jquery', 'wp-modal', 'wp-customer-toast'], // Add wp-modal for WPModal.confirm()
             $this->version,
             true
         );

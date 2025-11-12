@@ -1,134 +1,227 @@
 <?php
 /**
- * Tab pengaturan umum
+ * General Settings Tab
  *
- * @package     WPCustomer
- * @subpackage  Views/Settings
- * @version     1.0.11
+ * @package     WP_Customer
+ * @subpackage  Views/Templates/Settings
+ * @version     2.0.0
  * @author      arisciwek
- * 
- * Description:
- * - Pengaturan umum untuk plugin WP Customer
- * - Konfigurasi datatable dan cache
- * - Pengaturan realtime updates menggunakan Pusher
- * 
+ *
  * Path: /wp-customer/src/Views/templates/settings/tab-general.php
- * 
+ *
+ * Description: General settings tab template following wp-app-core pattern
+ *              Display settings, cache, API, and system configurations
+ *
  * Changelog:
- * v1.0.0 - 2024-01-07
+ * 2.0.0 - 2025-01-13 (TODO-2198)
+ * - BREAKING: Complete refactor to match wp-app-core pattern
+ * - Added proper form structure with hidden inputs
+ * - Removed submit button (moved to page level)
+ * - Added sections structure (Display, Cache, API, System)
+ * - Updated settings fields to match CustomerGeneralSettingsModel
+ * - Added proper styling
+ * 1.0.0 - 2024-01-07
  * - Initial version
- * - Add datatable settings
- * - Add cache settings 
- * - Add realtime update settings
  */
+
 if (!defined('ABSPATH')) {
     die;
 }
 
-$options = get_option('wp_customer_settings', array(
-    'datatables_page_length' => 25,
-    'enable_cache' => false,
-    'cache_duration' => 3600,
-    'enable_debug' => false,
-    'enable_pusher' => false,
-    'pusher_app_key' => '',
-    'pusher_app_secret' => '',
-    'pusher_cluster' => 'ap1'
-));
+// $settings is passed from controller
 ?>
 
-<form method="post" action="options.php">
-    <?php settings_fields('wp_customer_settings'); ?>
-    
-    <h3><?php _e('Data Per Halaman', 'wp-customer'); ?></h3>
-    <select name="wp_customer_settings[datatables_page_length]">
-        <option value="10" <?php selected($options['datatables_page_length'], 10); ?>>10</option>
-        <option value="25" <?php selected($options['datatables_page_length'], 25); ?>>25</option>
-        <option value="50" <?php selected($options['datatables_page_length'], 50); ?>>50</option>
-        <option value="100" <?php selected($options['datatables_page_length'], 100); ?>>100</option>
-    </select>
+<div class="wp-customer-settings-general">
+    <form method="post" action="options.php" id="wp-customer-general-settings-form">
+        <?php settings_fields('wp_customer_settings'); ?>
+        <input type="hidden" name="reset_to_defaults" value="0">
+        <input type="hidden" name="current_tab" value="general">
+        <input type="hidden" name="saved_tab" value="general">
 
-    <h3><?php _e('Pengaturan Cache', 'wp-customer'); ?></h3>
-    <p>
-        <label>
-            <input type="checkbox" 
-                   name="wp_customer_settings[enable_cache]" 
-                   value="1" 
-                   <?php checked($options['enable_cache'], 1); ?>>
-            <?php _e('Aktifkan caching', 'wp-customer'); ?>
-        </label>
-    </p>
-    
-    <p>
-        <label>
-            <?php _e('Durasi Cache (detik):', 'wp-customer'); ?>
-            <input type="number" 
-                   name="wp_customer_settings[cache_duration]" 
-                   value="<?php echo esc_attr($options['cache_duration']); ?>" 
-                   min="60" 
-                   step="60">
-        </label>
-    </p>
+        <!-- Display Settings Section -->
+        <div class="settings-section">
+            <h2><?php _e('Pengaturan Tampilan', 'wp-customer'); ?></h2>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="records_per_page"><?php _e('Data Per Halaman', 'wp-customer'); ?></label>
+                    </th>
+                    <td>
+                        <select name="wp_customer_settings[records_per_page]" id="records_per_page">
+                            <option value="5" <?php selected($settings['records_per_page'] ?? 15, 5); ?>>5</option>
+                            <option value="10" <?php selected($settings['records_per_page'] ?? 15, 10); ?>>10</option>
+                            <option value="15" <?php selected($settings['records_per_page'] ?? 15, 15); ?>>15</option>
+                            <option value="25" <?php selected($settings['records_per_page'] ?? 15, 25); ?>>25</option>
+                            <option value="50" <?php selected($settings['records_per_page'] ?? 15, 50); ?>>50</option>
+                            <option value="100" <?php selected($settings['records_per_page'] ?? 15, 100); ?>>100</option>
+                        </select>
+                        <p class="description"><?php _e('Jumlah data yang ditampilkan per halaman di tabel', 'wp-customer'); ?></p>
+                    </td>
+                </tr>
 
-    <p>
-        <button type="button" 
-                id="clear-all-cache" 
-                class="button button-secondary">
-            <?php _e('Clear All Cache', 'wp-customer'); ?>
-        </button>
-        <span id="cache-clear-status" class="cache-status"></span>
-    </p>
+                <tr>
+                    <th scope="row">
+                        <label for="datatables_language"><?php _e('Bahasa Tabel', 'wp-customer'); ?></label>
+                    </th>
+                    <td>
+                        <select name="wp_customer_settings[datatables_language]" id="datatables_language">
+                            <option value="id" <?php selected($settings['datatables_language'] ?? 'id', 'id'); ?>>Bahasa Indonesia</option>
+                            <option value="en" <?php selected($settings['datatables_language'] ?? 'id', 'en'); ?>>English</option>
+                        </select>
+                        <p class="description"><?php _e('Bahasa yang digunakan untuk datatables', 'wp-customer'); ?></p>
+                    </td>
+                </tr>
 
-    <h3><?php _e('Mode Debug', 'wp-customer'); ?></h3>
-    <p>
-        <label>
-            <input type="checkbox" 
-                   name="wp_customer_settings[enable_debug]" 
-                   value="1" 
-                   <?php checked($options['enable_debug'], 1); ?>>
-            <?php _e('Aktifkan mode debug', 'wp-customer'); ?>
-        </label>
-    </p>
+                <tr>
+                    <th scope="row">
+                        <label for="display_format"><?php _e('Format Tampilan', 'wp-customer'); ?></label>
+                    </th>
+                    <td>
+                        <select name="wp_customer_settings[display_format]" id="display_format">
+                            <option value="hierarchical" <?php selected($settings['display_format'] ?? 'hierarchical', 'hierarchical'); ?>><?php _e('Hierarki (dengan induk-anak)', 'wp-customer'); ?></option>
+                            <option value="flat" <?php selected($settings['display_format'] ?? 'hierarchical', 'flat'); ?>><?php _e('Datar (tanpa hierarki)', 'wp-customer'); ?></option>
+                        </select>
+                        <p class="description"><?php _e('Format tampilan data customer', 'wp-customer'); ?></p>
+                    </td>
+                </tr>
+            </table>
+        </div>
 
-    <h3><?php _e('Realtime Updates Configuration', 'wp-customer'); ?></h3>
-    <p>
-        <label><?php _e('Enable Realtime Updates', 'wp-customer'); ?></label><br>
-        <label>
-            <input type="checkbox" 
-                   name="wp_customer_settings[enable_pusher]" 
-                   value="1" 
-                   <?php checked($options['enable_pusher'], 1); ?>>
-            <?php _e('Enable Pusher integration', 'wp-customer'); ?>
-        </label>
-    </p>
+        <!-- Cache Settings Section -->
+        <div class="settings-section">
+            <h2><?php _e('Pengaturan Cache', 'wp-customer'); ?></h2>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="enable_caching"><?php _e('Aktifkan Cache', 'wp-customer'); ?></label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox"
+                                   name="wp_customer_settings[enable_caching]"
+                                   id="enable_caching"
+                                   value="1"
+                                   <?php checked($settings['enable_caching'] ?? true, 1); ?>>
+                            <?php _e('Aktifkan caching untuk meningkatkan performa', 'wp-customer'); ?>
+                        </label>
+                        <p class="description"><?php _e('Cache akan mempercepat loading data', 'wp-customer'); ?></p>
+                    </td>
+                </tr>
 
-    <p>
-        <label><?php _e('API Key', 'wp-customer'); ?></label><br>
-        <input type="text" 
-               name="wp_customer_settings[pusher_app_key]"
-               value="<?php echo esc_attr($options['pusher_app_key']); ?>"
-               class="regular-text">
-    </p>
+                <tr>
+                    <th scope="row">
+                        <label for="cache_duration"><?php _e('Durasi Cache', 'wp-customer'); ?></label>
+                    </th>
+                    <td>
+                        <select name="wp_customer_settings[cache_duration]" id="cache_duration">
+                            <option value="3600" <?php selected($settings['cache_duration'] ?? 43200, 3600); ?>><?php _e('1 Jam', 'wp-customer'); ?></option>
+                            <option value="7200" <?php selected($settings['cache_duration'] ?? 43200, 7200); ?>><?php _e('2 Jam', 'wp-customer'); ?></option>
+                            <option value="21600" <?php selected($settings['cache_duration'] ?? 43200, 21600); ?>><?php _e('6 Jam', 'wp-customer'); ?></option>
+                            <option value="43200" <?php selected($settings['cache_duration'] ?? 43200, 43200); ?>><?php _e('12 Jam', 'wp-customer'); ?></option>
+                            <option value="86400" <?php selected($settings['cache_duration'] ?? 43200, 86400); ?>><?php _e('24 Jam', 'wp-customer'); ?></option>
+                        </select>
+                        <p class="description"><?php _e('Durasi cache sebelum data di-refresh', 'wp-customer'); ?></p>
+                    </td>
+                </tr>
+            </table>
+        </div>
 
-    <p>
-        <label><?php _e('API Secret', 'wp-customer'); ?></label><br>
-        <input type="password" 
-               name="wp_customer_settings[pusher_app_secret]"
-               value="<?php echo esc_attr($options['pusher_app_secret']); ?>"
-               class="regular-text">
-    </p>
+        <!-- API Settings Section -->
+        <div class="settings-section">
+            <h2><?php _e('Pengaturan API', 'wp-customer'); ?></h2>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="enable_api"><?php _e('Aktifkan API', 'wp-customer'); ?></label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox"
+                                   name="wp_customer_settings[enable_api]"
+                                   id="enable_api"
+                                   value="1"
+                                   <?php checked($settings['enable_api'] ?? false, 1); ?>>
+                            <?php _e('Aktifkan REST API untuk plugin ini', 'wp-customer'); ?>
+                        </label>
+                        <p class="description"><?php _e('Aktifkan jika Anda ingin menggunakan API eksternal', 'wp-customer'); ?></p>
+                    </td>
+                </tr>
 
-    <p>
-        <label><?php _e('Cluster', 'wp-customer'); ?></label><br>
-        <select name="wp_customer_settings[pusher_cluster]"
-                class="regular-text">
-            <option value="ap1" <?php selected($options['pusher_cluster'], 'ap1'); ?>>ap1 (Asia Pacific)</option>
-            <option value="ap2" <?php selected($options['pusher_cluster'], 'ap2'); ?>>ap2 (Asia Pacific 2)</option>
-            <option value="us2" <?php selected($options['pusher_cluster'], 'us2'); ?>>us2 (US East Coast)</option>
-            <option value="us3" <?php selected($options['pusher_cluster'], 'us3'); ?>>us3 (US West Coast)</option>
-            <option value="eu" <?php selected($options['pusher_cluster'], 'eu'); ?>>eu (Europe)</option>
-        </select>
-    </p>
+                <tr>
+                    <th scope="row">
+                        <label for="api_key"><?php _e('API Key', 'wp-customer'); ?></label>
+                    </th>
+                    <td>
+                        <input type="text"
+                               name="wp_customer_settings[api_key]"
+                               id="api_key"
+                               value="<?php echo esc_attr($settings['api_key'] ?? ''); ?>"
+                               class="regular-text">
+                        <p class="description"><?php _e('API key untuk autentikasi eksternal (optional)', 'wp-customer'); ?></p>
+                    </td>
+                </tr>
+            </table>
+        </div>
 
-    <?php submit_button(__('Simpan Perubahan', 'wp-customer')); ?>
-</form>
+        <!-- System Settings Section -->
+        <div class="settings-section">
+            <h2><?php _e('Pengaturan Sistem', 'wp-customer'); ?></h2>
+            <table class="form-table">
+                <tr>
+                    <th scope="row">
+                        <label for="log_enabled"><?php _e('Logging', 'wp-customer'); ?></label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox"
+                                   name="wp_customer_settings[log_enabled]"
+                                   id="log_enabled"
+                                   value="1"
+                                   <?php checked($settings['log_enabled'] ?? false, 1); ?>>
+                            <?php _e('Aktifkan logging untuk debugging', 'wp-customer'); ?>
+                        </label>
+                        <p class="description"><?php _e('Log akan disimpan untuk troubleshooting', 'wp-customer'); ?></p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <th scope="row">
+                        <label for="enable_hard_delete_branch"><?php _e('Hard Delete Branch', 'wp-customer'); ?></label>
+                    </th>
+                    <td>
+                        <label>
+                            <input type="checkbox"
+                                   name="wp_customer_settings[enable_hard_delete_branch]"
+                                   id="enable_hard_delete_branch"
+                                   value="1"
+                                   <?php checked($settings['enable_hard_delete_branch'] ?? false, 1); ?>>
+                            <?php _e('Aktifkan penghapusan permanen untuk branch', 'wp-customer'); ?>
+                        </label>
+                        <p class="description">
+                            <strong><?php _e('PERINGATAN:', 'wp-customer'); ?></strong>
+                            <?php _e('Untuk production: gunakan soft delete (OFF). Untuk demo/testing: gunakan hard delete (ON)', 'wp-customer'); ?>
+                        </p>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </form>
+
+    <!-- DEPRECATED: Per-tab buttons moved to page level (settings-page.php) -->
+</div>
+
+<style>
+.settings-section {
+    background: #fff;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.settings-section h2 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e5e5e5;
+}
+</style>
