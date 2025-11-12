@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Tables
- * @version     1.0.11
+ * @version     1.0.12
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Tables/CustomerInvoicesDB.php
@@ -39,6 +39,10 @@
  * - app_customer_membership_levels table
  *
  * Changelog:
+ * 1.0.12 - 2025-01-13
+ * - Added cleanup_orphaned_records() method to handle orphaned records before FK creation
+ * - Prevents foreign key constraint errors during plugin activation
+ *
  * 1.3.0 - 2025-10-10
  * - Added from_level_id field for upgrade tracking and analytics
  * - Added index for from_level_id
@@ -99,12 +103,77 @@ class CustomerInvoicesDB {
     }
 
     /**
+     * Cleanup orphaned records sebelum menambahkan foreign keys
+     * Menghapus atau set NULL untuk records dengan referensi yang tidak valid
+     */
+    public static function cleanup_orphaned_records() {
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'app_customer_invoices';
+
+        // Delete invoices dengan customer_id yang tidak valid (NOT NULL field)
+        $deleted = $wpdb->query(
+            "DELETE FROM {$table_name}
+             WHERE customer_id NOT IN (SELECT id FROM {$wpdb->prefix}app_customers)"
+        );
+        if ($deleted > 0) {
+            error_log("[CustomerInvoicesDB] Cleaned up {$deleted} orphaned invoice records with invalid customer_id");
+        }
+
+        // Set NULL untuk branch_id yang tidak valid
+        $updated = $wpdb->query(
+            "UPDATE {$table_name}
+             SET branch_id = NULL
+             WHERE branch_id IS NOT NULL
+             AND branch_id NOT IN (SELECT id FROM {$wpdb->prefix}app_customer_branches)"
+        );
+        if ($updated > 0) {
+            error_log("[CustomerInvoicesDB] Set NULL for {$updated} invalid branch_id references");
+        }
+
+        // Set NULL untuk membership_id yang tidak valid
+        $updated = $wpdb->query(
+            "UPDATE {$table_name}
+             SET membership_id = NULL
+             WHERE membership_id IS NOT NULL
+             AND membership_id NOT IN (SELECT id FROM {$wpdb->prefix}app_customer_memberships)"
+        );
+        if ($updated > 0) {
+            error_log("[CustomerInvoicesDB] Set NULL for {$updated} invalid membership_id references");
+        }
+
+        // Set NULL untuk from_level_id yang tidak valid
+        $updated = $wpdb->query(
+            "UPDATE {$table_name}
+             SET from_level_id = NULL
+             WHERE from_level_id IS NOT NULL
+             AND from_level_id NOT IN (SELECT id FROM {$wpdb->prefix}app_customer_membership_levels)"
+        );
+        if ($updated > 0) {
+            error_log("[CustomerInvoicesDB] Set NULL for {$updated} invalid from_level_id references");
+        }
+
+        // Set NULL untuk level_id yang tidak valid
+        $updated = $wpdb->query(
+            "UPDATE {$table_name}
+             SET level_id = NULL
+             WHERE level_id IS NOT NULL
+             AND level_id NOT IN (SELECT id FROM {$wpdb->prefix}app_customer_membership_levels)"
+        );
+        if ($updated > 0) {
+            error_log("[CustomerInvoicesDB] Set NULL for {$updated} invalid level_id references");
+        }
+    }
+
+    /**
      * Add foreign key constraints yang tidak didukung oleh dbDelta
      * Harus dipanggil setelah tabel dibuat
      */
     public static function add_foreign_keys() {
         global $wpdb;
         $table_name = $wpdb->prefix . 'app_customer_invoices';
+
+        // Cleanup orphaned records dulu sebelum add FK
+        self::cleanup_orphaned_records();
 
         $constraints = [
             // FK to app_customers
