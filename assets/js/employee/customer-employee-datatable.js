@@ -21,7 +21,7 @@
  * Changelog:
  * 1.2.0 - 2025-11-02 (TODO-2191 Centralized Modal)
  * - Removed: .edit-employee event handler (moved to customer-datatable-v2.js)
- * - Now uses wpAppModal centralized system via customer-datatable-v2.js
+ * - Now uses WPModal centralized system via customer-datatable-v2.js
  * - Edit employee handled by initEmployeeHandlers() in customer-datatable-v2.js
  * - Prevents conflict and URL hash change issue
  *
