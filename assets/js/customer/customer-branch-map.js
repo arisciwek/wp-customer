@@ -8,7 +8,7 @@
  *
  * Path: /wp-customer/assets/js/customer/customer-branch-map.js
  *
- * Description: Adapter untuk integrate global MapPicker dengan wpAppModal.
+ * Description: Adapter untuk integrate global MapPicker dengan WPModal.
  *              Uses global MapPicker component from wp-app-core.
  *              Handles modal lifecycle untuk branch create/edit forms.
  *
@@ -16,7 +16,7 @@
  * - jQuery (loaded by WordPress)
  * - Leaflet.js (loaded globally by wp-app-core)
  * - wpapp-map-picker.js (Global MapPicker from wp-app-core)
- * - wpAppModal (wp-app-core)
+ * - WPModal (wp-app-core)
  *
  * Changelog:
  * 1.0.3 - 2025-11-02 (TODO-2190 Global Scope Migration)
@@ -26,14 +26,14 @@
  *
  * 1.0.1 - 2025-11-02 (TODO-2190 Fix - Event-Driven)
  * - CRITICAL FIX: Changed from callback to jQuery events
- * - Now listens to wpapp:modal-opened event (not onOpen callback)
- * - Now listens to wpapp:modal-closed event (not onClose callback)
+ * - Now listens to wpmodal:modal-opened event (not onOpen callback)
+ * - Now listens to wpmodal:modal-closed event (not onClose callback)
  * - Detects branch form via bodyUrl check
- * - More robust and de-coupled from wpAppModal implementation
+ * - More robust and de-coupled from WPModal implementation
  *
  * 1.0.0 - 2025-11-02 (TODO-2190)
  * - Initial release
- * - Integrate MapPicker with wpAppModal lifecycle
+ * - Integrate MapPicker with WPModal lifecycle
  * - Auto-initialize map on modal open
  * - Auto-cleanup on modal close
  */
@@ -57,14 +57,14 @@
         },
 
         /**
-         * Bind events to wpAppModal lifecycle
+         * Bind events to WPModal lifecycle
          */
         bindModalEvents() {
-            console.log('[CustomerBranchMap] Binding to wpapp:modal-opened event');
+            console.log('[CustomerBranchMap] Binding to wpmodal:modal-opened event');
 
-            // Listen to wpAppModal opened event
-            $(document).on('wpapp:modal-opened', (event, config) => {
-                console.log('[CustomerBranchMap] wpapp:modal-opened event triggered');
+            // Listen to WPModal opened event
+            $(document).on('wpmodal:modal-opened', (event, config) => {
+                console.log('[CustomerBranchMap] wpmodal:modal-opened event triggered');
                 console.log('[CustomerBranchMap] Modal config:', config);
 
                 // Check if this is a branch form modal
@@ -74,9 +74,9 @@
                 }
             });
 
-            // Listen to wpAppModal closed event
-            $(document).on('wpapp:modal-closed', () => {
-                console.log('[CustomerBranchMap] wpapp:modal-closed event triggered');
+            // Listen to WPModal closed event
+            $(document).on('wpmodal:modal-closed', () => {
+                console.log('[CustomerBranchMap] wpmodal:modal-closed event triggered');
                 this.onModalClose();
             });
         },
