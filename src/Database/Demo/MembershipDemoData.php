@@ -41,6 +41,8 @@
  */
 
 namespace WPCustomer\Database\Demo;
+
+use WPAppCore\Database\Demo\AbstractDemoData;  // TODO-2201: Shared from wp-app-core
 use WPCustomer\Controllers\Membership\CustomerMembershipController;
 use WPCustomer\Models\Customer\CustomerMembershipModel;
 use WPCustomer\Models\Membership\MembershipLevelModel;
@@ -56,16 +58,36 @@ class MembershipDemoData extends AbstractDemoData {
     protected $branchModel;
     protected $customerModel;
     private $membershipController;
-    
+
     private $membership_ids = [];
     private $levels_data = [];
 
     public function __construct() {
         parent::__construct();
-        $this->levelModel = new MembershipLevelModel();
-        $this->branchModel = new BranchModel();
-        $this->customerModel = new CustomerModel();
-        $this->membershipController = new CustomerMembershipController();
+    }
+
+    /**
+     * Initialize plugin-specific models
+     * Required by wp-app-core AbstractDemoData (TODO-2201)
+     *
+     * @return void
+     */
+    public function initModels(): void {
+        if (class_exists('WPCustomer\Models\Membership\MembershipLevelModel')) {
+            $this->levelModel = new MembershipLevelModel();
+        }
+
+        if (class_exists('WPCustomer\Models\Branch\BranchModel')) {
+            $this->branchModel = new BranchModel();
+        }
+
+        if (class_exists('WPCustomer\Models\Customer\CustomerModel')) {
+            $this->customerModel = new CustomerModel();
+        }
+
+        if (class_exists('WPCustomer\Controllers\Membership\CustomerMembershipController')) {
+            $this->membershipController = new CustomerMembershipController();
+        }
     }
 
     /**

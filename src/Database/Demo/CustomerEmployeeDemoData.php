@@ -19,6 +19,8 @@
 
 namespace WPCustomer\Database\Demo;
 
+use WPAppCore\Database\Demo\AbstractDemoData;  // TODO-2201: Shared from wp-app-core
+use WPAppCore\Database\Demo\WPUserGenerator;   // TODO-2201: Shared from wp-app-core
 use WPCustomer\Database\Demo\Data\CustomerEmployeeUsersData;
 use WPCustomer\Validators\Employee\CustomerEmployeeValidator;
 use WPCustomer\Models\Employee\CustomerEmployeeModel;
@@ -38,7 +40,18 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
         $this->wpUserGenerator = new WPUserGenerator();
         self::$employee_users = CustomerEmployeeUsersData::$data;
         $this->employeeValidator = new CustomerEmployeeValidator();
-        $this->employeeModel = new CustomerEmployeeModel();
+    }
+
+    /**
+     * Initialize plugin-specific models
+     * Required by wp-app-core AbstractDemoData (TODO-2201)
+     *
+     * @return void
+     */
+    public function initModels(): void {
+        if (class_exists('WPCustomer\Models\Employee\CustomerEmployeeModel')) {
+            $this->employeeModel = new CustomerEmployeeModel();
+        }
     }
 
     protected function validate(): bool {

@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Demo
- * @version     1.0.15
+ * @version     1.0.17
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Demo/BranchDemoData.php
@@ -25,13 +25,13 @@
  * - CustomerModel                   : Get customer data
  * - BranchModel                     : Generate branch code & save data
  * - WP Database (wi_provinces, wi_regencies)
- * 
+ *
  * Database Design:
  * - app_customer_branches
  *   * id             : Primary key
  *   * customer_id    : Foreign key ke customer
  *   * code           : Format Format kode: TTTT-RRXxRRXx-RR (13 karakter)
- *   *                  TTTT-RRXxRRXx adalah kode customer (12 karakter) 
+ *   *                  TTTT-RRXxRRXx adalah kode customer (12 karakter)
  *   *                  Tanda hubung '-' (1 karakter)
  *   *                  RR adalah 2 digit random number
  *   * name           : Nama branch
@@ -43,7 +43,7 @@
  *   * status         : enum('active','inactive')
  *
  * Usage Example:
- * ```php 
+ * ```php
  * $branchDemo = new BranchDemoData($customer_ids, $user_ids);
  * $branchDemo->run();
  * $branch_ids = $branchDemo->getBranchIds();
@@ -57,6 +57,30 @@
  * 5. Track generated branch IDs
  *
  * Changelog:
+ * 1.0.17 - 2025-11-13 (FIX: User creation permission issue + cleanup flow)
+ * - CRITICAL FIX: Create all branch users at start of generate() method
+ * - Follows CustomerDemoData pattern: users created before branch generation
+ * - Removes user creation from generateCabangBranches() and generateExtraBranches()
+ * - Step 1: Create cabang users (cabang1, cabang2 for each customer)
+ * - Step 1b: Create extra branch users (for assign inspector testing)
+ * - Step 2: Generate branches using existing users
+ * - Fixes "Current user cannot create users" error in web context
+ * - Fixes "Maaf, nama pengguna tersebut sudah ada!" error for extra branches
+ * - User creation now happens in correct WordPress context with proper permissions
+ * - CLEANUP: ALWAYS delete cabang branches before generation (via Model, triggers HOOK)
+ * - CLEANUP: Keeps pusat branches intact (created by CustomerDemoData)
+ * - CLEANUP: Ensures clean state for demo data on every run
+ * - PERFORMANCE: Increased timeout to 600s and memory to 256M
+ * - Added detailed progress logging for debugging timeout issues
+ *
+ * 1.0.16 - 2025-11-13 (FIX: SQL error in getRandomDivisionWithJurisdictions)
+ * - CRITICAL FIX: Fixed SQL column reference a.provinsi_code → a.province_id
+ * - Removed unnecessary JOIN to wi_provinces table (province_id already in agencies)
+ * - Line 1280: Changed INNER JOIN wi_provinces p ON a.provinsi_code = p.code
+ * - Now: SELECT a.province_id directly from app_agencies table
+ * - Fixes "Unknown column 'a.provinsi_code'" error during branch demo generation
+ * - Matches agency table schema (uses province_id, not provinsi_code)
+ *
  * 1.0.15 - 2025-11-09 (FIX: wp-app-core cache contract issue)
  * - CRITICAL FIX: Added wp_cache_flush() at start of validate()
  * - CRITICAL FIX: Replace Model->find() with direct wpdb query (2 locations)
@@ -102,6 +126,8 @@
 
 namespace WPCustomer\Database\Demo;
 
+use WPAppCore\Database\Demo\AbstractDemoData;  // TODO-2201: Shared from wp-app-core
+use WPAppCore\Database\Demo\WPUserGenerator;   // TODO-2201: Shared from wp-app-core
 use WPCustomer\Database\Demo\Data\BranchUsersData;
 use WPCustomer\Controllers\Branch\BranchController;
 use WPAgency\Database\Demo\Data\AgencyEmployeeUsersData;
@@ -119,11 +145,31 @@ class BranchDemoData extends AbstractDemoData {
     private $user_ids;
     protected $branch_users = [];
 
+    // Models initialized in initModels()
+    protected $customerModel;
+    protected $branchModel;
+
     public function __construct() {
         parent::__construct();
         $this->customer_ids = [];
         $this->user_ids = [];
         $this->branch_users = BranchUsersData::$data;
+    }
+
+    /**
+     * Initialize plugin-specific models
+     * Required by wp-app-core AbstractDemoData (TODO-2201)
+     *
+     * @return void
+     */
+    public function initModels(): void {
+        if (class_exists('WPCustomer\Models\Customer\CustomerModel')) {
+            $this->customerModel = new \WPCustomer\Models\Customer\CustomerModel();
+        }
+
+        if (class_exists('WPCustomer\Models\Branch\BranchModel')) {
+            $this->branchModel = new \WPCustomer\Models\Branch\BranchModel();
+        }
     }
 
     /**
@@ -237,7 +283,9 @@ class BranchDemoData extends AbstractDemoData {
     protected function generate(): void {
         // Increase max execution time for batch operations
         // Branch generation with user creation can take significant time
-        ini_set('max_execution_time', '300'); // 300 seconds = 5 minutes
+        set_time_limit(600); // 600 seconds = 10 minutes
+        ini_set('max_execution_time', '600');
+        ini_set('memory_limit', '256M');
 
         if (!$this->isDevelopmentMode()) {
             $this->debug('Cannot generate data - not in development mode');
@@ -247,33 +295,38 @@ class BranchDemoData extends AbstractDemoData {
         // Initialize WPUserGenerator for cleanup
         $userGenerator = new WPUserGenerator();
 
+        // ALWAYS cleanup existing cabang branches before generation
+        // This ensures clean state for demo data (pusat branches are kept)
+        error_log("[BranchDemoData] === Cleanup: Deleting existing cabang branches ===");
+
+        // Enable hard delete temporarily untuk demo cleanup
+        $original_settings = get_option('wp_customer_general_options', []);
+        $cleanup_settings = array_merge($original_settings, ['enable_hard_delete_branch' => true]);
+        update_option('wp_customer_general_options', $cleanup_settings);
+        error_log("[BranchDemoData] Enabled hard delete mode for cleanup");
+
+        // Delete cabang branches via Model (triggers HOOK for cascade cleanup)
+        // Only delete type='cabang', keep type='pusat' (created by CustomerDemoData)
+        $cabang_branches = $this->wpdb->get_results(
+            "SELECT id FROM {$this->wpdb->prefix}app_customer_branches WHERE type = 'cabang'",
+            ARRAY_A
+        );
+
+        $deleted_branches = 0;
+        foreach ($cabang_branches as $branch) {
+            if ($this->branchModel->delete($branch['id'])) {
+                $deleted_branches++;
+            }
+        }
+        error_log("[BranchDemoData] Deleted {$deleted_branches} cabang branches (HOOK handles employees)");
+
+        // Restore original settings
+        update_option('wp_customer_general_options', $original_settings);
+        error_log("[BranchDemoData] Restored original delete mode");
+
         // Clean up existing demo users if shouldClearData is enabled
         if ($this->shouldClearData()) {
             error_log("[BranchDemoData] === Cleanup mode enabled - Deleting existing demo users ===");
-
-            // Enable hard delete temporarily untuk demo cleanup
-            $original_settings = get_option('wp_customer_general_options', []);
-            $cleanup_settings = array_merge($original_settings, ['enable_hard_delete_branch' => true]);
-            update_option('wp_customer_general_options', $cleanup_settings);
-            error_log("[BranchDemoData] Enabled hard delete mode for cleanup");
-
-            // Delete cabang branches via Model (triggers HOOK for cascade cleanup)
-            $cabang_branches = $this->wpdb->get_results(
-                "SELECT id FROM {$this->wpdb->prefix}app_customer_branches WHERE type = 'cabang'",
-                ARRAY_A
-            );
-
-            $deleted_branches = 0;
-            foreach ($cabang_branches as $branch) {
-                if ($this->branchModel->delete($branch['id'])) {
-                    $deleted_branches++;
-                }
-            }
-            error_log("[BranchDemoData] Deleted {$deleted_branches} cabang branches (HOOK handles employees)");
-
-            // Restore original settings
-            update_option('wp_customer_general_options', $original_settings);
-            error_log("[BranchDemoData] Restored original delete mode");
 
             // Collect all branch admin user IDs from BranchUsersData
             $user_ids_to_delete = [];
@@ -329,8 +382,99 @@ class BranchDemoData extends AbstractDemoData {
 
         $generated_count = 0;
 
+        // Initialize WPUserGenerator untuk create users dengan static ID
+        $userGenerator = new WPUserGenerator();
+
         try {
-            // Get all active customers
+            // Step 1: Create all branch users first (like CustomerDemoData pattern)
+            $this->debug("=== Step 1: Creating branch users ===");
+            $user_count = 0;
+
+            foreach ($this->customer_ids as $customer_id) {
+                if (!isset($this->branch_users[$customer_id])) {
+                    continue;
+                }
+
+                // Create cabang users (cabang1 and cabang2)
+                foreach (['cabang1', 'cabang2'] as $cabang_key) {
+                    if (!isset($this->branch_users[$customer_id][$cabang_key])) {
+                        continue;
+                    }
+
+                    $user_data = $this->branch_users[$customer_id][$cabang_key];
+
+                    try {
+                        $this->debug("Creating user {$user_data['username']} (ID: {$user_data['id']})...");
+
+                        $user_id = $userGenerator->generateUser([
+                            'id' => $user_data['id'],
+                            'username' => $user_data['username'],
+                            'display_name' => $user_data['display_name'],
+                            'role' => 'customer'
+                        ]);
+
+                        if ($user_id) {
+                            // Add customer_branch_admin role
+                            $user = get_user_by('ID', $user_id);
+                            if ($user) {
+                                $role_exists = get_role('customer_branch_admin');
+                                if (!$role_exists) {
+                                    add_role('customer_branch_admin', __('Customer Branch Admin', 'wp-customer'), []);
+                                }
+                                $user->add_role('customer_branch_admin');
+                                $user_count++;
+                                $this->debug("✓ Created user '{$user_data['username']}' (ID: {$user_id})");
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        $this->debug("✗ Failed to create user '{$user_data['username']}': " . $e->getMessage());
+                        throw $e;
+                    }
+                }
+            }
+
+            $this->debug("=== Completed: Created {$user_count} branch users ===");
+
+            // Step 1b: Create extra branch users
+            $this->debug("=== Step 1b: Creating extra branch users ===");
+            $extra_users = BranchUsersData::$extra_branch_users;
+            $extra_user_count = 0;
+
+            foreach ($extra_users as $user_data) {
+                try {
+                    $this->debug("Creating extra user {$user_data['username']} (ID: {$user_data['id']})...");
+
+                    $user_id = $userGenerator->generateUser([
+                        'id' => $user_data['id'],
+                        'username' => $user_data['username'],
+                        'display_name' => $user_data['display_name'],
+                        'role' => 'customer'
+                    ]);
+
+                    if ($user_id) {
+                        // Add customer_branch_admin role
+                        $user = get_user_by('ID', $user_id);
+                        if ($user) {
+                            $role_exists = get_role('customer_branch_admin');
+                            if (!$role_exists) {
+                                add_role('customer_branch_admin', __('Customer Branch Admin', 'wp-customer'), []);
+                            }
+                            $user->add_role('customer_branch_admin');
+                            $extra_user_count++;
+                            $this->debug("✓ Created extra user '{$user_data['username']}' (ID: {$user_id})");
+                        }
+                    }
+                } catch (\Exception $e) {
+                    $this->debug("✗ Failed to create extra user '{$user_data['username']}': " . $e->getMessage());
+                    throw $e;
+                }
+            }
+
+            $this->debug("=== Completed: Created {$extra_user_count} extra branch users ===");
+
+            // Step 2: Generate branches (users already exist)
+            $this->debug("=== Step 2: Generating cabang branches ===");
+
             foreach ($this->customer_ids as $customer_id) {
                 // Direct query to avoid cache contract issue
                 $customer = $this->wpdb->get_row($this->wpdb->prepare(
@@ -362,10 +506,14 @@ class BranchDemoData extends AbstractDemoData {
                 if ($existing_cabang_count > 0) {
                     $this->debug("Cabang branches exist for customer {$customer_id}, skipping...");
                 } else {
+                    $this->debug("Processing customer {$customer_id}: {$customer->name}");
                     $this->generateCabangBranches($customer);
                     $generated_count++;
+                    $this->debug("✓ Completed cabang branches for customer {$customer_id}");
                 }
             }
+
+            $this->debug("=== Completed: Generated branches for {$generated_count} customers ===");
 
             // Generate extra branches for assign inspector
             $this->generateExtraBranches();
@@ -725,9 +873,6 @@ class BranchDemoData extends AbstractDemoData {
         $cabang_count = 2; // Selalu buat 2 cabang karena sudah ada 2 user cabang
         $used_provinces = [$customer->province_id];
 
-        // Initialize WPUserGenerator untuk create users dengan static ID
-        $userGenerator = new WPUserGenerator();
-
         for ($i = 0; $i < $cabang_count; $i++) {
             // Get cabang admin user data
             $cabang_key = 'cabang' . ($i + 1);
@@ -737,6 +882,7 @@ class BranchDemoData extends AbstractDemoData {
             }
 
             $user_data = $this->branch_users[$customer->id][$cabang_key];
+            $user_id = $user_data['id']; // User sudah dibuat di generate() method
 
             // Get random province that has agency (different from used provinces)
             $province_id = $this->getRandomProvinceWithAgencyExcept($customer->province_id);
@@ -749,31 +895,6 @@ class BranchDemoData extends AbstractDemoData {
             $regency_id = $this->getRandomRegencyId($province_id);
             $regency_name = $this->getRegencyName($regency_id);
             $location = $this->generateValidLocation();
-
-            // Step 1: Create user first using WPUserGenerator (static ID guarantee)
-            $user_create_data = [
-                'id' => $user_data['id'],
-                'username' => $user_data['username'],
-                'display_name' => $user_data['display_name'],
-                'role' => 'customer'  // Base role
-            ];
-
-            try {
-                $user_id = $userGenerator->generateUser($user_create_data);
-                error_log("[BranchDemoData] Created user '{$user_data['username']}' (ID: {$user_id}) for cabang branch");
-
-                // Add customer_branch_admin role (dual-role pattern)
-                $user = get_user_by('ID', $user_id);
-                if ($user) {
-                    $user->add_role('customer_branch_admin');
-                    error_log("[BranchDemoData] Added customer_branch_admin role to user ID {$user_id}");
-                }
-
-            } catch (\Exception $e) {
-                error_log("[BranchDemoData] Failed to create user '{$user_data['username']}' (ID: {$user_data['id']}): " . $e->getMessage());
-                $this->debug("Failed to create user for cabang branch: " . $e->getMessage());
-                throw $e;
-            }
 
             // Prepare branch data for runtime flow simulation
             $branch_data = [
@@ -935,8 +1056,9 @@ class BranchDemoData extends AbstractDemoData {
                 'regency_id' => $regency_id,
             ];
 
-            // Prepare admin data for runtime user creation
+            // Prepare admin data with existing user_id (user already created in Step 1b)
             $admin_data = [
+                'user_id' => $user_data['id'],  // Pass existing user_id
                 'username' => $user_data['username'],
                 'email' => $user_data['username'] . '@example.com',
                 'firstname' => $user_data['display_name'],
@@ -953,9 +1075,8 @@ class BranchDemoData extends AbstractDemoData {
             // 3. Call getAgencyAndDivisionIds() to set agency_id and division_id
             // 4. Skip auto-assign inspector (pass false to keep inspector_id NULL)
             // 5. Validate data
-            // 6. Create user with wp_insert_user() (role='customer')
-            // 7. Add role customer_branch_admin
-            // 8. Create branch via BranchModel::create()
+            // 6. Use existing user_id (user already created in Step 1b)
+            // 7. Create branch via BranchModel::create()
             try {
                 $branch_id = $this->createBranchViaRuntimeFlow(
                     $customer->id,
@@ -1252,10 +1373,9 @@ class BranchDemoData extends AbstractDemoData {
     private function getRandomDivisionWithJurisdictions(): ?array {
         // Get divisions that have jurisdictions
         $divisions = $this->wpdb->get_results(
-            "SELECT DISTINCT d.id, d.agency_id, p.id as province_id
+            "SELECT DISTINCT d.id, d.agency_id, a.province_id
              FROM {$this->wpdb->prefix}app_agency_divisions d
              INNER JOIN {$this->wpdb->prefix}app_agencies a ON d.agency_id = a.id
-             INNER JOIN {$this->wpdb->prefix}wi_provinces p ON a.provinsi_code = p.code
              INNER JOIN {$this->wpdb->prefix}app_agency_jurisdictions j ON d.id = j.division_id"
         );
 

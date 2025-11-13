@@ -102,4 +102,68 @@ class WP_Customer_Role_Manager {
         $roles = self::getRoles();
         return $roles[$role_slug] ?? null;
     }
+
+    /**
+     * Get user access type based on WordPress roles
+     * Returns the highest priority role for the user
+     *
+     * Priority order:
+     * 1. administrator -> 'admin'
+     * 2. customer_admin -> 'customer_admin'
+     * 3. customer_branch_admin -> 'customer_branch_admin'
+     * 4. customer_employee -> 'customer_employee'
+     * 5. none -> 'none'
+     *
+     * @param int $user_id User ID (0 for current user)
+     * @return string Access type
+     */
+    public static function getUserAccessType(int $user_id = 0): string {
+        if ($user_id === 0) {
+            $user_id = get_current_user_id();
+        }
+
+        $user = get_userdata($user_id);
+        if (!$user) {
+            return 'none';
+        }
+
+        // Check roles in priority order
+        if (in_array('administrator', $user->roles)) {
+            return 'admin';
+        }
+
+        if (in_array('customer_admin', $user->roles)) {
+            return 'customer_admin';
+        }
+
+        if (in_array('customer_branch_admin', $user->roles)) {
+            return 'customer_branch_admin';
+        }
+
+        if (in_array('customer_employee', $user->roles)) {
+            return 'customer_employee';
+        }
+
+        return 'none';
+    }
+
+    /**
+     * Check if user has specific role
+     *
+     * @param string $role_slug Role slug to check
+     * @param int $user_id User ID (0 for current user)
+     * @return bool True if user has the role
+     */
+    public static function userHasRole(string $role_slug, int $user_id = 0): bool {
+        if ($user_id === 0) {
+            $user_id = get_current_user_id();
+        }
+
+        $user = get_userdata($user_id);
+        if (!$user) {
+            return false;
+        }
+
+        return in_array($role_slug, $user->roles);
+    }
 }

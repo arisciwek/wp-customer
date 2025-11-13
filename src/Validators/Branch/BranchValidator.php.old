@@ -449,10 +449,6 @@ class BranchValidator extends AbstractValidator {
     /**
      * Get user relation with branch or customer
      *
-     * Uses WordPress roles (from class-role-manager.php) for access_type
-     * Uses CustomerEmployeesDB for ownership validation (customer_id, branch_id)
-     * AutoEntityCreator ensures all users in customers/branches tables exist in employees table
-     *
      * @param int $entity_id Branch ID or Customer ID (0 for any)
      * @param int $user_id User ID (if not provided, uses current user)
      * @return array Relation data
@@ -480,10 +476,6 @@ class BranchValidator extends AbstractValidator {
     /**
      * Build user relation from database
      *
-     * Simple approach:
-     * 1. Get access_type from WP_Customer_Role_Manager (single source of truth)
-     * 2. Get ownership (customer_id, branch_id) from app_customer_employees (AutoEntityCreator ensures all users exist here)
-     *
      * @param int $entity_id Branch ID or Customer ID (0 for any)
      * @param int $user_id User ID
      * @return array Relation data
@@ -491,40 +483,52 @@ class BranchValidator extends AbstractValidator {
     private function buildUserRelation(int $entity_id, int $user_id): array {
         global $wpdb;
 
-        // 1. Get access_type from WP_Customer_Role_Manager (delegated to role manager)
-        $access_type = \WP_Customer_Role_Manager::getUserAccessType($user_id);
+        $is_admin = current_user_can('edit_all_customer_branches');
 
-        // Determine boolean flags from access_type
-        $is_admin = $access_type === 'admin';
-        $is_customer_admin = $access_type === 'customer_admin';
-        $is_customer_branch_admin = $access_type === 'customer_branch_admin';
-        $is_customer_employee = $access_type === 'customer_employee';
-
-        // 2. Get ownership from app_customer_employees (AutoEntityCreator ensures all users exist here)
-        // Simple query - no JOIN needed!
-        $employee = $wpdb->get_row($wpdb->prepare("
-            SELECT customer_id, branch_id
-            FROM {$wpdb->prefix}app_customer_employees
-            WHERE user_id = %d
-            AND status = 'active'
-            AND (
-                %d = 0
-                OR customer_id = %d
-                OR branch_id = %d
-            )
-            LIMIT 1
-        ", $user_id, $entity_id, $entity_id, $entity_id));
-
-        // Build relation
-        return [
+        // Initialize relation
+        $relation = [
             'is_admin' => $is_admin,
-            'is_customer_admin' => $is_customer_admin,
-            'is_customer_branch_admin' => $is_customer_branch_admin,
-            'is_customer_employee' => $is_customer_employee,
-            'access_type' => $access_type,
-            'customer_id' => $employee ? (int) $employee->customer_id : 0,
-            'branch_id' => $employee ? (int) $employee->branch_id : 0
+            'is_customer_admin' => false,
+            'is_customer_branch_admin' => false,
+            'is_customer_employee' => false,
+            'access_type' => 'none'
         ];
+
+        if (!$is_admin) {
+            // Single query to check all relations
+            $query = $wpdb->prepare("
+                SELECT
+                    CASE WHEN c.user_id IS NOT NULL THEN 1 ELSE 0 END as is_customer_admin,
+                    CASE WHEN b.user_id IS NOT NULL THEN 1 ELSE 0 END as is_customer_branch_admin,
+                    CASE WHEN ce.user_id IS NOT NULL AND c.user_id IS NULL AND b.user_id IS NULL THEN 1 ELSE 0 END as is_customer_employee
+                FROM (SELECT %d as uid, %d as eid) u
+                LEFT JOIN {$wpdb->prefix}app_customers c ON c.user_id = u.uid AND (u.eid = 0 OR c.id = u.eid) AND c.status = 'active'
+                LEFT JOIN {$wpdb->prefix}app_customer_branches b ON b.user_id = u.uid AND (u.eid = 0 OR b.id = u.eid OR b.customer_id = u.eid) AND b.status = 'active'
+                LEFT JOIN {$wpdb->prefix}app_customer_employees ce ON ce.user_id = u.uid AND (u.eid = 0 OR ce.customer_id = u.eid) AND ce.status = 'active'
+                LIMIT 1
+            ", $user_id, $entity_id);
+
+            $result = $wpdb->get_row($query, ARRAY_A);
+
+            if ($result) {
+                $relation['is_customer_admin'] = (bool) $result['is_customer_admin'];
+                $relation['is_customer_branch_admin'] = (bool) $result['is_customer_branch_admin'];
+                $relation['is_customer_employee'] = (bool) $result['is_customer_employee'];
+            }
+        }
+
+        // Determine access type
+        if ($is_admin) {
+            $relation['access_type'] = 'admin';
+        } elseif ($relation['is_customer_admin']) {
+            $relation['access_type'] = 'customer_admin';
+        } elseif ($relation['is_customer_branch_admin']) {
+            $relation['access_type'] = 'customer_branch_admin';
+        } elseif ($relation['is_customer_employee']) {
+            $relation['access_type'] = 'customer_employee';
+        }
+
+        return $relation;
     }
 
     /**

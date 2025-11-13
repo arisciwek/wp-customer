@@ -79,10 +79,10 @@ class BranchDataTableModel extends DataTableModel {
         // No joins needed for branches
         $this->base_joins = [];
 
-        // Base WHERE for customer filtering
+        // Base WHERE for customer filtering - MUST be empty, filtering via filter_where hook only
         $this->base_where = [];
 
-        // Hook to add dynamic WHERE conditions
+        // Hook to add dynamic WHERE conditions (customer_id and status filters)
         add_filter($this->get_filter_hook('where'), [$this, 'filter_where'], 10, 3);
     }
 
@@ -199,6 +199,12 @@ class BranchDataTableModel extends DataTableModel {
      * @return array Modified WHERE conditions
      */
     public function filter_where($where_conditions, $request_data, $model): array {
+        // IMPORTANT: Only apply this filter if $model is instance of BranchDataTableModel
+        // This prevents conflicts with CompanyDataTableModel which uses same table
+        if (!($model instanceof self)) {
+            return $where_conditions;
+        }
+
         global $wpdb;
         $alias = $this->table_alias;
 

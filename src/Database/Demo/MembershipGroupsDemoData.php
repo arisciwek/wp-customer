@@ -19,6 +19,8 @@
 
 namespace WPCustomer\Database\Demo;
 
+use WPAppCore\Database\Demo\AbstractDemoData;  // TODO-2201: Shared from wp-app-core
+
 defined('ABSPATH') || exit;
 
 class MembershipGroupsDemoData extends AbstractDemoData {
@@ -27,10 +29,20 @@ class MembershipGroupsDemoData extends AbstractDemoData {
     // Default group IDs yang konsisten dengan data existing
     private const GROUP_IDS = [
         'staff' => 1,
-        'data' => 2, 
+        'data' => 2,
         'resources' => 3,
         'communication' => 4
     ];
+
+    /**
+     * Initialize plugin-specific models
+     * Required by wp-app-core AbstractDemoData (TODO-2201)
+     *
+     * @return void
+     */
+    public function initModels(): void {
+        // No models needed - uses wpdb directly
+    }
 
     protected function validate(): bool {
         try {

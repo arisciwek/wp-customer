@@ -39,7 +39,7 @@ class CompanyDataTableModel extends DataTableModel {
      * Table alias for JOINs
      * @var string
      */
-    protected $table_alias = 'comp';
+    protected $table_alias = 'cc';
 
     /**
      * Constructor
@@ -191,6 +191,12 @@ class CompanyDataTableModel extends DataTableModel {
      * @return array Modified WHERE conditions
      */
     public function filter_where($where_conditions, $request_data, $model): array {
+        // IMPORTANT: Only apply this filter if $model is instance of CompanyDataTableModel
+        // This prevents conflicts with BranchDataTableModel which uses same table
+        if (!($model instanceof self)) {
+            return $where_conditions;
+        }
+
         global $wpdb;
         $alias = $this->table_alias;
 

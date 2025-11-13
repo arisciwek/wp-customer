@@ -408,40 +408,40 @@ class CustomerDemoDataController {
             $type = sanitize_text_field($_POST['type'] ?? '');
 
             global $wpdb;
-            $exists = false;
+            $count = 0;
 
             switch ($type) {
                 case 'membership-groups':
-                    $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_membership_groups");
-                    $exists = $count > 0;
+                    $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_membership_feature_groups");
                     break;
 
                 case 'membership-features':
-                    $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_membership_features");
-                    $exists = $count > 0;
+                    $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_membership_features");
+                    break;
+
+                case 'membership-levels':
+                    $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_membership_levels");
                     break;
 
                 case 'customer':
-                    $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customers");
-                    $exists = $count > 0;
+                    $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customers");
                     break;
 
                 case 'branch':
-                    $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches");
-                    $exists = $count > 0;
+                    $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_branches");
                     break;
 
                 case 'memberships':
-                    $count = $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_memberships");
-                    $exists = $count > 0;
+                    $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM {$wpdb->prefix}app_customer_memberships");
                     break;
 
                 default:
-                    $exists = false;
+                    $count = 0;
             }
 
             wp_send_json_success([
-                'exists' => $exists,
+                'has_data' => $count > 0,
+                'count' => $count,
                 'type' => $type
             ]);
         } catch (\Exception $e) {

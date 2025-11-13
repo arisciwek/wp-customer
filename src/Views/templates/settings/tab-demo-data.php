@@ -163,7 +163,7 @@ if (!current_user_can('manage_options')) {
                 <p><?php _e('Generate employee data for branches.', 'wp-customer'); ?></p>
                 <p class="description" style="color: #646970; font-size: 12px;">
                     <strong><?php _e('Note:', 'wp-customer'); ?></strong>
-                    <?php _e('Requires branches to be generated first.', 'wp-customer'); ?>
+                    <?php _e('Requires customers and branches to be generated first.', 'wp-customer'); ?>
                 </p>
                 <div class="demo-data-card-footer">
                     <button type="button"
@@ -171,7 +171,7 @@ if (!current_user_can('manage_options')) {
                             data-action="customer_generate_employees"
                             data-nonce="<?php echo wp_create_nonce('customer_generate_employees'); ?>"
                             data-confirm="<?php esc_attr_e('Generate employee demo data?', 'wp-customer'); ?>"
-                            data-requires="branch"
+                            data-requires="customer,branch"
                             data-check-action="customer_check_demo_data"
                             data-check-nonce="<?php echo wp_create_nonce('customer_check_demo_data'); ?>">
                         <?php _e('Generate Employees', 'wp-customer'); ?>
@@ -185,7 +185,7 @@ if (!current_user_can('manage_options')) {
                 <p><?php _e('Generate membership data for existing branches and customers.', 'wp-customer'); ?></p>
                 <p class="description" style="color: #646970; font-size: 12px;">
                     <strong><?php _e('Note:', 'wp-customer'); ?></strong>
-                    <?php _e('Requires branches to be generated first.', 'wp-customer'); ?>
+                    <?php _e('Requires membership groups, features, levels, and branches to be generated first.', 'wp-customer'); ?>
                 </p>
                 <div class="demo-data-card-footer">
                     <button type="button"
@@ -193,7 +193,7 @@ if (!current_user_can('manage_options')) {
                             data-action="customer_generate_memberships"
                             data-nonce="<?php echo wp_create_nonce('customer_generate_memberships'); ?>"
                             data-confirm="<?php esc_attr_e('Generate customer memberships?', 'wp-customer'); ?>"
-                            data-requires="branch"
+                            data-requires="membership-levels"
                             data-check-action="customer_check_demo_data"
                             data-check-nonce="<?php echo wp_create_nonce('customer_check_demo_data'); ?>">
                         <?php _e('Generate Customer Memberships', 'wp-customer'); ?>

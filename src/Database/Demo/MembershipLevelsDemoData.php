@@ -39,16 +39,29 @@
 
 namespace WPCustomer\Database\Demo;
 
+use WPAppCore\Database\Demo\AbstractDemoData;  // TODO-2201: Shared from wp-app-core
+
 use WPCustomer\Models\Membership\MembershipLevelModel;
 
 class MembershipLevelsDemoData extends AbstractDemoData {
     use CustomerDemoDataHelperTrait;
 
     private $membershipLevelModel;
-    
+
     public function __construct() {
         parent::__construct();
-        $this->membershipLevelModel = new MembershipLevelModel();
+    }
+
+    /**
+     * Initialize plugin-specific models
+     * Required by wp-app-core AbstractDemoData (TODO-2201)
+     *
+     * @return void
+     */
+    public function initModels(): void {
+        if (class_exists('WPCustomer\Models\Membership\MembershipLevelModel')) {
+            $this->membershipLevelModel = new MembershipLevelModel();
+        }
     }
 
     /**
@@ -592,19 +605,12 @@ class MembershipLevelsDemoData extends AbstractDemoData {
         }
     }
 
-    protected function generate(): bool {
-        try {
-            if ($this->shouldClearData('membership_levels')) {
-                $this->clearExistingData('membership_levels');
-            }
-            
-            $this->insertDefaultLevels();
-            $this->debug('Default membership levels inserted');
-
-            return true;
-        } catch (\Exception $e) {
-            $this->debug('Generation failed: ' . $e->getMessage());
-            return false;
+    protected function generate(): void {
+        if ($this->shouldClearData('membership_levels')) {
+            $this->clearExistingData('membership_levels');
         }
+
+        $this->insertDefaultLevels();
+        $this->debug('Default membership levels inserted');
     }
 }
