@@ -4,7 +4,13 @@
  * Path /wp-customer/src/Views/templates/settings/tab-membership-features.php
  * @package     WP_Customer
  * @subpackage  Views/Settings
- * @version     1.0.11
+ * @version     1.0.12
+ *
+ * Changelog:
+ * 1.0.12 - 2025-01-13 (Task-2204)
+ * - Changed to use data from MembershipFeaturesController & MembershipGroupsController
+ * - Removed direct database query
+ * - Data now passed from CustomerSettingsPageController::prepareViewData()
  */
 
 if (!defined('ABSPATH')) {
@@ -15,30 +21,40 @@ if (!defined('ABSPATH')) {
 $field_types = ['checkbox', 'number', 'text'];
 $field_subtypes = ['integer', 'float', 'text'];
 
-// Get features from database untuk ditampilkan di tabel
-global $wpdb;
-$features = $wpdb->get_results("
-    SELECT * FROM {$wpdb->prefix}app_customer_membership_features 
-    WHERE status = 'active'
-    ORDER BY sort_order ASC
-");
+// Data provided by CustomerSettingsPageController::prepareViewData()
+// - $grouped_features : array dari MembershipFeaturesController::getAllFeatures()
+// - $field_groups     : array dari MembershipGroupsController::getAllGroups()
 
-// Kelompokkan features berdasarkan group
-$grouped_features = [];
-foreach ($features as $feature) {
-    $metadata = json_decode($feature->metadata);
-    $group = $metadata->group;
-    if (!isset($grouped_features[$group])) {
-        $grouped_features[$group] = [];
-    }
-    $grouped_features[$group][] = $feature;
-}
-
-// Cek apakah ada data yang dikirim
+// Cek apakah ada data yang dikirim dari controller
 if (!isset($grouped_features) || !isset($field_groups)) {
-    _e('Data tidak tersedia', 'wp-customer');
+    echo '<div class="notice notice-error"><p>';
+    _e('Data tidak tersedia. Pastikan MembershipFeaturesController dan MembershipGroupsController berfungsi dengan baik.', 'wp-customer');
+    echo '</p></div>';
     return;
 }
+
+// Hide default Save/Reset buttons for this AJAX-based tab
+add_filter('wpc_settings_footer_content', function($footer_html, $current_tab) {
+    if ($current_tab === 'membership-features') {
+        // Return custom footer for membership-features tab
+        ob_start();
+        ?>
+        <p class="submit" style="margin: 0;">
+            <button type="button"
+                    id="reset-membership-features-demo"
+                    class="button button-secondary"
+                    data-nonce="<?php echo wp_create_nonce('customer_generate_membership_features'); ?>">
+                <?php _e('Reset ke Demo Data', 'wp-customer'); ?>
+            </button>
+            <span class="description" style="margin-left: 10px;">
+                <?php _e('Hapus semua features dan generate ulang demo data', 'wp-customer'); ?>
+            </span>
+        </p>
+        <?php
+        return ob_get_clean();
+    }
+    return $footer_html;
+}, 10, 2);
 
 ?>
 <div class="wrap">
@@ -64,41 +80,45 @@ if (!isset($grouped_features) || !isset($field_groups)) {
                 </tr>
             </thead>
             <tbody>
-                <?php 
+                <?php
                 if (!empty($grouped_features)):
-                    foreach ($grouped_features as $group => $features): 
-                        foreach ($features as $feature):
-                            $metadata = json_decode($feature->metadata);
+                    // $grouped_features structure from controller:
+                    // [group_id => ['id' => ..., 'name' => ..., 'slug' => ..., 'features' => [...]]]
+                    foreach ($grouped_features as $group_id => $group_data):
+                        if (!empty($group_data['features'])):
+                            foreach ($group_data['features'] as $feature):
+                                $metadata = $feature['metadata']; // Already decoded by controller
                 ?>
                     <tr>
-                        <td><?php echo esc_html($group); ?></td>
-                        <td><?php echo esc_html($feature->field_name); ?></td>
-                        <td><?php echo esc_html($metadata->label); ?></td>
+                        <td><?php echo esc_html($group_data['name']); ?></td>
+                        <td><?php echo esc_html($feature['field_name']); ?></td>
+                        <td><?php echo esc_html($metadata['label'] ?? '-'); ?></td>
                         <td>
-                            <?php 
-                            echo esc_html($metadata->type);
-                            if (isset($metadata->subtype)) {
-                                echo ' (' . esc_html($metadata->subtype) . ')';
+                            <?php
+                            echo esc_html($metadata['type'] ?? '-');
+                            if (isset($metadata['subtype'])) {
+                                echo ' (' . esc_html($metadata['subtype']) . ')';
                             }
                             ?>
                         </td>
-                        <td><?php echo $metadata->is_required ? '✓' : '-'; ?></td>
-                        <td><?php echo esc_html($feature->sort_order); ?></td>
+                        <td><?php echo !empty($metadata['is_required']) ? '✓' : '-'; ?></td>
+                        <td><?php echo esc_html($feature['sort_order']); ?></td>
                         <td>
-                            <button type="button" 
-                                    class="button edit-feature" 
-                                    data-id="<?php echo esc_attr($feature->id); ?>">
+                            <button type="button"
+                                    class="button edit-feature"
+                                    data-id="<?php echo esc_attr($feature['id']); ?>">
                                 <span class="dashicons dashicons-edit"></span>
                             </button>
-                            <button type="button" 
-                                    class="button delete-feature" 
-                                    data-id="<?php echo esc_attr($feature->id); ?>">
+                            <button type="button"
+                                    class="button delete-feature"
+                                    data-id="<?php echo esc_attr($feature['id']); ?>">
                                 <span class="dashicons dashicons-trash"></span>
                             </button>
                         </td>
                     </tr>
-                <?php 
-                        endforeach;
+                <?php
+                            endforeach;
+                        endif;
                     endforeach;
                 else:
                 ?>
@@ -113,117 +133,6 @@ if (!isset($grouped_features) || !isset($field_groups)) {
 
 
 <!-- Modal Form for Add/Edit Feature -->
-
-<!-- Modal Form -->
-<div id="membership-feature-modal" class="wp-customer-modal" style="display:none;">
-    <div class="modal-content">
-        <form id="membership-feature-form">
-            <div class="modal-header">
-                <div class="modal-title">
-                    <span class="modal-icon"></span>
-                    <h3 id="modal-title"></h3>
-                </div>
-                <button type="button" class="modal-close" aria-label="Close modal">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-
-            <div class="modal-body">
-                <input type="hidden" name="id" id="feature-id">
-                
-                <div class="form-row">
-                    <label for="field-group"><?php _e('Feature Group', 'wp-customer'); ?></label>
-                    <select id="field-group" name="field_group" required>
-                        <?php foreach ($field_groups as $group): ?>
-                            <option value="<?php echo esc_attr($group); ?>">
-                                <?php echo esc_html(ucfirst($group)); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-
-                <div class="form-row">
-                    <label for="field-name"><?php _e('Field Name', 'wp-customer'); ?></label>
-                    <input type="text" id="field-name" name="field_name" required 
-                           pattern="[a-z_]+" title="Only lowercase letters and underscores allowed">
-                    <p class="description">
-                        <?php _e('Unique identifier (e.g., can_add_staff, max_departments)', 'wp-customer'); ?>
-                    </p>
-                </div>
-
-                <div class="form-row">
-                    <label for="field-label"><?php _e('Field Label', 'wp-customer'); ?></label>
-                    <input type="text" id="field-label" name="field_label" required>
-                    <p class="description">
-                        <?php _e('Display label (e.g., "Can Add Staff", "Maximum Departments")', 'wp-customer'); ?>
-                    </p>
-                </div>
-
-                <div class="form-row">
-                    <label for="field-type"><?php _e('Field Type', 'wp-customer'); ?></label>
-                    <select id="field-type" name="field_type" required>
-                        <?php foreach ($field_types as $type): ?>
-                            <option value="<?php echo esc_attr($type); ?>">
-                                <?php echo esc_html(ucfirst($type)); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div class="form-row field-subtype-row" style="display:none;">
-                    <label for="field-subtype"><?php _e('Field Subtype', 'wp-customer'); ?></label>
-                    <select id="field-subtype" name="field_subtype">
-                        <option value=""><?php _e('None', 'wp-customer'); ?></option>
-                        <?php foreach ($field_subtypes as $subtype): ?>
-                            <option value="<?php echo esc_attr($subtype); ?>">
-                                <?php echo esc_html(ucfirst($subtype)); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div class="form-row">
-                    <label>
-                        <input type="checkbox" name="is_required" value="1">
-                        <?php _e('Required Field', 'wp-customer'); ?>
-                    </label>
-                </div>
-
-                <div class="form-row">
-                    <label for="css-class"><?php _e('CSS Class', 'wp-customer'); ?></label>
-                    <input type="text" id="css-class" name="css_class">
-                </div>
-
-                <div class="form-row">
-                    <label for="css-id"><?php _e('CSS ID', 'wp-customer'); ?></label>
-                    <input type="text" id="css-id" name="css_id">
-                </div>
-
-                <div class="form-row">
-                    <label for="sort-order"><?php _e('Sort Order', 'wp-customer'); ?></label>
-                    <input type="number" id="sort-order" name="sort_order" min="0" value="0">
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <div class="modal-buttons">
-                    <button type="submit" class="button button-primary">
-                        <?php _e('Save Feature', 'wp-customer'); ?>
-                    </button>
-                    <button type="button" class="button modal-close">
-                        <?php _e('Cancel', 'wp-customer'); ?>
-                    </button>
-                </div>
-            </div>
-        </form>
-    </div>
-</div>
-
-
-
-
-<!-- Modal Form -->
 <div id="membership-feature-modal" class="wp-customer-modal" style="display:none;">
     <div class="modal-content">
         <form id="membership-feature-form">
@@ -246,9 +155,13 @@ if (!isset($grouped_features) || !isset($field_groups)) {
                         <?php _e('Grup Fitur', 'wp-customer'); ?>
                     </label>
                     <select id="field-group" name="field_group" required>
-                        <?php foreach ($field_groups as $group): ?>
-                            <option value="<?php echo esc_attr($group); ?>">
-                                <?php echo esc_html(ucfirst($group)); ?>
+                        <?php
+                        // $field_groups structure from controller:
+                        // [['id' => ..., 'name' => ..., 'slug' => ..., ...], ...]
+                        foreach ($field_groups as $group):
+                        ?>
+                            <option value="<?php echo esc_attr($group['id']); ?>">
+                                <?php echo esc_html($group['name']); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>

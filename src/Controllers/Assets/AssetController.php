@@ -351,7 +351,7 @@ class AssetController {
                 wp_enqueue_style(
                     'wp-customer-general-tab',
                     WP_CUSTOMER_URL . 'assets/css/settings/general-tab-style.css',
-                    ['wp-customer-settings'],
+                    ['wp-customer-settings-style'],  // Fixed: correct handle
                     $this->version
                 );
                 break;
@@ -360,7 +360,7 @@ class AssetController {
                 wp_enqueue_style(
                     'wp-customer-membership-levels-tab',
                     WP_CUSTOMER_URL . 'assets/css/settings/customer-membership-levels-tab-style.css',
-                    ['wp-customer-settings'],
+                    ['wp-customer-settings-style'],  // Fixed: correct handle
                     $this->version
                 );
                 break;
@@ -369,7 +369,7 @@ class AssetController {
                 wp_enqueue_style(
                     'wp-customer-membership-features-tab',
                     WP_CUSTOMER_URL . 'assets/css/settings/membership-features-tab-style.css',
-                    ['wp-customer-settings'],
+                    ['wp-customer-settings-style'],  // Fixed: correct handle
                     $this->version
                 );
                 break;
@@ -397,7 +397,7 @@ class AssetController {
                 wp_enqueue_style(
                     'wp-customer-invoice-payment-tab',
                     WP_CUSTOMER_URL . 'assets/css/settings/invoice-payment-style.css',
-                    ['wp-customer-settings'],
+                    ['wp-customer-settings-style'],  // Fixed: correct handle
                     $this->version
                 );
                 break;
@@ -428,7 +428,7 @@ class AssetController {
                 wp_enqueue_script(
                     'wp-customer-membership-features-tab',
                     WP_CUSTOMER_URL . 'assets/js/settings/customer-membership-features-tab-script.js',
-                    ['jquery', 'wp-customer-settings'],
+                    ['jquery', 'wp-customer-toast'],  // Fixed: removed non-existent 'wp-customer-settings' dependency
                     $this->version,
                     true
                 );

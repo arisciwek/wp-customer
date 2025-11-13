@@ -3,9 +3,9 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS/Settings
- * @version     1.0.0
+ * @version     1.1.0
  * @author      arisciwek
- * 
+ *
  * Path: /wp-customer/assets/js/settings/customer-membership-features-tab-script.js
  *
  * Description: Menangani interaksi dan fungsionalitas untuk tab Membership Features
@@ -18,11 +18,23 @@
  *
  * Dependencies:
  * - jQuery
- * - jQuery Validate
- * - CustomerToast
- * - wp-customer-settings
- * 
+ * - CustomerToast (for notifications)
+ * - wpCustomerSettings (localized data)
+ *
+ * AJAX Actions (registered in MembershipFeaturesController):
+ * - create_membership_feature (CREATE)
+ * - get_membership_feature (READ)
+ * - update_membership_feature (UPDATE)
+ * - delete_membership_feature (DELETE)
+ *
  * Changelog:
+ * 1.1.0 - 2025-01-13 (Task-2204)
+ * - Updated: Use correct AJAX actions from MembershipFeaturesController
+ * - Changed: 'save_membership_feature' → 'create_membership_feature' / 'update_membership_feature'
+ * - Fixed: populateForm() to handle data from new controller structure
+ * - Fixed: handleSubmit() to send data in correct format (metadata as JSON)
+ * - Compatible with AbstractCrudController pattern
+ *
  * 1.0.0 - 2024-02-10
  * - Initial creation
  * - Added CRUD operations for membership features
@@ -34,6 +46,9 @@
     'use strict';
 
     const MembershipFeaturesTab = {
+        // Store original metadata when editing
+        originalMetadata: null,
+
         init() {
             this.bindEvents();
             this.initializeForm();
@@ -55,6 +70,11 @@
             $('.delete-feature').on('click', (e) => {
                 const featureId = $(e.currentTarget).data('id');
                 this.handleDelete(featureId);
+            });
+
+            // Reset to demo data
+            $('#reset-membership-features-demo').on('click', (e) => {
+                this.handleResetToDemo(e);
             });
 
             // Close modal (untuk tombol X di pojok)
@@ -115,6 +135,8 @@
                 this.loadFeatureData(featureId);
                 $('.modal-title').text(wpCustomerSettings.i18n.editFeature);
             } else {
+                // Reset for new feature
+                this.originalMetadata = null;
                 $('#membership-feature-form')[0].reset();
                 $('#feature-id').val('');
                 $('.modal-title').text(wpCustomerSettings.i18n.addFeature);
@@ -145,12 +167,15 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        this.populateForm(response.data);
+                        // Response structure: {success: true, data: {message: '...', data: {feature}}}
+                        const featureData = response.data.data || response.data;
+                        this.populateForm(featureData);
                     } else {
                         CustomerToast.error(response.data.message);
                     }
                 },
-                error: () => {
+                error: (xhr, status, error) => {
+                    console.error('Load failed:', error);
                     CustomerToast.error(wpCustomerSettings.i18n.loadError);
                 },
                 complete: () => {
@@ -160,17 +185,34 @@
         },
 
         populateForm(data) {
-            const metadata = JSON.parse(data.metadata);
-            
+            // Data dari controller sudah dalam format object
+            const feature = data;
+
+            // Parse metadata safely
+            let metadata = {};
+            try {
+                if (typeof feature.metadata === 'string') {
+                    metadata = JSON.parse(feature.metadata);
+                } else if (feature.metadata && typeof feature.metadata === 'object') {
+                    metadata = feature.metadata;
+                }
+            } catch (e) {
+                console.error('Failed to parse metadata:', e);
+                metadata = {};
+            }
+
+            // Store original metadata for merging during save
+            this.originalMetadata = metadata;
+
             // Populate hidden ID
-            $('#feature-id').val(data.id);
-            
+            $('#feature-id').val(feature.id || '');
+
             // Populate basic fields
-            $('#field-name').val(data.field_name);
-            $('#field-group').val(metadata.group);
-            $('#field-label').val(metadata.label);
-            $('#field-type').val(metadata.type);
-            
+            $('#field-name').val(feature.field_name || '');
+            $('#field-group').val(feature.group_id || '');
+            $('#field-label').val(metadata.label || '');
+            $('#field-type').val(metadata.type || 'checkbox');
+
             // Populate field subtype if exists
             if (metadata.type === 'number') {
                 $('.field-subtype-row').show();
@@ -179,43 +221,112 @@
                 $('.field-subtype-row').hide();
                 $('#field-subtype').val('');
             }
-            
+
             // Populate required checkbox
-            $('input[name="is_required"]').prop('checked', metadata.is_required);
-            
+            $('input[name="is_required"]').prop('checked', metadata.is_required || false);
+
             // Populate UI settings
             if (metadata.ui_settings) {
                 $('#css-class').val(metadata.ui_settings.css_class || '');
                 $('#css-id').val(metadata.ui_settings.css_id || '');
+            } else {
+                $('#css-class').val('');
+                $('#css-id').val('');
             }
-            
+
             // Populate sort order
-            $('#sort-order').val(data.sort_order);
+            $('#sort-order').val(feature.sort_order || 0);
         },
 
         handleSubmit(e) {
-            const formData = new FormData(e.target);
-            formData.append('action', 'save_membership_feature');
-            formData.append('nonce', wpCustomerSettings.nonce);
+            const featureId = $('#feature-id').val();
+            const isEdit = featureId && featureId !== '';
+
+            // Determine action based on create or update
+            const action = isEdit ? 'update_membership_feature' : 'create_membership_feature';
+
+            // Build complete metadata
+            const fieldName = $('#field-name').val();
+            const fieldType = $('#field-type').val();
+
+            // Start with original metadata (if editing) or create new
+            const metadata = this.originalMetadata ? {...this.originalMetadata} : {};
+
+            // Update with form values
+            metadata.type = fieldType;
+            metadata.field = fieldName;
+            metadata.label = $('#field-label').val();
+            metadata.is_required = $('input[name="is_required"]').is(':checked');
+
+            // Preserve or set description
+            if (!metadata.description) {
+                metadata.description = $('#field-label').val() + ' feature';
+            }
+
+            // Update ui_settings
+            if (!metadata.ui_settings) {
+                metadata.ui_settings = {};
+            }
+            metadata.ui_settings.css_class = $('#css-class').val() || metadata.ui_settings.css_class || 'feature-' + fieldType;
+            metadata.ui_settings.css_id = $('#css-id').val() || metadata.ui_settings.css_id || '';
+
+            // Set default_value if not exists
+            if (typeof metadata.default_value === 'undefined') {
+                metadata.default_value = fieldType === 'checkbox' ? false : (fieldType === 'number' ? -1 : '');
+            }
+
+            // Add subtype for number fields
+            if (fieldType === 'number') {
+                const subtype = $('#field-subtype').val();
+                if (subtype) {
+                    metadata.subtype = subtype;
+                }
+                // Add number field settings
+                if (!metadata.ui_settings.min) metadata.ui_settings.min = -1;
+                if (!metadata.ui_settings.max) metadata.ui_settings.max = 1000;
+                if (!metadata.ui_settings.step) metadata.ui_settings.step = 1;
+            } else {
+                // Remove subtype if not number
+                delete metadata.subtype;
+            }
+
+            // Build form data
+            const formData = {
+                action: action,
+                nonce: wpCustomerSettings.nonce,
+                field_name: fieldName,
+                group_id: $('#field-group').val(),
+                sort_order: $('#sort-order').val() || 0,
+                status: 'active',
+                metadata: JSON.stringify(metadata),
+                settings: JSON.stringify({})
+            };
+
+            // Add ID if editing
+            if (isEdit) {
+                formData.id = featureId;
+            }
 
             $.ajax({
                 url: wpCustomerSettings.ajaxUrl,
                 type: 'POST',
                 data: formData,
-                processData: false,
-                contentType: false,
                 beforeSend: () => {
                     this.showLoading();
                 },
                 success: (response) => {
                     if (response.success) {
                         CustomerToast.success(response.data.message);
-                        window.location.reload();
+                        this.closeModal();
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
                     } else {
-                        CustomerToast.error(response.data.message);
+                        CustomerToast.error(response.data.message || wpCustomerSettings.i18n.saveError);
                     }
                 },
-                error: () => {
+                error: (xhr, status, error) => {
+                    console.error('Save failed:', error);
                     CustomerToast.error(wpCustomerSettings.i18n.saveError);
                 },
                 complete: () => {
@@ -247,6 +358,51 @@
                     }
                 });
             }
+        },
+
+        handleResetToDemo(e) {
+            const confirmMsg = 'Apakah Anda yakin ingin reset ke demo data?\n\n' +
+                              'Ini akan:\n' +
+                              '1. Menghapus semua membership features yang ada\n' +
+                              '2. Generate ulang demo data membership features\n\n' +
+                              'Tindakan ini TIDAK DAPAT dibatalkan!';
+
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            const $btn = $(e.currentTarget);
+            const nonce = $btn.data('nonce');
+
+            $.ajax({
+                url: wpCustomerSettings.ajaxUrl,
+                type: 'POST',
+                data: {
+                    action: 'customer_generate_membership_features',
+                    nonce: nonce
+                },
+                beforeSend: () => {
+                    $btn.prop('disabled', true);
+                    $btn.text('Resetting...');
+                },
+                success: (response) => {
+                    if (response.success) {
+                        CustomerToast.success(response.data.message || 'Demo data berhasil di-generate!');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        CustomerToast.error(response.data.message || 'Gagal reset demo data');
+                        $btn.prop('disabled', false);
+                        $btn.text('Reset ke Demo Data');
+                    }
+                },
+                error: () => {
+                    CustomerToast.error('Terjadi kesalahan saat reset demo data');
+                    $btn.prop('disabled', false);
+                    $btn.text('Reset ke Demo Data');
+                }
+            });
         },
 
         showLoading() {

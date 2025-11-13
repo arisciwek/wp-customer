@@ -24,7 +24,7 @@
 
 namespace WPCustomer\Controllers;
 
-use WPCustomer\Controllers\Membership\MembershipFeaturesController;
+use WPCustomer\Controllers\Settings\MembershipFeaturesController;
 use WPCustomer\Models\Membership\MembershipLevelModel;
 use WPCustomer\Models\Membership\MembershipFeatureModel;
 use WPCustomer\Cache\CustomerCacheManager;

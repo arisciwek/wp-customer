@@ -43,6 +43,8 @@ class CustomerSettingsPageController {
             'invoice-payment' => new InvoicePaymentSettingsController(),
             'permissions' => new CustomerPermissionsController(),
             'demo-data' => new CustomerDemoDataController(),
+            'membership-features' => new \WPCustomer\Controllers\Settings\MembershipFeaturesController(),  // Added: Register AJAX hooks
+            'membership-groups' => new \WPCustomer\Controllers\Settings\MembershipGroupsController(),      // Added: Register AJAX hooks
             // 'membership' => new CustomerMembershipSettingsController(), // TODO: Create this controller
             // Add more tabs here as needed
         ];
@@ -55,7 +57,10 @@ class CustomerSettingsPageController {
         // Initialize all specialized controllers FIRST
         // This registers their hooks (wpapp_save_*, wpapp_reset_*)
         foreach ($this->controllers as $tab => $controller) {
-            $controller->init();
+            // Only call init() if method exists (some controllers like CRUD controllers don't need it)
+            if (method_exists($controller, 'init')) {
+                $controller->init();
+            }
         }
 
         // CRITICAL: Central dispatcher - handle save/reset BEFORE WordPress processes form
@@ -291,6 +296,14 @@ class CustomerSettingsPageController {
                 if (isset($this->controllers['membership'])) {
                     $controller = $this->controllers['membership'];
                     $data['settings'] = $controller->getModelInstance()->getSettings();
+                }
+                break;
+
+            case 'membership-features':
+                // Use already-instantiated controllers (AJAX hooks registered in __construct)
+                if (isset($this->controllers['membership-features']) && isset($this->controllers['membership-groups'])) {
+                    $data['grouped_features'] = $this->controllers['membership-features']->getAllFeatures();
+                    $data['field_groups'] = $this->controllers['membership-groups']->getAllGroups();
                 }
                 break;
 
