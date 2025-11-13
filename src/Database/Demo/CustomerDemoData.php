@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Demo
- * @version     1.0.17
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Demo/Data/CustomerDemoData.php
@@ -15,8 +15,18 @@
  *              - Data wilayah dari Provinces/Regencies
  *              - Validasi dan tracking data unik
  *              - Static ID enforcement via wp_customer_customer_before_insert hook (TODO-3098)
+ *              - REFACTORED: Uses shared AbstractDemoData from wp-app-core (TODO-2201)
  *
  * Changelog:
+ * 1.1.0 - 2025-01-13 (TODO-2201: Abstract Demo Data Pattern)
+ * - BREAKING: Now extends WPAppCore\Database\Demo\AbstractDemoData (shared)
+ * - BREAKING: Uses WPAppCore\Database\Demo\WPUserGenerator (shared)
+ * - Added: initModels() method to initialize customerModel and cache
+ * - Code reduction: Eliminates duplicate AbstractDemoData (120 lines)
+ * - Code reduction: Eliminates duplicate WPUserGenerator (435 lines)
+ * - Pattern: Child plugin implements initModels(), validate(), generate()
+ * - Compatible with wp-app-core v2.0.1+ AbstractDemoData
+ *
  * 1.0.16 - 2025-11-09 (FIX: Hook name mismatch)
  * - CRITICAL FIX: Updated hook name from 'wp_customer_before_insert' to 'wp_customer_customer_before_insert'
  * - Reason: AbstractCrudModel uses pattern "{plugin}_{entity}_before_insert"
@@ -54,9 +64,13 @@
 
 namespace WPCustomer\Database\Demo;
 
+use WPAppCore\Database\Demo\AbstractDemoData;  // TODO-2201: Shared from wp-app-core
+use WPAppCore\Database\Demo\WPUserGenerator;   // TODO-2201: Shared from wp-app-core
 use WPCustomer\Database\Demo\Data\CustomerUsersData;
 use WPCustomer\Database\Demo\Data\BranchUsersData;
 use WPCustomer\Validators\CustomerValidator;
+use WPCustomer\Models\Customer\CustomerModel;
+use WPCustomer\Cache\CustomerCacheManager;
 
 defined('ABSPATH') || exit;
 
@@ -71,6 +85,10 @@ class CustomerDemoData extends AbstractDemoData {
     public $used_nib = [];
     protected $customer_users = [];
     private $customerValidator;
+
+    // TODO-2201: Properties for wp-app-core AbstractDemoData pattern
+    protected $customerModel;
+    protected $cache;
 
     // Data statis customer
     private static $customers = [
@@ -94,6 +112,20 @@ class CustomerDemoData extends AbstractDemoData {
         parent::__construct();
         $this->customer_users = CustomerUsersData::$data;
         $this->customerValidator = new CustomerValidator();
+    }
+
+    /**
+     * Initialize plugin-specific models and cache managers
+     * Required by wp-app-core AbstractDemoData (TODO-2201)
+     *
+     * @return void
+     */
+    public function initModels(): void {
+        $this->cache = new CustomerCacheManager();
+
+        if (class_exists('WPCustomer\Models\Customer\CustomerModel')) {
+            $this->customerModel = new CustomerModel();
+        }
     }
 
     /**

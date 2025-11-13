@@ -4,23 +4,31 @@
  *
  * @package     WP_Customer
  * @subpackage  Database/Demo
- * @version     1.0.11
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Database/Demo/MembershipFeaturesDemoData.php
- * 
+ *
  * Description: Generate demo data untuk membership features dan groups.
  *              Includes:
  *              - Setup default feature groups
  *              - Setup default features dengan metadata
  *              - Relasi antara feature dan groups
- *              
+ *              - REFACTORED: Uses shared AbstractDemoData from wp-app-core (TODO-2201)
+ *
  * Dependencies:
- * - AbstractDemoData base class
+ * - WPAppCore\Database\Demo\AbstractDemoData (shared)
  * - CustomerDemoDataHelperTrait
  * - MembershipFeaturesDB untuk definisi tabel
- * 
+ *
  * Changelog:
+ * 1.1.0 - 2025-01-13 (TODO-2201: Abstract Demo Data Pattern)
+ * - BREAKING: Now extends WPAppCore\Database\Demo\AbstractDemoData (shared)
+ * - Added: initModels() method (empty - uses wpdb directly)
+ * - Code reduction: Eliminates duplicate AbstractDemoData dependency
+ * - Pattern: Child plugin implements initModels(), validate(), generate()
+ * - Compatible with wp-app-core v2.0.1+ AbstractDemoData
+ *
  * 2.1.0 - 2025-02-14
  * - Added feature groups data
  * - Updated feature structure with group_id
@@ -37,10 +45,22 @@
 
 namespace WPCustomer\Database\Demo;
 
+use WPAppCore\Database\Demo\AbstractDemoData;  // TODO-2201: Shared from wp-app-core
+
 defined('ABSPATH') || exit;
 
 class MembershipFeaturesDemoData extends AbstractDemoData {
     use CustomerDemoDataHelperTrait;
+
+    /**
+     * Initialize plugin-specific models
+     * Required by wp-app-core AbstractDemoData (TODO-2201)
+     *
+     * @return void
+     */
+    public function initModels(): void {
+        // No models needed - uses wpdb directly
+    }
 
     protected function validate(): bool {
         try {

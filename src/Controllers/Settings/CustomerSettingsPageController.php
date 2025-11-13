@@ -238,6 +238,9 @@ class CustomerSettingsPageController {
             'invoice-payment' => 'tab-invoice-payment.php',
             'permissions' => 'tab-permissions.php',
             'membership' => 'tab-membership.php',
+            'membership-levels' => 'tab-membership-levels.php',
+            'membership-features' => 'tab-membership-features.php',
+            'demo-data' => 'tab-demo-data.php',
             // Add more tabs here as needed
         ];
 

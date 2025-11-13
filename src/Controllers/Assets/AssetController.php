@@ -375,12 +375,22 @@ class AssetController {
                 break;
 
             case 'demo-data':
+                // SHARED: Load base demo-data styles from wp-app-core (TODO-2201)
                 wp_enqueue_style(
-                    'wp-customer-demo-data-tab',
-                    WP_CUSTOMER_URL . 'assets/css/settings/demo-data-tab-style.css',
-                    ['wp-customer-settings'],
-                    $this->version
+                    'wpapp-demo-data',
+                    WP_APP_CORE_PLUGIN_URL . 'assets/css/demo-data/wpapp-demo-data.css',
+                    ['wpapp-settings-base'],  // Correct dependency handle
+                    WP_APP_CORE_VERSION
                 );
+
+                // CUSTOM: Load wp-customer-specific customizations (if any)
+                // Uncomment if needed for custom styles not in shared CSS
+                // wp_enqueue_style(
+                //     'wp-customer-demo-data-custom',
+                //     WP_CUSTOMER_URL . 'assets/css/settings/customer-demo-data-custom.css',
+                //     ['wpapp-demo-data'],
+                //     $this->version
+                // );
                 break;
 
             case 'invoice-payment':
@@ -469,15 +479,23 @@ class AssetController {
                 break;
 
             case 'demo-data':
+                // SHARED: Load demo-data script from wp-app-core (TODO-2201)
                 wp_enqueue_script(
-                    'wp-customer-demo-data-tab',
-                    WP_CUSTOMER_URL . 'assets/js/settings/customer-demo-data-tab-script.js',
-                    ['jquery', 'wp-customer-settings'],
-                    $this->version,
+                    'wpapp-demo-data',
+                    WP_APP_CORE_PLUGIN_URL . 'assets/js/demo-data/wpapp-demo-data.js',
+                    ['jquery', 'wpapp-settings-base', 'wp-modal'], // Correct dependency handle
+                    WP_APP_CORE_VERSION,
                     true
                 );
 
-                wp_localize_script('wp-customer-demo-data-tab', 'wpCustomerDemoData', [
+                // Localize with wp-customer specific data
+                wp_localize_script('wpapp-demo-data', 'wpCustomerSettings', [
+                    'pluginPrefix' => 'customer',
+                    'ajaxUrl' => admin_url('admin-ajax.php'),
+                    'nonces' => [
+                        'generate' => wp_create_nonce('wp_customer_generate_demo'),
+                        'delete' => wp_create_nonce('wp_customer_delete_demo'),
+                    ],
                     'i18n' => [
                         'errorMessage' => __('An error occurred while generating demo data.', 'wp-customer'),
                         'generating' => __('Generating...', 'wp-customer')
