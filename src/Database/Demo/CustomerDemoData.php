@@ -131,7 +131,7 @@ class CustomerDemoData extends AbstractDemoData {
     /**
      * Override run() to cleanup BEFORE parent transaction
      */
-    public function run() {
+    public function run(): bool {
         // Ensure models are initialized
         $this->initModels();
 

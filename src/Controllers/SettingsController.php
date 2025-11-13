@@ -37,36 +37,41 @@ class SettingsController {
 
     // Add this to your SettingsController or appropriate controller class
     public function register_ajax_handlers() {
-        add_action('wp_ajax_customer_generate_demo_data', [$this, 'handle_generate_demo_data']);
-        add_action('wp_ajax_customer_check_demo_data', [$this, 'handle_check_demo_data']);
-        add_action('wp_ajax_reset_customer_permissions', [$this, 'handle_reset_customer_permissions']);
+        // DEPRECATED: Moved to CustomerDemoDataController (TODO-2201)
+        // add_action('wp_ajax_customer_generate_demo_data', [$this, 'handle_generate_demo_data']);
+        // add_action('wp_ajax_customer_check_demo_data', [$this, 'handle_check_demo_data']);
 
-        add_action('wp_ajax_get_customer_membership_level', [$this, 'handle_get_customer_membership_level']);
+        // DEPRECATED: Replaced by AbstractPermissionsController (TODO-2200)
+        // Uses different nonce: 'customer_reset_permissions' instead of 'wp_customer_reset_permissions'
+        // add_action('wp_ajax_reset_customer_permissions', [$this, 'handle_reset_customer_permissions']);
 
-        add_action('wp_ajax_save_customer_membership_level', [$this, 'handle_save_customer_membership_level']);
+        // DEPRECATED: Moved to MembershipLevelController
+        // add_action('wp_ajax_get_customer_membership_level', [$this, 'handle_get_customer_membership_level']);
 
+        // DEPRECATED: Already registered in MembershipLevelController (line 49)
+        // add_action('wp_ajax_save_customer_membership_level', [$this, 'handle_save_customer_membership_level']);
 
+        // TODO: This controller will be deleted after all handlers are migrated
         return;
     }
 
-    public function handle_get_customer_membership_level() {
-        // Verify nonce first
-        check_ajax_referer('wp_customer_nonce', 'nonce');
-        
-        // Then forward to MembershipLevelController
-        $membership_level_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
-        $membership_level_controller->getMembershipLevel();
-    }
+    // DEPRECATED: Moved to MembershipLevelController
+    // public function handle_get_customer_membership_level() {
+    //     check_ajax_referer('wp_customer_nonce', 'nonce');
+    //     $membership_level_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
+    //     $membership_level_controller->getMembershipLevel();
+    // }
 
-    public function handle_save_customer_membership_level() {
-        // Verify nonce first
-        check_ajax_referer('wp_customer_nonce', 'nonce');
-        
-        // Then forward to MembershipLevelController
-        $membership_level_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
-        $membership_level_controller->saveMembershipLevel();
-    }
+    // DEPRECATED: Moved to MembershipLevelController
+    // public function handle_save_customer_membership_level() {
+    //     check_ajax_referer('wp_customer_nonce', 'nonce');
+    //     $membership_level_controller = new \WPCustomer\Controllers\Membership\MembershipLevelController();
+    //     $membership_level_controller->saveMembershipLevel();
+    // }
 
+    // DEPRECATED: Replaced by AbstractPermissionsController::handleResetPermissions()
+    // Uses different nonce: 'customer_reset_permissions' instead of 'wp_customer_reset_permissions'
+    /**
     public function handle_reset_customer_permissions() {
         // CRITICAL: Start output buffering to prevent contamination from plugin hooks
         // resetToDefault() triggers WordPress hooks that may init other plugins
@@ -134,6 +139,7 @@ class SettingsController {
             die(); // Ensure no code runs after wp_send_json
         }
     }
+    */
 
     public function register_settings() {
         // NOTE: wp_customer_settings registration moved to CustomerGeneralSettingsController (TODO-2198)
@@ -178,21 +184,20 @@ class SettingsController {
         return $sanitized;
     }
 
+    // DEPRECATED: Moved to CustomerDemoDataController (TODO-2201)
     /**
      * Get the appropriate generator class based on data type
      *
      * @param string $type The type of data to generate
      * @return AbstractDemoData Generator instance
      * @throws \Exception If invalid type specified
-     */
+     *
     private function getGeneratorClass($type) {
-
-        error_log('=== Start WP Customer getGeneratorClass ===');  // Log 1
-        error_log('Received type: ' . $type);          // Log 2
-        
+        error_log('=== Start WP Customer getGeneratorClass ===');
+        error_log('Received type: ' . $type);
         error_log('getGeneratorClass received type: [' . $type . ']');
         error_log('Type length: ' . strlen($type));
-        error_log('Type character codes: ' . json_encode(array_map('ord', str_split($type))));   
+        error_log('Type character codes: ' . json_encode(array_map('ord', str_split($type))));
 
         switch ($type) {
             case 'users':
@@ -220,7 +225,6 @@ class SettingsController {
 
     public function handle_generate_demo_data() {
         try {
-
             // Validate nonce and permissions first
             if (!current_user_can('manage_options')) {
                 throw new \Exception('Permission denied');
@@ -235,12 +239,12 @@ class SettingsController {
 
             // Get the generator class based on type
             $generator = $this->getGeneratorClass($type);
-            
+
             // Check if development mode is enabled before proceeding
             if (!$generator->isDevelopmentMode()) {
                 wp_send_json_error([
                     'message' => 'Cannot generate demo data - Development mode is not enabled. Please enable it in settings first.',
-                    'type' => 'dev_mode_off'  // Menandakan error karena development mode off
+                    'type' => 'dev_mode_off'
                 ]);
                 return;
             }
@@ -254,7 +258,7 @@ class SettingsController {
             } else {
                 wp_send_json_error([
                     'message' => 'Failed to generate demo data.',
-                    'type' => 'error'  // Menandakan error teknis
+                    'type' => 'error'
                 ]);
             }
 
@@ -266,6 +270,7 @@ class SettingsController {
             ]);
         }
     }
+    */
 
     public function renderPage() {
         if (!current_user_can('manage_options')) {
@@ -352,10 +357,13 @@ class SettingsController {
     }
 
     // Render functions for membership fields
-    public function render_membership_section() {
-        echo '<p>' . __('Konfigurasi level keanggotaan dan batasan untuk setiap level.', 'wp-customer') . '</p>';
-    }
+    // DEPRECATED: Not used anymore
+    // public function render_membership_section() {
+    //     echo '<p>' . __('Konfigurasi level keanggotaan dan batasan untuk setiap level.', 'wp-customer') . '</p>';
+    // }
 
+    // DEPRECATED: Moved to CustomerDemoDataController (TODO-2201)
+    /**
     public function handle_check_demo_data() {
         try {
             if (!current_user_can('manage_options')) {
@@ -365,7 +373,7 @@ class SettingsController {
             $type = sanitize_text_field($_POST['type']);
             $nonce = sanitize_text_field($_POST['nonce']);
 
-            if (!wp_verify_nonce($nonce, "check_demo_{$type}")) {
+            if (!wp_verify_nonce($nonce, 'customer_check_demo_data')) {
                 throw new \Exception('Invalid security token');
             }
 
@@ -409,5 +417,6 @@ class SettingsController {
             ]);
         }
     }
+    */
 
 }

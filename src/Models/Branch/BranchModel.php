@@ -90,10 +90,8 @@ class BranchModel extends AbstractCrudModel {
             'email' => '%s',
             'phone' => '%s',
             'address' => '%s',
-            'province_id' => '%d',
+            'provinsi_id' => '%d',
             'regency_id' => '%d',
-            'district_id' => '%d',
-            'village_id' => '%d',
             'postal_code' => '%s',
             'user_id' => '%d',
             'agency_id' => '%d',
@@ -146,10 +144,8 @@ class BranchModel extends AbstractCrudModel {
             'email',
             'phone',
             'address',
-            'province_id',
+            'provinsi_id',
             'regency_id',
-            'district_id',
-            'village_id',
             'postal_code',
             'user_id',
             'agency_id',
@@ -179,10 +175,8 @@ class BranchModel extends AbstractCrudModel {
             'email' => $data['email'] ?? null,
             'phone' => $data['phone'] ?? null,
             'address' => $data['address'] ?? null,
-            'province_id' => $data['province_id'] ?? null,
+            'provinsi_id' => $data['provinsi_id'] ?? null,
             'regency_id' => $data['regency_id'] ?? null,
-            'district_id' => $data['district_id'] ?? null,
-            'village_id' => $data['village_id'] ?? null,
             'postal_code' => $data['postal_code'] ?? null,
             'user_id' => $data['user_id'] ?? null,
             'agency_id' => $data['agency_id'] ?? null,
@@ -369,6 +363,7 @@ class BranchModel extends AbstractCrudModel {
         global $wpdb;
 
         // Get agency from province
+        // Note: wp_app_agencies table uses 'province_id' (not 'provinsi_id')
         $agency = $wpdb->get_row($wpdb->prepare("
             SELECT id FROM {$wpdb->prefix}app_agencies
             WHERE province_id = %d

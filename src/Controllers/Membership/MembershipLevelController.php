@@ -47,8 +47,22 @@ class MembershipLevelController {
         $this->cache_manager = new CustomerCacheManager();
         $this->validator = new MembershipLevelValidator();
 
+        // Register AJAX handlers
+        add_action('wp_ajax_get_customer_membership_level', [$this, 'handle_get_membership_level']);
         add_action('wp_ajax_save_customer_membership_level', [$this, 'handle_save_membership_level']);
-        
+
+    }
+
+    /**
+     * Handle AJAX request to get membership level
+     * Migrated from SettingsController (line 52-59)
+     */
+    public function handle_get_membership_level() {
+        // Verify nonce
+        check_ajax_referer('wp_customer_nonce', 'nonce');
+
+        // Call the main method
+        $this->getMembershipLevel();
     }
 
     public function getMembershipLevel() {

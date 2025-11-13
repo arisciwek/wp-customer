@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Settings
- * @version     2.2.0
+ * @version     2.2.1
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Views/templates/settings/tab-demo-data.php
@@ -14,8 +14,14 @@
  *              Assets loaded: wpapp-demo-data.css, wpapp-demo-data.js
  *              Development Settings form uses sticky footer for consistency.
  *              Card-footer pattern ensures consistent button alignment.
+ *              Dependency checking enabled via data-requires attributes (TODO-1209).
  *
  * Changelog:
+ * 2.2.1 - 2025-01-13 (TODO-1209)
+ * - Added: Dependency checking attributes (data-requires, data-check-action, data-check-nonce)
+ * - Added: 6 buttons now have dependency validation
+ * - Improved: Buttons auto-disabled until dependencies met
+ * - Improved: Clear tooltip feedback for dependency status
  * 2.2.0 - 2025-01-13
  * - Fixed: Button alignment with card-footer wrapper
  * - Added: .demo-data-card-footer wrapper around all buttons
@@ -83,7 +89,10 @@ if (!current_user_can('manage_options')) {
                             class="button button-primary demo-data-button"
                             data-action="customer_generate_membership_features"
                             data-nonce="<?php echo wp_create_nonce('customer_generate_membership_features'); ?>"
-                            data-confirm="<?php esc_attr_e('Generate membership features?', 'wp-customer'); ?>">
+                            data-confirm="<?php esc_attr_e('Generate membership features?', 'wp-customer'); ?>"
+                            data-requires="membership-groups"
+                            data-check-action="customer_check_demo_data"
+                            data-check-nonce="<?php echo wp_create_nonce('customer_check_demo_data'); ?>">
                         <?php _e('Generate Membership Features', 'wp-customer'); ?>
                     </button>
                 </div>
@@ -102,7 +111,10 @@ if (!current_user_can('manage_options')) {
                             class="button button-primary demo-data-button"
                             data-action="customer_generate_membership_levels"
                             data-nonce="<?php echo wp_create_nonce('customer_generate_membership_levels'); ?>"
-                            data-confirm="<?php esc_attr_e('Generate membership levels?', 'wp-customer'); ?>">
+                            data-confirm="<?php esc_attr_e('Generate membership levels?', 'wp-customer'); ?>"
+                            data-requires="membership-features"
+                            data-check-action="customer_check_demo_data"
+                            data-check-nonce="<?php echo wp_create_nonce('customer_check_demo_data'); ?>">
                         <?php _e('Generate Membership Levels', 'wp-customer'); ?>
                     </button>
                 </div>
@@ -136,7 +148,10 @@ if (!current_user_can('manage_options')) {
                             class="button button-primary demo-data-button"
                             data-action="customer_generate_branches"
                             data-nonce="<?php echo wp_create_nonce('customer_generate_branches'); ?>"
-                            data-confirm="<?php esc_attr_e('Generate branch demo data?', 'wp-customer'); ?>">
+                            data-confirm="<?php esc_attr_e('Generate branch demo data?', 'wp-customer'); ?>"
+                            data-requires="customer"
+                            data-check-action="customer_check_demo_data"
+                            data-check-nonce="<?php echo wp_create_nonce('customer_check_demo_data'); ?>">
                         <?php _e('Generate Branches', 'wp-customer'); ?>
                     </button>
                 </div>
@@ -155,7 +170,10 @@ if (!current_user_can('manage_options')) {
                             class="button button-primary demo-data-button"
                             data-action="customer_generate_employees"
                             data-nonce="<?php echo wp_create_nonce('customer_generate_employees'); ?>"
-                            data-confirm="<?php esc_attr_e('Generate employee demo data?', 'wp-customer'); ?>">
+                            data-confirm="<?php esc_attr_e('Generate employee demo data?', 'wp-customer'); ?>"
+                            data-requires="branch"
+                            data-check-action="customer_check_demo_data"
+                            data-check-nonce="<?php echo wp_create_nonce('customer_check_demo_data'); ?>">
                         <?php _e('Generate Employees', 'wp-customer'); ?>
                     </button>
                 </div>
@@ -174,7 +192,10 @@ if (!current_user_can('manage_options')) {
                             class="button button-primary demo-data-button"
                             data-action="customer_generate_memberships"
                             data-nonce="<?php echo wp_create_nonce('customer_generate_memberships'); ?>"
-                            data-confirm="<?php esc_attr_e('Generate customer memberships?', 'wp-customer'); ?>">
+                            data-confirm="<?php esc_attr_e('Generate customer memberships?', 'wp-customer'); ?>"
+                            data-requires="branch"
+                            data-check-action="customer_check_demo_data"
+                            data-check-nonce="<?php echo wp_create_nonce('customer_check_demo_data'); ?>">
                         <?php _e('Generate Customer Memberships', 'wp-customer'); ?>
                     </button>
                 </div>
@@ -193,7 +214,10 @@ if (!current_user_can('manage_options')) {
                             class="button button-primary demo-data-button"
                             data-action="customer_generate_invoices"
                             data-nonce="<?php echo wp_create_nonce('customer_generate_invoices'); ?>"
-                            data-confirm="<?php esc_attr_e('Generate company invoices?', 'wp-customer'); ?>">
+                            data-confirm="<?php esc_attr_e('Generate company invoices?', 'wp-customer'); ?>"
+                            data-requires="memberships"
+                            data-check-action="customer_check_demo_data"
+                            data-check-nonce="<?php echo wp_create_nonce('customer_check_demo_data'); ?>">
                         <?php _e('Generate Company Invoices', 'wp-customer'); ?>
                     </button>
                 </div>

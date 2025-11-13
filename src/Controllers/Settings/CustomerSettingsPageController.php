@@ -28,6 +28,7 @@ namespace WPCustomer\Controllers\Settings;
 use WPCustomer\Controllers\Settings\CustomerGeneralSettingsController;
 use WPCustomer\Controllers\Settings\InvoicePaymentSettingsController;
 use WPCustomer\Controllers\Settings\CustomerPermissionsController;
+use WPCustomer\Controllers\Settings\CustomerDemoDataController;
 
 defined('ABSPATH') || exit;
 
@@ -41,6 +42,7 @@ class CustomerSettingsPageController {
             'general' => new CustomerGeneralSettingsController(),
             'invoice-payment' => new InvoicePaymentSettingsController(),
             'permissions' => new CustomerPermissionsController(),
+            'demo-data' => new CustomerDemoDataController(),
             // 'membership' => new CustomerMembershipSettingsController(), // TODO: Create this controller
             // Add more tabs here as needed
         ];
