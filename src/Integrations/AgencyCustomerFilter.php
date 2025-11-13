@@ -47,7 +47,7 @@
  * - FIXED: whereRaw() now uses sprintf + intval instead of array bindings (avoid array binding Notice)
  *
  * 1.1.0 - 2025-11-05
- * - FIXED: Changed from provinsi_id to agency_id filtering
+ * - FIXED: Changed from province_id to agency_id filtering
  * - Match CustomerModel logic for consistency
  * - Now matches "WP Customer" (OLD) menu behavior
  *

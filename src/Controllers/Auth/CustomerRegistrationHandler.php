@@ -54,13 +54,13 @@ class CustomerRegistrationHandler {
         $name = sanitize_text_field($_POST['name']);
         $nib = $this->validator->formatNib(sanitize_text_field($_POST['nib']));
         $npwp = $this->validator->formatNpwp(sanitize_text_field($_POST['npwp']));
-        $provinsi_id = isset($_POST['provinsi_id']) ? (int)$_POST['provinsi_id'] : 0;
+        $province_id = isset($_POST['province_id']) ? (int)$_POST['province_id'] : 0;
         $regency_id = isset($_POST['regency_id']) ? (int)$_POST['regency_id'] : 0;
 
         // Validasi dasar
         if (empty($username) || empty($email) || empty($password) ||
             empty($name) || empty($nib) || empty($npwp) ||
-            empty($provinsi_id) || empty($regency_id)) {
+            empty($province_id) || empty($regency_id)) {
             wp_send_json_error([
                 'message' => __('Semua field wajib diisi.', 'wp-customer')
             ]);
@@ -96,7 +96,7 @@ class CustomerRegistrationHandler {
                 'name' => $name,
                 'nib' => $nib,
                 'npwp' => $npwp,
-                'provinsi_id' => $provinsi_id,
+                'province_id' => $province_id,
                 'regency_id' => $regency_id,
                 'status' => 'active',
                 'reg_type' => 'self' // Mark as self-register

@@ -30,7 +30,7 @@
  * - SIMPLIFIED: Single source of truth - customer_employees table only (Opsi 1)
  * - Removed UNION query with customers.user_id
  * - Relies on AutoEntityCreator to ensure all users are in customer_employees table
- * - Requires provinsi_id/regency_id validation to ensure AutoEntityCreator succeeds
+ * - Requires province_id/regency_id validation to ensure AutoEntityCreator succeeds
  *
  * 1.0.2 - 2025-11-02
  * - Check 2 sources for customer association (customers.user_id + customer_employees.user_id)

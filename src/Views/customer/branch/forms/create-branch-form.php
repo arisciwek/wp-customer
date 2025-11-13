@@ -161,7 +161,7 @@ defined('ABSPATH') || exit;
         // Gunakan hook dari wilayah-indonesia plugin
         // Jangan override class default agar JavaScript cascade berfungsi
         do_action('wilayah_indonesia_province_select', [
-            'name' => 'provinsi_id',
+            'name' => 'province_id',
             'id' => 'branch-provinsi',
             'required' => true
         ], null);

@@ -193,8 +193,8 @@ class BranchValidator extends AbstractValidator {
         }
 
         // Province validation (required for AutoEntityCreator)
-        if (empty($data['provinsi_id'])) {
-            $errors['provinsi_id'] = __('Provinsi wajib dipilih.', 'wp-customer');
+        if (empty($data['province_id'])) {
+            $errors['province_id'] = __('Provinsi wajib dipilih.', 'wp-customer');
         }
 
         // Regency validation (required for AutoEntityCreator)

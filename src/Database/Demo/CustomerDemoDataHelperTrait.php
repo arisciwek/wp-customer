@@ -62,8 +62,8 @@ trait CustomerDemoDataHelperTrait {
         $domains = ['gmail.com', 'yahoo.com', 'hotmail.com'];
 
         // Get random province and regency
-        $provinsi_id = $this->getRandomProvinceId();
-        $regency_id = $this->getRandomRegencyId($provinsi_id);
+        $province_id = $this->getRandomProvinceId();
+        $regency_id = $this->getRandomRegencyId($province_id);
         $regency_name = $this->getRegencyName($regency_id);
 
         $customer = $this->customerModel->getById($customer_id);
@@ -87,7 +87,7 @@ trait CustomerDemoDataHelperTrait {
                       $type,
                       strtolower(str_replace([' ', '.'], '', $customer->name)),
                       $domains[array_rand($domains)]),
-            'provinsi_id' => $provinsi_id,
+            'province_id' => $province_id,
             'regency_id' => $regency_id,
             'user_id' => $this->user_ids[$customer_id],
             'created_by' => $this->user_ids[$customer_id],

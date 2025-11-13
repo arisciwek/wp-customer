@@ -27,7 +27,7 @@
  * - address        : Alamat lengkap
  * - phone          : Nomor telepon
  * - email          : Email branch
- * - provinsi_id    : ID provinsi (required)
+ * - province_id    : ID provinsi (required)
  * - agency_id      : ID agency (nullable, diisi saat ada assignment)
  * - regency_id     : ID kabupaten/kota (required)
  * - division_id    : ID division agency (nullable, diisi saat ada assignment)
@@ -40,7 +40,7 @@
  *
  * Foreign Keys:
  * - customer_id    : REFERENCES app_customers(id) ON DELETE CASCADE
- * - provinsi_id    : REFERENCES wi_provinces(id) ON DELETE SET NULL
+ * - province_id    : REFERENCES wi_provinces(id) ON DELETE SET NULL
  * - regency_id     : REFERENCES wi_regencies(id) ON DELETE SET NULL
  * - agency_id      : REFERENCES app_agencies(id) ON DELETE SET NULL
  * - division_id    : REFERENCES app_agency_divisions(id) ON DELETE SET NULL
@@ -51,7 +51,7 @@
  * - Changed agency_id from NOT NULL to NULL (assigned when branch gets agency assignment)
  *
  * 1.0.12 - 2025-11-02
- * - Changed provinsi_id from NULL to NOT NULL (required field)
+ * - Changed province_id from NULL to NOT NULL (required field)
  * - Changed regency_id from NULL to NOT NULL (required field)
  *
  * 1.0.5 - 2025-10-06
@@ -96,7 +96,7 @@ class BranchesDB {
             address text NULL,
             phone varchar(20) NULL,
             email varchar(100) NULL,
-            provinsi_id bigint(20) UNSIGNED NOT NULL,
+            province_id bigint(20) UNSIGNED NOT NULL,
             agency_id bigint(20) UNSIGNED NULL,
             regency_id bigint(20) UNSIGNED NOT NULL,
             division_id bigint(20) UNSIGNED NULL,
@@ -141,7 +141,7 @@ class BranchesDB {
                 'name' => 'fk_branch_province',
                 'sql' => "ALTER TABLE {$table_name}
                          ADD CONSTRAINT fk_branch_province
-                         FOREIGN KEY (provinsi_id)
+                         FOREIGN KEY (province_id)
                          REFERENCES {$wpdb->prefix}wi_provinces(id)
                          ON DELETE RESTRICT"
             ],

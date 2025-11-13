@@ -180,7 +180,7 @@ class BranchController extends AbstractCrudController {
             'address' => sanitize_text_field($_POST['address'] ?? ''),
             'phone' => sanitize_text_field($_POST['phone'] ?? ''),
             'email' => sanitize_email($_POST['email'] ?? ''),
-            'provinsi_id' => isset($_POST['provinsi_id']) ? (int)$_POST['provinsi_id'] : null,
+            'province_id' => isset($_POST['province_id']) ? (int)$_POST['province_id'] : null,
             'regency_id' => isset($_POST['regency_id']) ? (int)$_POST['regency_id'] : null,
             'created_by' => get_current_user_id(),
             'status' => 'active'
@@ -354,7 +354,7 @@ class BranchController extends AbstractCrudController {
             'address' => isset($_POST['address']) ? sanitize_text_field($_POST['address']) : null,
             'phone' => isset($_POST['phone']) ? sanitize_text_field($_POST['phone']) : null,
             'email' => isset($_POST['email']) ? sanitize_email($_POST['email']) : null,
-            'provinsi_id' => isset($_POST['provinsi_id']) ? (int)$_POST['provinsi_id'] : null,
+            'province_id' => isset($_POST['province_id']) ? (int)$_POST['province_id'] : null,
             'regency_id' => isset($_POST['regency_id']) ? (int)$_POST['regency_id'] : null,
             'user_id' => isset($_POST['user_id']) ? (int)$_POST['user_id'] : null,
             'status' => isset($_POST['status']) ? sanitize_text_field($_POST['status']) : null
@@ -366,7 +366,7 @@ class BranchController extends AbstractCrudController {
         // User must manually re-assign inspector for the new location
 
         // If province or regency changed and branch has inspector, clear the assignment
-        if ((isset($data['provinsi_id']) || isset($data['regency_id'])) && !empty($branch->inspector_id)) {
+        if ((isset($data['province_id']) || isset($data['regency_id'])) && !empty($branch->inspector_id)) {
             // Location changed - clear inspector assignment
             $data['agency_id'] = null;
             $data['division_id'] = null;
@@ -762,8 +762,8 @@ class BranchController extends AbstractCrudController {
         try {
             check_ajax_referer('wp_customer_nonce', 'nonce');
 
-            $provinsi_id = isset($_POST['provinsi_id']) ? (int) $_POST['provinsi_id'] : 0;
-            if (!$provinsi_id) {
+            $province_id = isset($_POST['province_id']) ? (int) $_POST['province_id'] : 0;
+            if (!$province_id) {
                 throw new \Exception('ID Provinsi tidak valid');
             }
 
@@ -780,7 +780,7 @@ class BranchController extends AbstractCrudController {
                 AND d.status = 'active'
                 AND a.status = 'active'
                 ORDER BY r.name ASC
-            ", $provinsi_id));
+            ", $province_id));
 
             if ($regencies === null) {
                 throw new \Exception('Gagal mengambil data regencies');

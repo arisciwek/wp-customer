@@ -99,7 +99,7 @@ class CustomerModel extends AbstractCrudModel {
             'npwp',
             'nib',
             'status',
-            'provinsi_id',
+            'province_id',
             'regency_id',
             'user_id'
         ];
@@ -122,7 +122,7 @@ class CustomerModel extends AbstractCrudModel {
             'nib' => $data['nib'] ?? null,
             'status' => $data['status'] ?? 'active',
             'user_id' => $data['user_id'],
-            'provinsi_id' => $data['provinsi_id'] ?? null,
+            'province_id' => $data['province_id'] ?? null,
             'regency_id' => $data['regency_id'] ?? null,
             'reg_type' => $data['reg_type'] ?? 'self',
             'created_by' => get_current_user_id(),
@@ -145,7 +145,7 @@ class CustomerModel extends AbstractCrudModel {
             'nib' => '%s',
             'status' => '%s',
             'user_id' => '%d',
-            'provinsi_id' => '%d',
+            'province_id' => '%d',
             'regency_id' => '%d',
             'reg_type' => '%s',
             'created_by' => '%d',

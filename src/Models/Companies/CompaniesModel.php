@@ -341,7 +341,7 @@ class CompaniesModel {
             'address',
             'phone',
             'email',
-            'provinsi_id',
+            'province_id',
             'regency_id',
             'agency_id',
             'division_id',
@@ -373,7 +373,7 @@ class CompaniesModel {
 
         $int_fields = [
             'customer_id',
-            'provinsi_id',
+            'province_id',
             'regency_id',
             'agency_id',
             'division_id',

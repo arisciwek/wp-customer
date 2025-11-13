@@ -284,8 +284,8 @@ class CustomerValidator extends AbstractValidator {
         }
 
         // Province validation (required)
-        if (empty($data['provinsi_id'])) {
-            $errors['provinsi_id'] = __('Province is required', 'wp-customer');
+        if (empty($data['province_id'])) {
+            $errors['province_id'] = __('Province is required', 'wp-customer');
         }
 
         // Regency validation (required)

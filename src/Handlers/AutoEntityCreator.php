@@ -75,9 +75,9 @@ class AutoEntityCreator {
                 return;
             }
 
-            // Validasi: Customer harus punya provinsi_id dan regency_id
-            if (empty($customer_data['provinsi_id']) || empty($customer_data['regency_id'])) {
-                $this->log("Skip auto-create branch pusat for customer {$customer_id}: no provinsi_id or regency_id");
+            // Validasi: Customer harus punya province_id dan regency_id
+            if (empty($customer_data['province_id']) || empty($customer_data['regency_id'])) {
+                $this->log("Skip auto-create branch pusat for customer {$customer_id}: no province_id or regency_id");
                 return;
             }
 
@@ -106,13 +106,13 @@ class AutoEntityCreator {
             try {
                 // Get agency_id and division_id from location
                 $location_ids = $this->branchModel->getAgencyAndDivisionIds(
-                    $customer_data['provinsi_id'],
+                    $customer_data['province_id'],
                     $customer_data['regency_id']
                 );
 
                 // Get inspector_id from division (with fallback to province's agency)
                 $inspector_id = $this->branchModel->getInspectorId(
-                    $customer_data['provinsi_id'],
+                    $customer_data['province_id'],
                     $location_ids['division_id']
                 );
 
@@ -122,7 +122,7 @@ class AutoEntityCreator {
                     $division_id = $location_ids['division_id'];
                     $this->log("Inspector found for customer {$customer_id}: inspector_id={$inspector_id}, agency_id={$agency_id}, division_id={$division_id}");
                 } else {
-                    $this->log("No inspector found for customer {$customer_id} location (provinsi={$customer_data['provinsi_id']}, regency={$customer_data['regency_id']}), leaving agency/division/inspector NULL");
+                    $this->log("No inspector found for customer {$customer_id} location (provinsi={$customer_data['province_id']}, regency={$customer_data['regency_id']}), leaving agency/division/inspector NULL");
                 }
             } catch (\Exception $e) {
                 // If error getting location IDs, log and continue with NULL values
@@ -135,7 +135,7 @@ class AutoEntityCreator {
                 'name' => sprintf('%s Cabang %s', $customer_data['name'], $regency_name),
                 'type' => 'pusat',
                 'user_id' => $customer_data['user_id'],
-                'provinsi_id' => $customer_data['provinsi_id'],
+                'province_id' => $customer_data['province_id'],
                 'regency_id' => $customer_data['regency_id'],
                 'agency_id' => $agency_id,      // NULL if no inspector
                 'division_id' => $division_id,  // NULL if no inspector

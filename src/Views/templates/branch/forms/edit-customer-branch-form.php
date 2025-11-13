@@ -121,7 +121,7 @@
                             </label>
                             <?php 
                             do_action('wilayah_indonesia_province_select', [
-                                'name' => 'provinsi_id',
+                                'name' => 'province_id',
                                 'id' => 'edit-branch-provinsi',
                                 'class' => 'regular-text wilayah-province-select',
                                 'data-placeholder' => __('Pilih Provinsi', 'wp-customer'),

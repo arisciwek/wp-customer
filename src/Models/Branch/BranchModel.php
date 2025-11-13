@@ -90,7 +90,7 @@ class BranchModel extends AbstractCrudModel {
             'email' => '%s',
             'phone' => '%s',
             'address' => '%s',
-            'provinsi_id' => '%d',
+            'province_id' => '%d',
             'regency_id' => '%d',
             'postal_code' => '%s',
             'user_id' => '%d',
@@ -144,7 +144,7 @@ class BranchModel extends AbstractCrudModel {
             'email',
             'phone',
             'address',
-            'provinsi_id',
+            'province_id',
             'regency_id',
             'postal_code',
             'user_id',
@@ -175,7 +175,7 @@ class BranchModel extends AbstractCrudModel {
             'email' => $data['email'] ?? null,
             'phone' => $data['phone'] ?? null,
             'address' => $data['address'] ?? null,
-            'provinsi_id' => $data['provinsi_id'] ?? null,
+            'province_id' => $data['province_id'] ?? null,
             'regency_id' => $data['regency_id'] ?? null,
             'postal_code' => $data['postal_code'] ?? null,
             'user_id' => $data['user_id'] ?? null,
@@ -355,21 +355,21 @@ class BranchModel extends AbstractCrudModel {
      *
      * Used for inspector assignment
      *
-     * @param int $provinsi_id Province ID
+     * @param int $province_id Province ID
      * @param int $regency_id Regency ID
      * @return array ['agency_id' => int, 'division_id' => int]
      */
-    public function getAgencyAndDivisionIds(int $provinsi_id, int $regency_id): array {
+    public function getAgencyAndDivisionIds(int $province_id, int $regency_id): array {
         global $wpdb;
 
         // Get agency from province
-        // Note: wp_app_agencies table uses 'province_id' (not 'provinsi_id')
+        // Note: wp_app_agencies table uses 'province_id' (not 'province_id')
         $agency = $wpdb->get_row($wpdb->prepare("
             SELECT id FROM {$wpdb->prefix}app_agencies
             WHERE province_id = %d
             AND status = 'active'
             LIMIT 1
-        ", $provinsi_id));
+        ", $province_id));
 
         if (!$agency) {
             return ['agency_id' => null, 'division_id' => null];
@@ -393,23 +393,24 @@ class BranchModel extends AbstractCrudModel {
     /**
      * Get inspector ID from location
      *
-     * @param int $provinsi_id Province ID
+     * @param int $province_id Province ID
      * @param int|null $division_id Division ID
-     * @return int|null Inspector user ID
+     * @return int|null Inspector employee ID (not user_id!)
      */
-    public function getInspectorId(int $provinsi_id, ?int $division_id = null): ?int {
+    public function getInspectorId(int $province_id, ?int $division_id = null): ?int {
         global $wpdb;
 
         // Find inspector from division or agency
+        // IMPORTANT: Return employee.id (not user_id) because FK is to wp_app_agency_employees(id)
         $inspector = $wpdb->get_row($wpdb->prepare("
-            SELECT user_id
+            SELECT id
             FROM {$wpdb->prefix}app_agency_employees
             WHERE division_id = %d
             AND status = 'active'
             LIMIT 1
         ", $division_id));
 
-        return $inspector ? $inspector->user_id : null;
+        return $inspector ? $inspector->id : null;
     }
 
     /**

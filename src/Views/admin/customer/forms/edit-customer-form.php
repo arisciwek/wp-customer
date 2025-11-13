@@ -106,13 +106,13 @@ if (!isset($customer) || !is_object($customer)) {
             <?php _e('Province', 'wp-customer'); ?>
             <span class="required">*</span>
         </label>
-        <select id="customer-provinsi" name="customer_provinsi_id" class="wilayah-select" required>
+        <select id="customer-provinsi" name="customer_province_id" class="wilayah-select" required>
             <option value=""><?php _e('Select Province', 'wp-customer'); ?></option>
             <?php
             global $wpdb;
             $provinces = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}wi_provinces ORDER BY name");
             foreach ($provinces as $province) {
-                $selected = ($customer->provinsi_id == $province->id) ? 'selected' : '';
+                $selected = ($customer->province_id == $province->id) ? 'selected' : '';
                 echo '<option value="' . esc_attr($province->id) . '" ' . $selected . '>' . esc_html($province->name) . '</option>';
             }
             ?>
@@ -127,14 +127,14 @@ if (!isset($customer) || !is_object($customer)) {
             <?php _e('City/Regency', 'wp-customer'); ?>
             <span class="required">*</span>
         </label>
-        <select id="customer-regency" name="customer_regency_id" class="wilayah-select" <?php echo empty($customer->provinsi_id) ? 'disabled' : ''; ?> required>
+        <select id="customer-regency" name="customer_regency_id" class="wilayah-select" <?php echo empty($customer->province_id) ? 'disabled' : ''; ?> required>
             <option value=""><?php _e('Select province first', 'wp-customer'); ?></option>
             <?php
             // If customer has regency_id, load regencies for that province
-            if (!empty($customer->provinsi_id)) {
+            if (!empty($customer->province_id)) {
                 $regencies = $wpdb->get_results($wpdb->prepare(
                     "SELECT id, name FROM {$wpdb->prefix}wi_regencies WHERE province_id = %d ORDER BY name",
-                    $customer->provinsi_id
+                    $customer->province_id
                 ));
                 foreach ($regencies as $regency) {
                     $selected = ($customer->regency_id == $regency->id) ? 'selected' : '';

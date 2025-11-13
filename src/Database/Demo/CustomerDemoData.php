@@ -92,7 +92,7 @@ class CustomerDemoData extends AbstractDemoData {
 
     // Data statis customer
     private static $customers = [
-        //['id' => 1, 'name' => 'PT Maju Bersama', 'provinsi_id' => '16', 'regency_id' => '34'],
+        //['id' => 1, 'name' => 'PT Maju Bersama', 'province_id' => '16', 'regency_id' => '34'],
         ['id' => 1, 'name' => 'PT Maju Bersama'],
         ['id' => 2, 'name' => 'CV Teknologi Nusantara'],
         ['id' => 3, 'name' => 'PT Sinar Abadi'],
@@ -311,7 +311,7 @@ class CustomerDemoData extends AbstractDemoData {
         error_log("[CustomerDemoData] Customer data: " . json_encode([
             'name' => $customer_data['name'],
             'user_id' => $customer_data['user_id'],
-            'provinsi_id' => $customer_data['provinsi_id'],
+            'province_id' => $customer_data['province_id'],
             'regency_id' => $customer_data['regency_id']
         ]));
 
@@ -489,21 +489,21 @@ class CustomerDemoData extends AbstractDemoData {
                 }
 
                 // 3. Generate customer data baru
-                if (isset($customer['provinsi_id'])) {
-                    $provinsi_id = (int)$customer['provinsi_id'];
+                if (isset($customer['province_id'])) {
+                    $province_id = (int)$customer['province_id'];
                     // Pastikan regency sesuai dengan provinsi ini
                     $regency_id = isset($customer['regency_id']) ?
                         (int)$customer['regency_id'] :
-                        $this->getRandomRegencyId($provinsi_id);
+                        $this->getRandomRegencyId($province_id);
                 } else {
                     // Get random province that has an agency
-                    $provinsi_id = $this->getRandomProvinceWithAgency();
-                    $regency_id = $this->getRandomRegencyId($provinsi_id);
+                    $province_id = $this->getRandomProvinceWithAgency();
+                    $regency_id = $this->getRandomRegencyId($province_id);
                 }
 
                 // Validate location relationship
-                if (!$this->validateLocation($provinsi_id, $regency_id)) {
-                    throw new \Exception("Invalid province-regency relationship: Province {$provinsi_id}, Regency {$regency_id}");
+                if (!$this->validateLocation($province_id, $regency_id)) {
+                    throw new \Exception("Invalid province-regency relationship: Province {$province_id}, Regency {$regency_id}");
                 }
 
                 // 4. Prepare customer data (without fixed ID - let Model auto-generate)
@@ -512,7 +512,7 @@ class CustomerDemoData extends AbstractDemoData {
                     'npwp' => $this->generateNPWP(),
                     'nib' => $this->generateNIB(),
                     'status' => 'active',
-                    'provinsi_id' => $provinsi_id ?: null,
+                    'province_id' => $province_id ?: null,
                     'regency_id' => $regency_id ?: null,
                     'user_id' => $user_id,
                     'reg_type' => 'generate'
@@ -521,7 +521,7 @@ class CustomerDemoData extends AbstractDemoData {
                 error_log("[CustomerDemoData] Creating customer with data: " . json_encode([
                     'name' => $customer_data['name'],
                     'user_id' => $customer_data['user_id'],
-                    'provinsi_id' => $customer_data['provinsi_id'],
+                    'province_id' => $customer_data['province_id'],
                     'regency_id' => $customer_data['regency_id'],
                     'reg_type' => $customer_data['reg_type'],
                     'static_id' => $customer['id']

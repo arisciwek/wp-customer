@@ -154,7 +154,7 @@ class CustomerController extends AbstractCrudController {
             'name' => sanitize_text_field($_POST['name'] ?? ''),
             'npwp' => !empty($_POST['npwp']) ? $this->validator->formatNpwp($_POST['npwp']) : null,
             'nib' => !empty($_POST['nib']) ? $this->validator->formatNib($_POST['nib']) : null,
-            'provinsi_id' => isset($_POST['provinsi_id']) ? (int) $_POST['provinsi_id'] : null,
+            'province_id' => isset($_POST['province_id']) ? (int) $_POST['province_id'] : null,
             'regency_id' => isset($_POST['regency_id']) ? (int) $_POST['regency_id'] : null,
             'status' => sanitize_text_field($_POST['status'] ?? 'active')
         ];
@@ -172,7 +172,7 @@ class CustomerController extends AbstractCrudController {
             'npwp' => !empty($_POST['npwp']) ? sanitize_text_field($_POST['npwp']) : null,
             'nib' => !empty($_POST['nib']) ? sanitize_text_field($_POST['nib']) : null,
             'status' => !empty($_POST['status']) ? sanitize_text_field($_POST['status']) : 'active',
-            'provinsi_id' => !empty($_POST['provinsi_id']) ? (int) $_POST['provinsi_id'] : null,
+            'province_id' => !empty($_POST['province_id']) ? (int) $_POST['province_id'] : null,
             'regency_id' => !empty($_POST['regency_id']) ? (int) $_POST['regency_id'] : null
         ];
 
@@ -433,7 +433,7 @@ class CustomerController extends AbstractCrudController {
             'npwp' => isset($data['npwp']) ? sanitize_text_field($data['npwp']) : null,
             'nib' => isset($data['nib']) ? sanitize_text_field($data['nib']) : null,
             'status' => isset($data['status']) ? sanitize_text_field($data['status']) : 'active',
-            'provinsi_id' => isset($data['provinsi_id']) ? (int) $data['provinsi_id'] : null,
+            'province_id' => isset($data['province_id']) ? (int) $data['province_id'] : null,
             'regency_id' => isset($data['regency_id']) ? (int) $data['regency_id'] : null,
             'user_id' => $user_id,
             'reg_type' => isset($data['reg_type']) ? sanitize_text_field($data['reg_type']) : ($created_by ? 'by_admin' : 'self'),

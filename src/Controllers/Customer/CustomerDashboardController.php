@@ -635,7 +635,7 @@ class CustomerDashboardController {
             'npwp' => sanitize_text_field($_POST['customer_npwp'] ?? ''),
             'nib' => sanitize_text_field($_POST['customer_nib'] ?? ''),
             'status' => sanitize_text_field($_POST['customer_status'] ?? 'active'),
-            'provinsi_id' => !empty($_POST['customer_provinsi_id']) ? (int) $_POST['customer_provinsi_id'] : null,
+            'province_id' => !empty($_POST['customer_province_id']) ? (int) $_POST['customer_province_id'] : null,
             'regency_id' => !empty($_POST['customer_regency_id']) ? (int) $_POST['customer_regency_id'] : null,
         ];
 

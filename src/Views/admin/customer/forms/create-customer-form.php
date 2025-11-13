@@ -90,7 +90,7 @@ defined('ABSPATH') || exit;
             <?php _e('Province', 'wp-customer'); ?>
             <span class="required">*</span>
         </label>
-        <select id="customer-provinsi" name="customer_provinsi_id" class="wilayah-select" required>
+        <select id="customer-provinsi" name="customer_province_id" class="wilayah-select" required>
             <option value=""><?php _e('Select Province', 'wp-customer'); ?></option>
             <?php
             global $wpdb;

@@ -218,14 +218,14 @@ $is_admin_create = ($mode === 'admin-create');
 
         <!-- Provinsi -->
         <div class="<?php echo esc_attr($wrapper_classes); ?>">
-            <label for="<?php echo $is_admin_create ? 'customer-provinsi' : 'provinsi_id'; ?>">
+            <label for="<?php echo $is_admin_create ? 'customer-provinsi' : 'province_id'; ?>">
                 <?php _e('Provinsi', 'wp-customer'); ?>
                 <span class="required">*</span>
             </label>
             <?php
             do_action('wilayah_indonesia_province_select', [
-                'name' => 'provinsi_id',
-                'id' => $is_admin_create ? 'customer-provinsi' : 'provinsi_id',
+                'name' => 'province_id',
+                'id' => $is_admin_create ? 'customer-provinsi' : 'province_id',
                 'class' => $field_classes . ' wilayah-province-select',
                 'required' => 'required',
                 'data-placeholder' => __('Pilih Provinsi', 'wp-customer')
@@ -250,7 +250,7 @@ $is_admin_create = ($mode === 'admin-create');
                 'class' => $field_classes . ' wilayah-regency-select',
                 'required' => 'required',
                 'data-loading-text' => __('Memuat...', 'wp-customer'),
-                'data-dependent' => $is_admin_create ? 'customer-provinsi' : 'provinsi_id'
+                'data-dependent' => $is_admin_create ? 'customer-provinsi' : 'province_id'
             ]);
             ?>
             <?php if ($is_self_register): ?>

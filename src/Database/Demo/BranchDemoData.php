@@ -37,7 +37,7 @@
  *   * name           : Nama branch
  *   * type           : enum('cabang','pusat')
  *   * nitku          : Nomor Identitas Tempat Kegiatan Usaha
- *   * provinsi_id    : Foreign key ke wi_provinces
+ *   * province_id    : Foreign key ke wi_provinces
  *   * regency_id     : Foreign key ke wi_regencies
  *   * user_id        : Foreign key ke wp_users
  *   * status         : enum('active','inactive')
@@ -191,15 +191,15 @@ class BranchDemoData extends AbstractDemoData {
                     }
 
                     // Jika customer punya data wilayah, validasi relasinya
-                    if ($customer->provinsi_id && $customer->regency_id) {
+                    if ($customer->province_id && $customer->regency_id) {
                         // Cek provinsi ada
                         $province = $this->wpdb->get_row($this->wpdb->prepare("
                             SELECT * FROM {$this->wpdb->prefix}wi_provinces 
                             WHERE id = %d",
-                            $customer->provinsi_id
+                            $customer->province_id
                         ));
                         if (!$province) {
-                            throw new \Exception("Invalid province ID for customer {$customer_id}: {$customer->provinsi_id}");
+                            throw new \Exception("Invalid province ID for customer {$customer_id}: {$customer->province_id}");
                         }
 
                         // Cek regency ada dan berelasi dengan provinsi
@@ -209,10 +209,10 @@ class BranchDemoData extends AbstractDemoData {
                             JOIN {$this->wpdb->prefix}wi_provinces p ON r.province_id = p.id
                             WHERE r.id = %d AND r.province_id = %d",
                             $customer->regency_id,
-                            $customer->provinsi_id
+                            $customer->province_id
                         ));
                         if (!$regency) {
-                            throw new \Exception("Invalid regency ID {$customer->regency_id} for province {$customer->provinsi_id}");
+                            throw new \Exception("Invalid regency ID {$customer->regency_id} for province {$customer->province_id}");
                         }
 
                         $this->debug(sprintf(
@@ -393,7 +393,7 @@ class BranchDemoData extends AbstractDemoData {
 
     private function generatePusatBranch($customer, $branch_user_id): void {
         // Validate location data
-        if (!$this->validateLocation($customer->provinsi_id, $customer->regency_id)) {
+        if (!$this->validateLocation($customer->province_id, $customer->regency_id)) {
             throw new \Exception("Invalid location for customer: {$customer->id}");
         }
 
@@ -429,11 +429,11 @@ class BranchDemoData extends AbstractDemoData {
         $regency_name = $this->getRegencyName($customer->regency_id);
         $location = $this->generateValidLocation();
 
-        $agency_id = $this->generateAgencyID($customer->provinsi_id);
+        $agency_id = $this->generateAgencyID($customer->province_id);
         $division_id = $this->generateDivisionID($customer->regency_id);
-        $inspector_id = $this->generateInspectorID($customer->provinsi_id);
+        $inspector_id = $this->generateInspectorID($customer->province_id);
 
-        $this->debug("Generated for pusat branch - agency_id: {$agency_id}, division_id: {$division_id}, inspector_id: {$inspector_id} for provinsi_id: {$customer->provinsi_id}, regency_id: {$customer->regency_id}");
+        $this->debug("Generated for pusat branch - agency_id: {$agency_id}, division_id: {$division_id}, inspector_id: {$inspector_id} for province_id: {$customer->province_id}, regency_id: {$customer->regency_id}");
 
         // Generate branch code: customer_code + random 2 digits
         $branch_code = $customer->code . '-' . str_pad(rand(0, 99), 2, '0', STR_PAD_LEFT);
@@ -452,7 +452,7 @@ class BranchDemoData extends AbstractDemoData {
             'address' => $this->generateAddress($regency_name),
             'phone' => $this->generatePhone(),
             'email' => $this->generateEmail($customer->name, 'pusat'),
-            'provinsi_id' => $customer->provinsi_id,
+            'province_id' => $customer->province_id,
             'agency_id' => $agency_id,
             'regency_id' => $customer->regency_id,
             'division_id' => $division_id,
@@ -546,16 +546,16 @@ class BranchDemoData extends AbstractDemoData {
             'address' => sanitize_text_field($branch_data['address'] ?? ''),
             'phone' => sanitize_text_field($branch_data['phone'] ?? ''),
             'email' => sanitize_email($branch_data['email'] ?? ''),
-            'provinsi_id' => isset($branch_data['provinsi_id']) ? (int)$branch_data['provinsi_id'] : null,
+            'province_id' => isset($branch_data['province_id']) ? (int)$branch_data['province_id'] : null,
             'regency_id' => isset($branch_data['regency_id']) ? (int)$branch_data['regency_id'] : null,
             'created_by' => $current_user_id,
             'status' => 'active'
         ];
 
         // Step 4: Assign agency and division (line 567-575 from store())
-        if ($data['provinsi_id'] && $data['regency_id']) {
+        if ($data['province_id'] && $data['regency_id']) {
             try {
-                $agencyDivision = $model->getAgencyAndDivisionIds($data['provinsi_id'], $data['regency_id']);
+                $agencyDivision = $model->getAgencyAndDivisionIds($data['province_id'], $data['regency_id']);
                 $data['agency_id'] = $agencyDivision['agency_id'];
                 $data['division_id'] = $agencyDivision['division_id'];
             } catch (\Exception $e) {
@@ -565,17 +565,17 @@ class BranchDemoData extends AbstractDemoData {
 
         // Step 4b: Auto-assign inspector for regular branches (simulate assign inspector action)
         // For extra branches, skip this step to leave inspector_id NULL for testing
-        if ($auto_assign_inspector && $data['provinsi_id']) {
+        if ($auto_assign_inspector && $data['province_id']) {
             try {
                 $inspector_id = $model->getInspectorId(
-                    $data['provinsi_id'],
+                    $data['province_id'],
                     $data['division_id'] ?? null
                 );
                 if ($inspector_id) {
                     $data['inspector_id'] = $inspector_id;
-                    $this->debug("Auto-assigned inspector_id {$inspector_id} for branch in provinsi {$data['provinsi_id']}, division {$data['division_id']}");
+                    $this->debug("Auto-assigned inspector_id {$inspector_id} for branch in provinsi {$data['province_id']}, division {$data['division_id']}");
                 } else {
-                    $this->debug("No inspector found for provinsi {$data['provinsi_id']}, division {$data['division_id']}, leaving NULL");
+                    $this->debug("No inspector found for provinsi {$data['province_id']}, division {$data['division_id']}, leaving NULL");
                 }
             } catch (\Exception $e) {
                 // Log but don't fail - inspector assignment is not critical
@@ -723,7 +723,7 @@ class BranchDemoData extends AbstractDemoData {
      */
     private function generateCabangBranches($customer): void {
         $cabang_count = 2; // Selalu buat 2 cabang karena sudah ada 2 user cabang
-        $used_provinces = [$customer->provinsi_id];
+        $used_provinces = [$customer->province_id];
 
         // Initialize WPUserGenerator untuk create users dengan static ID
         $userGenerator = new WPUserGenerator();
@@ -739,14 +739,14 @@ class BranchDemoData extends AbstractDemoData {
             $user_data = $this->branch_users[$customer->id][$cabang_key];
 
             // Get random province that has agency (different from used provinces)
-            $provinsi_id = $this->getRandomProvinceWithAgencyExcept($customer->provinsi_id);
-            while (in_array($provinsi_id, $used_provinces)) {
-                $provinsi_id = $this->getRandomProvinceWithAgencyExcept($customer->provinsi_id);
+            $province_id = $this->getRandomProvinceWithAgencyExcept($customer->province_id);
+            while (in_array($province_id, $used_provinces)) {
+                $province_id = $this->getRandomProvinceWithAgencyExcept($customer->province_id);
             }
-            $used_provinces[] = $provinsi_id;
+            $used_provinces[] = $province_id;
 
             // Get random regency from selected province
-            $regency_id = $this->getRandomRegencyId($provinsi_id);
+            $regency_id = $this->getRandomRegencyId($province_id);
             $regency_name = $this->getRegencyName($regency_id);
             $location = $this->generateValidLocation();
 
@@ -786,7 +786,7 @@ class BranchDemoData extends AbstractDemoData {
                 'address' => $this->generateAddress($regency_name),
                 'phone' => $this->generatePhone(),
                 'email' => $this->generateEmail($customer->name, $cabang_key),
-                'provinsi_id' => $provinsi_id,
+                'province_id' => $province_id,
                 'regency_id' => $regency_id,
             ];
 
@@ -881,7 +881,7 @@ class BranchDemoData extends AbstractDemoData {
             }
 
             $division_id = $division_data['id'];
-            $provinsi_id = $division_data['provinsi_id'];
+            $province_id = $division_data['province_id'];
 
             // Get a random regency from this division's jurisdictions that doesn't already have a branch for this customer
             $regency_id = null;
@@ -931,7 +931,7 @@ class BranchDemoData extends AbstractDemoData {
                 'address' => $this->generateAddress($regency_name),
                 'phone' => $this->generatePhone(),
                 'email' => $this->generateEmail($customer->name, 'extra' . ($generated_extra + 1)),
-                'provinsi_id' => $provinsi_id,
+                'province_id' => $province_id,
                 'regency_id' => $regency_id,
             ];
 
@@ -1109,15 +1109,15 @@ class BranchDemoData extends AbstractDemoData {
     /**
      * Generate agency_id by province_id (ID-based FK)
      */
-    private function generateAgencyID($provinsi_id): int {
+    private function generateAgencyID($province_id): int {
         // Find agency with matching province_id (ID-based FK)
         $agency_id = $this->wpdb->get_var($this->wpdb->prepare(
             "SELECT id FROM {$this->wpdb->prefix}app_agencies WHERE province_id = %d LIMIT 1",
-            $provinsi_id
+            $province_id
         ));
 
         if (!$agency_id) {
-            throw new \Exception("Agency not found for province ID: {$provinsi_id}");
+            throw new \Exception("Agency not found for province ID: {$province_id}");
         }
 
         return (int) $agency_id;
@@ -1168,8 +1168,8 @@ class BranchDemoData extends AbstractDemoData {
      * Ensures unique assignment within the same agency
      * Excludes users with 'admin_dinas' role
      */
-    private function generateInspectorID($provinsi_id): ?int {
-        $agency_id = $this->generateAgencyID($provinsi_id);
+    private function generateInspectorID($province_id): ?int {
+        $agency_id = $this->generateAgencyID($province_id);
 
         // Initialize used inspectors for this agency if not set
         if (!isset($this->used_inspectors[$agency_id])) {
@@ -1178,8 +1178,9 @@ class BranchDemoData extends AbstractDemoData {
 
         // Get all pengawas employees from this agency
         // Roles: agency_pengawas, agency_pengawas_spesialis
+        // IMPORTANT: SELECT ae.id (employee id), not ae.user_id, because FK is to wp_app_agency_employees(id)
         $pengawas_ids = $this->wpdb->get_col($this->wpdb->prepare(
-            "SELECT ae.user_id FROM {$this->wpdb->prefix}app_agency_employees ae
+            "SELECT ae.id FROM {$this->wpdb->prefix}app_agency_employees ae
              JOIN {$this->wpdb->prefix}usermeta um ON ae.user_id = um.user_id
              WHERE ae.agency_id = %d
              AND ae.status = 'active'
@@ -1191,17 +1192,17 @@ class BranchDemoData extends AbstractDemoData {
             '%"agency_pengawas_spesialis"%'
         ));
 
-        $this->debug("Pengawas IDs found for agency {$agency_id}: " . implode(', ', $pengawas_ids));
+        $this->debug("Pengawas employee IDs found for agency {$agency_id}: " . implode(', ', $pengawas_ids));
 
         // Find unused pengawas
         $available_pengawas = array_diff($pengawas_ids, $this->used_inspectors[$agency_id]);
 
         if (!empty($available_pengawas)) {
             // Pick the first available
-            $inspector_user_id = reset($available_pengawas);
+            $inspector_employee_id = reset($available_pengawas);
             // Mark as used
-            $this->used_inspectors[$agency_id][] = $inspector_user_id;
-            return (int) $inspector_user_id;
+            $this->used_inspectors[$agency_id][] = $inspector_employee_id;
+            return (int) $inspector_employee_id;
         }
 
         // No available pengawas, return null
@@ -1251,7 +1252,7 @@ class BranchDemoData extends AbstractDemoData {
     private function getRandomDivisionWithJurisdictions(): ?array {
         // Get divisions that have jurisdictions
         $divisions = $this->wpdb->get_results(
-            "SELECT DISTINCT d.id, d.agency_id, p.id as provinsi_id
+            "SELECT DISTINCT d.id, d.agency_id, p.id as province_id
              FROM {$this->wpdb->prefix}app_agency_divisions d
              INNER JOIN {$this->wpdb->prefix}app_agencies a ON d.agency_id = a.id
              INNER JOIN {$this->wpdb->prefix}wi_provinces p ON a.provinsi_code = p.code
@@ -1266,7 +1267,7 @@ class BranchDemoData extends AbstractDemoData {
         return [
             'id' => (int) $division->id,
             'agency_id' => (int) $division->agency_id,
-            'provinsi_id' => (int) $division->provinsi_id
+            'province_id' => (int) $division->province_id
         ];
     }
 
@@ -1317,8 +1318,8 @@ class BranchDemoData extends AbstractDemoData {
     /**
      * Validate location data
      */
-    private function validateLocation(?int $provinsi_id, ?int $regency_id): bool {
-        if (!$provinsi_id || !$regency_id) {
+    private function validateLocation(?int $province_id, ?int $regency_id): bool {
+        if (!$province_id || !$regency_id) {
             return false;
         }
 
@@ -1327,7 +1328,7 @@ class BranchDemoData extends AbstractDemoData {
              FROM {$this->wpdb->prefix}wi_regencies r
              JOIN {$this->wpdb->prefix}wi_provinces p ON r.province_id = p.id
              WHERE r.id = %d AND r.province_id = %d",
-            $regency_id, $provinsi_id
+            $regency_id, $province_id
         ));
 
         return $regency !== null;
@@ -1336,14 +1337,14 @@ class BranchDemoData extends AbstractDemoData {
     /**
      * Get random regency ID from a province
      */
-    private function getRandomRegencyId(int $provinsi_id): int {
+    private function getRandomRegencyId(int $province_id): int {
         $regency_ids = $this->wpdb->get_col($this->wpdb->prepare(
             "SELECT id FROM {$this->wpdb->prefix}wi_regencies WHERE province_id = %d",
-            $provinsi_id
+            $province_id
         ));
 
         if (empty($regency_ids)) {
-            throw new \Exception("No regencies found for province ID: {$provinsi_id}");
+            throw new \Exception("No regencies found for province ID: {$province_id}");
         }
 
         return (int) $regency_ids[array_rand($regency_ids)];

@@ -177,10 +177,10 @@ defined('ABSPATH') || exit;
         // Gunakan hook dari wilayah-indonesia plugin dengan selected value
         // Jangan override class default agar JavaScript cascade berfungsi
         do_action('wilayah_indonesia_province_select', [
-            'name' => 'provinsi_id',
+            'name' => 'province_id',
             'id' => 'branch-provinsi',
             'required' => true
-        ], $branch->provinsi_id ?? null);
+        ], $branch->province_id ?? null);
         ?>
         <span class="description">
             <?php _e('Provinsi lokasi cabang', 'wp-customer'); ?>
@@ -200,7 +200,7 @@ defined('ABSPATH') || exit;
             'id' => 'branch-regency',
             'data-dependent' => 'branch-provinsi',
             'required' => true
-        ], $branch->provinsi_id ?? null, $branch->regency_id ?? null);
+        ], $branch->province_id ?? null, $branch->regency_id ?? null);
         ?>
         <span class="description">
             <?php _e('Kota/Kabupaten lokasi cabang', 'wp-customer'); ?>

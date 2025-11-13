@@ -124,7 +124,7 @@ class Installer {
         }
 
         if (!$has_agency_id) {
-            $wpdb->query("ALTER TABLE {$table} ADD COLUMN agency_id bigint(20) UNSIGNED NULL AFTER provinsi_id");
+            $wpdb->query("ALTER TABLE {$table} ADD COLUMN agency_id bigint(20) UNSIGNED NULL AFTER province_id");
             self::debug("Added agency_id column to branches table");
         }
 

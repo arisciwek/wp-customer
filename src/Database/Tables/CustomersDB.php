@@ -20,7 +20,7 @@
  * - name           : Nama customer
  * - nik            : Nomor Induk Kependudukan
  * - npwp           : Nomor Pokok Wajib Pajak
- * - provinsi_id    : ID provinsi (required)
+ * - province_id    : ID provinsi (required)
  * - regency_id     : ID kabupaten/kota (required)
  * - user_id        : ID User WP sebagai Owner (nullable)
  * - reg_type       : Tipe registrasi (self/by_admin/generate)
@@ -30,7 +30,7 @@
  *
  * Changelog:
  * 1.0.12 - 2025-11-02
- * - Changed provinsi_id from NULL to NOT NULL (required field)
+ * - Changed province_id from NULL to NOT NULL (required field)
  * - Changed regency_id from NULL to NOT NULL (required field)
  *
  * 1.0.3 - 2025-01-21 (Task-2165 Form Sync)
@@ -68,7 +68,7 @@ class CustomersDB {
             npwp varchar(20) NULL,
             nib varchar(20) NULL,
             status enum('inactive','active') NOT NULL DEFAULT 'inactive',
-            provinsi_id bigint(20) UNSIGNED NOT NULL,
+            province_id bigint(20) UNSIGNED NOT NULL,
             regency_id bigint(20) UNSIGNED NOT NULL,
             user_id bigint(20) UNSIGNED NULL,
             reg_type enum('self','by_admin','generate') NOT NULL DEFAULT 'self',
@@ -79,7 +79,7 @@ class CustomersDB {
             UNIQUE KEY code (code),
             UNIQUE KEY nib (nib),
             UNIQUE KEY npwp (npwp),
-            UNIQUE KEY name_region (name, provinsi_id, regency_id),
+            UNIQUE KEY name_region (name, province_id, regency_id),
             KEY created_by_index (created_by)
         ) $charset_collate;";
     }
@@ -98,7 +98,7 @@ class CustomersDB {
                 'name' => 'fk_customer_province',
                 'sql' => "ALTER TABLE {$table_name}
                          ADD CONSTRAINT fk_customer_province
-                         FOREIGN KEY (provinsi_id)
+                         FOREIGN KEY (province_id)
                          REFERENCES {$wpdb->prefix}wi_provinces(id)
                          ON DELETE RESTRICT"
             ],

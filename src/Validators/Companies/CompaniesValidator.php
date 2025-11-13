@@ -228,7 +228,7 @@ class CompaniesValidator {
         }
 
         // Optional numeric fields
-        $optional_numeric_fields = ['provinsi_id', 'regency_id', 'division_id', 'user_id', 'inspector_id'];
+        $optional_numeric_fields = ['province_id', 'regency_id', 'division_id', 'user_id', 'inspector_id'];
         foreach ($optional_numeric_fields as $field) {
             if (isset($data[$field]) && !empty($data[$field])) {
                 $data[$field] = intval($data[$field]);
@@ -297,7 +297,7 @@ class CompaniesValidator {
         }
 
         // Optional numeric fields
-        $optional_numeric_fields = ['customer_id', 'agency_id', 'provinsi_id', 'regency_id', 'division_id', 'user_id', 'inspector_id'];
+        $optional_numeric_fields = ['customer_id', 'agency_id', 'province_id', 'regency_id', 'division_id', 'user_id', 'inspector_id'];
         foreach ($optional_numeric_fields as $field) {
             if (isset($data[$field]) && !empty($data[$field])) {
                 $data[$field] = intval($data[$field]);
