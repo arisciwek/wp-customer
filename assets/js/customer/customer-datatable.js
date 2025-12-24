@@ -128,7 +128,98 @@
             console.warn('[Customer DataTable] Panel manager not found');
         }
 
+        // Export DataTable instance to global scope for external access
+        window.customerDataTableInstance = customerTable;
+
         console.log('[Customer DataTable] Ready');
+
+        // Listen to global action button events from wp-datatable
+        // Edit button event
+        $(document).on('wpdt:action-edit', function(e, data) {
+            if (data.entity !== 'customer') {
+                return; // Only handle customer entity
+            }
+
+            console.log('[Customer DataTable] Edit button clicked for customer:', data.id);
+
+            // Check if WPModal and wpCustomerConfig are available
+            if (typeof WPModal === 'undefined') {
+                console.error('[Customer DataTable] WPModal not found!');
+                alert('Modal system not available. Please refresh the page.');
+                return;
+            }
+
+            if (typeof wpCustomerConfig === 'undefined') {
+                console.error('[Customer DataTable] wpCustomerConfig not found!');
+                alert('Customer config not available. Please refresh the page.');
+                return;
+            }
+
+            // Show edit modal
+            WPModal.show({
+                type: 'form',
+                title: 'Edit Customer',
+                size: 'large',
+                bodyUrl: wpCustomerConfig.ajaxUrl + '?action=get_customer_form&mode=edit&customer_id=' + data.id + '&nonce=' + wpCustomerConfig.nonce,
+                buttons: {
+                    cancel: {
+                        label: 'Cancel',
+                        class: 'button'
+                    },
+                    submit: {
+                        label: 'Update Customer',
+                        class: 'button button-primary',
+                        type: 'submit'
+                    }
+                },
+                onSubmit: function(formData, $form) {
+                    // Delegate to CustomerModalHandler if available
+                    if (window.CustomerModalHandler && window.CustomerModalHandler.handleSave) {
+                        return window.CustomerModalHandler.handleSave(formData, $form);
+                    }
+                    console.error('[Customer DataTable] CustomerModalHandler not found!');
+                    return false;
+                },
+                onLoad: function() {
+                    // Attach real-time validation if CustomerModalHandler available
+                    if (window.CustomerModalHandler && window.CustomerModalHandler.attachRealtimeValidation) {
+                        window.CustomerModalHandler.attachRealtimeValidation();
+                    }
+                }
+            });
+        });
+
+        // Delete button event
+        $(document).on('wpdt:action-delete', function(e, data) {
+            if (data.entity !== 'customer') {
+                return; // Only handle customer entity
+            }
+
+            console.log('[Customer DataTable] Delete button clicked for customer:', data.id);
+
+            // Check if WPModal is available
+            if (typeof WPModal === 'undefined') {
+                console.error('[Customer DataTable] WPModal not found!');
+                alert('Modal system not available. Please refresh the page.');
+                return;
+            }
+
+            // Show delete confirmation
+            WPModal.confirm({
+                title: 'Delete Customer',
+                message: 'Are you sure you want to delete this customer? This action cannot be undone.',
+                danger: true,
+                confirmLabel: 'Delete',
+                onConfirm: function() {
+                    // Delegate to CustomerModalHandler if available
+                    if (window.CustomerModalHandler && window.CustomerModalHandler.handleDelete) {
+                        window.CustomerModalHandler.handleDelete(data.id);
+                    } else {
+                        console.error('[Customer DataTable] CustomerModalHandler not found!');
+                    }
+                }
+            });
+        });
     });
 
 })(jQuery);

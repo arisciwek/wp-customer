@@ -15,7 +15,7 @@
  * Dependencies:
  * - jQuery
  * - WPModal (from wp-modal)
- * - wpAppCoreCustomer localized object
+ * - wpCustomerConfig localized object
  *
  * Changelog:
  * 1.0.0 - 2025-11-01
@@ -89,7 +89,7 @@
                 type: 'form',
                 title: 'Add New Customer',
                 size: 'large',
-                bodyUrl: wpAppCoreCustomer.ajaxurl + '?action=get_customer_form&mode=create&nonce=' + wpAppCoreCustomer.nonce,
+                bodyUrl: wpCustomerConfig.ajaxUrl + '?action=get_customer_form&mode=create&nonce=' + wpCustomerConfig.nonce,
                 buttons: {
                     cancel: {
                         label: 'Cancel',
@@ -131,7 +131,7 @@
                 type: 'form',
                 title: 'Edit Customer',
                 size: 'large',
-                bodyUrl: wpAppCoreCustomer.ajaxurl + '?action=get_customer_form&mode=edit&customer_id=' + customerId + '&nonce=' + wpAppCoreCustomer.nonce,
+                bodyUrl: wpCustomerConfig.ajaxUrl + '?action=get_customer_form&mode=edit&customer_id=' + customerId + '&nonce=' + wpCustomerConfig.nonce,
                 buttons: {
                     cancel: {
                         label: 'Cancel',
@@ -282,7 +282,7 @@
 
             // Submit via AJAX
             $.ajax({
-                url: wpAppCoreCustomer.ajaxurl,
+                url: wpCustomerConfig.ajaxUrl,
                 method: 'POST',
                 data: formData,
                 processData: false,
@@ -301,37 +301,35 @@
                         // Hide modal immediately
                         WPModal.hide();
 
-                        // Small delay before showing notification to ensure modal is fully closed
-                        setTimeout(() => {
-                            // Show success notification
-                            WPModal.info({
-                                infoType: 'success',
-                                title: 'Success',
-                                message: response.data.message || 'Customer saved successfully',
-                                autoClose: 3000
-                            });
-                        }, 300);
-
-                        // Refresh DataTable immediately
-                        if (window.CustomerDataTable && window.CustomerDataTable.refresh) {
+                        // Refresh DataTable, then open panel after reload completes
+                        if (window.customerDataTableInstance) {
                             console.log('[CustomerModal] Refreshing DataTable...');
-                            window.CustomerDataTable.refresh();
+
+                            window.customerDataTableInstance.ajax.reload(function() {
+                                console.log('[CustomerModal] DataTable reload completed');
+
+                                // Trigger panel open request AFTER DataTable reload completes
+                                // This ensures new data is visible in table before panel opens
+                                if (customerId) {
+                                    console.log('[CustomerModal] Triggering panel open request for customer:', customerId);
+                                    $(document).trigger('wpdt:panel-open-request', {
+                                        entity: 'customer',
+                                        id: customerId
+                                    });
+                                }
+                            }, false); // false = keep current page position
                         } else {
-                            console.error('[CustomerModal] CustomerDataTable.refresh not available!');
-                        }
+                            console.error('[CustomerModal] customerDataTableInstance not available!');
 
-                        // If panel is open and customer ID is available, refresh panel to show edited customer
-                        const panelIsOpen = window.wpAppPanelManager && window.wpAppPanelManager.isOpen;
-                        console.log('[CustomerModal] Panel open check:', panelIsOpen);
-
-                        if (customerId && panelIsOpen) {
-                            console.log('[CustomerModal] Panel is open, will update to customer:', customerId);
-                            setTimeout(() => {
-                                console.log('[CustomerModal] Updating hash to #customer-' + customerId);
-                                window.location.hash = '#customer-' + customerId;
-                            }, 400);
-                        } else if (customerId) {
-                            console.log('[CustomerModal] Panel not open (or panel manager not available), customer ID:', customerId);
+                            // Fallback: still try to open panel even if reload failed
+                            if (customerId) {
+                                setTimeout(() => {
+                                    $(document).trigger('wpdt:panel-open-request', {
+                                        entity: 'customer',
+                                        id: customerId
+                                    });
+                                }, 500);
+                            }
                         }
 
                         // Reload statistics with delay to ensure DB has been updated
@@ -339,8 +337,6 @@
                             if (window.CustomerDataTable && window.CustomerDataTable.loadStatistics) {
                                 console.log('[CustomerModal] Reloading statistics (delayed 500ms)...');
                                 window.CustomerDataTable.loadStatistics();
-                            } else {
-                                console.error('[CustomerModal] CustomerDataTable.loadStatistics not available!');
                             }
                         }, 500);
 
@@ -555,36 +551,36 @@
          */
         handleDelete(customerId) {
             console.log('[CustomerModal] Deleting customer ID:', customerId);
+            console.log('[CustomerModal] Using nonce:', wpCustomerConfig.nonce);
+            console.log('[CustomerModal] Full wpCustomerConfig:', wpCustomerConfig);
 
             // Show loading
             WPModal.loading(true, 'Deleting customer...');
 
+            const deleteData = {
+                action: 'delete_customer',
+                customer_id: customerId,
+                nonce: wpCustomerConfig.nonce
+            };
+
+            console.log('[CustomerModal] Sending delete data:', deleteData);
+
             $.ajax({
-                url: wpAppCoreCustomer.ajaxurl,
+                url: wpCustomerConfig.ajaxUrl,
                 method: 'POST',
-                data: {
-                    action: 'delete_customer',
-                    customer_id: customerId,
-                    nonce: wpAppCoreCustomer.nonce
-                },
+                data: deleteData,
                 success: (response) => {
                     WPModal.loading(false);
 
                     if (response.success) {
                         console.log('[CustomerModal] Delete successful:', response);
 
-                        // Show success notification
-                        WPModal.info({
-                            infoType: 'success',
-                            title: 'Success',
-                            message: response.data.message || 'Customer deleted successfully',
-                            autoClose: 3000
-                        });
-
                         // Refresh DataTable
-                        if (window.CustomerDataTable && window.CustomerDataTable.refresh) {
+                        if (window.customerDataTableInstance) {
                             console.log('[CustomerModal] Refreshing DataTable...');
-                            window.CustomerDataTable.refresh();
+                            window.customerDataTableInstance.ajax.reload(null, false); // null callback, false = keep page position
+                        } else {
+                            console.error('[CustomerModal] customerDataTableInstance not available!');
                         }
 
                         // Reload statistics with delay

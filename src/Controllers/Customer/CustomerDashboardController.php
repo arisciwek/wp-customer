@@ -768,26 +768,13 @@ class CustomerDashboardController {
         }
 
         try {
-            $customer = $this->model->find($customer_id);
+            // Use model delete() which triggers hooks for cascade operations
+            $result = $this->model->delete($customer_id);
 
-            if (!$customer) {
-                wp_send_json_error(['message' => __('Customer not found', 'wp-customer')]);
-            }
-
-            global $wpdb;
-            $result = $wpdb->delete(
-                $wpdb->prefix . 'app_customers',
-                ['id' => $customer_id],
-                ['%d']
-            );
-
-            if ($result !== false) {
-                $cache = new \WPCustomer\Cache\CustomerCacheManager();
-                $cache->invalidateCustomerCache($customer_id);
-
+            if ($result) {
                 wp_send_json_success(['message' => __('Customer deleted successfully', 'wp-customer')]);
             } else {
-                wp_send_json_error(['message' => __('Failed to delete customer', 'wp-customer')]);
+                wp_send_json_error(['message' => __('Customer not found or failed to delete', 'wp-customer')]);
             }
 
         } catch (\Exception $e) {

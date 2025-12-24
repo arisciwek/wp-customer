@@ -179,6 +179,16 @@ class AssetController {
             false  // Load in header instead of footer
         );
 
+        // Enqueue customer modal handler for CRUD operations (edit/delete buttons)
+        // Listens to wpdt:action-edit and wpdt:action-delete events from wp-datatable
+        wp_enqueue_script(
+            'customer-modal-handler',
+            WP_CUSTOMER_URL . 'assets/js/customer/customer-modal-handler.js',
+            ['jquery', 'wp-modal', 'customer-datatable'],
+            $this->version,
+            true  // Load in footer
+        );
+
         // Enqueue branches DataTable (for branches tab)
         wp_enqueue_script(
             'branches-datatable',
@@ -197,7 +207,8 @@ class AssetController {
             false
         );
 
-        // Localize script with nonce (shared by all DataTables)
+        // Localize script with nonce (shared by all DataTables and modal handler)
+        // Used by: customer-datatable.js, customer-modal-handler.js
         wp_localize_script('customer-datatable', 'wpCustomerConfig', [
             'nonce' => wp_create_nonce('wpdt_nonce'),
             'ajaxUrl' => admin_url('admin-ajax.php')

@@ -49,6 +49,9 @@ define('WP_CUSTOMER_VERSION', '1.0.15');
 define('WP_CUSTOMER_FILE', __FILE__);
 define('WP_CUSTOMER_PATH', plugin_dir_path(__FILE__));
 define('WP_CUSTOMER_URL', plugin_dir_url(__FILE__));
+
+// Load critical hook classes early
+require_once WP_CUSTOMER_PATH . 'src/Hooks/CustomerDeleteHooks.php';
 define('WP_CUSTOMER_DEVELOPMENT', false);
 
 
@@ -144,6 +147,9 @@ class WPCustomer {
 
         // Initialize controllers
         $this->initControllers();
+
+        // Initialize delete hooks for cascade operations
+        \WPCustomer\Hooks\CustomerDeleteHooks::init();
 
         // Initialize other hooks
         $init_hooks = new WP_Customer_Init_Hooks();

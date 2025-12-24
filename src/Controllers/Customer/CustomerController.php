@@ -71,7 +71,8 @@ class CustomerController extends AbstractCrudController {
         add_action('wp_ajax_create_customer', [$this, 'store']);
         add_action('wp_ajax_get_customer', [$this, 'show']);
         add_action('wp_ajax_update_customer', [$this, 'update']);
-        add_action('wp_ajax_delete_customer', [$this, 'delete']);
+        // DISABLED: Conflict with CustomerDashboardController::handle_delete_customer (uses wpdt_nonce)
+        // add_action('wp_ajax_delete_customer', [$this, 'delete']);
         add_action('wp_ajax_validate_customer_access', [$this, 'validateCustomerAccess']);
     }
 

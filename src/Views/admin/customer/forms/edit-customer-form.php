@@ -35,7 +35,7 @@ if (!isset($customer) || !is_object($customer)) {
     <input type="hidden" name="action" value="save_customer">
     <input type="hidden" name="mode" value="edit">
     <input type="hidden" name="customer_id" value="<?php echo esc_attr($customer->id); ?>">
-    <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('wpapp_panel_nonce'); ?>">
+    <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('wpdt_nonce'); ?>">
 
     <div class="wpapp-form-field">
         <label for="customer-name">

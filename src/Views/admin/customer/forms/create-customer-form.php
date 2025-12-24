@@ -26,7 +26,7 @@ defined('ABSPATH') || exit;
 <form id="customer-form" class="wpapp-modal-form">
     <input type="hidden" name="action" value="save_customer">
     <input type="hidden" name="mode" value="create">
-    <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('wpapp_panel_nonce'); ?>">
+    <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('wpdt_nonce'); ?>">
 
     <div class="wpapp-form-field">
         <label for="customer-name">
