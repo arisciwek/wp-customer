@@ -44,10 +44,10 @@ add_filter('wpc_settings_footer_content', function($footer_html, $current_tab) {
                     id="reset-membership-features-demo"
                     class="button button-secondary"
                     data-nonce="<?php echo wp_create_nonce('customer_generate_membership_features'); ?>">
-                <?php _e('Reset ke Demo Data', 'wp-customer'); ?>
+                <?php _e('Reset Ke Default Data', 'wp-customer'); ?>
             </button>
             <span class="description" style="margin-left: 10px;">
-                <?php _e('Hapus semua features dan generate ulang demo data', 'wp-customer'); ?>
+                <?php _e('Hapus semua features & groups, kemudian generate ulang default data', 'wp-customer'); ?>
             </span>
         </p>
         <?php
@@ -60,9 +60,15 @@ add_filter('wpc_settings_footer_content', function($footer_html, $current_tab) {
 <div class="wrap">
     <div class="membership-features-header">
         <h2><?php _e('Membership Features Management', 'wp-customer'); ?></h2>
-        <button type="button" class="button button-primary" id="add-membership-feature">
-            <?php _e('Add New Feature', 'wp-customer'); ?>
-        </button>
+        <div class="header-actions">
+            <button type="button" class="button button-secondary" id="manage-membership-groups">
+                <span class="dashicons dashicons-category" style="margin-top: 3px;"></span>
+                <?php _e('Manage Groups', 'wp-customer'); ?>
+            </button>
+            <button type="button" class="button button-primary" id="add-membership-feature">
+                <?php _e('Add New Feature', 'wp-customer'); ?>
+            </button>
+        </div>
     </div>
 
     <!-- Features Table -->

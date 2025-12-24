@@ -1,0 +1,212 @@
+/**
+ * Membership Groups Modal Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Settings
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/settings/customer-membership-groups-modal-style.css
+ *
+ * Description: Additional styles for membership groups modal
+ *              Complements inline styles in modal template
+ *
+ * Changelog:
+ * 1.0.0 - 2025-11-14 (Task-2205)
+ * - Initial creation
+ * - Header actions styling
+ * - Minor modal adjustments
+ */
+
+/* Header Actions Layout */
+.membership-features-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.membership-features-header h2 {
+    margin: 0;
+}
+
+.membership-features-header .header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.membership-features-header .button .dashicons {
+    margin-top: 3px;
+}
+
+/* Modal specific overrides */
+#membership-groups-modal-content .wp-list-table {
+    margin-top: 0;
+}
+
+#membership-groups-modal-content .form-row {
+    margin-bottom: 15px;
+}
+
+#membership-groups-modal-content .form-row label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+#membership-groups-modal-content .form-row label .required {
+    color: #dc3232;
+}
+
+#membership-groups-modal-content .form-actions {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+}
+
+#membership-groups-modal-content .form-actions .spinner {
+    float: none;
+    margin: 0 10px;
+}
+
+/* Table column widths */
+#membership-groups-modal-content .col-name {
+    width: 20%;
+}
+
+#membership-groups-modal-content .col-slug {
+    width: 15%;
+}
+
+#membership-groups-modal-content .col-capability {
+    width: 15%;
+}
+
+#membership-groups-modal-content .col-description {
+    width: 30%;
+}
+
+#membership-groups-modal-content .col-sort {
+    width: 10%;
+}
+
+#membership-groups-modal-content .col-actions {
+    width: 10%;
+}
+
+/* Loading state */
+#groups-loading {
+    text-align: center;
+    padding: 40px;
+}
+
+#groups-loading .spinner {
+    float: none;
+}
+
+/* Capability badges */
+.capability-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.capability-features {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.capability-limits {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.capability-notifications {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
+/* Button sizing in table */
+#membership-groups-modal-content .button-small {
+    padding: 2px 8px;
+    height: auto;
+    line-height: 1.5;
+}
+
+#membership-groups-modal-content .button-small .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* Empty state */
+.groups-empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    background: #f9f9f9;
+    border: 1px dashed #ddd;
+    border-radius: 4px;
+}
+
+.groups-empty-state .dashicons {
+    font-size: 48px;
+    color: #ccc;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.groups-empty-state p {
+    color: #666;
+    margin: 10px 0;
+}
+
+/* Form header actions */
+.form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.form-header h3 {
+    margin: 0;
+}
+
+/* Groups header actions */
+.groups-header {
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.groups-header h3 {
+    margin: 0;
+}
+
+/* Required field indicator */
+#membership-groups-modal-content .form-row label span {
+    color: #dc3232;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 782px) {
+    .membership-features-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .membership-features-header .header-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .membership-features-header .header-actions .button {
+        width: 100%;
+        text-align: center;
+    }
+}

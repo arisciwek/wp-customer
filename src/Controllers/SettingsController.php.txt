@@ -25,6 +25,7 @@
 namespace WPCustomer\Controllers;
 
 use WPCustomer\Controllers\Settings\MembershipFeaturesController;
+use WPCustomer\Controllers\Settings\MembershipGroupsController;
 use WPCustomer\Models\Membership\MembershipLevelModel;
 use WPCustomer\Models\Membership\MembershipFeatureModel;
 use WPCustomer\Cache\CustomerCacheManager;
@@ -33,6 +34,15 @@ class SettingsController {
     public function init() {
         add_action('admin_init', [$this, 'register_settings']);
         $this->register_ajax_handlers();
+        $this->initControllers();
+    }
+
+    /**
+     * Initialize controllers that need to register hooks
+     */
+    private function initControllers() {
+        // Initialize MembershipGroupsController for AJAX hooks
+        new MembershipGroupsController();
     }
 
     // Add this to your SettingsController or appropriate controller class

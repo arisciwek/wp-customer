@@ -123,17 +123,17 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
             if ($this->shouldClearData('membership_features')) {
                 $this->clearExistingData('membership_features');
             }
-            
-            // Ambil group IDs yang ada
-            $group_ids = $this->getExistingGroupIds();
-            
-            // Insert features dengan group_ids yang sesuai
+
+            // Insert default groups first
+            $group_ids = $this->insertDefaultGroups();
+
+            // Insert features dengan group_ids yang baru dibuat
             $this->insertDefaultFeatures($group_ids);
-            
-            $this->debug('Demo data generation completed successfully');
+
+            $this->debug('Demo data generation completed successfully (groups & features)');
 
         } catch (\Exception $e) {
-            $this->debug("Error in feature generation: " . $e->getMessage());
+            $this->debug("Error in generation: " . $e->getMessage());
             throw $e;
         }
     }
@@ -360,20 +360,32 @@ class MembershipFeaturesDemoData extends AbstractDemoData {
         try {
             $this->wpdb->query("START TRANSACTION");
 
-            // Delete existing features
+            // Delete existing features first (due to foreign key constraint)
             $this->wpdb->query(
-                "DELETE FROM {$this->wpdb->prefix}app_customer_membership_features 
+                "DELETE FROM {$this->wpdb->prefix}app_customer_membership_features
                  WHERE id > 0"
             );
 
-            // Reset auto increment
+            // Reset features auto increment
             $this->wpdb->query(
-                "ALTER TABLE {$this->wpdb->prefix}app_customer_membership_features 
+                "ALTER TABLE {$this->wpdb->prefix}app_customer_membership_features
+                 AUTO_INCREMENT = 1"
+            );
+
+            // Delete existing groups
+            $this->wpdb->query(
+                "DELETE FROM {$this->wpdb->prefix}app_customer_membership_feature_groups
+                 WHERE id > 0"
+            );
+
+            // Reset groups auto increment
+            $this->wpdb->query(
+                "ALTER TABLE {$this->wpdb->prefix}app_customer_membership_feature_groups
                  AUTO_INCREMENT = 1"
             );
 
             $this->wpdb->query("COMMIT");
-            $this->debug('Cleared existing membership features');
+            $this->debug('Cleared existing membership groups and features');
 
         } catch (\Exception $e) {
             $this->wpdb->query("ROLLBACK");

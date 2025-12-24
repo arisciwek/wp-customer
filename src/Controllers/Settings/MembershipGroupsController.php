@@ -75,6 +75,9 @@ class MembershipGroupsController extends AbstractCrudController {
         // Custom hooks
         add_action('wp_ajax_get_all_membership_groups', [$this, 'getAllGroupsAjax']);
         add_action('wp_ajax_get_membership_groups_by_capability', [$this, 'getGroupsByCapabilityAjax']);
+
+        // Modal content hook
+        add_action('wp_ajax_get_groups_modal_content', [$this, 'getModalContent']);
     }
 
     // ========================================
@@ -251,7 +254,7 @@ class MembershipGroupsController extends AbstractCrudController {
     }
 
     /**
-     * Override delete() to invalidate cache
+     * Override delete() to validate and invalidate cache
      *
      * @return void
      */
@@ -263,6 +266,12 @@ class MembershipGroupsController extends AbstractCrudController {
 
             // Check permission
             $this->checkPermission('delete');
+
+            // IMPORTANT: Validate delete operation (check if group has features)
+            $deleteErrors = $this->validator->validateDelete($id);
+            if (!empty($deleteErrors)) {
+                throw new \Exception(implode(' ', $deleteErrors));
+            }
 
             // Get group info before deletion (for cache invalidation)
             $group = $this->model->find($id);
@@ -442,5 +451,47 @@ class MembershipGroupsController extends AbstractCrudController {
         } catch (\Exception $e) {
             wp_send_json_error(['message' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * Get modal content HTML
+     * Returns rendered modal template with groups data
+     *
+     * @return void
+     */
+    public function getModalContent(): void {
+        // Verify nonce - check both GET and POST
+        $nonce = $_REQUEST['nonce'] ?? '';
+        if (!wp_verify_nonce($nonce, 'wp_customer_nonce')) {
+            wp_die('<div class="notice notice-error"><p>Invalid nonce</p></div>');
+        }
+
+        if (!current_user_can('manage_options')) {
+            wp_die('<div class="notice notice-error"><p>Permission denied</p></div>');
+        }
+
+        // Get all active groups
+        $groups = $this->getAllGroups();
+
+        // Build template path - ensure trailing slash
+        $plugin_path = defined('WP_CUSTOMER_PATH') ? WP_CUSTOMER_PATH : plugin_dir_path(dirname(dirname(dirname(__FILE__)))) . '/';
+        $template_path = $plugin_path . 'src/Views/modals/membership-groups-modal.php';
+
+        // Debug: Check if path is correct
+        if (!file_exists($template_path)) {
+            $error_msg = 'Modal template not found.<br>';
+            $error_msg .= 'Plugin Path: ' . esc_html($plugin_path) . '<br>';
+            $error_msg .= 'Template Path: ' . esc_html($template_path) . '<br>';
+            $error_msg .= 'File exists: ' . (file_exists($template_path) ? 'YES' : 'NO');
+            wp_die('<div class="notice notice-error"><p>' . $error_msg . '</p></div>');
+        }
+
+        // Set header for HTML response
+        header('Content-Type: text/html; charset=utf-8');
+
+        // Include template directly (no output buffering to avoid conflicts)
+        include $template_path;
+
+        wp_die(); // Clean exit
     }
 }

@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Controllers/Assets
- * @version     1.5.1
+ * @version     1.6.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Controllers/Assets/AssetController.php
@@ -15,6 +15,13 @@
  *              Inspired by wp-datatable dan wp-modal AssetController.
  *
  * Changelog:
+ * 1.6.0 - 2025-11-14 (Task-2205)
+ * - Added: Membership Groups Modal assets enqueuing
+ * - Added: customer-membership-groups-modal-script.js
+ * - Added: customer-membership-groups-modal-style.css
+ * - Localized: wpCustomerGroupsModal with AJAX & i18n data
+ * - Dependencies: wp-modal plugin for modal display
+ *
  * 1.5.1 - 2025-11-09 (TODO-2196)
  * - Added: company-invoice-style.css enqueuing
  * - CSS includes invoice info grid styles (moved from PHP template)
@@ -313,6 +320,7 @@ class AssetController {
         );
 
         // SHARED: Load base settings script from wp-app-core
+        // Handles Save button
         wp_enqueue_script(
             'wpapp-settings-base',
             WP_APP_CORE_PLUGIN_URL . 'assets/js/settings/wpapp-settings-script.js',
@@ -321,16 +329,17 @@ class AssetController {
             true
         );
 
-        // CUSTOM: Load wp-customer-specific script (if needed for customizations)
-        // Currently not needed as shared script handles all functionality
-        // Uncomment if custom behavior is required:
-        // wp_enqueue_script(
-        //     'wp-customer-settings-script',
-        //     WP_CUSTOMER_URL . 'assets/js/settings/customer-settings-script.js',
-        //     ['wpapp-settings-base', 'wp-customer-toast'],
-        //     $this->version,
-        //     true
-        // );
+        // SHARED: Load reset script from wp-app-core (GLOBAL for ALL plugins)
+        // Handles Reset button (#wpapp-settings-reset) with WPModal confirmation
+        // File: wpapp-settings-reset-script.js (renamed from settings-reset-helper-post.js)
+        // Used by: wp-customer, wp-agency, wp-disnaker, and all wp-app-* plugins
+        wp_enqueue_script(
+            'wpapp-settings-reset-script',
+            WP_APP_CORE_PLUGIN_URL . 'assets/js/settings/wpapp-settings-reset-script.js',
+            ['jquery', 'wp-modal', 'wpapp-settings-base'],
+            WP_APP_CORE_VERSION,
+            true
+        );
 
         // Tab-specific scripts
         $this->enqueue_settings_tab_scripts($current_tab);
@@ -370,6 +379,14 @@ class AssetController {
                     'wp-customer-membership-features-tab',
                     WP_CUSTOMER_URL . 'assets/css/settings/membership-features-tab-style.css',
                     ['wp-customer-settings-style'],  // Fixed: correct handle
+                    $this->version
+                );
+
+                // Groups modal style (Task-2205)
+                wp_enqueue_style(
+                    'wp-customer-membership-groups-modal',
+                    WP_CUSTOMER_URL . 'assets/css/settings/customer-membership-groups-modal-style.css',
+                    ['wp-customer-membership-features-tab', 'wp-modal'],
                     $this->version
                 );
                 break;
@@ -448,6 +465,35 @@ class AssetController {
                             'deleteError' => __('Failed to delete feature', 'wp-customer'),
                             'saving' => __('Saving...', 'wp-customer'),
                             'loading' => __('Loading...', 'wp-customer')
+                        ]
+                    ]
+                );
+
+                // Groups modal script (Task-2205)
+                wp_enqueue_script(
+                    'wp-customer-membership-groups-modal',
+                    WP_CUSTOMER_URL . 'assets/js/settings/customer-membership-groups-modal-script.js',
+                    ['jquery', 'wp-customer-toast', 'wp-modal'],  // depends on WP-Modal plugin
+                    $this->version,
+                    true
+                );
+
+                wp_localize_script(
+                    'wp-customer-membership-groups-modal',
+                    'wpCustomerGroupsModal',
+                    [
+                        'ajaxUrl' => admin_url('admin-ajax.php'),
+                        'nonce' => wp_create_nonce('wp_customer_nonce'),
+                        'i18n' => [
+                            'modalTitle' => __('Manage Feature Groups', 'wp-customer'),
+                            'addGroup' => __('Add New Group', 'wp-customer'),
+                            'editGroup' => __('Edit Group', 'wp-customer'),
+                            'deleteConfirm' => __('Are you sure you want to delete this group? This action cannot be undone.', 'wp-customer'),
+                            'closeModal' => __('Close', 'wp-customer'),
+                            'loadError' => __('Failed to load group data', 'wp-customer'),
+                            'saveError' => __('Failed to save group', 'wp-customer'),
+                            'deleteError' => __('Failed to delete group', 'wp-customer'),
+                            'reloadError' => __('Failed to reload groups list', 'wp-customer')
                         ]
                     ]
                 );

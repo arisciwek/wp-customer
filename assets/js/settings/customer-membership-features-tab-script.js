@@ -361,18 +361,48 @@
         },
 
         handleResetToDemo(e) {
-            const confirmMsg = 'Apakah Anda yakin ingin reset ke demo data?\n\n' +
-                              'Ini akan:\n' +
-                              '1. Menghapus semua membership features yang ada\n' +
-                              '2. Generate ulang demo data membership features\n\n' +
-                              'Tindakan ini TIDAK DAPAT dibatalkan!';
-
-            if (!confirm(confirmMsg)) {
-                return;
-            }
-
+            console.log('[DEBUG] handleResetToDemo called');
             const $btn = $(e.currentTarget);
             const nonce = $btn.data('nonce');
+            const self = this; // Save context reference
+
+            console.log('[DEBUG] Button:', $btn);
+            console.log('[DEBUG] Nonce:', nonce);
+            console.log('[DEBUG] Self context:', self);
+
+            // Use WPModal.confirm() - the correct method for confirmation modals
+            const message = `
+                <p><strong>Apakah Anda yakin ingin reset ke default data?</strong></p>
+                <p>Ini akan:</p>
+                <ol style="margin-left: 20px;">
+                    <li>Menghapus semua membership groups yang ada</li>
+                    <li>Menghapus semua membership features yang ada</li>
+                    <li>Generate ulang default data (groups & features)</li>
+                </ol>
+                <p style="color: #d63638; font-weight: bold;">⚠️ Tindakan ini TIDAK DAPAT dibatalkan!</p>
+            `;
+
+            WPModal.confirm({
+                title: 'Reset Ke Default Data',
+                message: message,
+                danger: true,
+                confirmLabel: 'Ya, Reset Sekarang',
+                onConfirm: function() {
+                    console.log('[DEBUG] onConfirm called');
+                    console.log('[DEBUG] self:', self);
+                    console.log('[DEBUG] Calling executeReset...');
+                    self.executeReset($btn, nonce);
+                    console.log('[DEBUG] executeReset called');
+                }
+            });
+            console.log('[DEBUG] WPModal.confirm called');
+        },
+
+        executeReset($btn, nonce) {
+            console.log('[DEBUG] executeReset started');
+            console.log('[DEBUG] executeReset $btn:', $btn);
+            console.log('[DEBUG] executeReset nonce:', nonce);
+            console.log('[DEBUG] AJAX URL:', wpCustomerSettings.ajaxUrl);
 
             $.ajax({
                 url: wpCustomerSettings.ajaxUrl,
@@ -382,25 +412,28 @@
                     nonce: nonce
                 },
                 beforeSend: () => {
+                    console.log('[DEBUG] AJAX beforeSend');
                     $btn.prop('disabled', true);
                     $btn.text('Resetting...');
                 },
                 success: (response) => {
+                    console.log('[DEBUG] AJAX success:', response);
                     if (response.success) {
-                        CustomerToast.success(response.data.message || 'Demo data berhasil di-generate!');
+                        CustomerToast.success(response.data.message || 'Default data berhasil di-generate!');
                         setTimeout(() => {
                             window.location.reload();
                         }, 1000);
                     } else {
-                        CustomerToast.error(response.data.message || 'Gagal reset demo data');
+                        CustomerToast.error(response.data.message || 'Gagal reset default data');
                         $btn.prop('disabled', false);
-                        $btn.text('Reset ke Demo Data');
+                        $btn.text('Reset Ke Default Data');
                     }
                 },
-                error: () => {
-                    CustomerToast.error('Terjadi kesalahan saat reset demo data');
+                error: (xhr, status, error) => {
+                    console.log('[DEBUG] AJAX error:', xhr, status, error);
+                    CustomerToast.error('Terjadi kesalahan saat reset default data');
                     $btn.prop('disabled', false);
-                    $btn.text('Reset ke Demo Data');
+                    $btn.text('Reset Ke Default Data');
                 }
             });
         },

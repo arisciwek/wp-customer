@@ -196,6 +196,17 @@ class MembershipGroupsValidator extends AbstractValidator {
     }
 
     /**
+     * Public wrapper for validateDeleteOperation
+     * Allows controller to validate delete before executing
+     *
+     * @param int $id Entity ID
+     * @return array Errors (empty if valid)
+     */
+    public function validateDelete(int $id): array {
+        return $this->validateDeleteOperation($id);
+    }
+
+    /**
      * Check if user can create
      *
      * @return bool

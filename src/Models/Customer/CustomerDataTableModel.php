@@ -358,7 +358,7 @@ class CustomerDataTableModel extends DataTableModel {
             );
         }
 
-        return implode(' ', $buttons);
+        return '<div class="wpdt-action-buttons">' . implode(' ', $buttons) . '</div>';
     }
 
     /**

@@ -137,11 +137,11 @@ class CustomerDemoDataController {
 
             if ($success) {
                 wp_send_json_success([
-                    'message' => __('Membership features generated successfully', 'wp-customer')
+                    'message' => __('Default membership groups & features generated successfully', 'wp-customer')
                 ]);
             } else {
                 wp_send_json_error([
-                    'message' => __('Failed to generate membership features', 'wp-customer')
+                    'message' => __('Failed to generate default data', 'wp-customer')
                 ]);
             }
         } catch (\Exception $e) {

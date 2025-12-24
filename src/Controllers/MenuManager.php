@@ -11,7 +11,6 @@
 
 namespace WPCustomer\Controllers;
 
-use WPCustomer\Controllers\SettingsController;
 use WPCustomer\Controllers\Settings\CustomerSettingsPageController;
 use WPCustomer\Controllers\Customer\CustomerController;
 use WPCustomer\Controllers\Customer\CustomerDashboardController;
@@ -23,8 +22,7 @@ use WPCustomer\Controllers\Company\CompanyInvoiceDashboardController;
 class MenuManager {
     private $plugin_name;
     private $version;
-    private $settings_controller;  // OLD: Legacy AJAX handlers
-    private $settings_page_controller;  // NEW: Standardized settings (TODO-2198)
+    private $settings_page_controller;  // Standardized settings (TODO-2198)
     private $customer_controller;
     private $customer_dashboard_controller;  // CustomerDashboardController for DualPanel
     private $company_controller;  // CompanyController (OLD - will be deprecated)
@@ -35,8 +33,7 @@ class MenuManager {
     public function __construct($plugin_name, $version) {
         $this->plugin_name = $plugin_name;
         $this->version = $version;
-        $this->settings_controller = new SettingsController();  // OLD: Legacy AJAX
-        $this->settings_page_controller = new CustomerSettingsPageController();  // NEW: TODO-2198
+        $this->settings_page_controller = new CustomerSettingsPageController();  // TODO-2198
         $this->customer_controller = new CustomerController();
         $this->customer_dashboard_controller = new CustomerDashboardController();
         $this->company_controller = new CompanyController();  // OLD - keeping for reference
@@ -47,8 +44,7 @@ class MenuManager {
 
     public function init() {
         add_action('admin_menu', [$this, 'registerMenus']);
-        $this->settings_controller->init();  // OLD: Legacy AJAX handlers
-        $this->settings_page_controller->init();  // NEW: Standardized settings (TODO-2198)
+        $this->settings_page_controller->init();  // Standardized settings (TODO-2198)
     }
 
     public function registerMenus() {
