@@ -14,10 +14,13 @@
  *              Pattern sama dengan customer-datatable.php
  *
  * Changelog:
+ * 1.0.1 - 2025-12-25
+ * - Removed status column (only active companies shown)
+ * - Columns: Code, Name, Type, Email, Phone, Actions
+ *
  * 1.0.0 - 2025-11-09 (TODO-2195)
  * - Initial implementation following customer DataTable pattern
  * - Uses wp-datatable framework
- * - Columns: Code, Name, Type, Email, Phone, Status, Actions
  */
 
 defined('ABSPATH') || exit;
@@ -32,7 +35,6 @@ defined('ABSPATH') || exit;
                 <th><?php esc_html_e('Type', 'wp-customer'); ?></th>
                 <th><?php esc_html_e('Email', 'wp-customer'); ?></th>
                 <th><?php esc_html_e('Phone', 'wp-customer'); ?></th>
-                <th><?php esc_html_e('Status', 'wp-customer'); ?></th>
                 <th><?php esc_html_e('Actions', 'wp-customer'); ?></th>
             </tr>
         </thead>

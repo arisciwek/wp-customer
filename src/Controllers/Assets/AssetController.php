@@ -15,6 +15,14 @@
  *              Inspired by wp-datatable dan wp-modal AssetController.
  *
  * Changelog:
+ * 1.7.0 - 2025-12-25
+ * - Added: Map picker integration for company dashboard
+ * - Added: Leaflet.js (1.9.4) enqueuing for map functionality
+ * - Added: wpapp-map-picker.js (global from wp-app-core)
+ * - Added: wpapp-map-adapter.js (global from wp-app-core)
+ * - Added: company-map-adapter.js for company-specific map integration
+ * - Support: Location picker in company edit forms
+ *
  * 1.6.0 - 2025-11-14 (Task-2205)
  * - Added: Membership Groups Modal assets enqueuing
  * - Added: customer-membership-groups-modal-script.js
@@ -229,6 +237,49 @@ class AssetController {
      * @return void
      */
     private function enqueue_company_dashboard_assets(): void {
+        // Enqueue Leaflet CSS (for map picker)
+        wp_enqueue_style(
+            'leaflet',
+            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+            [],
+            '1.9.4'
+        );
+
+        // Enqueue Leaflet JS (for map picker)
+        wp_enqueue_script(
+            'leaflet',
+            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+            [],
+            '1.9.4',
+            false
+        );
+
+        // Enqueue global MapPicker from wp-app-core
+        wp_enqueue_script(
+            'wpapp-map-picker',
+            WP_APP_CORE_PLUGIN_URL . 'assets/js/map/wpapp-map-picker.js',
+            ['jquery', 'leaflet'],
+            WP_APP_CORE_VERSION,
+            false
+        );
+
+        // Enqueue global Map Adapter from wp-app-core
+        wp_enqueue_script(
+            'wpapp-map-adapter',
+            WP_APP_CORE_PLUGIN_URL . 'assets/js/map/wpapp-map-adapter.js',
+            ['jquery', 'leaflet', 'wpapp-map-picker'],
+            WP_APP_CORE_VERSION,
+            false
+        );
+
+        // Enqueue CSS for forms (edit company modals)
+        wp_enqueue_style(
+            'company-forms',
+            WP_CUSTOMER_URL . 'assets/css/company/company-forms.css',
+            [],
+            $this->version
+        );
+
         // Enqueue minimal JS for DataTable initialization
         // Dependency: jquery only (datatables will be loaded by wp-datatable BaseAssets)
         wp_enqueue_script(
@@ -248,8 +299,36 @@ class AssetController {
             false
         );
 
-        // Localize script with nonce (shared by all DataTables)
+        // Enqueue company modal handler for CRUD operations (edit/delete buttons)
+        // Handles company-edit-btn and company-delete-btn clicks
+        // Uses WPModal from wp-modal plugin
+        wp_enqueue_script(
+            'company-modal-handler',
+            WP_CUSTOMER_URL . 'assets/js/company/company-modal-handler.js',
+            ['jquery', 'wp-modal', 'company-datatable'],
+            $this->version,
+            true  // Load in footer
+        );
+
+        // Enqueue company map adapter for location picker in company forms
+        // Integrates global MapPicker with company modal forms
+        // Dependencies: wpapp-map-picker and wpapp-map-adapter from wp-app-core
+        wp_enqueue_script(
+            'company-map-adapter',
+            WP_CUSTOMER_URL . 'assets/js/company/company-map-adapter.js',
+            ['jquery', 'wp-modal', 'wpapp-map-adapter', 'company-datatable'],
+            $this->version,
+            true  // Load in footer
+        );
+
+        // Localize script with nonce (shared by all DataTables and modal)
         wp_localize_script('company-datatable', 'wpCompanyConfig', [
+            'nonce' => wp_create_nonce('wpdt_nonce'),
+            'ajaxUrl' => admin_url('admin-ajax.php')
+        ]);
+
+        // Localize script for company modal (wpCustomerData is expected by company-modal-handler.js)
+        wp_localize_script('company-modal-handler', 'wpCustomerData', [
             'nonce' => wp_create_nonce('wpdt_nonce'),
             'ajaxUrl' => admin_url('admin-ajax.php')
         ]);

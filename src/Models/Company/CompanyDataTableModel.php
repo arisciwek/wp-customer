@@ -18,12 +18,17 @@
  *              Includes View button dengan wpdt-panel-trigger class.
  *
  * Changelog:
+ * 1.0.1 - 2025-12-25
+ * - Removed status column from display
+ * - Always filter to show only active companies
+ * - Edit access controlled by edit_all_customer_branches permission
+ * - Columns: Code, Name, Type, Email, Phone, Actions
+ *
  * 1.0.0 - 2025-11-09 (TODO-2195)
  * - Initial implementation for Company dashboard
  * - Based on BranchDataTableModel but with View button
  * - View button has wpdt-panel-trigger class for dual panel
  * - Filters companies only (no customer_id filter)
- * - Columns: Code, Name, Type, Email, Phone, Status, Actions
  */
 
 namespace WPCustomer\Models\Company;
@@ -94,9 +99,9 @@ class CompanyDataTableModel extends DataTableModel {
             "{$alias}.type as type",
             "{$alias}.email as email",
             "{$alias}.phone as phone",
-            "{$alias}.status as status",
             "{$alias}.id as id",
-            "{$alias}.customer_id as customer_id"
+            "{$alias}.customer_id as customer_id",
+            "{$alias}.status as status"
         ];
     }
 
@@ -113,18 +118,6 @@ class CompanyDataTableModel extends DataTableModel {
             $type_display = $row->type === 'pusat' ? 'Pusat' : 'Cabang';
         }
 
-        // Format status badge
-        $status_badge = '';
-        if (isset($row->status)) {
-            $badge_class = $row->status === 'active' ? 'status-active' : 'status-inactive';
-            $status_text = $row->status === 'active' ? __('Active', 'wp-customer') : __('Inactive', 'wp-customer');
-            $status_badge = sprintf(
-                '<span class="status-badge %s">%s</span>',
-                $badge_class,
-                $status_text
-            );
-        }
-
         return [
             'DT_RowId' => 'company-' . ($row->id ?? 0),
             'DT_RowData' => [
@@ -138,7 +131,6 @@ class CompanyDataTableModel extends DataTableModel {
             'type' => esc_html($type_display),
             'email' => esc_html($row->email ?? '-'),
             'phone' => esc_html($row->phone ?? '-'),
-            'status' => $status_badge,
             'actions' => $this->generate_action_buttons($row)
         ];
     }
@@ -194,7 +186,7 @@ class CompanyDataTableModel extends DataTableModel {
      * Filter WHERE conditions
      *
      * Hooked to: wpapp_datatable_company_where
-     * Filters by accessible branch IDs and status from request data
+     * Filters by accessible branch IDs and active status only
      *
      * @param array $where_conditions Current WHERE conditions
      * @param array $request_data DataTables request data
@@ -212,7 +204,7 @@ class CompanyDataTableModel extends DataTableModel {
         $alias = $this->table_alias;
 
         // Filter by accessible branch IDs (access control)
-        // Platform staff get empty array = see all
+        // Platform staff and users with edit_all_customer_branches get empty array = see all
         // Customer users get filtered array based on role:
         // - customer_admin: all branches in their customer(s)
         // - customer_branch_admin: only their assigned branch(es)
@@ -226,16 +218,10 @@ class CompanyDataTableModel extends DataTableModel {
                 ...$accessible_branch_ids
             );
         }
-        // If empty array from platform staff, no filter needed (see all)
+        // If empty array from platform staff or users with edit_all_customer_branches, no filter needed (see all)
 
-        // Filter by status (optional, from dropdown filter)
-        if (isset($request_data['status_filter']) && !empty($request_data['status_filter'])) {
-            $status = sanitize_text_field($request_data['status_filter']);
-            $where_conditions[] = sprintf("{$alias}.status = '%s'", esc_sql($status));
-        } else {
-            // Default to active if no filter specified
-            $where_conditions[] = "{$alias}.status = 'active'";
-        }
+        // Always filter to show only active companies
+        $where_conditions[] = "{$alias}.status = 'active'";
 
         return $where_conditions;
     }

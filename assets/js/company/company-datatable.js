@@ -25,10 +25,13 @@
  * 5. Panel opens automatically - NO custom code needed!
  *
  * Changelog:
+ * 1.0.1 - 2025-12-25
+ * - Removed status column (only active companies shown)
+ * - Columns: Code, Name, Type, Email, Phone, Actions
+ *
  * 1.0.0 - 2025-11-09 (TODO-2195)
  * - Initial implementation following customer-datatable.js pattern
  * - TRUE minimal implementation - delegates everything to framework
- * - Columns: Code, Name, Type, Email, Phone, Status, Actions
  */
 
 (function($) {
@@ -59,6 +62,11 @@
             console.error('[Company DataTable] No nonce available!');
         }
 
+        // Destroy existing table if it exists (for hot reload)
+        if ($.fn.DataTable.isDataTable('#company-datatable')) {
+            $('#company-datatable').DataTable().destroy();
+        }
+
         // Initialize DataTable with server-side processing
         var companyTable = $table.DataTable({
             processing: true,
@@ -72,42 +80,43 @@
                 }
             },
             columns: [
-                {
-                    data: 'code',
-                    name: 'code',
-                    responsivePriority: 1  // Always visible
-                },
-                {
-                    data: 'name',
-                    name: 'name',
-                    responsivePriority: 1  // Always visible
-                },
-                {
-                    data: 'type',
-                    name: 'type',
-                    responsivePriority: 2  // Hide when panel opens
-                },
-                {
-                    data: 'email',
-                    name: 'email',
-                    responsivePriority: 3  // Hide when panel opens (lower priority)
-                },
-                {
-                    data: 'phone',
-                    name: 'phone',
-                    responsivePriority: 2  // Hide when panel opens
-                },
-                {
-                    data: 'status',
-                    name: 'status',
-                    responsivePriority: 1  // Always visible (no render, Model sends HTML badge)
-                },
+                { data: 'code' },
+                { data: 'name' },
+                { data: 'type' },
+                { data: 'email' },
+                { data: 'phone' },
                 {
                     data: 'actions',
-                    name: 'actions',
                     orderable: false,
-                    searchable: false,
-                    responsivePriority: 1  // Always visible (actions always needed)
+                    searchable: false
+                }
+            ],
+            columnDefs: [
+                {
+                    targets: 0,  // Code
+                    responsivePriority: 1
+                },
+                {
+                    targets: 1,  // Name
+                    responsivePriority: 1
+                },
+                {
+                    targets: 2,  // Type
+                    responsivePriority: 2
+                },
+                {
+                    targets: 3,  // Email
+                    responsivePriority: 3
+                },
+                {
+                    targets: 4,  // Phone
+                    responsivePriority: 2
+                },
+                {
+                    targets: 5,  // Actions
+                    responsivePriority: 1,
+                    orderable: false,
+                    searchable: false
                 }
             ],
             createdRow: function(row, data, dataIndex) {
