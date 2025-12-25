@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Integrations
- * @version     1.3.0
+ * @version     1.4.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Integrations/BranchAccessFilter.php
@@ -33,6 +33,11 @@
  * - wp_app_customer_employees table (user context)
  *
  * Changelog:
+ * 1.4.0 - 2025-12-25
+ * - Added: Entity relation config for 'customer_employees' entity
+ * - Fix: Register customer_employees with EntityRelationModel
+ * - Support: Employee DataTable access filtering
+ *
  * 1.3.0 - 2025-11-02 (TODO-2190 Fix)
  * - CRITICAL SIMPLIFICATION: Removed division_id filtering for customer roles
  * - All customer roles now filter by customer_id only (unified access)
@@ -106,6 +111,17 @@ class BranchAccessFilter {
             'customer_column' => 'customer_id',
             'access_filter' => true,
             'cache_group' => 'wp_customer_company_relations',
+            'cache_ttl' => 3600
+        ];
+
+        // Register 'customer_employees' entity config
+        // Used by EmployeeDataTableModel (employee listing)
+        $configs['customer_employees'] = [
+            'bridge_table' => 'app_customer_employees',
+            'entity_column' => 'id',
+            'customer_column' => 'customer_id',
+            'access_filter' => true,
+            'cache_group' => 'wp_customer_employee_relations',
             'cache_ttl' => 3600
         ];
 

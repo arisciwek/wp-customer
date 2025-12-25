@@ -433,15 +433,38 @@ class CompanyDashboardController {
         }
 
         try {
+            $branch_id = isset($_POST['company_id']) ? intval($_POST['company_id']) : 0;
+
+            if (!$branch_id) {
+                wp_send_json_error(['message' => __('Branch ID required', 'wp-customer')]);
+                return;
+            }
+
+            // Get customer_id from branch record
+            global $wpdb;
+            $branch = $wpdb->get_row($wpdb->prepare(
+                "SELECT customer_id FROM {$wpdb->prefix}app_customer_branches WHERE id = %d",
+                $branch_id
+            ));
+
+            if (!$branch) {
+                wp_send_json_error(['message' => __('Branch not found', 'wp-customer')]);
+                return;
+            }
+
             $model = new EmployeeDataTableModel();
 
-            // Filter by branch_id (company_id in this context)
-            $_POST['branch_id'] = isset($_POST['company_id']) ? intval($_POST['company_id']) : 0;
+            // Set both customer_id and branch_id for filtering
+            $_POST['customer_id'] = $branch->customer_id;
+            $_POST['branch_id'] = $branch_id;
+
+            error_log("[CompanyDashboard] Employees DataTable request - branch_id: {$branch_id}, customer_id: {$branch->customer_id}");
 
             $response = $model->get_datatable_data($_POST);
             wp_send_json($response);
 
         } catch (\Exception $e) {
+            error_log('[CompanyDashboard] Error in handle_employees_datatable: ' . $e->getMessage());
             wp_send_json_error(['message' => __('Error loading employees', 'wp-customer')]);
         }
     }

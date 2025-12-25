@@ -7,7 +7,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Employee
- * @version     2.0.0
+ * @version     2.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Employee/EmployeeDataTableModel.php
@@ -18,6 +18,12 @@
  *              Columns: Nama, Jabatan, Email, Telepon, Status
  *
  * Changelog:
+ * 2.1.0 - 2025-12-25
+ * - Added: Role-based branch filtering for customer employees
+ * - Regular customer_employee only see employees in their own branch
+ * - Customer admins see all employees in their customer
+ * - Support for explicit branch_id filtering (company staff tab)
+ *
  * 2.0.0 - 2025-11-05
  * - ✅ REFACTORED: get_total_count() with QueryBuilder (48% reduction: 23 → 12 lines)
  * - ✅ REFACTORED: get_total_count_global() with QueryBuilder (36% reduction: 28 → 18 lines)
@@ -250,24 +256,73 @@ class EmployeeDataTableModel extends DataTableModel {
     public function filter_where($where_conditions, $request_data, $model): array {
         global $wpdb;
         $alias = $this->table_alias;
+        $current_user_id = get_current_user_id();
+
+        error_log('[EmployeeDataTable] filter_where START');
+        error_log('[EmployeeDataTable] Current user ID: ' . $current_user_id);
+        error_log('[EmployeeDataTable] Request data: ' . print_r($request_data, true));
+        error_log('[EmployeeDataTable] Initial WHERE conditions: ' . print_r($where_conditions, true));
 
         // Filter by customer_id (required)
         if (isset($request_data['customer_id'])) {
             $customer_id = (int) $request_data['customer_id'];
             // Use sprintf since customer_id is already cast to int
-            $where_conditions[] = sprintf("{$alias}.customer_id = %d", $customer_id);
+            $where_clause = sprintf("{$alias}.customer_id = %d", $customer_id);
+            $where_conditions[] = $where_clause;
+            error_log("[EmployeeDataTable] Added customer_id filter: {$where_clause}");
+        } else {
+            error_log('[EmployeeDataTable] WARNING: No customer_id in request_data!');
+        }
+
+        // Filter by branch_id (optional, for company staff tab OR from request)
+        if (isset($request_data['branch_id']) && !empty($request_data['branch_id'])) {
+            $branch_id = (int) $request_data['branch_id'];
+            $branch_clause = sprintf("{$alias}.branch_id = %d", $branch_id);
+            $where_conditions[] = $branch_clause;
+            error_log("[EmployeeDataTable] Added branch_id filter from request: {$branch_clause}");
+        } else {
+            // Check if current user is a regular customer_employee (not admin)
+            // Regular employees should only see employees in their own branch
+            $user = wp_get_current_user();
+            $is_customer_employee = in_array('customer_employee', $user->roles)
+                                    && !in_array('customer_admin', $user->roles)
+                                    && !in_array('customer_branch_admin', $user->roles)
+                                    && !current_user_can('administrator');
+
+            if ($is_customer_employee) {
+                // Get user's branch_id from employee record
+                $user_employee = $wpdb->get_row($wpdb->prepare(
+                    "SELECT branch_id FROM {$wpdb->prefix}app_customer_employees WHERE user_id = %d LIMIT 1",
+                    $current_user_id
+                ));
+
+                if ($user_employee && $user_employee->branch_id) {
+                    $user_branch_id = (int) $user_employee->branch_id;
+                    $branch_clause = sprintf("{$alias}.branch_id = %d", $user_branch_id);
+                    $where_conditions[] = $branch_clause;
+                    error_log("[EmployeeDataTable] Regular employee - Added branch_id filter from user's branch: {$branch_clause}");
+                } else {
+                    error_log("[EmployeeDataTable] Regular employee but no branch_id found for user {$current_user_id}");
+                }
+            } else {
+                error_log("[EmployeeDataTable] User is admin/manager - no branch_id restriction");
+            }
         }
 
         // Filter by status (optional, from dropdown filter)
         if (isset($request_data['status_filter']) && !empty($request_data['status_filter'])) {
             $status = sanitize_text_field($request_data['status_filter']);
             // Use esc_sql since status is already sanitized
-            $where_conditions[] = sprintf("{$alias}.status = '%s'", esc_sql($status));
+            $status_clause = sprintf("{$alias}.status = '%s'", esc_sql($status));
+            $where_conditions[] = $status_clause;
+            error_log("[EmployeeDataTable] Added status filter: {$status_clause}");
         } else {
             // Default to active if no filter specified
             $where_conditions[] = "{$alias}.status = 'active'";
+            error_log("[EmployeeDataTable] Added default active filter");
         }
 
+        error_log('[EmployeeDataTable] Final WHERE conditions: ' . print_r($where_conditions, true));
         return $where_conditions;
     }
 

@@ -7,7 +7,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Branch
- * @version     2.0.0
+ * @version     2.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Branch/BranchDataTableModel.php
@@ -18,6 +18,13 @@
  *              Columns: Kode, Nama Cabang, Tipe, Email, Telepon, Status
  *
  * Changelog:
+ * 2.1.0 - 2025-12-25
+ * - Added: Role-based branch filtering
+ * - customer_admin: see all branches in their customer
+ * - customer_branch_admin: only see their managed branch
+ * - customer_employee: only see their own branch
+ * - Non-admin users automatically filtered by their branch_id
+ *
  * 2.0.0 - 2025-11-05
  * - ✅ REFACTORED: get_total_count() with QueryBuilder (48% reduction: 23 → 12 lines)
  * - ✅ FIXED: Single placeholder wpdb::prepare Notice (line 199, 205)
@@ -207,12 +214,41 @@ class BranchDataTableModel extends DataTableModel {
 
         global $wpdb;
         $alias = $this->table_alias;
+        $current_user_id = get_current_user_id();
 
         // Filter by customer_id (required)
         if (isset($request_data['customer_id'])) {
             $customer_id = (int) $request_data['customer_id'];
             // Use sprintf since customer_id is already cast to int
             $where_conditions[] = sprintf("{$alias}.customer_id = %d", $customer_id);
+        }
+
+        // Role-based branch filtering
+        // customer_admin: see all branches in their customer
+        // customer_branch_admin: only see their managed branch
+        // customer_employee: only see their own branch
+        $user = wp_get_current_user();
+        $is_customer_admin = in_array('customer_admin', $user->roles);
+        $is_admin = current_user_can('administrator');
+
+        // If not customer_admin and not system admin, filter by user's branch
+        if (!$is_customer_admin && !$is_admin) {
+            // Get user's branch_id from employee record
+            $user_employee = $wpdb->get_row($wpdb->prepare(
+                "SELECT branch_id FROM {$wpdb->prefix}app_customer_employees WHERE user_id = %d LIMIT 1",
+                $current_user_id
+            ));
+
+            if ($user_employee && $user_employee->branch_id) {
+                $user_branch_id = (int) $user_employee->branch_id;
+                $branch_clause = sprintf("{$alias}.id = %d", $user_branch_id);
+                $where_conditions[] = $branch_clause;
+                error_log("[BranchDataTable] Non-admin user (ID: {$current_user_id}) - filtered to branch_id: {$user_branch_id}");
+            } else {
+                error_log("[BranchDataTable] Non-admin user (ID: {$current_user_id}) but no branch_id found");
+            }
+        } else {
+            error_log("[BranchDataTable] Admin user (ID: {$current_user_id}) - no branch restriction");
         }
 
         // Filter by status (optional, from dropdown filter)

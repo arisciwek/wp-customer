@@ -28,6 +28,9 @@
 (function($) {
     'use strict';
 
+    console.log('[Company Employees DataTable] Script loaded');
+    console.log('[Company Employees DataTable] wpCompanyConfig:', wpCompanyConfig);
+
     // Configuration from wp_localize_script
     const nonce = wpCompanyConfig.nonce;
     const ajaxurl = wpCompanyConfig.ajaxUrl;
@@ -38,16 +41,26 @@
      * Initialize Company Employees DataTable
      */
     function initCompanyEmployeesDataTable() {
-        const $table = $('#company-employees-datatable');
+        console.log('[Company Employees DataTable] initCompanyEmployeesDataTable called');
 
-        if (!$table.length || $.fn.DataTable.isDataTable($table)) {
+        const $table = $('#company-employees-datatable');
+        console.log('[Company Employees DataTable] Table element found:', $table.length > 0);
+
+        if (!$table.length) {
+            console.error('[Company Employees DataTable] Table element not found');
+            return;
+        }
+
+        if ($.fn.DataTable.isDataTable($table)) {
+            console.log('[Company Employees DataTable] DataTable already initialized, skipping');
             return;
         }
 
         const companyId = $table.data('company-id');
+        console.log('[Company Employees DataTable] Company ID:', companyId);
 
         if (!companyId) {
-            console.error('[Company Employees DataTable] company-id not found');
+            console.error('[Company Employees DataTable] company-id not found on table element');
             return;
         }
 
@@ -62,6 +75,11 @@
                     d.action = 'get_company_employees_datatable';
                     d.nonce = nonce;
                     d.company_id = companyId;
+                    console.log('[Company Employees DataTable] AJAX data:', { action: d.action, company_id: companyId });
+                },
+                error: function(xhr, error, code) {
+                    console.error('[Company Employees DataTable] AJAX error:', error, code);
+                    console.error('[Company Employees DataTable] Response:', xhr.responseText);
                 }
             },
             columns: [
@@ -101,17 +119,51 @@
     }
 
     /**
+     * Retry initialization with polling
+     * Waits for table element to appear in DOM after AJAX load
+     */
+    function retryInitDataTable(maxRetries = 10, retryDelay = 200) {
+        let retryCount = 0;
+
+        const attemptInit = function() {
+            const $table = $('#company-employees-datatable');
+
+            if ($table.length > 0) {
+                // Table found, initialize
+                console.log('[Company Employees DataTable] Table element found after ' + retryCount + ' retries');
+                if (!$.fn.DataTable.isDataTable($table)) {
+                    initCompanyEmployeesDataTable();
+                } else {
+                    console.log('[Company Employees DataTable] DataTable already initialized');
+                }
+                return true;
+            }
+
+            // Table not found yet
+            retryCount++;
+            if (retryCount < maxRetries) {
+                console.log('[Company Employees DataTable] Table not found, retry ' + retryCount + '/' + maxRetries);
+                setTimeout(attemptInit, retryDelay);
+            } else {
+                console.error('[Company Employees DataTable] Max retries reached, table element not found');
+            }
+        };
+
+        attemptInit();
+    }
+
+    /**
      * Listen for tab switching event
      */
     $(document).on('wpdt:tab-switched', function(e, data) {
+        console.log('[Company Employees DataTable] Tab switched event received:', data);
+
         // Initialize DataTable when staff tab becomes active
         if (data.tabId === 'staff') {
-            console.log('[Company Employees DataTable] Tab switched to staff');
+            console.log('[Company Employees DataTable] Staff tab activated');
 
-            // Small delay to ensure DOM is ready
-            setTimeout(function() {
-                initCompanyEmployeesDataTable();
-            }, 100);
+            // Use retry logic to wait for AJAX content to load
+            retryInitDataTable();
         }
     });
 
@@ -124,9 +176,7 @@
 
         if ($staffTab.hasClass('nav-tab-active')) {
             console.log('[Company Employees DataTable] Staff tab active on load');
-            setTimeout(function() {
-                initCompanyEmployeesDataTable();
-            }, 100);
+            retryInitDataTable();
         }
     });
 
