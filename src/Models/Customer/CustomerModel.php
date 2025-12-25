@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Customer
- * @version     2.0.0
+ * @version     2.0.2
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Customer/CustomerModel.php
@@ -15,6 +15,15 @@
  *              All CRUD operations INHERITED from AbstractCrudModel.
  *
  * Changelog:
+ * 2.0.2 - 2025-12-25
+ * - Added getHeadOffice() method to fetch head office (pusat) data
+ * - Returns complete branch data with province/regency names
+ * - Includes address, phone, email, coordinates
+ *
+ * 2.0.1 - 2025-12-25
+ * - Added getAdminUser() method to fetch admin user data
+ * - Returns user data (display_name, user_email, user_login) from user_id
+ *
  * 2.0.0 - 2025-01-08 (Task-2191: CRUD Refactoring)
  * - BREAKING: Refactored to extend AbstractCrudModel
  * - Code reduction: 1451 lines → ~250 lines (83% reduction)
@@ -367,5 +376,69 @@ class CustomerModel extends AbstractCrudModel {
         $results = $wpdb->get_col($sql);
 
         return $results ? array_map('intval', $results) : [];
+    }
+
+    /**
+     * Get admin user data for customer
+     *
+     * @param int $customer_id Customer ID
+     * @return object|null Admin user data or null if not found
+     */
+    public function getAdminUser(int $customer_id): ?object {
+        $customer = $this->find($customer_id);
+
+        if (!$customer || !$customer->user_id) {
+            return null;
+        }
+
+        $user = get_userdata($customer->user_id);
+
+        if (!$user) {
+            return null;
+        }
+
+        return (object) [
+            'id' => $user->ID,
+            'display_name' => $user->display_name,
+            'user_email' => $user->user_email,
+            'user_login' => $user->user_login
+        ];
+    }
+
+    /**
+     * Get head office (pusat) data for customer
+     *
+     * @param int $customer_id Customer ID
+     * @return object|null Head office data or null if not found
+     */
+    public function getHeadOffice(int $customer_id): ?object {
+        global $wpdb;
+
+        $sql = "
+            SELECT
+                b.id,
+                b.code,
+                b.name,
+                b.address,
+                b.postal_code,
+                b.phone,
+                b.email,
+                b.latitude,
+                b.longitude,
+                b.province_id,
+                b.regency_id,
+                p.name as province_name,
+                r.name as regency_name
+            FROM {$wpdb->prefix}app_customer_branches b
+            LEFT JOIN {$wpdb->prefix}wi_provinces p ON b.province_id = p.id
+            LEFT JOIN {$wpdb->prefix}wi_regencies r ON b.regency_id = r.id
+            WHERE b.customer_id = %d
+            AND b.type = 'pusat'
+            LIMIT 1
+        ";
+
+        $result = $wpdb->get_row($wpdb->prepare($sql, $customer_id));
+
+        return $result ?: null;
     }
 }

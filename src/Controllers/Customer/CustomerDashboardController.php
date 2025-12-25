@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Controllers/Customer
- * @version     3.0.1
+ * @version     3.0.3
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Controllers/Customer/CustomerDashboardController.php
@@ -15,6 +15,16 @@
  *              Uses hook-based architecture untuk extensibility.
  *
  * Changelog:
+ * 3.0.3 - 2025-12-25
+ * - Added head office data to customer detail response
+ * - Fetch head office using CustomerModel::getHeadOffice()
+ * - Complete address data (address, postal_code, phone, email, coordinates)
+ *
+ * 3.0.2 - 2025-12-25
+ * - Added admin user data to customer detail response
+ * - Fetch admin user using CustomerModel::getAdminUser()
+ * - Admin data available in info tab (admin_name, admin_email, admin_login)
+ *
  * 3.0.1 - 2025-11-09
  * - ARCHITECTURAL FIX: Implemented proper wp-datatable tab rendering pattern
  * - Added template paths to tab registration (Direct Inclusion Pattern)
@@ -351,6 +361,29 @@ class CustomerDashboardController {
 
             $membership = $this->model->getMembershipData($id);
             $access = $this->validator->validateAccess($id);
+            $admin_user = $this->model->getAdminUser($id);
+            $head_office = $this->model->getHeadOffice($id);
+
+            // Add admin user data to customer object
+            if ($admin_user) {
+                $customer->admin_name = $admin_user->display_name;
+                $customer->admin_email = $admin_user->user_email;
+                $customer->admin_login = $admin_user->user_login;
+            }
+
+            // Add head office data to customer object
+            if ($head_office) {
+                $customer->pusat_name = $head_office->name;
+                $customer->pusat_code = $head_office->code;
+                $customer->pusat_address = $head_office->address;
+                $customer->pusat_postal_code = $head_office->postal_code;
+                $customer->pusat_phone = $head_office->phone;
+                $customer->pusat_email = $head_office->email;
+                $customer->pusat_latitude = $head_office->latitude;
+                $customer->pusat_longitude = $head_office->longitude;
+                $customer->province_name = $head_office->province_name;
+                $customer->regency_name = $head_office->regency_name;
+            }
 
             // Render tab content
             $tabs = $this->render_tabs_content($customer);

@@ -30,6 +30,7 @@ namespace WPCustomer\Models\Company;
 
 use WPAppCore\Models\DataTable\DataTableModel;
 use WPQB\QueryBuilder;
+use WPCustomer\Models\Relation\EntityRelationModel;
 
 defined('ABSPATH') || exit;
 
@@ -42,6 +43,12 @@ class CompanyDataTableModel extends DataTableModel {
     protected $table_alias = 'cc';
 
     /**
+     * Entity relation model for access control
+     * @var EntityRelationModel
+     */
+    private $relation_model;
+
+    /**
      * Constructor
      * Setup table and columns configuration
      */
@@ -51,6 +58,9 @@ class CompanyDataTableModel extends DataTableModel {
         global $wpdb;
         $this->table = $wpdb->prefix . 'app_customer_branches ' . $this->table_alias;
         $this->index_column = $this->table_alias . '.id';
+
+        // Initialize EntityRelationModel for access control
+        $this->relation_model = new EntityRelationModel();
 
         // Define searchable columns
         $this->searchable_columns = [
@@ -184,7 +194,7 @@ class CompanyDataTableModel extends DataTableModel {
      * Filter WHERE conditions
      *
      * Hooked to: wpapp_datatable_company_where
-     * Filters by status from request data (optional)
+     * Filters by accessible branch IDs and status from request data
      *
      * @param array $where_conditions Current WHERE conditions
      * @param array $request_data DataTables request data
@@ -200,6 +210,23 @@ class CompanyDataTableModel extends DataTableModel {
 
         global $wpdb;
         $alias = $this->table_alias;
+
+        // Filter by accessible branch IDs (access control)
+        // Platform staff get empty array = see all
+        // Customer users get filtered array based on role:
+        // - customer_admin: all branches in their customer(s)
+        // - customer_branch_admin: only their assigned branch(es)
+        $accessible_branch_ids = $this->relation_model->get_accessible_entity_ids('company');
+
+        if (!empty($accessible_branch_ids)) {
+            // User has limited access - filter by accessible IDs
+            $placeholders = implode(',', array_fill(0, count($accessible_branch_ids), '%d'));
+            $where_conditions[] = $wpdb->prepare(
+                "{$alias}.id IN ($placeholders)",
+                ...$accessible_branch_ids
+            );
+        }
+        // If empty array from platform staff, no filter needed (see all)
 
         // Filter by status (optional, from dropdown filter)
         if (isset($request_data['status_filter']) && !empty($request_data['status_filter'])) {

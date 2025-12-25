@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Customer/Tabs
- * @version     1.1.0
+ * @version     1.1.2
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Views/customer/tabs/info.php
@@ -14,6 +14,17 @@
  *              Improved styling with card-based design.
  *
  * Changelog:
+ * 1.1.2 - 2025-12-25
+ * - Enhanced Head Office section with complete address details
+ * - Added postal code, phone, email fields
+ * - Added coordinates with Google Maps link
+ * - Maps link only shows if coordinates available
+ *
+ * 1.1.1 - 2025-12-25
+ * - Added Customer Admin section
+ * - Shows admin name, email, and username
+ * - Admin data fetched from user_id relationship
+ *
  * 1.1.0 - 2025-11-02 (TODO-2189)
  * - Improved CSS styling in customer-filter.css
  * - Card-based section design with hover effects
@@ -78,6 +89,27 @@ $customer = $data;
         </div>
     </div>
 
+    <?php if (isset($customer->admin_name)): ?>
+    <div class="customer-info-section">
+        <h3><?php echo esc_html__('Customer Admin', 'wp-customer'); ?></h3>
+
+        <div class="customer-info-row">
+            <label><?php echo esc_html__('Name:', 'wp-customer'); ?></label>
+            <span><?php echo esc_html($customer->admin_name ?? '-'); ?></span>
+        </div>
+
+        <div class="customer-info-row">
+            <label><?php echo esc_html__('Email:', 'wp-customer'); ?></label>
+            <span><?php echo esc_html($customer->admin_email ?? '-'); ?></span>
+        </div>
+
+        <div class="customer-info-row">
+            <label><?php echo esc_html__('Username:', 'wp-customer'); ?></label>
+            <span><?php echo esc_html($customer->admin_login ?? '-'); ?></span>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <?php if (isset($customer->pusat_name)): ?>
     <div class="customer-info-section">
         <h3><?php echo esc_html__('Head Office', 'wp-customer'); ?></h3>
@@ -98,6 +130,11 @@ $customer = $data;
         </div>
 
         <div class="customer-info-row">
+            <label><?php echo esc_html__('Postal Code:', 'wp-customer'); ?></label>
+            <span><?php echo esc_html($customer->pusat_postal_code ?? '-'); ?></span>
+        </div>
+
+        <div class="customer-info-row">
             <label><?php echo esc_html__('Province:', 'wp-customer'); ?></label>
             <span><?php echo esc_html($customer->province_name ?? '-'); ?></span>
         </div>
@@ -106,6 +143,32 @@ $customer = $data;
             <label><?php echo esc_html__('Regency:', 'wp-customer'); ?></label>
             <span><?php echo esc_html($customer->regency_name ?? '-'); ?></span>
         </div>
+
+        <div class="customer-info-row">
+            <label><?php echo esc_html__('Phone:', 'wp-customer'); ?></label>
+            <span><?php echo esc_html($customer->pusat_phone ?? '-'); ?></span>
+        </div>
+
+        <div class="customer-info-row">
+            <label><?php echo esc_html__('Email:', 'wp-customer'); ?></label>
+            <span><?php echo esc_html($customer->pusat_email ?? '-'); ?></span>
+        </div>
+
+        <?php if (!empty($customer->pusat_latitude) && !empty($customer->pusat_longitude)): ?>
+        <div class="customer-info-row">
+            <label><?php echo esc_html__('Coordinates:', 'wp-customer'); ?></label>
+            <span>
+                <?php echo esc_html($customer->pusat_latitude . ', ' . $customer->pusat_longitude); ?>
+                <a href="https://www.google.com/maps?q=<?php echo esc_attr($customer->pusat_latitude); ?>,<?php echo esc_attr($customer->pusat_longitude); ?>"
+                   target="_blank"
+                   class="button button-small"
+                   style="margin-left: 10px;">
+                    <span class="dashicons dashicons-location"></span>
+                    <?php echo esc_html__('View on Maps', 'wp-customer'); ?>
+                </a>
+            </span>
+        </div>
+        <?php endif; ?>
     </div>
     <?php endif; ?>
 

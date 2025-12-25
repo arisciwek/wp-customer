@@ -226,26 +226,32 @@ class EntityRelationModel {
             return $cached;
         }
 
-        // Get accessible customer IDs first
-        $accessible_customer_ids = $this->get_accessible_customer_ids_for_user($user_id);
+        // Special handling for branch (company) entities
+        // Branch access is role-based: customer_admin sees all branches, customer_branch_admin sees only assigned branch
+        if ($entity_type === 'company') {
+            $entity_ids = $this->get_accessible_branch_ids_for_user($user_id);
+        } else {
+            // Get accessible customer IDs first
+            $accessible_customer_ids = $this->get_accessible_customer_ids_for_user($user_id);
 
-        if (empty($accessible_customer_ids)) {
-            return []; // No accessible customers = no accessible entities
+            if (empty($accessible_customer_ids)) {
+                return []; // No accessible customers = no accessible entities
+            }
+
+            // Query entity IDs related to accessible customers
+            $bridge_table = $this->wpdb->prefix . $config['bridge_table'];
+            $entity_column = $config['entity_column'];
+            $customer_column = $config['customer_column'];
+
+            $placeholders = implode(',', array_fill(0, count($accessible_customer_ids), '%d'));
+
+            $sql = "SELECT DISTINCT b.{$entity_column}
+                    FROM {$bridge_table} b
+                    WHERE b.{$customer_column} IN ($placeholders)";
+
+            $entity_ids = $this->wpdb->get_col($this->wpdb->prepare($sql, $accessible_customer_ids));
+            $entity_ids = array_map('intval', $entity_ids);
         }
-
-        // Query entity IDs related to accessible customers
-        $bridge_table = $this->wpdb->prefix . $config['bridge_table'];
-        $entity_column = $config['entity_column'];
-        $customer_column = $config['customer_column'];
-
-        $placeholders = implode(',', array_fill(0, count($accessible_customer_ids), '%d'));
-
-        $sql = "SELECT DISTINCT b.{$entity_column}
-                FROM {$bridge_table} b
-                WHERE b.{$customer_column} IN ($placeholders)";
-
-        $entity_ids = $this->wpdb->get_col($this->wpdb->prepare($sql, $accessible_customer_ids));
-        $entity_ids = array_map('intval', $entity_ids);
 
         // Cache result
         $cache_ttl = $config['cache_ttl'] ?? self::DEFAULT_CACHE_TTL;
@@ -275,6 +281,57 @@ class EntityRelationModel {
         $customer_ids = $this->wpdb->get_col($this->wpdb->prepare($sql, $user_id));
 
         return array_map('intval', $customer_ids);
+    }
+
+    /**
+     * Get accessible branch IDs for user
+     *
+     * Returns branch IDs that the user has access to based on role:
+     * - customer_admin (owner): all branches in their customer
+     * - customer_branch_admin: only their assigned branch
+     *
+     * @param int $user_id User ID
+     * @return array Array of branch IDs
+     *
+     * @since 1.0.12
+     */
+    private function get_accessible_branch_ids_for_user(int $user_id): array {
+        $user = get_user_by('id', $user_id);
+        if (!$user) {
+            return [];
+        }
+
+        // Check if user is customer_admin (owner) - can see all branches in customer
+        if ($user->has_cap('customer_admin')) {
+            // Get customer IDs for this user
+            $accessible_customer_ids = $this->get_accessible_customer_ids_for_user($user_id);
+
+            if (empty($accessible_customer_ids)) {
+                return [];
+            }
+
+            // Return all branches in those customers
+            $table = $this->wpdb->prefix . 'app_customer_branches';
+            $placeholders = implode(',', array_fill(0, count($accessible_customer_ids), '%d'));
+
+            $sql = "SELECT DISTINCT id
+                    FROM {$table}
+                    WHERE customer_id IN ($placeholders)";
+
+            $branch_ids = $this->wpdb->get_col($this->wpdb->prepare($sql, $accessible_customer_ids));
+            return array_map('intval', $branch_ids);
+        }
+
+        // customer_branch_admin or regular employee - only see assigned branches
+        $table = $this->wpdb->prefix . 'app_customer_employees';
+
+        $sql = "SELECT DISTINCT branch_id
+                FROM {$table}
+                WHERE user_id = %d";
+
+        $branch_ids = $this->wpdb->get_col($this->wpdb->prepare($sql, $user_id));
+
+        return array_map('intval', $branch_ids);
     }
 
     /**
