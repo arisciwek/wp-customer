@@ -203,6 +203,9 @@ class CompanyDataTableModel extends DataTableModel {
         global $wpdb;
         $alias = $this->table_alias;
 
+        error_log('[CompanyDataTable] filter_where START');
+        error_log('[CompanyDataTable] Current user ID: ' . get_current_user_id());
+
         // Filter by accessible branch IDs (access control)
         // Platform staff and users with edit_all_customer_branches get empty array = see all
         // Customer users get filtered array based on role:
@@ -210,18 +213,27 @@ class CompanyDataTableModel extends DataTableModel {
         // - customer_branch_admin: only their assigned branch(es)
         $accessible_branch_ids = $this->relation_model->get_accessible_entity_ids('company');
 
+        error_log('[CompanyDataTable] Accessible branch IDs: ' . print_r($accessible_branch_ids, true));
+
         if (!empty($accessible_branch_ids)) {
             // User has limited access - filter by accessible IDs
             $placeholders = implode(',', array_fill(0, count($accessible_branch_ids), '%d'));
-            $where_conditions[] = $wpdb->prepare(
+            $where_clause = $wpdb->prepare(
                 "{$alias}.id IN ($placeholders)",
                 ...$accessible_branch_ids
             );
+            $where_conditions[] = $where_clause;
+            error_log('[CompanyDataTable] Added WHERE clause: ' . $where_clause);
+        } else {
+            error_log('[CompanyDataTable] Empty accessible IDs - showing all (platform/admin user)');
         }
         // If empty array from platform staff or users with edit_all_customer_branches, no filter needed (see all)
 
         // Always filter to show only active companies
         $where_conditions[] = "{$alias}.status = 'active'";
+        error_log('[CompanyDataTable] Added active filter');
+
+        error_log('[CompanyDataTable] Final WHERE conditions: ' . print_r($where_conditions, true));
 
         return $where_conditions;
     }

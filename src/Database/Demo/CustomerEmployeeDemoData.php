@@ -374,22 +374,29 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
      * @return array Map of [static_id => actual_id]
      */
     private function buildBranchIdMap(): array {
-        // Get demo branches (type='pusat') ordered by customer_id
+        // Get ALL demo branches (pusat + cabang) ordered by customer, then type
+        // Order: pusat first (type DESC because 'pusat' > 'cabang' alphabetically)
         $demo_branches = $this->wpdb->get_results(
-            "SELECT b.id, b.customer_id, c.user_id
+            "SELECT b.id, b.customer_id, b.type, c.user_id
              FROM {$this->wpdb->prefix}app_customer_branches b
              INNER JOIN {$this->wpdb->prefix}app_customers c ON b.customer_id = c.id
-             WHERE c.reg_type = 'generate' AND b.type = 'pusat'
-             ORDER BY c.user_id ASC"
+             WHERE c.reg_type = 'generate'
+             ORDER BY c.user_id ASC, b.type DESC, b.id ASC"
         );
 
         $map = [];
         foreach ($demo_branches as $index => $branch) {
-            // Static branch_id 1-10 maps to pusat branches in sequence
+            // Static branch_id 1-30 maps to all branches in sequence
+            // Customer 1: branches 1-3 (1 pusat + 2 cabang)
+            // Customer 2: branches 4-6 (1 pusat + 2 cabang)
+            // etc.
             $static_branch_id = $index + 1;
             $map[$static_branch_id] = $branch->id;
+
+            error_log("[BranchIdMap] Static ID {$static_branch_id} → Actual ID {$branch->id} (customer: {$branch->customer_id}, type: {$branch->type})");
         }
 
+        error_log("[BranchIdMap] Total branches mapped: " . count($map));
         return $map;
     }
 

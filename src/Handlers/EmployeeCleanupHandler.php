@@ -45,12 +45,17 @@ class EmployeeCleanupHandler {
      * - Pre-deletion notifications
      *
      * @param int $employee_id Employee ID being deleted
-     * @param array $employee_data Employee data before deletion
+     * @param stdClass|array $employee_data Employee data before deletion (stdClass from Model, array from direct calls)
      * @return void
      *
      * @since 1.0.0
      */
-    public function handleBeforeDelete(int $employee_id, array $employee_data): void {
+    public function handleBeforeDelete(int $employee_id, $employee_data): void {
+        // Convert stdClass to array if needed (AbstractCrudModel passes stdClass)
+        if (is_object($employee_data)) {
+            $employee_data = (array) $employee_data;
+        }
+
         // Log deletion for audit trail
         if (defined('WP_DEBUG') && WP_DEBUG) {
             error_log(sprintf(
@@ -77,13 +82,18 @@ class EmployeeCleanupHandler {
      * Employee is a leaf node, so no cascade delete needed.
      *
      * @param int $employee_id Employee ID that was deleted
-     * @param array $employee_data Employee data before deletion
+     * @param stdClass|array $employee_data Employee data before deletion (stdClass from Model, array from direct calls)
      * @param bool $is_hard_delete Whether this was a hard delete (true) or soft delete (false)
      * @return void
      *
      * @since 1.0.0
      */
-    public function handleAfterDelete(int $employee_id, array $employee_data, bool $is_hard_delete): void {
+    public function handleAfterDelete(int $employee_id, $employee_data, bool $is_hard_delete = false): void {
+        // Convert stdClass to array if needed (AbstractCrudModel passes stdClass)
+        if (is_object($employee_data)) {
+            $employee_data = (array) $employee_data;
+        }
+
         $customer_id = $employee_data['customer_id'] ?? 0;
         $branch_id = $employee_data['branch_id'] ?? 0;
 

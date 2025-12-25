@@ -53,10 +53,15 @@ class BranchCleanupHandler {
      * Handle before branch delete - validation
      *
      * @param int $branch_id Branch ID yang akan dihapus
-     * @param array $branch_data Branch data (id, customer_id, name, type, etc)
+     * @param stdClass|array $branch_data Branch data (stdClass from Model, array from direct calls)
      * @return void
      */
-    public function handleBeforeDelete(int $branch_id, array $branch_data): void {
+    public function handleBeforeDelete(int $branch_id, $branch_data): void {
+        // Convert stdClass to array if needed (AbstractCrudModel passes stdClass)
+        if (is_object($branch_data)) {
+            $branch_data = (array) $branch_data;
+        }
+
         error_log(sprintf(
             '[BranchCleanupHandler] Before delete branch %d (%s, type: %s)',
             $branch_id,
@@ -72,12 +77,17 @@ class BranchCleanupHandler {
      * Handle after branch delete - cascade cleanup
      *
      * @param int $branch_id Branch ID yang sudah dihapus
-     * @param array $branch_data Branch data (id, customer_id, name, type, etc)
+     * @param stdClass|array $branch_data Branch data (stdClass from Model, array from direct calls)
      * @param bool $is_hard_delete True jika hard delete, false jika soft delete
      * @return void
      */
-    public function handleAfterDelete(int $branch_id, array $branch_data, bool $is_hard_delete = false): void {
+    public function handleAfterDelete(int $branch_id, $branch_data, bool $is_hard_delete = false): void {
         global $wpdb;
+
+        // Convert stdClass to array if needed (AbstractCrudModel passes stdClass)
+        if (is_object($branch_data)) {
+            $branch_data = (array) $branch_data;
+        }
 
         error_log(sprintf(
             '[BranchCleanupHandler] After delete branch %d (hard_delete: %s)',

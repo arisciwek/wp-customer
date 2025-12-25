@@ -54,10 +54,10 @@ class CustomerDeleteHooks {
      * Delete order penting untuk menjaga referential integrity.
      *
      * @param int $customer_id Customer ID yang akan dihapus
-     * @param object $customer Customer entity object
+     * @param stdClass|array|object $customer Customer entity (stdClass from Model, array from direct calls)
      * @return void
      */
-    public static function cascadeDeleteRelatedEntities(int $customer_id, object $customer): void {
+    public static function cascadeDeleteRelatedEntities(int $customer_id, $customer): void {
         global $wpdb;
 
         error_log("[Customer Delete] Cascade delete started for customer ID: {$customer_id}");
@@ -103,11 +103,16 @@ class CustomerDeleteHooks {
      * Untuk cleanup operations jika diperlukan.
      *
      * @param int $customer_id Customer ID yang sudah dihapus
-     * @param object $customer Customer entity object (before delete)
+     * @param stdClass|array|object $customer Customer entity (stdClass from Model, array from direct calls)
      * @return void
      */
-    public static function cleanupAfterDelete(int $customer_id, object $customer): void {
-        error_log("[Customer Delete] Cleanup completed for customer ID: {$customer_id} (Code: {$customer->code})");
+    public static function cleanupAfterDelete(int $customer_id, $customer): void {
+        // Convert to object if needed for backward compatibility
+        if (is_array($customer)) {
+            $customer = (object) $customer;
+        }
+
+        error_log("[Customer Delete] Cleanup completed for customer ID: {$customer_id} (Code: " . ($customer->code ?? 'N/A') . ")");
 
         // Future: Additional cleanup operations here
         // - Delete uploaded files
