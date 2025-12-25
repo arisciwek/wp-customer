@@ -67,6 +67,7 @@ class CompanyDataTableModel extends DataTableModel {
         $this->base_where = [];
 
         // Hook to add dynamic WHERE conditions
+        // Note: Use 'company' entity type for access filter
         add_filter($this->get_filter_hook('where'), [$this, 'filter_where'], 10, 3);
     }
 
@@ -210,6 +211,22 @@ class CompanyDataTableModel extends DataTableModel {
         }
 
         return $where_conditions;
+    }
+
+    /**
+     * Override get_filter_hook to use 'company' entity type
+     *
+     * CompanyDataTableModel uses app_customer_branches table (same as BranchDataTableModel)
+     * but needs different entity type for access filtering.
+     *
+     * @param string $type Hook type ('where', 'order', etc.)
+     * @return string Filter hook name
+     *
+     * @since 1.0.1
+     */
+    protected function get_filter_hook($type) {
+        // Use 'company' as entity type instead of 'customer_branches'
+        return "wpapp_datatable_company_{$type}";
     }
 
     /**

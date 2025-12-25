@@ -86,6 +86,12 @@ class DataTableAccessFilter {
                 'id_column' => 'id',
                 'priority' => 10
             ],
+            'company' => [
+                'hook' => 'wpapp_datatable_company_where',
+                'table_alias' => 'cc',
+                'id_column' => 'id',
+                'priority' => 10
+            ],
             'customer_employees' => [
                 'hook' => 'wpapp_datatable_customer_employees_where',
                 'table_alias' => 'ce',
@@ -456,6 +462,9 @@ class DataTableAccessFilter {
             ],
             'customer_branches' => [
                 'customer_admin',         // Customer Admin can see all branches in their customer
+            ],
+            'company' => [
+                'customer_admin',         // Customer Admin can see all companies in their customer
             ],
             'customer_employees' => [
                 'customer_admin',         // Customer Admin can see all employees in their customer

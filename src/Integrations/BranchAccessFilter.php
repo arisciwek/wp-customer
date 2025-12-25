@@ -70,6 +70,46 @@ class BranchAccessFilter {
         // Hook into wp-agency NewCompanyDataTableModel WHERE filter
         // Note: Hook name is 'customer_branches' (app_ prefix removed by wp-app-core)
         add_filter('wpapp_datatable_customer_branches_where', [$this, 'filter_branches_by_customer'], 10, 3);
+
+        // Register entity relation configs for customer_branches and company
+        add_filter('wp_customer_entity_relation_configs', [$this, 'register_entity_configs'], 10, 1);
+    }
+
+    /**
+     * Register entity relation configurations
+     *
+     * Registers 'customer_branches' and 'company' entity configs for EntityRelationModel.
+     * Both use the same branches table but different entity types for access control.
+     *
+     * @param array $configs Existing entity configs
+     * @return array Modified configs
+     *
+     * @since 1.4.0
+     */
+    public function register_entity_configs(array $configs): array {
+        // Register 'customer_branches' entity config
+        // Used by BranchDataTableModel (branch management within customer)
+        $configs['customer_branches'] = [
+            'bridge_table' => 'app_customer_branches',
+            'entity_column' => 'id',
+            'customer_column' => 'customer_id',
+            'access_filter' => true,
+            'cache_group' => 'wp_customer_branch_relations',
+            'cache_ttl' => 3600
+        ];
+
+        // Register 'company' entity config
+        // Used by CompanyDataTableModel (company dashboard view)
+        $configs['company'] = [
+            'bridge_table' => 'app_customer_branches',
+            'entity_column' => 'id',
+            'customer_column' => 'customer_id',
+            'access_filter' => true,
+            'cache_group' => 'wp_customer_company_relations',
+            'cache_ttl' => 3600
+        ];
+
+        return $configs;
     }
 
     /**
