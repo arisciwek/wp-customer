@@ -74,12 +74,8 @@ class DataTableAccessFilter {
     private function load_configs(): void {
         // Default configs for entities with access control
         $default_configs = [
-            'agency' => [
-                'hook' => 'wpapp_datatable_agencies_where',
-                'table_alias' => 'a',
-                'id_column' => 'id',
-                'priority' => 10
-            ],
+            // 'agency' config removed - handled by AgencyAccessFilter instead
+            // AgencyAccessFilter provides more specific customer-based filtering
             'customer_branches' => [
                 'hook' => 'wpapp_datatable_customer_branches_where',
                 'table_alias' => 'cb',

@@ -115,8 +115,12 @@ class AgencyAccessFilter {
 
         error_log('[AgencyAccessFilter] User IS customer employee (ID: ' . $employee->id . ')');
 
-        // Check if user is branch admin (has specific branch_id and division_id)
-        $is_branch_admin = !empty($employee->branch_id) && !empty($employee->division_id);
+        // Check if user is branch admin vs customer admin
+        // Branch admin: Has division_id AND does NOT have customer_admin role
+        // Customer admin: Has customer_admin role (sees all agencies from customer)
+        $user = wp_get_current_user();
+        $is_customer_admin = in_array('customer_admin', $user->roles);
+        $is_branch_admin = !empty($employee->branch_id) && !empty($employee->division_id) && !$is_customer_admin;
 
         if ($is_branch_admin) {
             // Branch admin: filter by the single agency from their branch
@@ -132,16 +136,15 @@ class AgencyAccessFilter {
                 error_log('[AgencyAccessFilter] Branch has no agency, blocking all');
             }
         } else {
-            // Customer admin: filter by accessible agencies (existing logic)
-            error_log('[AgencyAccessFilter] User is CUSTOMER ADMIN - filtering by accessible agencies');
+            // Customer admin: filter by ALL agencies from their customer
+            error_log('[AgencyAccessFilter] User is CUSTOMER ADMIN - filtering by customer agencies');
 
             $accessible_agencies = $wpdb->get_col($wpdb->prepare(
                 "SELECT DISTINCT b.agency_id
                  FROM {$wpdb->prefix}app_customer_branches b
-                 INNER JOIN {$wpdb->prefix}app_customer_employees ce ON b.id = ce.branch_id
-                 WHERE ce.user_id = %d
+                 WHERE b.customer_id = %d
                  AND b.agency_id IS NOT NULL",
-                $user_id
+                $employee->customer_id
             ));
 
             if (empty($accessible_agencies)) {
