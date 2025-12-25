@@ -169,6 +169,14 @@ class AssetController {
      * @return void
      */
     private function enqueue_customer_dashboard_assets(): void {
+        // Enqueue CSS for forms (create/edit customer modals)
+        wp_enqueue_style(
+            'customer-forms',
+            WP_CUSTOMER_URL . 'assets/css/customer/customer-forms.css',
+            [],
+            $this->version
+        );
+
         // Enqueue minimal JS for DataTable initialization
         // Dependency: jquery only (datatables will be loaded by wp-datatable BaseAssets)
         wp_enqueue_script(

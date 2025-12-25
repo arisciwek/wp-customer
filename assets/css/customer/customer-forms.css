@@ -1,0 +1,99 @@
+/**
+ * Customer Forms Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/Customer
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/customer/customer-forms.css
+ *
+ * Description: Styling for customer forms (edit, create).
+ *              Two-column grid layout for compact modal display.
+ *
+ * Changelog:
+ * 1.0.0 - 2025-12-25
+ * - Initial creation
+ * - Two-column grid layout
+ * - Responsive design
+ */
+
+/* Two Column Grid Layout */
+.wpapp-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 0;
+}
+
+.wpapp-form-column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* Form Fields */
+.wpapp-form-field {
+    display: flex;
+    flex-direction: column;
+}
+
+.wpapp-form-field label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #1d2327;
+    font-size: 13px;
+}
+
+.wpapp-form-field label .required {
+    color: #dc3232;
+    margin-left: 3px;
+}
+
+/* Input Elements */
+.wpapp-form-field input[type="text"],
+.wpapp-form-field input[type="email"],
+.wpapp-form-field select {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #dcdcdc;
+    border-radius: 3px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.wpapp-form-field input:focus,
+.wpapp-form-field select:focus {
+    border-color: #2271b1;
+    outline: none;
+    box-shadow: 0 0 0 1px #2271b1;
+}
+
+.wpapp-form-field input:disabled,
+.wpapp-form-field input[readonly] {
+    background-color: #f6f7f7;
+    color: #646970;
+    cursor: not-allowed;
+}
+
+/* Help Text */
+.wpapp-form-field .description {
+    margin-top: 4px;
+    color: #646970;
+    font-size: 11px;
+    font-style: italic;
+    line-height: 1.3;
+}
+
+/* Error State */
+.wpapp-form-field.has-error input,
+.wpapp-form-field.has-error select {
+    border-color: #dc3232;
+}
+
+/* Responsive: Stack on small screens */
+@media (max-width: 768px) {
+    .wpapp-form-grid {
+        grid-template-columns: 1fr;
+    }
+}

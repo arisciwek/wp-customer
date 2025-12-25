@@ -28,94 +28,103 @@ defined('ABSPATH') || exit;
     <input type="hidden" name="mode" value="create">
     <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('wpdt_nonce'); ?>">
 
-    <div class="wpapp-form-field">
-        <label for="customer-name">
-            <?php _e('Customer Name', 'wp-customer'); ?>
-            <span class="required">*</span>
-        </label>
-        <input type="text"
-               id="customer-name"
-               name="customer_name"
-               required
-               placeholder="<?php esc_attr_e('Enter customer name', 'wp-customer'); ?>">
-        <span class="description">
-            <?php _e('Full legal name of the customer', 'wp-customer'); ?>
-        </span>
-    </div>
+    <!-- Customer Information - Two Column Layout -->
+    <div class="wpapp-form-grid">
+        <!-- Left Column -->
+        <div class="wpapp-form-column">
+            <div class="wpapp-form-field">
+                <label for="customer-name">
+                    <?php _e('Customer Name', 'wp-customer'); ?>
+                    <span class="required">*</span>
+                </label>
+                <input type="text"
+                       id="customer-name"
+                       name="customer_name"
+                       required
+                       placeholder="<?php esc_attr_e('Enter customer name', 'wp-customer'); ?>">
+                <span class="description">
+                    <?php _e('Full legal name', 'wp-customer'); ?>
+                </span>
+            </div>
 
-    <div class="wpapp-form-field">
-        <label for="customer-npwp">
-            <?php _e('NPWP', 'wp-customer'); ?>
-        </label>
-        <input type="text"
-               id="customer-npwp"
-               name="customer_npwp"
-               maxlength="20"
-               placeholder="<?php esc_attr_e('Enter NPWP number', 'wp-customer'); ?>">
-        <span class="description">
-            <?php _e('Tax identification number - 15 digits, format: 12.345.678.9-012.000 (optional)', 'wp-customer'); ?>
-        </span>
-    </div>
+            <div class="wpapp-form-field">
+                <label for="customer-npwp">
+                    <?php _e('NPWP', 'wp-customer'); ?>
+                </label>
+                <input type="text"
+                       id="customer-npwp"
+                       name="customer_npwp"
+                       maxlength="20"
+                       placeholder="<?php esc_attr_e('Enter NPWP number', 'wp-customer'); ?>">
+                <span class="description">
+                    <?php _e('15 digits (optional)', 'wp-customer'); ?>
+                </span>
+            </div>
 
-    <div class="wpapp-form-field">
-        <label for="customer-nib">
-            <?php _e('NIB', 'wp-customer'); ?>
-        </label>
-        <input type="text"
-               id="customer-nib"
-               name="customer_nib"
-               maxlength="13"
-               placeholder="<?php esc_attr_e('Enter NIB number', 'wp-customer'); ?>">
-        <span class="description">
-            <?php _e('Nomor Induk Berusaha - 13 digits (optional)', 'wp-customer'); ?>
-        </span>
-    </div>
+            <div class="wpapp-form-field">
+                <label for="customer-nib">
+                    <?php _e('NIB', 'wp-customer'); ?>
+                </label>
+                <input type="text"
+                       id="customer-nib"
+                       name="customer_nib"
+                       maxlength="13"
+                       placeholder="<?php esc_attr_e('Enter NIB number', 'wp-customer'); ?>">
+                <span class="description">
+                    <?php _e('13 digits (optional)', 'wp-customer'); ?>
+                </span>
+            </div>
+        </div>
 
-    <div class="wpapp-form-field">
-        <label for="customer-status">
-            <?php _e('Status', 'wp-customer'); ?>
-            <span class="required">*</span>
-        </label>
-        <select id="customer-status" name="customer_status" required>
-            <option value="active"><?php _e('Active', 'wp-customer'); ?></option>
-            <option value="inactive"><?php _e('Inactive', 'wp-customer'); ?></option>
-        </select>
-        <span class="description">
-            <?php _e('Customer account status', 'wp-customer'); ?>
-        </span>
-    </div>
+        <!-- Right Column -->
+        <div class="wpapp-form-column">
+            <div class="wpapp-form-field">
+                <label for="customer-status">
+                    <?php _e('Status', 'wp-customer'); ?>
+                    <span class="required">*</span>
+                </label>
+                <select id="customer-status" name="customer_status" required>
+                    <option value="active"><?php _e('Active', 'wp-customer'); ?></option>
+                    <option value="inactive"><?php _e('Inactive', 'wp-customer'); ?></option>
+                </select>
+                <span class="description">
+                    <?php _e('Account status', 'wp-customer'); ?>
+                </span>
+            </div>
 
-    <div class="wpapp-form-field">
-        <label for="customer-provinsi">
-            <?php _e('Province', 'wp-customer'); ?>
-            <span class="required">*</span>
-        </label>
-        <select id="customer-provinsi" name="customer_province_id" class="wilayah-select" required>
-            <option value=""><?php _e('Select Province', 'wp-customer'); ?></option>
-            <?php
-            global $wpdb;
-            $provinces = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}wi_provinces ORDER BY name");
-            foreach ($provinces as $province) {
-                echo '<option value="' . esc_attr($province->id) . '">' . esc_html($province->name) . '</option>';
-            }
-            ?>
-        </select>
-        <span class="description">
-            <?php _e('Province for branch office location', 'wp-customer'); ?>
-        </span>
-    </div>
+            <div class="wpapp-form-field">
+                <label for="customer-provinsi">
+                    <?php _e('Province', 'wp-customer'); ?>
+                    <span class="required">*</span>
+                </label>
+                <select id="customer-provinsi" name="customer_province_id" class="wilayah-select" required>
+                    <option value=""><?php _e('Select Province', 'wp-customer'); ?></option>
+                    <?php
+                    global $wpdb;
+                    $provinces = $wpdb->get_results("SELECT id, name FROM {$wpdb->prefix}wi_provinces ORDER BY name");
+                    foreach ($provinces as $province) {
+                        echo '<option value="' . esc_attr($province->id) . '">' . esc_html($province->name) . '</option>';
+                    }
+                    ?>
+                </select>
+                <span class="description">
+                    <?php _e('Branch location', 'wp-customer'); ?>
+                </span>
+            </div>
 
-    <div class="wpapp-form-field">
-        <label for="customer-regency">
-            <?php _e('City/Regency', 'wp-customer'); ?>
-            <span class="required">*</span>
-        </label>
-        <select id="customer-regency" name="customer_regency_id" class="wilayah-select" disabled required>
-            <option value=""><?php _e('Select province first', 'wp-customer'); ?></option>
-        </select>
-        <span class="description">
-            <?php _e('City/Regency for branch office location', 'wp-customer'); ?>
-        </span>
+            <div class="wpapp-form-field">
+                <label for="customer-regency">
+                    <?php _e('City/Regency', 'wp-customer'); ?>
+                    <span class="required">*</span>
+                </label>
+                <select id="customer-regency" name="customer_regency_id" class="wilayah-select" disabled required>
+                    <option value=""><?php _e('Select province first', 'wp-customer'); ?></option>
+                </select>
+                <span class="description">
+                    <?php _e('City/Regency', 'wp-customer'); ?>
+                </span>
+            </div>
+        </div>
     </div>
 
     <hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
@@ -124,33 +133,40 @@ defined('ABSPATH') || exit;
         <?php _e('Administrator Information', 'wp-customer'); ?>
     </h4>
 
-    <div class="wpapp-form-field">
-        <label for="admin-name">
-            <?php _e('Admin Name', 'wp-customer'); ?>
-            <span class="required">*</span>
-        </label>
-        <input type="text"
-               id="admin-name"
-               name="admin_name"
-               required
-               placeholder="<?php esc_attr_e('Enter administrator name', 'wp-customer'); ?>">
-        <span class="description">
-            <?php _e('Name of the administrator who will manage this customer', 'wp-customer'); ?>
-        </span>
-    </div>
+    <!-- Admin Information - Two Column Layout -->
+    <div class="wpapp-form-grid">
+        <div class="wpapp-form-column">
+            <div class="wpapp-form-field">
+                <label for="admin-name">
+                    <?php _e('Admin Name', 'wp-customer'); ?>
+                    <span class="required">*</span>
+                </label>
+                <input type="text"
+                       id="admin-name"
+                       name="admin_name"
+                       required
+                       placeholder="<?php esc_attr_e('Enter administrator name', 'wp-customer'); ?>">
+                <span class="description">
+                    <?php _e('Administrator name', 'wp-customer'); ?>
+                </span>
+            </div>
+        </div>
 
-    <div class="wpapp-form-field">
-        <label for="admin-email">
-            <?php _e('Admin Email', 'wp-customer'); ?>
-            <span class="required">*</span>
-        </label>
-        <input type="email"
-               id="admin-email"
-               name="admin_email"
-               required
-               placeholder="<?php esc_attr_e('admin@company.com', 'wp-customer'); ?>">
-        <span class="description">
-            <?php _e('Email address for login and notifications', 'wp-customer'); ?>
-        </span>
+        <div class="wpapp-form-column">
+            <div class="wpapp-form-field">
+                <label for="admin-email">
+                    <?php _e('Admin Email', 'wp-customer'); ?>
+                    <span class="required">*</span>
+                </label>
+                <input type="email"
+                       id="admin-email"
+                       name="admin_email"
+                       required
+                       placeholder="<?php esc_attr_e('admin@company.com', 'wp-customer'); ?>">
+                <span class="description">
+                    <?php _e('Login & notifications', 'wp-customer'); ?>
+                </span>
+            </div>
+        </div>
     </div>
 </form>
