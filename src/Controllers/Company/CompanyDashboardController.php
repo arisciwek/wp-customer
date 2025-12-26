@@ -34,6 +34,7 @@ namespace WPCustomer\Controllers\Company;
 
 use WPDataTable\Templates\DualPanel\DashboardTemplate;
 use WPCustomer\Models\Branch\BranchModel;
+use WPCustomer\Models\Company\CompanyModel;
 use WPCustomer\Models\Company\CompanyDataTableModel;
 use WPCustomer\Models\Employee\EmployeeDataTableModel;
 use WPCustomer\Validators\Branch\BranchValidator;
@@ -46,6 +47,11 @@ class CompanyDashboardController {
      * @var BranchModel
      */
     private $model;
+
+    /**
+     * @var CompanyModel
+     */
+    private $company_model;
 
     /**
      * @var CompanyDataTableModel
@@ -62,6 +68,7 @@ class CompanyDashboardController {
      */
     public function __construct() {
         $this->model = new BranchModel();
+        $this->company_model = new CompanyModel();
         $this->datatable_model = new CompanyDataTableModel();
         $this->validator = new BranchValidator();
 
@@ -254,7 +261,8 @@ class CompanyDashboardController {
         }
 
         try {
-            $company = $this->model->find($company_id);
+            // Use CompanyModel to get branch with all related data (province, city, agency, division, inspector)
+            $company = $this->company_model->getBranchWithLatestMembership($company_id);
 
             if (!$company) {
                 wp_send_json_error(['message' => __('Company not found', 'wp-customer')]);

@@ -229,6 +229,8 @@
                 $('#company-customer-name').text(data.company.customer_name || '-');
 
                 // Location Information
+                $('#company-province').text(data.company.province_name || '-');
+                $('#company-city').text(data.company.city_name || '-');
                 $('#company-address').text(data.company.address || '-');
                 $('#company-postal-code').text(data.company.postal_code || '-');
 

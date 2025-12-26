@@ -79,12 +79,12 @@ defined('ABSPATH') || exit;
 
         <div class="info-group">
             <label><?php esc_html_e('Province:', 'wp-customer'); ?></label>
-            <div class="info-value"><?php echo esc_html($company->province ?? '-'); ?></div>
+            <div class="info-value"><?php echo esc_html($company->province_name ?? '-'); ?></div>
         </div>
 
         <div class="info-group">
             <label><?php esc_html_e('City:', 'wp-customer'); ?></label>
-            <div class="info-value"><?php echo esc_html($company->city ?? '-'); ?></div>
+            <div class="info-value"><?php echo esc_html($company->city_name ?? '-'); ?></div>
         </div>
 
         <div class="info-group">
@@ -126,6 +126,40 @@ defined('ABSPATH') || exit;
             </div>
         </div>
         <?php endif; ?>
+    </div>
+
+    <!-- Agency Assignment Section -->
+    <div class="company-agency-section">
+        <h3 class="section-header">
+            <?php esc_html_e('Disnaker & Pengawas', 'wp-customer'); ?>
+            <?php
+            /**
+             * Hook: wp_customer_company_agency_actions
+             *
+             * Allow other plugins (wp-agency) to add action buttons for agency assignment
+             *
+             * @param object $company Company data object
+             */
+            do_action('wp_customer_company_agency_actions', $company);
+            ?>
+        </h3>
+
+        <div class="agency-info-grid">
+            <div class="info-group">
+                <label><?php esc_html_e('Disnaker:', 'wp-customer'); ?></label>
+                <div class="info-value"><?php echo esc_html($company->agency_name ?? '-'); ?></div>
+            </div>
+
+            <div class="info-group">
+                <label><?php esc_html_e('Unit Kerja:', 'wp-customer'); ?></label>
+                <div class="info-value"><?php echo esc_html($company->division_name ?? '-'); ?></div>
+            </div>
+
+            <div class="info-group">
+                <label><?php esc_html_e('Pengawas:', 'wp-customer'); ?></label>
+                <div class="info-value"><?php echo esc_html($company->inspector_name ?? '-'); ?></div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -180,5 +214,32 @@ defined('ABSPATH') || exit;
 .status-inactive {
     background-color: #f8d7da;
     color: #721c24;
+}
+
+/* Agency Assignment Section */
+.company-agency-section {
+    margin: 20px;
+    padding: 20px;
+    background: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+.company-agency-section .section-header {
+    margin: 0 0 15px 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #2271b1;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1d2327;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.agency-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
 }
 </style>

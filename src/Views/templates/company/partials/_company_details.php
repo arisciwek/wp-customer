@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Templates/Company/Partials
- * @version     1.0.11
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Views/templates/company/partials/_company_details.php
@@ -53,6 +53,14 @@ defined('ABSPATH') || exit;
             <div class="inside">
                 <table class="form-table">
                     <tr>
+                        <th><?php _e('Provinsi', 'wp-customer'); ?></th>
+                        <td><span id="company-province"></span></td>
+                    </tr>
+                    <tr>
+                        <th><?php _e('Kota/Kabupaten', 'wp-customer'); ?></th>
+                        <td><span id="company-city"></span></td>
+                    </tr>
+                    <tr>
                         <th><?php _e('Alamat', 'wp-customer'); ?></th>
                         <td><span id="company-address"></span></td>
                     </tr>
@@ -94,16 +102,16 @@ defined('ABSPATH') || exit;
             </div>
         </div>
 
-        <!-- Unit Kerja dan Pengawas -->
+        <!-- Disnaker dan Pengawas -->
         <div class="postbox">
             <h3 class="hndle">
                 <span class="dashicons dashicons-groups"></span>
-                <?php _e('Unit Kerja dan Pengawas', 'wp-customer'); ?>
+                <?php _e('Disnaker dan Pengawas', 'wp-customer'); ?>
             </h3>
             <div class="inside">
                 <table class="form-table">
                     <tr>
-                        <th><?php _e('Agency', 'wp-customer'); ?></th>
+                        <th><?php _e('Disnaker', 'wp-customer'); ?></th>
                         <td><span id="company-agency-name"></span></td>
                     </tr>
                     <tr>

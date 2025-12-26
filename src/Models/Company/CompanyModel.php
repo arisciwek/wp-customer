@@ -65,9 +65,13 @@ class CompanyModel {
                    m.status as membership_status,
                    l.name as level_name,
                    c.name as customer_name,
+                   a.id as agency_id,
                    a.name as agency_name,
                    d.name as division_name,
-                   u.display_name as inspector_name
+                   e.user_id as inspector_user_id,
+                   u.display_name as inspector_name,
+                   p.name as province_name,
+                   r.name as city_name
             FROM {$this->table} b
             LEFT JOIN (
                 SELECT m1.*
@@ -79,9 +83,12 @@ class CompanyModel {
             ) m ON b.id = m.branch_id
             LEFT JOIN {$this->levels_table} l ON m.level_id = l.id
             LEFT JOIN {$wpdb->prefix}app_customers c ON b.customer_id = c.id
-            LEFT JOIN {$wpdb->prefix}app_agencies a ON b.agency_id = a.id
             LEFT JOIN {$wpdb->prefix}app_agency_divisions d ON b.division_id = d.id
-            LEFT JOIN {$wpdb->users} u ON b.inspector_id = u.ID
+            LEFT JOIN {$wpdb->prefix}app_agencies a ON d.agency_id = a.id
+            LEFT JOIN {$wpdb->prefix}app_agency_employees e ON b.inspector_id = e.id
+            LEFT JOIN {$wpdb->users} u ON e.user_id = u.ID
+            LEFT JOIN {$wpdb->prefix}wi_provinces p ON b.province_id = p.id
+            LEFT JOIN {$wpdb->prefix}wi_regencies r ON b.regency_id = r.id
             WHERE b.id = %d
         ", $id));
 
