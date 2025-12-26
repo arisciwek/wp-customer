@@ -70,13 +70,14 @@ class AgencyCustomerFilter {
      * Register filter hooks
      */
     public function __construct() {
-        // Hook into customer DataTable QueryBuilder filters
+        // Hook into customer DataTable QueryBuilder filters (Phase 6 - Fixed)
+        // Priority 20: runs AFTER CustomerRoleFilter (priority 10)
 
-        // For statistics count (uses WPQB\QueryBuilder)
+        // For statistics count (QueryBuilder)
         add_filter('wpapp_datatable_customers_count_query', [$this, 'filter_count_query'], 20, 2);
 
-        // For data query (uses DataTableQueryBuilder with WHERE array)
-        add_filter('wpapp_datatable_customers_where', [$this, 'filter_where_conditions'], 20, 3);
+        // For data query (QueryBuilder)
+        add_filter('wpapp_datatable_customers_query', [$this, 'filter_data_query'], 20, 2);
     }
 
     /**
@@ -131,56 +132,22 @@ class AgencyCustomerFilter {
     }
 
     /**
-     * Filter WHERE conditions for data query (Simplified - Phase 6)
+     * Filter data query for agency users (Simplified - Phase 6)
      *
      * Uses wp-agency EntityRelationModel for consistent access control.
      * Agency users see only customers with branches assigned to their agency.
      *
-     * Hooked to: wpapp_datatable_customers_where (priority 20, after CustomerRoleFilter)
+     * Hooked to: wpapp_datatable_customers_query (priority 20, after CustomerRoleFilter)
      *
-     * @param array $where_conditions Current WHERE conditions (array of SQL strings)
-     * @param array $request_data DataTables request data
-     * @param DataTableModel $model Model instance
-     * @return array Modified WHERE conditions
+     * @param QueryBuilder $query QueryBuilder instance
+     * @param array $params Request parameters
+     * @return QueryBuilder Modified query
      *
      * @since 1.4.0 Simplified to use wp-agency EntityRelationModel
      */
-    public function filter_where_conditions($where_conditions, $request_data, $model) {
-        // Check if admin (no filtering)
-        if (current_user_can('manage_options')) {
-            return $where_conditions;
-        }
-
-        // Check if user has agency role
-        if (!$this->hasAgencyRole()) {
-            return $where_conditions;
-        }
-
-        // Check if wp-agency plugin is active
-        if (!class_exists('\\WPAgency\\Models\\Relation\\EntityRelationModel')) {
-            return $where_conditions;
-        }
-
-        // Use wp-agency EntityRelationModel
-        $agency_entity_model = new \WPAgency\Models\Relation\EntityRelationModel();
-        $customer_ids = $agency_entity_model->get_accessible_entity_ids('customer');
-
-        // Empty = see all
-        if (empty($customer_ids)) {
-            return $where_conditions;
-        }
-
-        // [0] = block all
-        if ($customer_ids === [0]) {
-            $where_conditions[] = '1=0';
-            return $where_conditions;
-        }
-
-        // Apply filter
-        $ids = implode(',', array_map('intval', $customer_ids));
-        $where_conditions[] = "c.id IN ({$ids})";
-
-        return $where_conditions;
+    public function filter_data_query($query, $params) {
+        // Use same logic as filter_count_query
+        return $this->filter_count_query($query, $params);
     }
 
     /**

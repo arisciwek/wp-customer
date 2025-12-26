@@ -1,45 +1,40 @@
 <?php
 /**
- * Customer Role-Based Filter (WITH QueryBuilder Support)
+ * Customer Role-Based Filter (QueryBuilder-only)
  *
  * @package     WP_Customer
  * @subpackage  Integrations
- * @version     2.0.0
+ * @version     2.1.0
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Integrations/CustomerRoleFilter-WithQueryBuilder.php
+ * Path: /wp-customer/src/Integrations/CustomerRoleFilter.php
  *
- * Description: ENHANCED role-based filtering untuk Customer DataTable.
- *              Supports BOTH old array-based hooks AND new QueryBuilder hooks.
- *              Maintains backward compatibility during migration period.
+ * Description: Role-based filtering untuk Customer DataTable menggunakan QueryBuilder.
+ *              Uses EntityRelationModel for consistent access control.
  *
- * Key Changes from v1.0.3:
- * - ✅ Added QueryBuilder hook support (wpapp_datatable_customers_count_query)
- * - ✅ Added QueryBuilder data hook (wpapp_datatable_customers_query)
- * - ✅ Maintained backward compatibility (old hook still works)
- * - ✅ Type-safe filtering with QueryBuilder
- * - ✅ Cleaner code, easier to maintain
- *
- * Migration Strategy:
- * - Phase 1: Add new hooks alongside old hooks (THIS VERSION)
- * - Phase 2: Test thoroughly with QueryBuilder-based DataTable
- * - Phase 3: Remove old hook after full migration verified
+ * Active Hooks:
+ * - wpapp_datatable_customers_count_query (QueryBuilder - for statistics)
+ * - wpapp_datatable_customers_query (QueryBuilder - for data)
  *
  * Dependencies:
- * - wp_app_customer_employees table
+ * - EntityRelationModel (single source of truth)
  * - includes/class-role-manager.php
- * - WPQB\QueryBuilder (optional, for new hooks)
+ * - WPQB\QueryBuilder
  *
  * Changelog:
+ * 2.1.0 - 2025-12-26 (Phase 4 Consolidation)
+ * - DELETED deprecated filter_customers_by_role() method (not called anywhere)
+ * - DELETED old hook wpapp_datatable_customers_where (deprecated since Nov 2025)
+ * - Simplified to use EntityRelationModel (removes duplicate SQL queries)
+ * - QueryBuilder-only (old array-based hooks removed)
+ * - Cleaner, DRY code
+ *
  * 2.0.0 - 2025-11-05
  * - Added QueryBuilder hook support
- * - Backward compatible with array-based hooks
- * - Cleaner, type-safe filtering
- * - Prepared for full QueryBuilder migration
+ * - Maintained old hooks for backward compatibility
  *
  * 1.0.3 - 2025-11-02
  * - Single source of truth - customer_employees table only
- * - Removed UNION query
  *
  * 1.0.0 - 2025-11-01
  * - Initial implementation
@@ -54,71 +49,10 @@ class CustomerRoleFilter {
      * Register filter hooks
      */
     public function __construct() {
-        // ========================================
-        // OLD HOOKS (Array-based) - Keep for backward compatibility
-        // ========================================
-        add_filter('wpapp_datatable_customers_where', [$this, 'filter_customers_by_role'], 10, 3);
-
-        // ========================================
-        // NEW HOOKS (QueryBuilder-based) - For refactored DataTable models
-        // ========================================
+        // QueryBuilder-based hooks (actively used by CustomerDataTableModel)
         add_filter('wpapp_datatable_customers_count_query', [$this, 'filter_count_query'], 10, 2);
         add_filter('wpapp_datatable_customers_query', [$this, 'filter_data_query'], 10, 2);
     }
-
-    // ========================================
-    // OLD METHOD (Array-based) - Backward Compatibility
-    // ========================================
-
-    /**
-     * Filter customers based on user's role (OLD - Array-based)
-     *
-     * ⚠️ DEPRECATED: Will be removed after full migration to QueryBuilder
-     *
-     * Hooked to: wpapp_datatable_customers_where
-     *
-     * @param array $where Existing WHERE conditions
-     * @param array $request DataTable request data
-     * @param object $model DataTableModel instance
-     * @return array Modified WHERE conditions
-     */
-    public function filter_customers_by_role($where, $request, $model) {
-        global $wpdb;
-
-        // Check if admin (no filtering)
-        if (current_user_can('manage_options')) {
-            return $where;
-        }
-
-        // Check if user has customer plugin role
-        if (!$this->hasCustomerRole()) {
-            // Not a customer plugin user - no filtering needed
-            return $where;
-        }
-
-        // Use EntityRelationModel (Phase 4 - Simplified)
-        $entity_model = new \WPCustomer\Models\Relation\EntityRelationModel();
-        $customer_ids = $entity_model->get_accessible_entity_ids('customer');
-
-        if (empty($customer_ids)) {
-            return $where; // See all (should not happen for customer users)
-        }
-
-        if ($customer_ids === [0]) {
-            $where[] = '1=0';
-            return $where;
-        }
-
-        // Apply filter
-        $customer_ids_string = implode(',', array_map('intval', $customer_ids));
-        $where[] = "c.id IN ({$customer_ids_string})";
-
-        return $where;
-    }
-
-    // ========================================
-    // NEW METHODS (QueryBuilder-based)
-    // ========================================
 
     /**
      * Filter count query with QueryBuilder (Simplified - Phase 4)
