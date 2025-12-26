@@ -7,7 +7,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Company
- * @version     1.0.0
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Company/CompanyDataTableModel.php
@@ -18,6 +18,12 @@
  *              Includes View button dengan wpdt-panel-trigger class.
  *
  * Changelog:
+ * 1.1.0 - 2025-12-26
+ * - Added agency, division, and inspector columns
+ * - Added JOINs to app_agencies, app_agency_divisions, app_agency_employees
+ * - Display agency name (Disnaker), division name (Unit Kerja), and inspector name (Pengawas)
+ * - Columns: Code, Name, Type, Email, Phone, Disnaker, Unit Kerja, Pengawas, Actions
+ *
  * 1.0.1 - 2025-12-25
  * - Removed status column from display
  * - Always filter to show only active companies
@@ -75,8 +81,12 @@ class CompanyDataTableModel extends DataTableModel {
             $this->table_alias . '.phone'
         ];
 
-        // No joins needed
-        $this->base_joins = [];
+        // JOINs for agency, division, and inspector info
+        $this->base_joins = [
+            "LEFT JOIN {$wpdb->prefix}app_agencies a ON {$this->table_alias}.agency_id = a.id",
+            "LEFT JOIN {$wpdb->prefix}app_agency_divisions d ON {$this->table_alias}.division_id = d.id",
+            "LEFT JOIN {$wpdb->prefix}app_agency_employees e ON {$this->table_alias}.inspector_id = e.id"
+        ];
 
         // Base WHERE for filtering
         $this->base_where = [];
@@ -99,6 +109,9 @@ class CompanyDataTableModel extends DataTableModel {
             "{$alias}.type as type",
             "{$alias}.email as email",
             "{$alias}.phone as phone",
+            "a.name as agency_name",
+            "d.name as division_name",
+            "e.name as inspector_name",
             "{$alias}.id as id",
             "{$alias}.customer_id as customer_id",
             "{$alias}.status as status"
@@ -131,6 +144,9 @@ class CompanyDataTableModel extends DataTableModel {
             'type' => esc_html($type_display),
             'email' => esc_html($row->email ?? '-'),
             'phone' => esc_html($row->phone ?? '-'),
+            'agency' => esc_html($row->agency_name ?? '-'),
+            'division' => esc_html($row->division_name ?? '-'),
+            'inspector' => esc_html($row->inspector_name ?? '-'),
             'actions' => $this->generate_action_buttons($row)
         ];
     }

@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Views/Admin/Company
- * @version     1.0.0
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Views/admin/company/datatable/datatable.php
@@ -14,6 +14,10 @@
  *              Pattern sama dengan customer-datatable.php
  *
  * Changelog:
+ * 1.1.0 - 2025-12-26
+ * - Added Disnaker, Unit Kerja, and Pengawas columns
+ * - Columns: Code, Name, Type, Email, Phone, Disnaker, Unit Kerja, Pengawas, Actions
+ *
  * 1.0.1 - 2025-12-25
  * - Removed status column (only active companies shown)
  * - Columns: Code, Name, Type, Email, Phone, Actions
@@ -35,6 +39,9 @@ defined('ABSPATH') || exit;
                 <th><?php esc_html_e('Type', 'wp-customer'); ?></th>
                 <th><?php esc_html_e('Email', 'wp-customer'); ?></th>
                 <th><?php esc_html_e('Phone', 'wp-customer'); ?></th>
+                <th><?php esc_html_e('Disnaker', 'wp-customer'); ?></th>
+                <th><?php esc_html_e('Unit Kerja', 'wp-customer'); ?></th>
+                <th><?php esc_html_e('Pengawas', 'wp-customer'); ?></th>
                 <th><?php esc_html_e('Actions', 'wp-customer'); ?></th>
             </tr>
         </thead>

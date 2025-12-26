@@ -3,7 +3,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Assets/JS/Company
- * @version     1.0.0
+ * @version     1.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/assets/js/company/company-datatable.js
@@ -25,6 +25,11 @@
  * 5. Panel opens automatically - NO custom code needed!
  *
  * Changelog:
+ * 1.1.0 - 2025-12-26
+ * - Added agency, division, and inspector columns
+ * - Columns: Code, Name, Type, Email, Phone, Agency, Division, Inspector, Actions
+ * - Updated columnDefs targets (Actions moved from 5 to 8)
+ *
  * 1.0.1 - 2025-12-25
  * - Removed status column (only active companies shown)
  * - Columns: Code, Name, Type, Email, Phone, Actions
@@ -85,6 +90,9 @@
                 { data: 'type' },
                 { data: 'email' },
                 { data: 'phone' },
+                { data: 'agency' },
+                { data: 'division' },
+                { data: 'inspector' },
                 {
                     data: 'actions',
                     orderable: false,
@@ -113,7 +121,19 @@
                     responsivePriority: 2
                 },
                 {
-                    targets: 5,  // Actions
+                    targets: 5,  // Agency (Disnaker)
+                    responsivePriority: 3
+                },
+                {
+                    targets: 6,  // Division (Unit Kerja)
+                    responsivePriority: 3
+                },
+                {
+                    targets: 7,  // Inspector (Pengawas)
+                    responsivePriority: 3
+                },
+                {
+                    targets: 8,  // Actions
                     responsivePriority: 1,
                     orderable: false,
                     searchable: false

@@ -7,7 +7,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Branch
- * @version     2.1.0
+ * @version     2.2.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Branch/BranchDataTableModel.php
@@ -18,6 +18,11 @@
  *              Columns: Kode, Nama Cabang, Tipe, Email, Telepon, Status
  *
  * Changelog:
+ * 2.2.0 - 2025-12-26
+ * - Added agency, division, and inspector columns
+ * - Added JOINs to app_agencies, app_agency_divisions, app_agency_employees
+ * - Display agency name, division name (unit kerja), and inspector name
+ *
  * 2.1.0 - 2025-12-25
  * - Added: Role-based branch filtering
  * - customer_admin: see all branches in their customer
@@ -83,8 +88,12 @@ class BranchDataTableModel extends DataTableModel {
             $this->table_alias . '.phone'
         ];
 
-        // No joins needed for branches
-        $this->base_joins = [];
+        // JOINs for agency, division, and inspector info
+        $this->base_joins = [
+            "LEFT JOIN {$wpdb->prefix}app_agencies a ON {$this->table_alias}.agency_id = a.id",
+            "LEFT JOIN {$wpdb->prefix}app_agency_divisions d ON {$this->table_alias}.division_id = d.id",
+            "LEFT JOIN {$wpdb->prefix}app_agency_employees e ON {$this->table_alias}.inspector_id = e.id"
+        ];
 
         // Base WHERE for customer filtering - MUST be empty, filtering via filter_where hook only
         $this->base_where = [];
@@ -106,6 +115,9 @@ class BranchDataTableModel extends DataTableModel {
             "{$alias}.type as type",
             "{$alias}.email as email",
             "{$alias}.phone as phone",
+            "a.name as agency_name",
+            "d.name as division_name",
+            "e.name as inspector_name",
             "{$alias}.status as status",
             "{$alias}.id as id",
             "{$alias}.customer_id as customer_id"
@@ -150,6 +162,9 @@ class BranchDataTableModel extends DataTableModel {
             'type' => esc_html($type_display),
             'email' => esc_html($row->email ?? '-'),
             'phone' => esc_html($row->phone ?? '-'),
+            'agency' => esc_html($row->agency_name ?? '-'),
+            'division' => esc_html($row->division_name ?? '-'),
+            'inspector' => esc_html($row->inspector_name ?? '-'),
             'status' => $status_badge,
             'actions' => $this->generate_action_buttons($row)
         ];
