@@ -448,10 +448,11 @@ class DataTableAccessFilter {
         // Admin roles can see ALL data, non-admin roles are filtered
         $entity_admin_roles = [
             'agency' => [
-                'agency_admin_dinas',     // Admin Dinas (top level)
-                'agency_admin_unit',      // Admin Unit (unit level)
-                'agency_kepala_dinas',    // Kepala Dinas (head of agency)
-                'agency_kepala_bidang',   // Kepala Bidang (head of division)
+                // Agency roles removed - now filtered by AgencyCompanyFilter based on province
+                // 'agency_admin_dinas',     // Filtered by province now
+                // 'agency_admin_unit',      // Filtered by unit now
+                // 'agency_kepala_dinas',    // Filtered by province now
+                // 'agency_kepala_bidang',   // Filtered by division now
             ],
             'customer' => [
                 'customer_admin',         // Customer Admin (owner/top level)
@@ -461,6 +462,7 @@ class DataTableAccessFilter {
             ],
             'company' => [
                 'customer_admin',         // Customer Admin can see all companies in their customer
+                // Agency roles removed - filtered by AgencyCompanyFilter
             ],
             'customer_employees' => [
                 'customer_admin',         // Customer Admin can see all employees in their customer

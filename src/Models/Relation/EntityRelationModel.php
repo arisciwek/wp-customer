@@ -226,10 +226,17 @@ class EntityRelationModel {
             return $cached;
         }
 
-        // Special handling for branch (company) entities
-        // Branch access is role-based: customer_admin sees all branches, customer_branch_admin sees only assigned branch
+        // Special handling for 'company' entity
         if ($entity_type === 'company') {
-            $entity_ids = $this->get_accessible_branch_ids_for_user($user_id);
+            // Check if user is agency user first
+            if ($this->is_agency_user($user_id)) {
+                // Agency users see companies in their province
+                $entity_ids = $this->get_accessible_company_ids_for_agency_user($user_id);
+            } else {
+                // Customer users: role-based access
+                // customer_admin sees all branches, customer_branch_admin sees only assigned branch
+                $entity_ids = $this->get_accessible_branch_ids_for_user($user_id);
+            }
         } else {
             // Get accessible customer IDs first
             $accessible_customer_ids = $this->get_accessible_customer_ids_for_user($user_id);
@@ -506,5 +513,156 @@ class EntityRelationModel {
         wp_cache_set($cache_key, $count, $cache_group, $cache_ttl);
 
         return $count;
+    }
+
+    /**
+     * Check if user is agency user
+     *
+     * Check if user has any agency-related role.
+     * Uses WP_Agency_Role_Manager for role list if available.
+     *
+     * @param int $user_id User ID
+     * @return bool True if agency user, false otherwise
+     *
+     * @since 1.1.0
+     */
+    private function is_agency_user(int $user_id): bool {
+        $user = get_user_by('id', $user_id);
+        if (!$user) {
+            return false;
+        }
+
+        $user_roles = (array) $user->roles;
+
+        // Get agency roles from WP_Agency_Role_Manager if available
+        if (class_exists('WP_Agency_Role_Manager')) {
+            $agency_roles = \WP_Agency_Role_Manager::getRoleSlugs();
+        } else {
+            // Fallback to hardcoded list if wp-agency not available
+            $agency_roles = [
+                'agency',
+                'agency_employee',
+                'agency_admin_dinas',
+                'agency_admin_unit',
+                'agency_pengawas',
+                'agency_pengawas_spesialis',
+                'agency_kepala_unit',
+                'agency_kepala_seksi',
+                'agency_kepala_bidang',
+                'agency_kepala_dinas'
+            ];
+        }
+
+        foreach ($user_roles as $role) {
+            if (in_array($role, $agency_roles)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get accessible company IDs for agency user
+     *
+     * Returns company (branch) IDs in the same province as the user's agency.
+     *
+     * @param int $user_id User ID
+     * @return array Array of company IDs
+     *
+     * @since 1.1.0
+     */
+    private function get_accessible_company_ids_for_agency_user(int $user_id): array {
+        // Get agency's province_id
+        $province_id = $this->get_user_agency_province_id($user_id);
+
+        if (!$province_id) {
+            return []; // No province = no access
+        }
+
+        // Get all companies (branches) in this province
+        $table = $this->wpdb->prefix . 'app_customer_branches';
+
+        $sql = "SELECT DISTINCT id
+                FROM {$table}
+                WHERE province_id = %d
+                AND status = 'active'";
+
+        $company_ids = $this->wpdb->get_col($this->wpdb->prepare($sql, $province_id));
+
+        return array_map('intval', $company_ids);
+    }
+
+    /**
+     * Get user's agency province ID
+     *
+     * Logic:
+     * 1. Get user's agency_id (from agency admin OR employee table)
+     * 2. Get agency's province_id
+     *
+     * @param int $user_id User ID
+     * @return int|null Province ID or null if not found
+     *
+     * @since 1.1.0
+     */
+    private function get_user_agency_province_id(int $user_id): ?int {
+        // Get agency_id first
+        $agency_id = $this->get_user_agency_id($user_id);
+
+        if (!$agency_id) {
+            return null;
+        }
+
+        // Get province_id from agency
+        $table = $this->wpdb->prefix . 'app_agencies';
+
+        $sql = "SELECT province_id
+                FROM {$table}
+                WHERE id = %d
+                LIMIT 1";
+
+        $province_id = $this->wpdb->get_var($this->wpdb->prepare($sql, $agency_id));
+
+        return $province_id ? (int) $province_id : null;
+    }
+
+    /**
+     * Get user's agency ID
+     *
+     * Logic:
+     * 1. Check if user is agency admin (wp_app_agencies.user_id)
+     * 2. If not, check if user is agency employee (wp_app_agency_employees.agency_id)
+     *
+     * @param int $user_id User ID
+     * @return int|null Agency ID or null if not found
+     *
+     * @since 1.1.0
+     */
+    private function get_user_agency_id(int $user_id): ?int {
+        // Check 1: Is user an agency admin?
+        $table = $this->wpdb->prefix . 'app_agencies';
+
+        $sql = "SELECT id
+                FROM {$table}
+                WHERE user_id = %d
+                LIMIT 1";
+
+        $agency_id = $this->wpdb->get_var($this->wpdb->prepare($sql, $user_id));
+
+        if ($agency_id) {
+            return (int) $agency_id;
+        }
+
+        // Check 2: Is user an agency employee?
+        $table = $this->wpdb->prefix . 'app_agency_employees';
+
+        $sql = "SELECT agency_id
+                FROM {$table}
+                WHERE user_id = %d
+                LIMIT 1";
+
+        $agency_id = $this->wpdb->get_var($this->wpdb->prepare($sql, $user_id));
+
+        return $agency_id ? (int) $agency_id : null;
     }
 }

@@ -132,8 +132,14 @@ class WPCustomer {
         register_deactivation_hook(WP_CUSTOMER_FILE, array('WP_Customer_Deactivator', 'deactivate'));
 
         // Register non-persistent cache groups to avoid conflicts with object cache plugins
-        // This ensures our cache is runtime-only and doesn't persist to Memcached/Redis
-        wp_cache_add_non_persistent_groups(array('wp_customer'));
+        // This ensures our cache is runtime-only and doesn't persist to Memcached/Redis/W3TC
+        wp_cache_add_non_persistent_groups(array(
+            'wp_customer',
+            'wp_customer_entity_relations',
+            'wp_customer_branch_relations',
+            'wp_customer_company_relations',
+            'wp_customer_employee_relations'
+        ));
 
         // Run upgrade check on admin_init (fixes duplicate wp_capabilities, etc.)
         $this->loader->add_action('admin_init', 'WP_Customer_Upgrade', 'check_and_upgrade');
@@ -186,6 +192,10 @@ class WPCustomer {
         // Agency users only see customers with branches in their province
         $agency_customer_filter = new \WPCustomer\Integrations\AgencyCustomerFilter();
 
+        // NOTE: Agency company filter removed - now handled by EntityRelationModel
+        // EntityRelationModel.get_accessible_entity_ids() handles agency users for 'company' entity
+        // Returns company IDs based on province, integrated with DataTableAccessFilter
+
         // TODO-2183: Agency access filter integration (cross-plugin with wp-agency)
         $agency_access_filter = new \WPCustomer\Integrations\AgencyAccessFilter();
 
@@ -209,6 +219,9 @@ class WPCustomer {
         // Initialize DataTableAccessFilter for access control
         // Filters agency datatable based on user role and access
         new \WPCustomer\Controllers\Integration\DataTableAccessFilter();
+
+        // WP Admin Bar Integration - Add customer/company info to admin bar
+        add_filter('wp_admin_bar_user_data', 'wp_customer_add_admin_bar_user_data', 10, 3);
 
         // DEBUG: Log all database queries related to agencies
         add_filter('query', function($query) {
@@ -344,6 +357,60 @@ class WPCustomer {
  */
 function wp_customer() {
     return WPCustomer::getInstance();
+}
+
+/**
+ * Add customer/company data to WP Admin Bar
+ *
+ * Hook into: wp_admin_bar_user_data
+ *
+ * Displays:
+ * - Customer/Company name
+ * - Branch name & code
+ * - Branch type (Pusat/Cabang)
+ * - Employee name (if available)
+ *
+ * @param array $data Current user data
+ * @param int $user_id WordPress user ID
+ * @param WP_User $user WordPress user object
+ * @return array Enhanced user data
+ */
+function wp_customer_add_admin_bar_user_data($data, $user_id, $user) {
+    global $wpdb;
+
+    // Check if user is customer employee
+    $employee = $wpdb->get_row($wpdb->prepare(
+        "SELECT ce.name as employee_name,
+                c.name as customer_name,
+                cb.name as branch_name,
+                cb.code as branch_code,
+                cb.type as branch_type
+         FROM {$wpdb->prefix}app_customer_employees ce
+         LEFT JOIN {$wpdb->prefix}app_customers c ON ce.customer_id = c.id
+         LEFT JOIN {$wpdb->prefix}app_customer_branches cb ON ce.branch_id = cb.id
+         WHERE ce.user_id = %d
+         LIMIT 1",
+        $user_id
+    ));
+
+    if (!$employee) {
+        return $data; // Not a customer employee
+    }
+
+    // Prepare enhanced data
+    $enhanced_data = [
+        'entity_name' => $employee->customer_name,
+        'entity_icon' => '🏢',
+        'branch_name' => $employee->branch_name,
+    ];
+
+    // Add branch type as custom field if available
+    if ($employee->branch_type) {
+        $branch_type_label = $employee->branch_type === 'pusat' ? 'Pusat' : 'Cabang';
+        $enhanced_data['custom_fields']['Tipe Cabang'] = $branch_type_label;
+    }
+
+    return array_merge($data, $enhanced_data);
 }
 
 // Initialize the plugin
