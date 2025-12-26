@@ -129,62 +129,47 @@ class BranchAccessFilter {
     }
 
     /**
-     * Filter customer branches based on customer employee's customer_id
+     * Filter customer branches based on customer employee's access (Simplified - Phase 5)
+     *
+     * Uses EntityRelationModel for consistent access control.
+     * Returns accessible branch IDs for current user.
      *
      * Hooked to: wpapp_datatable_customer_branches_where
-     *
-     * SQL Pattern:
-     * User → CustomerEmployee → Customer → Branches
-     *
-     * Access Logic:
-     * - ALL customer roles filter by customer_id only
-     * - customer_admin, customer_branch_admin, customer_employee: same access level
-     * - They see all branches in their customer (no division restriction)
-     * - Division filtering is for agency users, handled by wp-agency plugin
-     * - If user is NOT CustomerEmployee → no filtering (Platform/Agency user)
      *
      * @param array $where Existing WHERE conditions
      * @param array $request DataTable request data
      * @param object $model NewCompanyDataTableModel instance
      * @return array Modified WHERE conditions
+     *
+     * @since 1.5.0 Simplified to use EntityRelationModel
      */
     public function filter_branches_by_customer($where, $request, $model) {
-        global $wpdb;
-
-        $user_id = get_current_user_id();
-
-        error_log('[BranchAccessFilter] filter_branches_by_customer CALLED for user_id: ' . $user_id);
-        error_log('[BranchAccessFilter] Incoming WHERE conditions: ' . print_r($where, true));
-
-        // Get table alias from model (supports flexible aliasing)
-        $alias = method_exists($model, 'get_table_alias') ? $model->get_table_alias() : 'cb';
-        error_log('[BranchAccessFilter] Using table alias: ' . $alias);
-
-        // Check if user is customer employee
-        $employee = $wpdb->get_row($wpdb->prepare(
-            "SELECT ce.customer_id, ce.branch_id
-             FROM {$wpdb->prefix}app_customer_employees ce
-             WHERE ce.user_id = %d",
-            $user_id
-        ));
-
-        // Not a customer employee, no filtering needed (agency user, platform staff, etc)
-        if (!$employee) {
-            error_log('[BranchAccessFilter] User is NOT a customer employee, skipping filter');
+        // Platform staff bypass
+        if (current_user_can('manage_options')) {
             return $where;
         }
 
-        error_log('[BranchAccessFilter] User IS customer employee');
-        error_log('[BranchAccessFilter] Customer ID: ' . $employee->customer_id);
+        // Get table alias from model (supports flexible aliasing: cb, b, etc)
+        $alias = method_exists($model, 'get_table_alias') ? $model->get_table_alias() : 'cb';
 
-        // All customer roles (customer_admin, customer_branch_admin, customer_employee)
-        // filter by customer_id only - they see all branches in their customer
-        // Division filtering is for agency users, not customer users
-        $where[] = sprintf("{$alias}.customer_id = %d", intval($employee->customer_id));
+        // Use EntityRelationModel
+        $entity_model = new \WPCustomer\Models\Relation\EntityRelationModel();
+        $accessible_ids = $entity_model->get_accessible_entity_ids('customer_branches');
 
-        error_log("[BranchAccessFilter] Added WHERE: {$alias}.customer_id = " . $employee->customer_id);
+        // Empty = see all (should not happen for customer users)
+        if (empty($accessible_ids)) {
+            return $where;
+        }
 
-        error_log('[BranchAccessFilter] Final WHERE conditions: ' . print_r($where, true));
+        // [0] = block all
+        if ($accessible_ids === [0]) {
+            $where[] = '1=0';
+            return $where;
+        }
+
+        // Apply filter by branch IDs
+        $ids = implode(',', array_map('intval', $accessible_ids));
+        $where[] = "{$alias}.id IN ({$ids})";
 
         return $where;
     }

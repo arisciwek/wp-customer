@@ -65,104 +65,69 @@ class EmployeeAccessFilter {
     }
 
     /**
-     * Filter agency employees based on customer's accessible agencies
+     * Filter agency employees based on customer's accessible agencies (Simplified - Phase 3)
+     *
+     * Uses EntityRelationModel for consistent access control.
+     * Branch admin: filters by division_id
+     * Customer admin: filters by accessible agency_ids
      *
      * Hooked to: wpapp_datatable_agency_employees_where
-     *
-     * SQL Pattern:
-     * User → CustomerEmployee → Branch → Agency → AgencyEmployees
-     *
-     * Access Logic:
-     * - If user is CustomerEmployee → filter to accessible agencies only
-     * - If user is NOT CustomerEmployee → no filtering (Platform/Agency user)
      *
      * @param array $where Existing WHERE conditions
      * @param array $request DataTable request data
      * @param object $model EmployeeDataTableModel instance
      * @return array Modified WHERE conditions
+     *
+     * @since 1.2.0 Simplified to use EntityRelationModel
      */
     public function filter_employees_by_customer($where, $request, $model) {
         global $wpdb;
 
-        $user_id = get_current_user_id();
+        // Platform staff bypass
+        if (current_user_can('manage_options')) {
+            return $where;
+        }
 
-        error_log('[EmployeeAccessFilter] filter_employees_by_customer CALLED for user_id: ' . $user_id);
-        error_log('[EmployeeAccessFilter] Incoming WHERE conditions: ' . print_r($where, true));
-
-        // Check if user is customer employee - get branch info too for division filtering
+        // Check if customer employee
         $employee = $wpdb->get_row($wpdb->prepare(
             "SELECT ce.*, b.division_id
              FROM {$wpdb->prefix}app_customer_employees ce
              LEFT JOIN {$wpdb->prefix}app_customer_branches b ON ce.branch_id = b.id
              WHERE ce.user_id = %d",
-            $user_id
+            get_current_user_id()
         ));
 
-        // Not a customer employee, no filtering needed
         if (!$employee) {
-            error_log('[EmployeeAccessFilter] User is NOT a customer employee, skipping filter');
-            return $where;
+            return $where; // Not customer employee
         }
 
-        error_log('[EmployeeAccessFilter] User IS customer employee (ID: ' . $employee->id . ')');
-
-        // Check if user is branch admin (has specific branch_id and division_id)
-        $is_branch_admin = !empty($employee->branch_id) && !empty($employee->division_id);
+        // Detect branch admin
+        $user = wp_get_current_user();
+        $is_customer_admin = in_array('customer_admin', $user->roles);
+        $is_branch_admin = !empty($employee->division_id) && !$is_customer_admin;
 
         if ($is_branch_admin) {
             // Branch admin: filter by division_id
-            error_log('[EmployeeAccessFilter] User is BRANCH ADMIN - filtering by division_id: ' . $employee->division_id);
-
-            // Get agency_id from division (for additional security)
-            $division = $wpdb->get_row($wpdb->prepare(
-                "SELECT agency_id FROM {$wpdb->prefix}app_agency_divisions WHERE id = %d",
-                $employee->division_id
-            ));
-
-            if ($division) {
-                $where[] = $wpdb->prepare('e.division_id = %d', $employee->division_id);
-                $where[] = $wpdb->prepare('e.agency_id = %d', $division->agency_id);
-
-                error_log('[EmployeeAccessFilter] Added WHERE: e.division_id = ' . $employee->division_id);
-                error_log('[EmployeeAccessFilter] Added WHERE: e.agency_id = ' . $division->agency_id);
-            } else {
-                // Division not found, block all
-                $where[] = "1=0";
-                error_log('[EmployeeAccessFilter] Division not found, blocking all');
-            }
+            $where[] = $wpdb->prepare('e.division_id = %d', $employee->division_id);
+            return $where;
         } else {
-            // Customer admin: filter by accessible agencies (existing logic)
-            error_log('[EmployeeAccessFilter] User is CUSTOMER ADMIN - filtering by accessible agencies');
+            // Customer admin: use EntityRelationModel (Phase 3 - Simplified)
+            $entity_model = new \WPCustomer\Models\Relation\EntityRelationModel();
+            $accessible_ids = $entity_model->get_accessible_entity_ids('agency');
 
-            $accessible_agencies = $wpdb->get_col($wpdb->prepare(
-                "SELECT DISTINCT b.agency_id
-                 FROM {$wpdb->prefix}app_customer_branches b
-                 INNER JOIN {$wpdb->prefix}app_customer_employees ce ON b.id = ce.branch_id
-                 WHERE ce.user_id = %d
-                 AND b.agency_id IS NOT NULL",
-                $user_id
-            ));
-
-            if (empty($accessible_agencies)) {
-                // User has no accessible agencies, block all
-                error_log('[EmployeeAccessFilter] NO accessible agencies found, blocking all');
-                $where[] = "1=0";
-            } else {
-                // Filter to accessible agencies only
-                $ids = implode(',', array_map('intval', $accessible_agencies));
-                $where[] = "e.agency_id IN ({$ids})";
-
-                error_log(sprintf(
-                    '[EmployeeAccessFilter] User %d has access to %d agencies: [%s]',
-                    $user_id,
-                    count($accessible_agencies),
-                    implode(', ', $accessible_agencies)
-                ));
-                error_log('[EmployeeAccessFilter] Added WHERE: e.agency_id IN (' . $ids . ')');
+            if (empty($accessible_ids)) {
+                return $where; // See all
             }
-        }
 
-        error_log('[EmployeeAccessFilter] Final WHERE conditions: ' . print_r($where, true));
+            if ($accessible_ids === [0]) {
+                $where[] = '1=0';
+                return $where;
+            }
+
+            // Apply agency filter (table alias 'e' for employees)
+            $ids = implode(',', array_map('intval', $accessible_ids));
+            $where[] = "e.agency_id IN ({$ids})";
+        }
 
         return $where;
     }

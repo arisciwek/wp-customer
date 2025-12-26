@@ -242,7 +242,9 @@ class EntityRelationModel {
             $accessible_customer_ids = $this->get_accessible_customer_ids_for_user($user_id);
 
             if (empty($accessible_customer_ids)) {
-                return []; // No accessible customers = no accessible entities
+                // No accessible customers = no accessible entities
+                wp_cache_set($cache_key, [0], $cache_group, $cache_ttl);
+                return [0]; // Block all
             }
 
             // Query entity IDs related to accessible customers

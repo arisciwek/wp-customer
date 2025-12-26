@@ -80,72 +80,61 @@ class AgencyCustomerFilter {
     }
 
     /**
-     * Filter count query for agency users (QueryBuilder)
+     * Filter count query for agency users (Simplified - Phase 6)
      *
-     * Agency-based filtering: hanya customers dengan branches di agency user.
+     * Uses wp-agency EntityRelationModel for consistent access control.
+     * Agency users see only customers with branches assigned to their agency.
      *
      * Hooked to: wpapp_datatable_customers_count_query (priority 20, after CustomerRoleFilter)
      *
      * @param QueryBuilder $query QueryBuilder instance
      * @param array $params Request parameters
      * @return QueryBuilder Modified query
+     *
+     * @since 1.4.0 Simplified to use wp-agency EntityRelationModel
      */
     public function filter_count_query($query, $params) {
-        error_log('=== AgencyCustomerFilter::filter_count_query CALLED ===');
-        error_log('User ID: ' . get_current_user_id());
-        error_log('Query class: ' . get_class($query));
-
         // Check if admin (no filtering)
         if (current_user_can('manage_options')) {
-            error_log('User is admin - skipping filter');
             return $query;
         }
 
         // Check if user has agency role
         if (!$this->hasAgencyRole()) {
-            error_log('User does not have agency role - skipping filter');
-            // Not an agency user - no filtering needed
             return $query;
         }
 
-        error_log('User has agency role - applying filter');
+        // Check if wp-agency plugin is active and has EntityRelationModel
+        if (!class_exists('\\WPAgency\\Models\\Relation\\EntityRelationModel')) {
+            return $query; // wp-agency not available, skip filter
+        }
 
-        // Get user's agency_id
-        $agency_id = $this->getUserAgencyId();
-        error_log('Agency ID: ' . ($agency_id ?? 'NULL'));
+        // Use wp-agency EntityRelationModel
+        $agency_entity_model = new \WPAgency\Models\Relation\EntityRelationModel();
+        $customer_ids = $agency_entity_model->get_accessible_entity_ids('customer');
 
-        if (!$agency_id) {
-            error_log('No agency_id - blocking all results');
-            // No agency assigned - block all results
+        // Empty = see all (platform staff)
+        if (empty($customer_ids)) {
+            return $query;
+        }
+
+        // [0] = block all
+        if ($customer_ids === [0]) {
             $query->whereRaw('1=0');
             return $query;
         }
 
-        // Filter customers: only those with branches in this agency
-        global $wpdb;
-        error_log('Adding agency_id filter: ' . $agency_id);
-
-        // Use sprintf with intval to avoid wpdb::prepare array binding Notice
-        // QueryBuilder's whereRaw doesn't need bindings array with sprintf approach
-        $query->whereRaw(sprintf(
-            "c.id IN (
-                SELECT DISTINCT customer_id
-                FROM {$wpdb->prefix}app_customer_branches
-                WHERE agency_id = %d
-            )",
-            intval($agency_id)
-        ));
-
-        error_log('Query after filter: ' . $query->toSql());
-        error_log('=== END AgencyCustomerFilter ===');
+        // Apply filter
+        $query->whereIn('c.id', $customer_ids);
 
         return $query;
     }
 
     /**
-     * Filter WHERE conditions for data query (DataTableQueryBuilder)
+     * Filter WHERE conditions for data query (Simplified - Phase 6)
      *
-     * Agency-based filtering: hanya customers dengan branches di agency user.
+     * Uses wp-agency EntityRelationModel for consistent access control.
+     * Agency users see only customers with branches assigned to their agency.
      *
      * Hooked to: wpapp_datatable_customers_where (priority 20, after CustomerRoleFilter)
      *
@@ -153,51 +142,44 @@ class AgencyCustomerFilter {
      * @param array $request_data DataTables request data
      * @param DataTableModel $model Model instance
      * @return array Modified WHERE conditions
+     *
+     * @since 1.4.0 Simplified to use wp-agency EntityRelationModel
      */
     public function filter_where_conditions($where_conditions, $request_data, $model) {
-        error_log('=== AgencyCustomerFilter::filter_where_conditions CALLED ===');
-        error_log('User ID: ' . get_current_user_id());
-        error_log('Where conditions count: ' . count($where_conditions));
-
         // Check if admin (no filtering)
         if (current_user_can('manage_options')) {
-            error_log('User is admin - skipping filter');
             return $where_conditions;
         }
 
         // Check if user has agency role
         if (!$this->hasAgencyRole()) {
-            error_log('User does not have agency role - skipping filter');
             return $where_conditions;
         }
 
-        error_log('User has agency role - applying filter');
+        // Check if wp-agency plugin is active
+        if (!class_exists('\\WPAgency\\Models\\Relation\\EntityRelationModel')) {
+            return $where_conditions;
+        }
 
-        // Get user's agency_id
-        $agency_id = $this->getUserAgencyId();
-        error_log('Agency ID: ' . ($agency_id ?? 'NULL'));
+        // Use wp-agency EntityRelationModel
+        $agency_entity_model = new \WPAgency\Models\Relation\EntityRelationModel();
+        $customer_ids = $agency_entity_model->get_accessible_entity_ids('customer');
 
-        if (!$agency_id) {
-            error_log('No agency_id - blocking all results');
-            // No agency assigned - block all results
+        // Empty = see all
+        if (empty($customer_ids)) {
+            return $where_conditions;
+        }
+
+        // [0] = block all
+        if ($customer_ids === [0]) {
             $where_conditions[] = '1=0';
             return $where_conditions;
         }
 
-        // Add agency filter to WHERE conditions
-        global $wpdb;
-        error_log('Adding agency_id WHERE condition: ' . $agency_id);
+        // Apply filter
+        $ids = implode(',', array_map('intval', $customer_ids));
+        $where_conditions[] = "c.id IN ({$ids})";
 
-        $where_conditions[] = sprintf(
-            "c.id IN (
-                SELECT DISTINCT customer_id
-                FROM {$wpdb->prefix}app_customer_branches
-                WHERE agency_id = %d
-            )",
-            intval($agency_id)
-        );
-
-        error_log('=== END AgencyCustomerFilter::filter_where_conditions ===');
         return $where_conditions;
     }
 
@@ -229,78 +211,43 @@ class AgencyCustomerFilter {
     }
 
     /**
-     * Get agency_id from user (agency admin OR employee)
+     * Get filter statistics (for debugging/logging - Phase 6 Updated)
      *
-     * Logic (matches WP_Agency_WP_Customer_Integration::get_user_agency_id):
-     * 1. Check if user is agency admin (wp_app_agencies.user_id)
-     * 2. If not, check if user is agency employee (wp_app_agency_employees.agency_id)
-     *
-     * @return int|null Agency ID or null if not found
-     */
-    private function getUserAgencyId() {
-        global $wpdb;
-        static $cache = [];
-
-        $user_id = get_current_user_id();
-
-        error_log('getUserAgencyId() - User ID: ' . $user_id);
-
-        // Check cache
-        if (isset($cache[$user_id])) {
-            error_log('getUserAgencyId() - Cache hit: ' . $cache[$user_id]);
-            return $cache[$user_id];
-        }
-
-        // Check 1: Is user an agency admin?
-        // Use sprintf + intval to avoid single placeholder wpdb::prepare Notice
-        $agency_id = $wpdb->get_var(sprintf("
-            SELECT id
-            FROM {$wpdb->prefix}app_agencies
-            WHERE user_id = %d
-            LIMIT 1
-        ", intval($user_id)));
-
-        error_log('getUserAgencyId() - Check agency admin: ' . ($agency_id ?? 'NULL'));
-
-        if ($agency_id) {
-            $cache[$user_id] = (int) $agency_id;
-            error_log('getUserAgencyId() - Found as admin, agency_id: ' . $cache[$user_id]);
-            return $cache[$user_id];
-        }
-
-        // Check 2: Is user an agency employee?
-        // Use sprintf + intval to avoid single placeholder wpdb::prepare Notice
-        $agency_id = $wpdb->get_var(sprintf("
-            SELECT agency_id
-            FROM {$wpdb->prefix}app_agency_employees
-            WHERE user_id = %d
-            LIMIT 1
-        ", intval($user_id)));
-
-        error_log('getUserAgencyId() - Check agency employee: ' . ($agency_id ?? 'NULL'));
-
-        $cache[$user_id] = $agency_id ? (int) $agency_id : null;
-        error_log('getUserAgencyId() - Final result: ' . ($cache[$user_id] ?? 'NULL'));
-        return $cache[$user_id];
-    }
-
-    /**
-     * Get filter statistics (for debugging/logging)
+     * Uses wp-agency EntityRelationModel for consistent data access.
      *
      * @return array Statistics
+     *
+     * @since 1.4.0 Updated to use wp-agency EntityRelationModel
      */
     public function getFilterStats() {
         $current_user_id = get_current_user_id();
         $is_admin = current_user_can('manage_options');
         $has_agency_role = $this->hasAgencyRole();
-        $agency_id = $this->getUserAgencyId();
+
+        // Check if wp-agency available
+        if (!class_exists('\\WPAgency\\Models\\Relation\\EntityRelationModel')) {
+            return [
+                'user_id' => $current_user_id,
+                'is_admin' => $is_admin,
+                'has_agency_role' => $has_agency_role,
+                'accessible_customer_ids' => [],
+                'accessible_count' => 0,
+                'filter_active' => false,
+                'note' => 'wp-agency plugin not active'
+            ];
+        }
+
+        // Use wp-agency EntityRelationModel
+        $agency_entity_model = new \WPAgency\Models\Relation\EntityRelationModel();
+        $accessible_ids = $agency_entity_model->get_accessible_entity_ids('customer');
 
         return [
             'user_id' => $current_user_id,
             'is_admin' => $is_admin,
             'has_agency_role' => $has_agency_role,
-            'agency_id' => $agency_id,
-            'filter_active' => !$is_admin && $has_agency_role && $agency_id !== null
+            'accessible_customer_ids' => $accessible_ids,
+            'accessible_count' => count($accessible_ids),
+            'filter_active' => !$is_admin && $has_agency_role && !empty($accessible_ids)
         ];
     }
 }

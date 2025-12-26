@@ -96,17 +96,22 @@ class CustomerRoleFilter {
             return $where;
         }
 
-        // Get accessible customer IDs
-        $customer_ids = $this->getAccessibleCustomerIds();
+        // Use EntityRelationModel (Phase 4 - Simplified)
+        $entity_model = new \WPCustomer\Models\Relation\EntityRelationModel();
+        $customer_ids = $entity_model->get_accessible_entity_ids('customer');
 
-        if (!empty($customer_ids)) {
-            // ❌ OLD: Manual SQL string building
-            $customer_ids_string = implode(',', array_map('intval', $customer_ids));
-            $where[] = "c.id IN ({$customer_ids_string})";
-        } else {
-            // Block all results
-            $where[] = '1=0';
+        if (empty($customer_ids)) {
+            return $where; // See all (should not happen for customer users)
         }
+
+        if ($customer_ids === [0]) {
+            $where[] = '1=0';
+            return $where;
+        }
+
+        // Apply filter
+        $customer_ids_string = implode(',', array_map('intval', $customer_ids));
+        $where[] = "c.id IN ({$customer_ids_string})";
 
         return $where;
     }
@@ -116,13 +121,17 @@ class CustomerRoleFilter {
     // ========================================
 
     /**
-     * Filter count query with QueryBuilder (NEW - Type-safe)
+     * Filter count query with QueryBuilder (Simplified - Phase 4)
+     *
+     * Uses EntityRelationModel for consistent access control.
      *
      * Hooked to: wpapp_datatable_customers_count_query
      *
      * @param \WPQB\QueryBuilder $query QueryBuilder instance
      * @param array $params Request parameters
      * @return \WPQB\QueryBuilder Modified query
+     *
+     * @since 2.1.0 Simplified to use EntityRelationModel
      */
     public function filter_count_query($query, $params) {
         // Check if admin (no filtering)
@@ -132,20 +141,24 @@ class CustomerRoleFilter {
 
         // Check if user has customer plugin role
         if (!$this->hasCustomerRole()) {
-            // Not a customer plugin user - no filtering needed
             return $query;
         }
 
-        // Get accessible customer IDs
-        $customer_ids = $this->getAccessibleCustomerIds();
+        // Use EntityRelationModel
+        $entity_model = new \WPCustomer\Models\Relation\EntityRelationModel();
+        $customer_ids = $entity_model->get_accessible_entity_ids('customer');
 
-        if (!empty($customer_ids)) {
-            // ✅ NEW: Type-safe QueryBuilder method
-            $query->whereIn('c.id', $customer_ids);
-        } else {
-            // Block all results
-            $query->whereRaw('1=0');
+        if (empty($customer_ids)) {
+            return $query; // See all
         }
+
+        if ($customer_ids === [0]) {
+            $query->whereRaw('1=0');
+            return $query;
+        }
+
+        // Apply filter
+        $query->whereIn('c.id', $customer_ids);
 
         return $query;
     }
@@ -191,39 +204,22 @@ class CustomerRoleFilter {
     }
 
     /**
-     * Get customer IDs accessible to current user
+     * Get filter statistics (for debugging/logging - Phase 4 Updated)
      *
-     * Single source of truth: customer_employees table
-     *
-     * @return array Customer IDs
-     */
-    private function getAccessibleCustomerIds() {
-        global $wpdb;
-
-        $current_user_id = get_current_user_id();
-
-        // Query customer_employees table
-        $customer_ids = $wpdb->get_col($wpdb->prepare(
-            "SELECT DISTINCT customer_id
-             FROM {$wpdb->prefix}app_customer_employees
-             WHERE user_id = %d
-             AND status = 'active'",
-            $current_user_id
-        ));
-
-        return array_map('intval', $customer_ids);
-    }
-
-    /**
-     * Get filter statistics (for debugging/logging)
+     * Uses EntityRelationModel for consistent data access.
      *
      * @return array Statistics
+     *
+     * @since 2.1.0 Updated to use EntityRelationModel
      */
     public function getFilterStats() {
         $current_user_id = get_current_user_id();
         $is_admin = current_user_can('manage_options');
         $has_customer_role = $this->hasCustomerRole();
-        $accessible_ids = $this->getAccessibleCustomerIds();
+
+        // Use EntityRelationModel
+        $entity_model = new \WPCustomer\Models\Relation\EntityRelationModel();
+        $accessible_ids = $entity_model->get_accessible_entity_ids('customer');
 
         return [
             'user_id' => $current_user_id,
