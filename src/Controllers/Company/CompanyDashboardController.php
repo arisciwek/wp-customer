@@ -79,6 +79,9 @@ class CompanyDashboardController {
      * Initialize hooks
      */
     private function init_hooks(): void {
+        // Enqueue assets
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
+
         // Signal wp-datatable to load dual panel assets
         add_filter('wpdt_use_dual_panel', [$this, 'signal_dual_panel'], 10, 1);
 
@@ -105,6 +108,24 @@ class CompanyDashboardController {
         add_action('wp_ajax_get_company_form', [$this, 'handle_get_company_form']);
         add_action('wp_ajax_save_company', [$this, 'handle_save_company']);
         add_action('wp_ajax_delete_company', [$this, 'handle_delete_company']);
+    }
+
+    /**
+     * Enqueue assets
+     */
+    public function enqueue_assets($hook): void {
+        // Only load on company dashboard page
+        if ($hook !== 'toplevel_page_perusahaan') {
+            return;
+        }
+
+        // Enqueue company info tab styles
+        wp_enqueue_style(
+            'wp-customer-company-info',
+            WP_CUSTOMER_URL . 'assets/css/admin/company-info.css',
+            [],
+            WP_CUSTOMER_VERSION
+        );
     }
 
     /**
