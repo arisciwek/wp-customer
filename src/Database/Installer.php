@@ -13,7 +13,8 @@ class Installer {
         'app_customer_memberships',
         'app_customer_invoices',
         'app_customer_payments',
-        'app_customer_employees'
+        'app_customer_employees',
+        'app_customer_audit_logs' // Audit log table (no dependencies)
     ];
 
     // Table class mappings for easier maintenance
@@ -25,7 +26,8 @@ class Installer {
         'app_customer_invoices' => Tables\CustomerInvoicesDB::class,
         'app_customer_payments' => Tables\CustomerPaymentsDB::class,
         'app_customer_branches' => Tables\BranchesDB::class,
-        'app_customer_employees' => Tables\CustomerEmployeesDB::class
+        'app_customer_employees' => Tables\CustomerEmployeesDB::class,
+        'app_customer_audit_logs' => Tables\AuditLogsDB::class
     ];
 
     private static function debug($message) {

@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Customer
- * @version     2.0.2
+ * @version     2.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Customer/CustomerModel.php
@@ -13,8 +13,16 @@
  *              Extends AbstractCrudModel dari wp-app-core.
  *              Handles create, read, update, delete operations.
  *              All CRUD operations INHERITED from AbstractCrudModel.
+ *              AUTO-TRACKING: Uses Auditable trait for audit logging.
  *
  * Changelog:
+ * 2.1.0 - 2025-12-28 (Audit Log Integration)
+ * - Added: Auditable trait for automatic audit logging
+ * - Added: Auto-tracking for create, update, delete operations
+ * - Override: create(), update(), delete() methods untuk inject logging
+ * - Config: auditable_type = 'customer', excluded fields = updated_at, created_at, created_by
+ * - All changes now logged to app_customer_audit_logs table
+ *
  * 2.0.2 - 2025-12-25
  * - Added getHeadOffice() method to fetch head office (pusat) data
  * - Returns complete branch data with province/regency names
@@ -39,10 +47,27 @@ namespace WPCustomer\Models\Customer;
 
 use WPAppCore\Models\Abstract\AbstractCrudModel;
 use WPCustomer\Cache\CustomerCacheManager;
+use WPCustomer\Traits\Auditable;
 
 defined('ABSPATH') || exit;
 
 class CustomerModel extends AbstractCrudModel {
+    use Auditable;
+
+    /**
+     * Auditable configuration
+     */
+    protected $auditable_type = 'customer';
+    protected $auditable_excluded = ['updated_at', 'created_at', 'created_by'];
+
+    /**
+     * Reference field mappings for audit log
+     */
+    protected $auditable_references = [
+        'province_id' => ['table' => 'wi_provinces', 'key' => 'id', 'label' => 'name'],
+        'regency_id' => ['table' => 'wi_regencies', 'key' => 'id', 'label' => 'name'],
+        'user_id' => ['table' => 'users', 'key' => 'ID', 'label' => 'display_name'],
+    ];
 
     /**
      * Static code tracker (untuk uniqueness)
@@ -161,6 +186,71 @@ class CustomerModel extends AbstractCrudModel {
             'created_at' => '%s',
             'updated_at' => '%s'
         ];
+    }
+
+    // ========================================
+    // AUDIT LOG INTEGRATION
+    // ========================================
+
+    /**
+     * Create customer with audit logging
+     *
+     * @param array $data Customer data
+     * @return int|null Customer ID or null on failure
+     */
+    public function create(array $data): ?int {
+        // Call parent create method
+        $customer_id = parent::create($data);
+
+        // Log creation
+        if ($customer_id) {
+            $this->logAudit('created', $customer_id, null, $data);
+        }
+
+        return $customer_id;
+    }
+
+    /**
+     * Update customer with audit logging
+     *
+     * @param int $id Customer ID
+     * @param array $data Update data
+     * @return bool Success status
+     */
+    public function update(int $id, array $data): bool {
+        // Get old data before update
+        $old_data = $this->find($id);
+
+        // Call parent update method
+        $result = parent::update($id, $data);
+
+        // Log update (only changed fields will be logged)
+        if ($result && $old_data) {
+            $this->logAudit('updated', $id, $old_data, $data);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Delete customer with audit logging
+     *
+     * @param int $id Customer ID
+     * @return bool Success status
+     */
+    public function delete(int $id): bool {
+        // Get data before deletion
+        $old_data = $this->find($id);
+
+        // Call parent delete method
+        $result = parent::delete($id);
+
+        // Log deletion
+        if ($result && $old_data) {
+            $this->logAudit('deleted', $id, $old_data, null);
+        }
+
+        return $result;
     }
 
     // ========================================

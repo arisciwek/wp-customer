@@ -185,6 +185,14 @@ class AssetController {
             $this->version
         );
 
+        // Enqueue CSS for audit log / history tab
+        wp_enqueue_style(
+            'audit-log-styles',
+            WP_CUSTOMER_URL . 'assets/css/audit-log/audit-log.css',
+            [],
+            $this->version
+        );
+
         // Enqueue minimal JS for DataTable initialization
         // Dependency: jquery only (datatables will be loaded by wp-datatable BaseAssets)
         wp_enqueue_script(
@@ -222,6 +230,43 @@ class AssetController {
             $this->version,
             false
         );
+
+        // Enqueue audit log DataTable (for history tab)
+        wp_enqueue_script(
+            'audit-log-datatable',
+            WP_CUSTOMER_URL . 'assets/js/audit-log/audit-log.js',
+            ['jquery', 'customer-datatable'],
+            $this->version,
+            false
+        );
+
+        // Localize audit log script with nonce and i18n
+        wp_localize_script('audit-log-datatable', 'wpCustomerAuditLog', [
+            'nonce' => wp_create_nonce('wp_customer_ajax_nonce'),
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'i18n' => [
+                'processing' => __('Loading...', 'wp-customer'),
+                'search' => __('Search:', 'wp-customer'),
+                'lengthMenu' => __('Show _MENU_ entries', 'wp-customer'),
+                'info' => __('Showing _START_ to _END_ of _TOTAL_ entries', 'wp-customer'),
+                'infoEmpty' => __('No entries available', 'wp-customer'),
+                'infoFiltered' => __('(filtered from _MAX_ total entries)', 'wp-customer'),
+                'zeroRecords' => __('No matching records found', 'wp-customer'),
+                'emptyTable' => __('No audit logs available', 'wp-customer'),
+                'paginate' => [
+                    'first' => __('First', 'wp-customer'),
+                    'previous' => __('Previous', 'wp-customer'),
+                    'next' => __('Next', 'wp-customer'),
+                    'last' => __('Last', 'wp-customer')
+                ],
+                'field' => __('Field', 'wp-customer'),
+                'oldValue' => __('Old Value', 'wp-customer'),
+                'newValue' => __('New Value', 'wp-customer'),
+                'detailTitle' => __('Audit Log Details', 'wp-customer'),
+                'close' => __('Close', 'wp-customer'),
+                'modalLibraryNotLoaded' => __('Modal library not loaded', 'wp-customer')
+            ]
+        ]);
 
         // Localize script with nonce (shared by all DataTables and modal handler)
         // Used by: customer-datatable.js, customer-modal-handler.js

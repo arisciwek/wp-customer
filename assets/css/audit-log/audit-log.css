@@ -1,0 +1,90 @@
+/**
+ * Audit Log / History Tab Styles
+ *
+ * @package     WP_Customer
+ * @subpackage  Assets/CSS/AuditLog
+ * @version     1.0.0
+ * @author      arisciwek
+ *
+ * Path: /wp-customer/assets/css/audit-log/audit-log.css
+ *
+ * Description: Styles untuk audit log history tab.
+ *              Includes badges, comparison table, and action buttons.
+ *
+ * Changelog:
+ * 1.0.0 - 2025-12-28
+ * - Initial implementation
+ * - Audit badges (created, updated, deleted)
+ * - Comparison table for old/new values
+ * - Action button styles
+ */
+
+/* Audit badges */
+.audit-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.audit-badge-created {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.audit-badge-updated {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.audit-badge-deleted {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.audit-more-changes {
+    color: #666;
+    font-style: italic;
+    font-size: 11px;
+}
+
+/* Action buttons */
+.view-audit-detail {
+    padding: 4px 8px;
+    min-height: 0;
+    line-height: 1;
+}
+
+.view-audit-detail .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+}
+
+/* Audit comparison table */
+.audit-comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.audit-comparison-table th,
+.audit-comparison-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+
+.audit-comparison-table thead th {
+    background-color: #f5f5f5;
+    font-weight: 600;
+}
+
+.audit-comparison-table .audit-field-changed {
+    background-color: #fff3cd;
+}
+
+.audit-comparison-table .audit-field-changed td {
+    border-left: 3px solid #856404;
+}

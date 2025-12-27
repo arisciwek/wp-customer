@@ -171,8 +171,20 @@ class CustomerSettingsPageController {
         // Add redirect after settings saved to prevent form resubmission
         add_filter('wp_redirect', [$this, 'addSettingsSavedMessage'], 10, 2);
 
-        // Register development settings (if needed)
-        // register_setting(...);
+        // Register development settings
+        register_setting(
+            'wp_customer_development_settings',  // Option group (matches settings_fields())
+            'wp_customer_development_settings',  // Option name
+            [
+                'type' => 'array',
+                'description' => 'WP Customer development settings',
+                'sanitize_callback' => [$this, 'sanitizeDevelopmentSettings'],
+                'default' => [
+                    'enable_development' => 0,
+                    'clear_data_on_deactivate' => 0
+                ]
+            ]
+        );
     }
 
     /**
@@ -375,5 +387,23 @@ class CustomerSettingsPageController {
         }
 
         return $location;
+    }
+
+    /**
+     * Sanitize development settings
+     *
+     * @param array $input Raw input from form
+     * @return array Sanitized settings
+     */
+    public function sanitizeDevelopmentSettings($input): array {
+        $sanitized = [];
+
+        // Sanitize enable_development (checkbox)
+        $sanitized['enable_development'] = isset($input['enable_development']) && $input['enable_development'] == '1' ? 1 : 0;
+
+        // Sanitize clear_data_on_deactivate (checkbox)
+        $sanitized['clear_data_on_deactivate'] = isset($input['clear_data_on_deactivate']) && $input['clear_data_on_deactivate'] == '1' ? 1 : 0;
+
+        return $sanitized;
     }
 }

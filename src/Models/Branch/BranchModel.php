@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Branch
- * @version     2.0.0
+ * @version     2.1.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Branch/BranchModel.php
@@ -13,6 +13,7 @@
  *              Extends AbstractCrudModel dari wp-app-core.
  *              Handles create, read, update, delete operations.
  *              All CRUD operations INHERITED from AbstractCrudModel.
+ *              AUTO-TRACKING: Uses Auditable trait for audit logging.
  *
  * Separation of Concerns:
  * - BranchModel: CRUD operations only
@@ -21,6 +22,13 @@
  * - BranchController: HTTP request handling only
  *
  * Changelog:
+ * 2.1.0 - 2025-12-28 (Audit Log Integration)
+ * - Added: Auditable trait for automatic audit logging
+ * - Added: Auto-tracking for create, update, delete operations
+ * - Override: create(), update(), delete() methods untuk inject logging
+ * - Config: auditable_type = 'branch', excluded fields = updated_at, created_at, updated_by
+ * - All changes now logged to app_customer_audit_logs table
+ *
  * 2.0.0 - 2025-11-09 (TODO-2193: CRUD Refactoring)
  * - BREAKING: Refactored to extend AbstractCrudModel
  * - CRUD methods INHERITED: find(), create(), update(), delete()
@@ -38,10 +46,32 @@ namespace WPCustomer\Models\Branch;
 use WPAppCore\Models\Abstract\AbstractCrudModel;
 use WPCustomer\Cache\BranchCacheManager;
 use WPCustomer\Models\Customer\CustomerModel;
+use WPCustomer\Traits\Auditable;
 
 defined('ABSPATH') || exit;
 
 class BranchModel extends AbstractCrudModel {
+    use Auditable;
+
+    /**
+     * Auditable configuration
+     */
+    protected $auditable_type = 'branch';
+    protected $auditable_excluded = ['updated_at', 'created_at', 'updated_by'];
+
+    /**
+     * Reference field mappings for audit log
+     * Format: 'field' => ['table' => 'table_name', 'key' => 'id_col', 'label' => 'name_col']
+     */
+    protected $auditable_references = [
+        'province_id' => ['table' => 'wi_provinces', 'key' => 'id', 'label' => 'name'],
+        'regency_id' => ['table' => 'wi_regencies', 'key' => 'id', 'label' => 'name'],
+        'user_id' => ['table' => 'users', 'key' => 'ID', 'label' => 'display_name'],
+        'customer_id' => ['table' => 'app_customers', 'key' => 'id', 'label' => 'name'],
+        'agency_id' => ['table' => 'app_agencies', 'key' => 'id', 'label' => 'name'],
+        'division_id' => ['table' => 'app_agency_divisions', 'key' => 'id', 'label' => 'name'],
+        'inspector_id' => ['table' => 'app_agency_employees', 'key' => 'id', 'label' => 'name'],
+    ];
 
     /**
      * Cache keys constants
@@ -208,6 +238,71 @@ class BranchModel extends AbstractCrudModel {
         $updateData['updated_by'] = get_current_user_id();
 
         return $updateData;
+    }
+
+    // ========================================
+    // AUDIT LOG INTEGRATION
+    // ========================================
+
+    /**
+     * Create branch with audit logging
+     *
+     * @param array $data Branch data
+     * @return int|null Branch ID or null on failure
+     */
+    public function create(array $data): ?int {
+        // Call parent create method
+        $branch_id = parent::create($data);
+
+        // Log creation
+        if ($branch_id) {
+            $this->logAudit('created', $branch_id, null, $data);
+        }
+
+        return $branch_id;
+    }
+
+    /**
+     * Update branch with audit logging
+     *
+     * @param int $id Branch ID
+     * @param array $data Update data
+     * @return bool Success status
+     */
+    public function update(int $id, array $data): bool {
+        // Get old data before update
+        $old_data = $this->find($id);
+
+        // Call parent update method
+        $result = parent::update($id, $data);
+
+        // Log update (only changed fields will be logged)
+        if ($result && $old_data) {
+            $this->logAudit('updated', $id, $old_data, $data);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Delete branch with audit logging
+     *
+     * @param int $id Branch ID
+     * @return bool Success status
+     */
+    public function delete(int $id): bool {
+        // Get data before deletion
+        $old_data = $this->find($id);
+
+        // Call parent delete method
+        $result = parent::delete($id);
+
+        // Log deletion
+        if ($result && $old_data) {
+            $this->logAudit('deleted', $id, $old_data, null);
+        }
+
+        return $result;
     }
 
     // ========================================

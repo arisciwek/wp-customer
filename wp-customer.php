@@ -252,6 +252,9 @@ class WPCustomer {
         new \WPCustomer\Controllers\Company\CompanyMembershipController();
         new \WPCustomer\Controllers\Company\CompanyInvoiceController(); // CRUD operations only
 
+        // Audit Log Controller (History Tab in Customer Detail)
+        new \WPCustomer\Controllers\AuditLog\AuditLogController();
+
         // Integration Controllers (Hook-based Cross-Plugin Integration)
         // OLD CODE - Commented out (replaced by generic framework TODO-2179)
         // Task-2177: Agency Integration - Injects customer statistics into wp-agency dashboard

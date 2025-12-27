@@ -69,6 +69,7 @@ class WP_Customer_Deactivator {
             // Delete tables in correct order (child tables first)
             $tables = [
                 // First level - no dependencies
+                'app_customer_audit_logs',   // Drop audit log first (no FK, polymorphic)
                 'app_customer_memberships',  // Drop this first as it references both customers and levels
                 'app_customer_employees',    // Drop this next as it references customers and branches
                 'app_customer_branches',     // Drop this after employees as it only references customers

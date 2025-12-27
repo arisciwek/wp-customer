@@ -190,6 +190,11 @@ class CustomerDashboardController {
                 'title' => __('Staff', 'wp-customer'),
                 'template' => WP_CUSTOMER_PATH . 'src/Views/admin/customer/tabs/employees.php',
                 'priority' => 30
+            ],
+            'history' => [
+                'title' => __('History', 'wp-customer'),
+                'template' => WP_CUSTOMER_PATH . 'src/Views/templates/audit-log/history-tab.php',
+                'priority' => 40
             ]
         ];
     }
