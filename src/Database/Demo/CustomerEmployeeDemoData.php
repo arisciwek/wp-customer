@@ -368,32 +368,50 @@ class CustomerEmployeeDemoData extends AbstractDemoData {
     /**
      * Build branch ID mapping from static data to actual database
      *
-     * Task-2171: Static data uses branch_id based on sequence, but actual
-     * database IDs may differ. This method creates mapping.
+     * FIXED: Changed from global sequence-based to customer-specific mapping
+     * to handle extra branches that break sequential mapping.
+     *
+     * Task-2171: Static data uses branch_id based on customer sequence:
+     * - Customer 1 (static_id=1): branch_id 1,2,3 (1 pusat + 2 cabang)
+     * - Customer 2 (static_id=2): branch_id 4,5,6 (1 pusat + 2 cabang)
+     * - Formula: static_branch_id = (static_customer_id - 1) * 3 + branch_index
      *
      * @return array Map of [static_id => actual_id]
      */
     private function buildBranchIdMap(): array {
-        // Get ALL demo branches (pusat + cabang) ordered by customer, then type
-        // Order: pusat first (type DESC because 'pusat' > 'cabang' alphabetically)
-        $demo_branches = $this->wpdb->get_results(
-            "SELECT b.id, b.customer_id, b.type, c.user_id
-             FROM {$this->wpdb->prefix}app_customer_branches b
-             INNER JOIN {$this->wpdb->prefix}app_customers c ON b.customer_id = c.id
-             WHERE c.reg_type = 'generate'
-             ORDER BY c.user_id ASC, b.type DESC, b.id ASC"
-        );
-
         $map = [];
-        foreach ($demo_branches as $index => $branch) {
-            // Static branch_id 1-30 maps to all branches in sequence
-            // Customer 1: branches 1-3 (1 pusat + 2 cabang)
-            // Customer 2: branches 4-6 (1 pusat + 2 cabang)
-            // etc.
-            $static_branch_id = $index + 1;
-            $map[$static_branch_id] = $branch->id;
+        $customer_id_map = $this->buildCustomerIdMap();
 
-            error_log("[BranchIdMap] Static ID {$static_branch_id} → Actual ID {$branch->id} (customer: {$branch->customer_id}, type: {$branch->type})");
+        // Process each static customer (1-10)
+        for ($static_customer_id = 1; $static_customer_id <= 10; $static_customer_id++) {
+            $actual_customer_id = $customer_id_map[$static_customer_id] ?? null;
+
+            if (!$actual_customer_id) {
+                error_log("[BranchIdMap] WARNING: No actual customer found for static customer {$static_customer_id}");
+                continue;
+            }
+
+            // Get ONLY first 3 branches for this customer (1 pusat + 2 cabang)
+            // Ignore extra branches added later
+            $customer_branches = $this->wpdb->get_results($this->wpdb->prepare(
+                "SELECT id, type
+                 FROM {$this->wpdb->prefix}app_customer_branches
+                 WHERE customer_id = %d
+                 ORDER BY type DESC, id ASC
+                 LIMIT 3",
+                $actual_customer_id
+            ));
+
+            // Map each branch to static ID
+            foreach ($customer_branches as $index => $branch) {
+                // Calculate static branch_id: (customer - 1) * 3 + index + 1
+                // Customer 1: 0*3+1=1, 0*3+2=2, 0*3+3=3
+                // Customer 2: 1*3+1=4, 1*3+2=5, 1*3+3=6
+                $static_branch_id = ($static_customer_id - 1) * 3 + ($index + 1);
+                $map[$static_branch_id] = $branch->id;
+
+                error_log("[BranchIdMap] Static ID {$static_branch_id} → Actual ID {$branch->id} (customer: static={$static_customer_id}, actual={$actual_customer_id}, type: {$branch->type})");
+            }
         }
 
         error_log("[BranchIdMap] Total branches mapped: " . count($map));

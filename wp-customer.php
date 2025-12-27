@@ -3,18 +3,24 @@
  * Plugin Name: WP Customer
  * Plugin URI:
  * Description: Plugin untuk mengelola data Customer dan Cabangnya
- * Version: 1.0.15
+ * Version: 1.0.16
  * Author: arisciwek
  * Author URI:
  * License: GPL v2 or later
  *
  * @package     WP_Customer
- * @version     1.0.15
+ * @version     1.0.16
  * @author      arisciwek
  *
  * Path: /wp-customer/wp-customer.php
  *
  * Changelog:
+ * 1.0.16 - 2025-12-27 (Refactoring - Filter Consolidation)
+ * - Removed: 8 legacy Integration filter files (AgencyAccessFilter, AgencyCompanyFilter, etc.)
+ * - Added: Single RoleBasedFilter class replacing all deleted filters
+ * - Simplified: Hook-based filtering system for all datatables
+ * - Cleaned: Removed obsolete comments and deprecated code references
+ *
  * 1.0.15 - 2025-11-02 (TODO-2190 Fully Global Architecture)
  * - Removed: customer-branch-map.js (plugin-specific adapter)
  * - Now uses: wpapp-map-adapter.js (global adapter from wp-app-core)
@@ -38,14 +44,13 @@
  * - Fixed: Customer context preservation in modals
  *
  * 1.0.12 - 2025-10-31 (TODO-2183)
- * - Added: AgencyAccessFilter instantiation for cross-plugin integration
  * - Fixed: customer_admin now can see Disnaker list (Task-2176)
  */
 
 defined('ABSPATH') || exit;
 
 // Define plugin constants first, before anything else
-define('WP_CUSTOMER_VERSION', '1.0.15');
+define('WP_CUSTOMER_VERSION', '1.0.16');
 define('WP_CUSTOMER_FILE', __FILE__);
 define('WP_CUSTOMER_PATH', plugin_dir_path(__FILE__));
 define('WP_CUSTOMER_URL', plugin_dir_url(__FILE__));
@@ -184,26 +189,12 @@ class WPCustomer {
         add_action('wp_customer_customer_before_delete', [$customer_cleanup_handler, 'handleBeforeDelete'], 10, 2);
         add_action('wp_customer_customer_deleted', [$customer_cleanup_handler, 'handleAfterDelete'], 10, 3);
 
-        // Customer role-based filter (Review-01 from TODO-2187)
-        // Filter customer DataTable based on user's customer_employees association
-        $customer_role_filter = new \WPCustomer\Integrations\CustomerRoleFilter();
-
-        // Agency customer filter - Province-based filtering for agency users
-        // Agency users only see customers with branches in their province
-        $agency_customer_filter = new \WPCustomer\Integrations\AgencyCustomerFilter();
-
-        // NOTE: Agency company filter removed - now handled by EntityRelationModel
-        // EntityRelationModel.get_accessible_entity_ids() handles agency users for 'company' entity
-        // Returns company IDs based on province, integrated with DataTableAccessFilter
-
-        // TODO-2183: Agency access filter integration (cross-plugin with wp-agency)
-        $agency_access_filter = new \WPCustomer\Integrations\AgencyAccessFilter();
-
-        // TODO-2183 Follow-up: Agency employee access filter integration
-        $employee_access_filter = new \WPCustomer\Integrations\EmployeeAccessFilter();
-
-        // TODO-2183 Follow-up: Branch access filter integration (new companies tab)
-        $branch_access_filter = new \WPCustomer\Integrations\BranchAccessFilter();
+        // RoleBasedFilter: Unified hook-based filtering system (v2.0)
+        // Replaces 8 legacy Integration filters with single class
+        // Supports 3 roles: customer_admin, customer_branch_admin, customer_employee
+        // Works with ANY datatable from ANY plugin via wpapp_datatable_where_* hooks
+        // Filters: customers, companies, branches, employees based on user context
+        new \WPCustomer\Filters\RoleBasedFilter();
 
         // Task-2170: Employee lifecycle hooks (created, updated, before_delete, deleted)
         $employee_cleanup_handler = new \WPCustomer\Handlers\EmployeeCleanupHandler();
@@ -216,30 +207,29 @@ class WPCustomer {
         $agency_tab_controller = new \WPCustomer\Controllers\Integration\AgencyTabController();
         $agency_tab_controller->init();
 
-        // Initialize DataTableAccessFilter for access control
-        // Filters agency datatable based on user role and access
-        new \WPCustomer\Controllers\Integration\DataTableAccessFilter();
-
         // WP Admin Bar Integration - Add customer/company info to admin bar
         add_filter('wp_admin_bar_user_data', 'wp_customer_add_admin_bar_user_data', 10, 3);
 
-        // DEBUG: Log all database queries related to agencies
+        // DEBUG: Log database queries untuk wp-customer tables
         add_filter('query', function($query) {
-            if (strpos($query, 'app_agencies') !== false) {
-                error_log('=== FINAL SQL QUERY (agencies) ===');
+            static $logging = false;
+
+            // Prevent infinite recursion
+            if ($logging) {
+                return $query;
+            }
+
+            // Log company/branch queries
+            if (strpos($query, 'app_customer_branches') !== false && strpos($query, 'SELECT') === 0) {
+                $logging = true;
+                error_log('=== FINAL SQL QUERY (companies/branches) ===');
                 error_log($query);
                 error_log('=== END SQL QUERY ===');
+                $logging = false;
             }
+
             return $query;
         });
-
-        // OLD CODE - Commented out (replaced by generic framework)
-        // TODO-2071: Cross-plugin integration with wp-agency
-        // Filter agencies based on customer's branches
-        // Only initialize if wp-agency is active
-        // if (class_exists('WPAgency\Models\Agency\AgencyDataTableModel')) {
-        //     new \WPCustomer\Integrations\AgencyAccessFilter();
-        // }
     }
 
     /**

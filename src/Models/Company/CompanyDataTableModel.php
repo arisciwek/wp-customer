@@ -41,7 +41,6 @@ namespace WPCustomer\Models\Company;
 
 use WPAppCore\Models\DataTable\DataTableModel;
 use WPQB\QueryBuilder;
-use WPCustomer\Models\Relation\EntityRelationModel;
 
 defined('ABSPATH') || exit;
 
@@ -54,12 +53,6 @@ class CompanyDataTableModel extends DataTableModel {
     protected $table_alias = 'cc';
 
     /**
-     * Entity relation model for access control
-     * @var EntityRelationModel
-     */
-    private $relation_model;
-
-    /**
      * Constructor
      * Setup table and columns configuration
      */
@@ -69,9 +62,6 @@ class CompanyDataTableModel extends DataTableModel {
         global $wpdb;
         $this->table = $wpdb->prefix . 'app_customer_branches ' . $this->table_alias;
         $this->index_column = $this->table_alias . '.id';
-
-        // Initialize EntityRelationModel for access control
-        $this->relation_model = new EntityRelationModel();
 
         // Define searchable columns
         $this->searchable_columns = [
@@ -222,28 +212,8 @@ class CompanyDataTableModel extends DataTableModel {
         error_log('[CompanyDataTable] filter_where START');
         error_log('[CompanyDataTable] Current user ID: ' . get_current_user_id());
 
-        // Filter by accessible branch IDs (access control)
-        // Platform staff and users with edit_all_customer_branches get empty array = see all
-        // Customer users get filtered array based on role:
-        // - customer_admin: all branches in their customer(s)
-        // - customer_branch_admin: only their assigned branch(es)
-        $accessible_branch_ids = $this->relation_model->get_accessible_entity_ids('company');
-
-        error_log('[CompanyDataTable] Accessible branch IDs: ' . print_r($accessible_branch_ids, true));
-
-        if (!empty($accessible_branch_ids)) {
-            // User has limited access - filter by accessible IDs
-            $placeholders = implode(',', array_fill(0, count($accessible_branch_ids), '%d'));
-            $where_clause = $wpdb->prepare(
-                "{$alias}.id IN ($placeholders)",
-                ...$accessible_branch_ids
-            );
-            $where_conditions[] = $where_clause;
-            error_log('[CompanyDataTable] Added WHERE clause: ' . $where_clause);
-        } else {
-            error_log('[CompanyDataTable] Empty accessible IDs - showing all (platform/admin user)');
-        }
-        // If empty array from platform staff or users with edit_all_customer_branches, no filter needed (see all)
+        // Role-based filtering will be handled by RoleBasedFilter hook
+        // No need for manual filtering here anymore
 
         // Always filter to show only active companies
         $where_conditions[] = "{$alias}.status = 'active'";
@@ -255,20 +225,12 @@ class CompanyDataTableModel extends DataTableModel {
     }
 
     /**
-     * Override get_filter_hook to use 'company' entity type
+     * Override removed - use parent class role-based hook system
+     * Parent class now generates: wpapp_datatable_where_customer_admin (role-based)
+     * Instead of: wpapp_datatable_company_where (entity-based)
      *
-     * CompanyDataTableModel uses app_customer_branches table (same as BranchDataTableModel)
-     * but needs different entity type for access filtering.
-     *
-     * @param string $type Hook type ('where', 'order', etc.)
-     * @return string Filter hook name
-     *
-     * @since 1.0.1
+     * @since 2.0.0 - Migrated to role-based hook system
      */
-    protected function get_filter_hook($type) {
-        // Use 'company' as entity type instead of 'customer_branches'
-        return "wpapp_datatable_company_{$type}";
-    }
 
     /**
      * Get table alias
