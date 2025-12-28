@@ -132,9 +132,8 @@ class WPCustomer {
      * Initialize hooks and controllers
      */
     private function initHooks() {
-        // Register activation/deactivation hooks
-        register_activation_hook(WP_CUSTOMER_FILE, array('WP_Customer_Activator', 'activate'));
-        register_deactivation_hook(WP_CUSTOMER_FILE, array('WP_Customer_Deactivator', 'deactivate'));
+        // NOTE: Activation/deactivation hooks now registered at file level (before plugins_loaded)
+        // This ensures tables are created during plugin activation
 
         // Register non-persistent cache groups to avoid conflicts with object cache plugins
         // This ensures our cache is runtime-only and doesn't persist to Memcached/Redis/W3TC
@@ -405,6 +404,40 @@ function wp_customer_add_admin_bar_user_data($data, $user_id, $user) {
 
     return array_merge($data, $enhanced_data);
 }
+
+// ============================================================================
+// ACTIVATION/DEACTIVATION HOOKS
+// Must be registered at file level, NOT inside plugins_loaded
+// ============================================================================
+
+/**
+ * Activation hook
+ * Runs when plugin is activated - creates tables, roles, etc.
+ */
+register_activation_hook(__FILE__, function() {
+    // Load autoloader first
+    require_once WP_CUSTOMER_PATH . 'includes/class-autoloader.php';
+    $autoloader = new WPCustomerAutoloader('WPCustomer\\', WP_CUSTOMER_PATH);
+    $autoloader->register();
+
+    // Now load and run activator
+    require_once WP_CUSTOMER_PATH . 'includes/class-activator.php';
+    WP_Customer_Activator::activate();
+});
+
+/**
+ * Deactivation hook
+ * Runs when plugin is deactivated - cleanup if needed
+ */
+register_deactivation_hook(__FILE__, function() {
+    require_once WP_CUSTOMER_PATH . 'includes/class-deactivator.php';
+    WP_Customer_Deactivator::deactivate();
+});
+
+// ============================================================================
+// PLUGIN INITIALIZATION
+// Uses plugins_loaded to ensure dependencies are available
+// ============================================================================
 
 /**
  * Initialize plugin with dependency checks

@@ -69,7 +69,9 @@ class WP_Customer_Deactivator {
             $tables = [
                 // First level - no dependencies
                 'app_customer_audit_logs',   // Drop audit log first (no FK, polymorphic)
-                'app_customer_memberships',  // Drop this first as it references both customers and levels
+                'app_customer_payments',     // Drop payments before invoices (FK to invoices)
+                'app_customer_invoices',     // Drop invoices before branches (FK to branches)
+                'app_customer_memberships',  // Drop this as it references both customers and levels
                 'app_customer_employees',    // Drop this next as it references customers and branches
                 'app_customer_branches',     // Drop this after employees as it only references customers
                 // Second level - referenced by others
