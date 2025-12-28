@@ -13,7 +13,7 @@
 
 namespace WPCustomer\Models\Companies;
 
-use WPAppCore\Models\DataTable\DataTableModel;
+use WPDataTable\Core\AbstractDataTable;
 
 /**
  * CompaniesDataTableModel class
@@ -23,7 +23,7 @@ use WPAppCore\Models\DataTable\DataTableModel;
  *
  * @since 1.1.0
  */
-class CompaniesDataTableModel extends DataTableModel {
+class CompaniesDataTableModel extends AbstractDataTable {
 
     /**
      * Constructor
@@ -172,7 +172,7 @@ class CompaniesDataTableModel extends DataTableModel {
      * @param object $row Database row object
      * @return array Formatted row data
      */
-    protected function format_row($row) {
+    public function format_row($row) {
         return [
             // Column 0: ID (hidden, for reference)
             $row->id,

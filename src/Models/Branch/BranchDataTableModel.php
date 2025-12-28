@@ -56,12 +56,12 @@
 
 namespace WPCustomer\Models\Branch;
 
-use WPAppCore\Models\DataTable\DataTableModel;
+use WPDataTable\Core\AbstractDataTable;
 use WPQB\QueryBuilder;
 
 defined('ABSPATH') || exit;
 
-class BranchDataTableModel extends DataTableModel {
+class BranchDataTableModel extends AbstractDataTable {
 
     /**
      * Table alias for JOINs
@@ -107,7 +107,7 @@ class BranchDataTableModel extends DataTableModel {
      *
      * @return array Column definitions
      */
-    protected function get_columns(): array {
+    public function get_columns(): array {
         $alias = $this->table_alias;
         return [
             "{$alias}.code as code",
@@ -130,7 +130,7 @@ class BranchDataTableModel extends DataTableModel {
      * @param object $row Database row
      * @return array Formatted row data
      */
-    protected function format_row($row): array {
+    public function format_row($row): array {
         // Format type display
         $type_display = '';
         if (isset($row->type)) {
@@ -176,7 +176,7 @@ class BranchDataTableModel extends DataTableModel {
      * @param object $row Branch data
      * @return string HTML buttons
      */
-    private function generate_action_buttons($row): string {
+    protected function generate_action_buttons($row, array $options = []): string {
         $buttons = [];
 
         // Edit button (shown for users with edit permission)

@@ -39,12 +39,12 @@
 
 namespace WPCustomer\Models\Company;
 
-use WPAppCore\Models\DataTable\DataTableModel;
+use WPDataTable\Core\AbstractDataTable;
 use WPQB\QueryBuilder;
 
 defined('ABSPATH') || exit;
 
-class CompanyDataTableModel extends DataTableModel {
+class CompanyDataTableModel extends AbstractDataTable {
 
     /**
      * Table alias for JOINs
@@ -91,7 +91,7 @@ class CompanyDataTableModel extends DataTableModel {
      *
      * @return array Column definitions
      */
-    protected function get_columns(): array {
+    public function get_columns(): array {
         $alias = $this->table_alias;
         return [
             "{$alias}.code as code",
@@ -114,7 +114,7 @@ class CompanyDataTableModel extends DataTableModel {
      * @param object $row Database row
      * @return array Formatted row data
      */
-    protected function format_row($row): array {
+    public function format_row($row): array {
         // Format type display
         $type_display = '';
         if (isset($row->type)) {
@@ -147,7 +147,7 @@ class CompanyDataTableModel extends DataTableModel {
      * @param object $row Company data
      * @return string HTML buttons
      */
-    private function generate_action_buttons($row): string {
+    protected function generate_action_buttons($row, array $options = []): string {
         $buttons = [];
 
         // View button (ALWAYS shown for detail panel trigger)

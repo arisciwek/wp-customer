@@ -406,5 +406,46 @@ function wp_customer_add_admin_bar_user_data($data, $user_id, $user) {
     return array_merge($data, $enhanced_data);
 }
 
-// Initialize the plugin
-wp_customer()->run();
+/**
+ * Initialize plugin with dependency checks
+ *
+ * Priority 25 ensures wp-app-core (priority 20) loads first
+ * Checks for wp-datatable and wp-app-core availability
+ */
+add_action('plugins_loaded', function() {
+    // Check dependencies
+    $has_datatable = class_exists('WP_DataTable', false);
+    $has_app_core = class_exists('WP_App_Core', false); // Global namespace, not WPAppCore\
+
+    if (!$has_datatable || !$has_app_core) {
+        add_action('admin_notices', function() use ($has_datatable, $has_app_core) {
+            $missing = [];
+            if (!$has_datatable) $missing[] = 'wp-datatable';
+            if (!$has_app_core) $missing[] = 'wp-app-core';
+
+            echo '<div class="notice notice-error"><p>';
+            echo '<strong>WP Customer:</strong> Requires ' . implode(' and ', $missing) . ' plugin(s) to be installed and activated.';
+            echo '</p></div>';
+        });
+        return;
+    }
+
+    // CRITICAL: Explicitly load AbstractDataTable if autoloader fails
+    if (!class_exists('WPDataTable\\Core\\AbstractDataTable', false)) {
+        $abstract_datatable_file = WP_PLUGIN_DIR . '/wp-datatable/src/Core/AbstractDataTable.php';
+        if (file_exists($abstract_datatable_file)) {
+            require_once $abstract_datatable_file;
+        }
+    }
+
+    // CRITICAL: Explicitly load AbstractSettingsController if autoloader fails
+    if (!class_exists('WPAppCore\\Controllers\\Abstract\\AbstractSettingsController', false)) {
+        $abstract_settings_file = WP_PLUGIN_DIR . '/wp-app-core/src/Controllers/Abstract/AbstractSettingsController.php';
+        if (file_exists($abstract_settings_file)) {
+            require_once $abstract_settings_file;
+        }
+    }
+
+    // Initialize plugin
+    wp_customer()->run();
+}, 25); // Priority 25 ensures wp-app-core (priority 20) loads first

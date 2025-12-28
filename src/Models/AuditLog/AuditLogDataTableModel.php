@@ -33,11 +33,11 @@
 
 namespace WPCustomer\Models\AuditLog;
 
-use WPAppCore\Models\DataTable\DataTableModel;
+use WPDataTable\Core\AbstractDataTable;
 
 defined('ABSPATH') || exit;
 
-class AuditLogDataTableModel extends DataTableModel {
+class AuditLogDataTableModel extends AbstractDataTable {
 
     /**
      * Constructor
@@ -73,7 +73,7 @@ class AuditLogDataTableModel extends DataTableModel {
      *
      * @return array Column definitions
      */
-    protected function get_columns(): array {
+    public function get_columns(): array {
         return [
             'al.id',
             'al.auditable_type',
@@ -94,7 +94,7 @@ class AuditLogDataTableModel extends DataTableModel {
      * @param object $row Database row
      * @return array Formatted row data
      */
-    protected function format_row($row): array {
+    public function format_row($row): array {
         // Decode JSON values
         $old_values = !empty($row->old_values) ? json_decode($row->old_values, true) : null;
         $new_values = !empty($row->new_values) ? json_decode($row->new_values, true) : null;
@@ -197,7 +197,7 @@ class AuditLogDataTableModel extends DataTableModel {
      * @param string $event Event type
      * @return string HTML summary
      */
-    private function generate_changes_summary($old_values, $new_values, $event): string {
+    protected function generate_changes_summary($old_values, $new_values, $event): string {
         if ($event === 'created') {
             return '<span class="audit-event-created">' . __('Record created', 'wp-customer') . '</span>';
         }
@@ -240,7 +240,7 @@ class AuditLogDataTableModel extends DataTableModel {
      * @param int $id Entity ID
      * @return string Formatted label
      */
-    private function format_entity_label($type, $id): string {
+    protected function format_entity_label($type, $id): string {
         $labels = [
             'customer' => __('Customer', 'wp-customer'),
             'branch' => __('Branch', 'wp-customer'),
@@ -257,7 +257,7 @@ class AuditLogDataTableModel extends DataTableModel {
      * @param string $event Event type
      * @return string Formatted HTML
      */
-    private function format_event($event): string {
+    protected function format_event($event): string {
         $classes = [
             'created' => 'audit-badge-created',
             'updated' => 'audit-badge-updated',
@@ -282,7 +282,7 @@ class AuditLogDataTableModel extends DataTableModel {
      * @param string $datetime MySQL datetime
      * @return string Formatted datetime
      */
-    private function format_datetime($datetime): string {
+    protected function format_datetime($datetime): string {
         if (empty($datetime)) {
             return '-';
         }
@@ -299,7 +299,7 @@ class AuditLogDataTableModel extends DataTableModel {
      * @param object $row Database row
      * @return string HTML for action buttons
      */
-    private function generate_action_buttons($row): string {
+    protected function generate_action_buttons($row, array $options = []): string {
         $audit_id = $row->id ?? 0;
 
         // View details button (opens modal with old/new comparison)

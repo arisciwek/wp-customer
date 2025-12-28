@@ -30,13 +30,13 @@
 
 namespace WPCustomer\Models\Company;
 
-use WPAppCore\Models\DataTable\DataTableModel;
+use WPDataTable\Core\AbstractDataTable;
 use WPCustomer\Models\Company\CompanyInvoiceModel;
 use WPCustomer\Validators\CustomerValidator;
 
 defined('ABSPATH') || exit;
 
-class CompanyInvoiceDataTableModel extends DataTableModel {
+class CompanyInvoiceDataTableModel extends AbstractDataTable {
 
     /**
      * @var CompanyInvoiceModel
@@ -90,7 +90,7 @@ class CompanyInvoiceDataTableModel extends DataTableModel {
      *
      * @return array Column definitions
      */
-    protected function get_columns(): array {
+    public function get_columns(): array {
         $alias = $this->table_alias;
         return [
             "{$alias}.id as id",
@@ -115,7 +115,7 @@ class CompanyInvoiceDataTableModel extends DataTableModel {
      * @param object $row Database row
      * @return array Formatted row data
      */
-    protected function format_row($row): array {
+    public function format_row($row): array {
         // Check if this is an upgrade
         $is_upgrade = ($row->from_level_id && $row->level_id && $row->from_level_id != $row->level_id);
 
@@ -164,7 +164,7 @@ class CompanyInvoiceDataTableModel extends DataTableModel {
      * @param string $status Invoice status
      * @return string HTML badge
      */
-    private function generate_status_badge(string $status): string {
+    protected function generate_status_badge(string $status): string {
         $badge_classes = [
             'pending' => 'status-pending',
             'pending_payment' => 'status-pending-payment',
@@ -201,7 +201,7 @@ class CompanyInvoiceDataTableModel extends DataTableModel {
      * @param object $row Invoice data
      * @return string HTML buttons
      */
-    private function generate_action_buttons($row): string {
+    protected function generate_action_buttons($row, array $options = []): string {
         $buttons = [];
 
         // ✅ View button - REQUIRED for panel trigger

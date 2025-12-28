@@ -117,7 +117,7 @@ class CustomerDataTableModel extends AbstractDataTable {
      * @param object $row Database row object
      * @return array Formatted row data
      */
-    protected function format_row($row): array {
+    public function format_row($row): array {
         // Format status badge
         $status_badge = '';
         if (isset($row->status)) {
@@ -155,7 +155,7 @@ class CustomerDataTableModel extends AbstractDataTable {
      * @param array $request_data DataTables request data
      * @return array WHERE conditions
      */
-    protected function get_where_conditions(array $request_data): array {
+    public function get_where_conditions(array $request_data): array {
         global $wpdb;
         $where = [];
 
@@ -304,7 +304,7 @@ class CustomerDataTableModel extends AbstractDataTable {
      * @param string $status Status value
      * @return string HTML badge
      */
-    private function format_status_badge(string $status): string {
+    protected function format_status_badge(string $status, array $options = []): string {
         $badge_class = $status === 'active' ? 'success' : 'error';
         $status_text = $status === 'active'
             ? __('Active', 'wp-customer')
@@ -325,7 +325,7 @@ class CustomerDataTableModel extends AbstractDataTable {
      * @param object $row Database row object
      * @return string HTML action buttons
      */
-    private function generate_action_buttons($row): string {
+    protected function generate_action_buttons($row, array $options = []): string {
         $buttons = [];
 
         // View button - uses wpdt-panel-trigger for wp-datatable integration

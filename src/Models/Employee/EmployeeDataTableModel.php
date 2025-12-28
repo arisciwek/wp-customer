@@ -59,12 +59,12 @@
 
 namespace WPCustomer\Models\Employee;
 
-use WPAppCore\Models\DataTable\DataTableModel;
+use WPDataTable\Core\AbstractDataTable;
 use WPQB\QueryBuilder;
 
 defined('ABSPATH') || exit;
 
-class EmployeeDataTableModel extends DataTableModel {
+class EmployeeDataTableModel extends AbstractDataTable {
 
     /**
      * Table alias for JOINs
@@ -108,7 +108,7 @@ class EmployeeDataTableModel extends DataTableModel {
      *
      * @return array Column definitions
      */
-    protected function get_columns(): array {
+    public function get_columns(): array {
         $alias = $this->table_alias;
         return [
             "{$alias}.name as name",
@@ -133,7 +133,7 @@ class EmployeeDataTableModel extends DataTableModel {
      * @param object $row Database row
      * @return array Formatted row data
      */
-    protected function format_row($row): array {
+    public function format_row($row): array {
         // Format status badge
         $status_badge = '';
         if (isset($row->status)) {
@@ -179,7 +179,7 @@ class EmployeeDataTableModel extends DataTableModel {
      * @param object $row Employee data
      * @return string HTML buttons
      */
-    private function generate_action_buttons($row): string {
+    protected function generate_action_buttons($row, array $options = []): string {
         $buttons = [];
 
         // Edit button (shown for users with edit permission)
@@ -219,7 +219,7 @@ class EmployeeDataTableModel extends DataTableModel {
      * @param array $departments Department flags ['finance' => true, 'operation' => false, etc.]
      * @return string HTML badges
      */
-    private function generate_department_badges(array $departments): string {
+    protected function generate_department_badges(array $departments): string {
         $badges = [];
 
         $department_labels = [
