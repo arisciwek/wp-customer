@@ -67,15 +67,8 @@ class CompaniesController {
      * Register AJAX handlers
      */
     public function register_ajax_handlers() {
-        // Register DataTable handler using wp-app-core system
-        if (class_exists('\\WPAppCore\\Controllers\\DataTable\\DataTableController')) {
-            \WPAppCore\Controllers\DataTable\DataTableController::register_ajax_action(
-                'companies_datatable',
-                CompaniesDataTableModel::class
-            );
-        } else {
-            error_log('WPAppCore DataTableController not found. Make sure wp-app-core plugin is active.');
-        }
+        // NOTE: DataTable AJAX handler now registered via AbstractDataTable
+        // No need for manual registration via DataTableController
 
         // Register other AJAX endpoints
         add_action('wp_ajax_get_company_details', [$this, 'ajax_get_details']);
