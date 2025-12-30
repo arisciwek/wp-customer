@@ -7,7 +7,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Branch
- * @version     2.2.0
+ * @version     2.2.1
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Branch/BranchDataTableModel.php
@@ -18,6 +18,12 @@
  *              Columns: Kode, Nama Cabang, Tipe, Email, Telepon, Status
  *
  * Changelog:
+ * 2.2.1 - 2025-12-30
+ * - CRITICAL FIX: Added $this->columns property definition in constructor
+ * - Fixes "Invalid JSON response" error in Branches tab DataTable
+ * - Fixes SQL error: "SELECT  FROM" (missing column list)
+ * - Now properly matches AbstractDataTable v2.0 requirements
+ *
  * 2.2.0 - 2025-12-26
  * - Added agency, division, and inspector columns
  * - Added JOINs to app_agencies, app_agency_divisions, app_agency_employees
@@ -95,6 +101,22 @@ class BranchDataTableModel extends AbstractDataTable {
             "LEFT JOIN {$wpdb->prefix}app_agency_employees e ON {$this->table_alias}.inspector_id = e.id"
         ];
 
+        // CRITICAL: Define columns for SELECT clause (required by AbstractDataTable)
+        $alias = $this->table_alias; // 'cb' for Branches tab
+        $this->columns = [
+            "{$alias}.code",
+            "{$alias}.name",
+            "{$alias}.type",
+            "{$alias}.email",
+            "{$alias}.phone",
+            "a.name as agency_name",
+            "d.name as division_name",
+            "e.name as inspector_name",
+            "{$alias}.status",
+            "{$alias}.id",
+            "{$alias}.customer_id"
+        ];
+
         // Base WHERE for customer filtering - MUST be empty, filtering via filter_where hook only
         $this->base_where = [];
 
@@ -105,23 +127,13 @@ class BranchDataTableModel extends AbstractDataTable {
     /**
      * Get columns for SELECT clause
      *
+     * DEPRECATED: Use $this->columns property instead.
+     * Kept for backward compatibility only.
+     *
      * @return array Column definitions
      */
     public function get_columns(): array {
-        $alias = $this->table_alias;
-        return [
-            "{$alias}.code as code",
-            "{$alias}.name as name",
-            "{$alias}.type as type",
-            "{$alias}.email as email",
-            "{$alias}.phone as phone",
-            "a.name as agency_name",
-            "d.name as division_name",
-            "e.name as inspector_name",
-            "{$alias}.status as status",
-            "{$alias}.id as id",
-            "{$alias}.customer_id as customer_id"
-        ];
+        return $this->columns;
     }
 
     /**
