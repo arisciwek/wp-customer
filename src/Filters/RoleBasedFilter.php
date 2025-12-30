@@ -175,7 +175,7 @@ class RoleBasedFilter {
                 return "c.id = {$customer_id}";
 
             case 'company':
-                return "cb.customer_id = {$customer_id}";
+                return "cc.customer_id = {$customer_id}";
 
             case 'branch':
                 return "cb.customer_id = {$customer_id}";
@@ -215,7 +215,7 @@ class RoleBasedFilter {
 
             case 'company':
                 // Branch admin only sees their branch as company
-                return "cb.id = {$branch_id}";
+                return "cc.id = {$branch_id}";
 
             case 'branch':
                 // Branch admin only sees their branch

@@ -7,7 +7,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Company
- * @version     1.1.0
+ * @version     1.1.1
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Company/CompanyDataTableModel.php
@@ -18,6 +18,13 @@
  *              Includes View button dengan wpdt-panel-trigger class.
  *
  * Changelog:
+ * 1.1.1 - 2025-12-30
+ * - CRITICAL FIX: Changed table alias from 'cb' to 'cc'
+ * - 'cc' = customer_company (Companies page)
+ * - 'cb' = customer_branch (Branches tab in Customer detail)
+ * - Now correctly matches RoleBasedFilter expectations in both wp-customer and wp-agency
+ * - Fixes conflict with NewCompanyDataTableModel filter
+ *
  * 1.1.0 - 2025-12-26
  * - Added agency, division, and inspector columns
  * - Added JOINs to app_agencies, app_agency_divisions, app_agency_employees
@@ -48,10 +55,11 @@ class CompanyDataTableModel extends AbstractDataTable {
 
     /**
      * Table alias for JOINs
-     * MUST be 'cb' to match wp-agency RoleBasedFilter expectations
+     * MUST be 'cc' (customer_company) for Companies page
+     * Different from BranchDataTableModel which uses 'cb' (customer_branch)
      * @var string
      */
-    protected $table_alias = 'cb';
+    protected $table_alias = 'cc';
 
     /**
      * Constructor
@@ -65,7 +73,7 @@ class CompanyDataTableModel extends AbstractDataTable {
         $this->index_column = $this->table_alias . '.id';
 
         // CRITICAL: Define columns for SELECT clause (required by AbstractDataTable)
-        $alias = $this->table_alias;
+        $alias = $this->table_alias; // 'cc' for Companies page
         $this->columns = [
             "{$alias}.code",
             "{$alias}.name",
