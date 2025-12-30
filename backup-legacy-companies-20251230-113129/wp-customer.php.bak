@@ -244,6 +244,8 @@ class WPCustomer {
         // Branch Controller
         new \WPCustomer\Controllers\Branch\BranchController();
 
+        // Companies Controller (Branch Management with Hook-based System)
+        new \WPCustomer\Controllers\Companies\CompaniesController();
 
         // Company Controllers
         new \WPCustomer\Controllers\Company\CompanyMembershipController();

@@ -48,9 +48,10 @@ class CompanyDataTableModel extends AbstractDataTable {
 
     /**
      * Table alias for JOINs
+     * MUST be 'cb' to match wp-agency RoleBasedFilter expectations
      * @var string
      */
-    protected $table_alias = 'cc';
+    protected $table_alias = 'cb';
 
     /**
      * Constructor
@@ -62,6 +63,22 @@ class CompanyDataTableModel extends AbstractDataTable {
         global $wpdb;
         $this->table = $wpdb->prefix . 'app_customer_branches ' . $this->table_alias;
         $this->index_column = $this->table_alias . '.id';
+
+        // CRITICAL: Define columns for SELECT clause (required by AbstractDataTable)
+        $alias = $this->table_alias;
+        $this->columns = [
+            "{$alias}.code",
+            "{$alias}.name",
+            "{$alias}.type",
+            "{$alias}.email",
+            "{$alias}.phone",
+            "a.name as agency_name",
+            "d.name as division_name",
+            "e.name as inspector_name",
+            "{$alias}.id",
+            "{$alias}.customer_id",
+            "{$alias}.status"
+        ];
 
         // Define searchable columns
         $this->searchable_columns = [
@@ -78,34 +95,22 @@ class CompanyDataTableModel extends AbstractDataTable {
             "LEFT JOIN {$wpdb->prefix}app_agency_employees e ON {$this->table_alias}.inspector_id = e.id"
         ];
 
-        // Base WHERE for filtering
-        $this->base_where = [];
-
-        // Hook to add dynamic WHERE conditions
-        // Note: Use 'company' entity type for access filter
-        add_filter($this->get_filter_hook('where'), [$this, 'filter_where'], 10, 3);
+        // Base WHERE: Always filter to show only active companies
+        $this->base_where = [
+            "{$alias}.status = 'active'"
+        ];
     }
 
     /**
      * Get columns for SELECT clause
      *
+     * NOTE: This method is now deprecated - columns are defined in $this->columns
+     * Kept for backward compatibility only
+     *
      * @return array Column definitions
      */
     public function get_columns(): array {
-        $alias = $this->table_alias;
-        return [
-            "{$alias}.code as code",
-            "{$alias}.name as name",
-            "{$alias}.type as type",
-            "{$alias}.email as email",
-            "{$alias}.phone as phone",
-            "a.name as agency_name",
-            "d.name as division_name",
-            "e.name as inspector_name",
-            "{$alias}.id as id",
-            "{$alias}.customer_id as customer_id",
-            "{$alias}.status as status"
-        ];
+        return $this->columns;
     }
 
     /**
@@ -189,40 +194,13 @@ class CompanyDataTableModel extends AbstractDataTable {
     }
 
     /**
-     * Filter WHERE conditions
+     * Filter WHERE conditions (REMOVED - moved to base_where)
      *
-     * Hooked to: wpapp_datatable_company_where
-     * Filters by accessible branch IDs and active status only
+     * Active filter is now in $this->base_where in constructor.
+     * Role-based filtering handled by parent class hook system.
      *
-     * @param array $where_conditions Current WHERE conditions
-     * @param array $request_data DataTables request data
-     * @param DataTableModel $model Model instance
-     * @return array Modified WHERE conditions
+     * @deprecated Kept for backward compatibility
      */
-    public function filter_where($where_conditions, $request_data, $model): array {
-        // IMPORTANT: Only apply this filter if $model is instance of CompanyDataTableModel
-        // This prevents conflicts with BranchDataTableModel which uses same table
-        if (!($model instanceof self)) {
-            return $where_conditions;
-        }
-
-        global $wpdb;
-        $alias = $this->table_alias;
-
-        error_log('[CompanyDataTable] filter_where START');
-        error_log('[CompanyDataTable] Current user ID: ' . get_current_user_id());
-
-        // Role-based filtering will be handled by RoleBasedFilter hook
-        // No need for manual filtering here anymore
-
-        // Always filter to show only active companies
-        $where_conditions[] = "{$alias}.status = 'active'";
-        error_log('[CompanyDataTable] Added active filter');
-
-        error_log('[CompanyDataTable] Final WHERE conditions: ' . print_r($where_conditions, true));
-
-        return $where_conditions;
-    }
 
     /**
      * Override removed - use parent class role-based hook system

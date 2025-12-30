@@ -4,7 +4,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Filters
- * @version     2.1.0
+ * @version     2.1.1
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Filters/RoleBasedFilter.php
@@ -175,7 +175,7 @@ class RoleBasedFilter {
                 return "c.id = {$customer_id}";
 
             case 'company':
-                return "cc.customer_id = {$customer_id}";
+                return "cb.customer_id = {$customer_id}";
 
             case 'branch':
                 return "cb.customer_id = {$customer_id}";
@@ -215,7 +215,7 @@ class RoleBasedFilter {
 
             case 'company':
                 // Branch admin only sees their branch as company
-                return "cc.id = {$branch_id}";
+                return "cb.id = {$branch_id}";
 
             case 'branch':
                 // Branch admin only sees their branch
