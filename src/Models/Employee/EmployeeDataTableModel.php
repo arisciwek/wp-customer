@@ -7,7 +7,7 @@
  *
  * @package     WP_Customer
  * @subpackage  Models/Employee
- * @version     2.1.0
+ * @version     2.1.1
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Models/Employee/EmployeeDataTableModel.php
@@ -18,6 +18,12 @@
  *              Columns: Nama, Jabatan, Email, Telepon, Status
  *
  * Changelog:
+ * 2.1.1 - 2025-12-30
+ * - CRITICAL FIX: Added $this->columns property definition in constructor
+ * - Fixes "Invalid JSON response" error in Employees tab DataTable
+ * - Fixes SQL error: "SELECT  FROM" (missing column list)
+ * - Now properly matches AbstractDataTable v2.0 requirements
+ *
  * 2.1.0 - 2025-12-25
  * - Added: Role-based branch filtering for customer employees
  * - Regular customer_employee only see employees in their own branch
@@ -96,6 +102,24 @@ class EmployeeDataTableModel extends AbstractDataTable {
             "LEFT JOIN {$wpdb->prefix}app_customer_branches AS branches ON {$this->table_alias}.branch_id = branches.id"
         ];
 
+        // CRITICAL: Define columns for SELECT clause (required by AbstractDataTable)
+        $alias = $this->table_alias; // 'ce' for Employees tab
+        $this->columns = [
+            "{$alias}.name",
+            "{$alias}.position",
+            "{$alias}.email",
+            "{$alias}.phone",
+            "{$alias}.status",
+            "{$alias}.id",
+            "{$alias}.customer_id",
+            "{$alias}.branch_id",
+            "{$alias}.finance",
+            "{$alias}.operation",
+            "{$alias}.legal",
+            "{$alias}.purchase",
+            "branches.name as branch_name"
+        ];
+
         // Base WHERE for customer filtering
         $this->base_where = [];
 
@@ -106,25 +130,13 @@ class EmployeeDataTableModel extends AbstractDataTable {
     /**
      * Get columns for SELECT clause
      *
+     * DEPRECATED: Use $this->columns property instead.
+     * Kept for backward compatibility only.
+     *
      * @return array Column definitions
      */
     public function get_columns(): array {
-        $alias = $this->table_alias;
-        return [
-            "{$alias}.name as name",
-            "{$alias}.position as position",
-            "{$alias}.email as email",
-            "{$alias}.phone as phone",
-            "{$alias}.status as status",
-            "{$alias}.id as id",
-            "{$alias}.customer_id as customer_id",
-            "{$alias}.branch_id as branch_id",
-            "{$alias}.finance as finance",
-            "{$alias}.operation as operation",
-            "{$alias}.legal as legal",
-            "{$alias}.purchase as purchase",
-            "branches.name as branch_name"
-        ];
+        return $this->columns;
     }
 
     /**
