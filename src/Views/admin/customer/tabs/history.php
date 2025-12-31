@@ -3,11 +3,11 @@
  * Audit Log History Tab Template
  *
  * @package     WP_Customer
- * @subpackage  Views/AuditLog
- * @version     1.0.0
+ * @subpackage  Views/Admin/Customer/Tabs
+ * @version     1.0.1
  * @author      arisciwek
  *
- * Path: /wp-customer/src/Views/templates/audit-log/history-tab.php
+ * Path: /wp-customer/src/Views/admin/customer/tabs/history.php
  *
  * Description: History tab untuk customer detail page.
  *              Shows complete timeline: customer + branches + employees.
@@ -17,6 +17,8 @@
  * - $customer_id: Customer ID untuk filter
  *
  * Changelog:
+ * 1.0.1 - 2025-12-31
+ * - Moved from templates/audit-log/history-tab.php to admin/customer/tabs/history.php
  * 1.0.0 - 2025-12-28
  * - Initial implementation
  * - DataTable with server-side processing

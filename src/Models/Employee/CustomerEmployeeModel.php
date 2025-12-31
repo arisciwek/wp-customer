@@ -37,10 +37,30 @@ namespace WPCustomer\Models\Employee;
 use WPAppCore\Models\Abstract\AbstractCrudModel;
 use WPCustomer\Cache\EmployeeCacheManager;
 use WPCustomer\Models\Customer\CustomerModel;
+use WPCustomer\Traits\Auditable;
 
 defined('ABSPATH') || exit;
 
 class CustomerEmployeeModel extends AbstractCrudModel {
+    use Auditable;
+
+    /**
+     * Auditable configuration
+     */
+    protected $auditable_type = 'customer_employee';
+    protected $auditable_excluded = ['updated_at', 'created_at', 'updated_by'];
+    protected $auditable_references = [
+        'customer_id' => [
+            'table' => 'app_customers',
+            'key' => 'id',
+            'label' => 'name'
+        ],
+        'branch_id' => [
+            'table' => 'app_customer_branches',
+            'key' => 'id',
+            'label' => 'name'
+        ]
+    ];
 
     /**
      * Cache keys constants
@@ -206,6 +226,71 @@ class CustomerEmployeeModel extends AbstractCrudModel {
         $updateData['updated_by'] = get_current_user_id();
 
         return $updateData;
+    }
+
+    // ========================================
+    // OVERRIDE CRUD METHODS (With Audit Logging)
+    // ========================================
+
+    /**
+     * Create employee with audit logging
+     *
+     * @param array $data Employee data
+     * @return int|null Employee ID or null on failure
+     */
+    public function create(array $data): ?int {
+        // Call parent create method
+        $employee_id = parent::create($data);
+
+        // Log creation
+        if ($employee_id) {
+            $this->logAudit('created', $employee_id, null, $data);
+        }
+
+        return $employee_id;
+    }
+
+    /**
+     * Update employee with audit logging
+     *
+     * @param int $id Employee ID
+     * @param array $data Update data
+     * @return bool Success status
+     */
+    public function update(int $id, array $data): bool {
+        // Get old data before update
+        $old_data = $this->find($id);
+
+        // Call parent update method
+        $result = parent::update($id, $data);
+
+        // Log update (only changed fields will be logged)
+        if ($result && $old_data) {
+            $this->logAudit('updated', $id, $old_data, $data);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Delete employee with audit logging
+     *
+     * @param int $id Employee ID
+     * @return bool Success status
+     */
+    public function delete(int $id): bool {
+        // Get data before deletion
+        $old_data = $this->find($id);
+
+        // Call parent delete method
+        $result = parent::delete($id);
+
+        // Log deletion
+        if ($result && $old_data) {
+            $this->logAudit('deleted', $id, $old_data, null);
+        }
+
+        return $result;
     }
 
     // ========================================

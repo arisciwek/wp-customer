@@ -177,6 +177,32 @@ class AssetController {
      * @return void
      */
     private function enqueue_customer_dashboard_assets(): void {
+        // Enqueue Leaflet CSS (for branch map picker in edit forms)
+        wp_enqueue_style(
+            'leaflet',
+            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
+            [],
+            '1.9.4'
+        );
+
+        // Enqueue Leaflet JS (for branch map picker in edit forms)
+        wp_enqueue_script(
+            'leaflet',
+            'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
+            [],
+            '1.9.4',
+            false
+        );
+
+        // Enqueue global MapPicker from wp-app-core
+        wp_enqueue_script(
+            'wpapp-map-picker',
+            WP_APP_CORE_PLUGIN_URL . 'assets/js/map/wpapp-map-picker.js',
+            ['jquery', 'leaflet'],
+            WP_APP_CORE_VERSION,
+            false
+        );
+
         // Enqueue CSS for forms (create/edit customer modals)
         wp_enqueue_style(
             'customer-forms',
@@ -238,6 +264,17 @@ class AssetController {
             ['jquery', 'customer-datatable'],
             $this->version,
             false
+        );
+
+        // Enqueue customer branch map adapter for location picker in branch edit forms
+        // Integrates global MapPicker with branch modal forms
+        // Dependencies: wpapp-map-picker from wp-app-core and wp-modal
+        wp_enqueue_script(
+            'customer-branch-map',
+            WP_CUSTOMER_URL . 'assets/js/customer/customer-branch-map.js',
+            ['jquery', 'wp-modal', 'wpapp-map-picker', 'customer-datatable'],
+            $this->version,
+            true  // Load in footer
         );
 
         // Localize audit log script with nonce and i18n

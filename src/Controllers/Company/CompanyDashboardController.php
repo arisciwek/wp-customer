@@ -4,16 +4,25 @@
  *
  * @package     WP_Customer
  * @subpackage  Controllers/Company
- * @version     1.1.0
+ * @version     2.0.0
  * @author      arisciwek
  *
  * Path: /wp-customer/src/Controllers/Company/CompanyDashboardController.php
  *
  * Description: Dashboard controller untuk Company (Branch) management.
- *              Uses wp-datatable DualPanel framework.
- *              Pattern sama dengan CustomerDashboardController.
+ *              Now extends AbstractDashboardController from wp-datatable.
+ *              Significantly reduced code by using base class functionality.
  *
  * Changelog:
+ * 2.0.0 - 2025-12-30
+ * - REFACTOR: Extends AbstractDashboardController from wp-datatable
+ * - Implemented 7 abstract methods (getEntity, getPageSlug, getCapability, getDashboardConfig, getTabsConfig, getDataTableViewPath, getDetailData)
+ * - Removed duplicate code: render(), signal_dual_panel(), register_tabs(), handle_datatable(), handle_get_details(), render_tabs_content()
+ * - Override init_hooks() to add custom AJAX handlers
+ * - Override handle_get_stats() for custom SQL queries
+ * - Kept custom methods: CRUD handlers, tab lazy loading, employee datatable
+ * - Code reduction: 667 lines → 578 lines (13.3% reduction, 89 lines removed)
+ *
  * 1.1.0 - 2025-12-25
  * - Added: Modal CRUD handlers (get_company_form, save_company, delete_company)
  * - Added: Edit company functionality via modal
@@ -32,7 +41,7 @@
 
 namespace WPCustomer\Controllers\Company;
 
-use WPDataTable\Templates\DualPanel\DashboardTemplate;
+use WPDataTable\Core\AbstractDashboardController;
 use WPCustomer\Models\Branch\BranchModel;
 use WPCustomer\Models\Company\CompanyModel;
 use WPCustomer\Models\Company\CompanyDataTableModel;
@@ -41,27 +50,12 @@ use WPCustomer\Validators\Branch\BranchValidator;
 
 defined('ABSPATH') || exit;
 
-class CompanyDashboardController {
-
-    /**
-     * @var BranchModel
-     */
-    private $model;
+class CompanyDashboardController extends AbstractDashboardController {
 
     /**
      * @var CompanyModel
      */
     private $company_model;
-
-    /**
-     * @var CompanyDataTableModel
-     */
-    private $datatable_model;
-
-    /**
-     * @var BranchValidator
-     */
-    private $validator;
 
     /**
      * Constructor
@@ -75,27 +69,97 @@ class CompanyDashboardController {
         $this->init_hooks();
     }
 
+    // ========================================
+    // ABSTRACT METHODS IMPLEMENTATION
+    // ========================================
+
     /**
-     * Initialize hooks
+     * Get entity name
      */
-    private function init_hooks(): void {
-        // Enqueue assets
+    protected function getEntity(): string {
+        return 'company';
+    }
+
+    /**
+     * Get page slug
+     */
+    protected function getPageSlug(): string {
+        return 'perusahaan';
+    }
+
+    /**
+     * Get required capability
+     */
+    protected function getCapability(): string {
+        return 'view_customer_branch_list';
+    }
+
+    /**
+     * Get dashboard configuration
+     */
+    protected function getDashboardConfig(): array {
+        return [
+            'entity' => 'company',
+            'title' => __('Companies', 'wp-customer'),
+            'description' => __('Manage your companies', 'wp-customer'),
+            'has_stats' => true,
+            'has_tabs' => true,
+            'has_filters' => false,
+            'ajax_action' => 'get_company_details',
+        ];
+    }
+
+    /**
+     * Get tabs configuration
+     */
+    protected function getTabsConfig(): array {
+        return [
+            'info' => [
+                'title' => __('Company Information', 'wp-customer'),
+                'template' => WP_CUSTOMER_PATH . 'src/Views/admin/company/tabs/info.php',
+                'priority' => 10
+            ],
+            'staff' => [
+                'title' => __('Staff', 'wp-customer'),
+                'template' => WP_CUSTOMER_PATH . 'src/Views/admin/company/tabs/staff.php',
+                'priority' => 20
+            ]
+        ];
+    }
+
+    /**
+     * Get DataTable view path
+     */
+    protected function getDataTableViewPath(): string {
+        return WP_CUSTOMER_PATH . 'src/Views/admin/company/datatable/datatable.php';
+    }
+
+    /**
+     * Get detail data by ID
+     */
+    protected function getDetailData(int $id): ?object {
+        // Use CompanyModel to get branch with all related data
+        $company = $this->company_model->getBranchWithLatestMembership($id);
+        return $company ?: null;
+    }
+
+    // ========================================
+    // OVERRIDE PARENT METHODS
+    // ========================================
+
+    /**
+     * Override init_hooks to add custom AJAX handlers
+     */
+    protected function init_hooks(): void {
+        // Call parent to register base hooks
+        parent::init_hooks();
+
+        // Enqueue custom assets
         add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
 
-        // Signal wp-datatable to load dual panel assets
-        add_filter('wpdt_use_dual_panel', [$this, 'signal_dual_panel'], 10, 1);
-
-        // Register tabs
-        add_filter('wpdt_datatable_tabs', [$this, 'register_tabs'], 10, 2);
-
-        // Register content hooks
+        // Register custom content hooks
         add_action('wpdt_left_panel_content', [$this, 'render_datatable'], 10, 1);
         add_action('wpdt_statistics_content', [$this, 'render_statistics'], 10, 1);
-
-        // AJAX handlers - Dashboard
-        add_action('wp_ajax_get_company_datatable', [$this, 'handle_datatable']);
-        add_action('wp_ajax_get_company_details', [$this, 'handle_get_details']);
-        add_action('wp_ajax_get_company_stats', [$this, 'handle_get_stats']);
 
         // AJAX handlers - Tab lazy loading
         add_action('wp_ajax_load_company_info_tab', [$this, 'handle_load_info_tab']);
@@ -109,6 +173,43 @@ class CompanyDashboardController {
         add_action('wp_ajax_save_company', [$this, 'handle_save_company']);
         add_action('wp_ajax_delete_company', [$this, 'handle_delete_company']);
     }
+
+    /**
+     * Override handle_get_stats for custom SQL queries
+     */
+    public function handle_get_stats(): void {
+        if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
+            wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
+            return;
+        }
+
+        if (!current_user_can($this->getCapability())) {
+            wp_send_json_error(['message' => __('Permission denied', 'wp-customer')]);
+            return;
+        }
+
+        try {
+            global $wpdb;
+            $table = $wpdb->prefix . 'app_customer_branches';
+
+            $total = $wpdb->get_var("SELECT COUNT(*) FROM {$table}");
+            $active = $wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status = 'active'");
+            $inactive = $wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status = 'inactive'");
+
+            wp_send_json_success([
+                'total' => (int) $total,
+                'active' => (int) $active,
+                'inactive' => (int) $inactive
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error(['message' => __('Error loading statistics', 'wp-customer')]);
+        }
+    }
+
+    // ========================================
+    // CUSTOM METHODS
+    // ========================================
 
     /**
      * Enqueue assets
@@ -127,75 +228,6 @@ class CompanyDashboardController {
             WP_CUSTOMER_VERSION
         );
     }
-
-    /**
-     * Render dashboard page
-     * Called from MenuManager
-     */
-    public function render(): void {
-        // Check permission
-        if (!current_user_can('view_customer_branch_list')) {
-            wp_die(__('You do not have permission to access this page.', 'wp-customer'));
-        }
-
-        // Render wp-datatable dual panel dashboard
-        DashboardTemplate::render([
-            'entity' => 'company',
-            'title' => __('Companies', 'wp-customer'),
-            'description' => __('Manage your companies', 'wp-customer'),
-            'has_stats' => true,
-            'has_tabs' => true,
-            'has_filters' => false,
-            'ajax_action' => 'get_company_details',
-        ]);
-    }
-
-    // ========================================
-    // DUAL PANEL SIGNAL
-    // ========================================
-
-    /**
-     * Signal wp-datatable to use dual panel layout
-     */
-    public function signal_dual_panel($use): bool {
-        error_log('[CompanyDashboard] signal_dual_panel called, page=' . ($_GET['page'] ?? 'none'));
-        if (isset($_GET['page']) && $_GET['page'] === 'perusahaan') {
-            error_log('[CompanyDashboard] Returning true for dual panel');
-            return true;
-        }
-        error_log('[CompanyDashboard] Returning false for dual panel');
-        return $use;
-    }
-
-    // ========================================
-    // TAB REGISTRATION
-    // ========================================
-
-    /**
-     * Register tabs for company dashboard
-     */
-    public function register_tabs($tabs, $entity): array {
-        if ($entity !== 'company') {
-            return $tabs;
-        }
-
-        return [
-            'info' => [
-                'title' => __('Company Information', 'wp-customer'),
-                'template' => WP_CUSTOMER_PATH . 'src/Views/admin/company/tabs/info.php',
-                'priority' => 10
-            ],
-            'staff' => [
-                'title' => __('Staff', 'wp-customer'),
-                'template' => WP_CUSTOMER_PATH . 'src/Views/admin/company/tabs/staff.php',
-                'priority' => 20
-            ]
-        ];
-    }
-
-    // ========================================
-    // CONTENT RENDERING
-    // ========================================
 
     /**
      * Render DataTable in left panel
@@ -231,132 +263,6 @@ class CompanyDashboardController {
         }
 
         include $view_file;
-    }
-
-    // ========================================
-    // AJAX HANDLERS - DASHBOARD
-    // ========================================
-
-    /**
-     * Handle DataTable AJAX request
-     */
-    public function handle_datatable(): void {
-        if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
-            wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
-            return;
-        }
-
-        if (!current_user_can('view_customer_branch_list')) {
-            wp_send_json_error(['message' => __('Permission denied', 'wp-customer')]);
-            return;
-        }
-
-        try {
-            $response = $this->datatable_model->get_datatable_data($_POST);
-            wp_send_json($response);
-
-        } catch (\Exception $e) {
-            wp_send_json_error(['message' => __('Error loading companies', 'wp-customer')]);
-        }
-    }
-
-    /**
-     * Handle get company details for detail panel
-     */
-    public function handle_get_details(): void {
-        if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
-            wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
-            return;
-        }
-
-        if (!current_user_can('view_customer_branch_list')) {
-            wp_send_json_error(['message' => __('Permission denied', 'wp-customer')]);
-            return;
-        }
-
-        $company_id = isset($_POST['id']) ? intval($_POST['id']) : 0;
-
-        if (!$company_id) {
-            wp_send_json_error(['message' => __('Company ID required', 'wp-customer')]);
-            return;
-        }
-
-        try {
-            // Use CompanyModel to get branch with all related data (province, city, agency, division, inspector)
-            $company = $this->company_model->getBranchWithLatestMembership($company_id);
-
-            if (!$company) {
-                wp_send_json_error(['message' => __('Company not found', 'wp-customer')]);
-                return;
-            }
-
-            // Render tabs content
-            $tabs = $this->render_tabs_content($company);
-
-            wp_send_json_success([
-                'title' => esc_html($company->name),
-                'tabs' => $tabs
-            ]);
-
-        } catch (\Exception $e) {
-            error_log('[CompanyDashboard] Error in handle_get_details: ' . $e->getMessage());
-            wp_send_json_error(['message' => __('Error loading company details', 'wp-customer')]);
-        }
-    }
-
-    /**
-     * Render tabs content for detail panel
-     */
-    private function render_tabs_content($company): array {
-        $tabs_content = [];
-        $registered_tabs = $this->register_tabs([], 'company');
-
-        foreach ($registered_tabs as $tab_id => $tab) {
-            if (!isset($tab['template']) || !file_exists($tab['template'])) {
-                continue;
-            }
-
-            ob_start();
-            $data = $company; // Make $data available to template
-            include $tab['template'];
-            $content = ob_get_clean();
-            $tabs_content[$tab_id] = $content;
-        }
-
-        return $tabs_content;
-    }
-
-    /**
-     * Handle get statistics
-     */
-    public function handle_get_stats(): void {
-        if (!check_ajax_referer('wpdt_nonce', 'nonce', false)) {
-            wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
-            return;
-        }
-
-        if (!current_user_can('view_customer_branch_list')) {
-            wp_send_json_error(['message' => __('Permission denied', 'wp-customer')]);
-            return;
-        }
-
-        try {
-            global $wpdb;
-            $table = $wpdb->prefix . 'app_customer_branches';
-
-            $total = $wpdb->get_var("SELECT COUNT(*) FROM {$table}");
-            $active = $wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status = 'active'");
-            $inactive = $wpdb->get_var("SELECT COUNT(*) FROM {$table} WHERE status = 'inactive'");
-
-            wp_send_json_success([
-                'total' => (int) $total,
-                'active' => (int) $active,
-                'inactive' => (int) $inactive
-            ]);
-
-        } catch (\Exception $e) {
-            wp_send_json_error(['message' => __('Error loading statistics', 'wp-customer')]);
-        }
     }
 
     // ========================================

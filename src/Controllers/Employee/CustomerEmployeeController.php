@@ -74,8 +74,10 @@ class CustomerEmployeeController extends AbstractCrudController {
         add_action('wp_ajax_change_customer_employee_status', [$this, 'changeStatus']);
         add_action('wp_ajax_create_customer_employee_button', [$this, 'createEmployeeButton']);
 
-        // Modal integration (TODO-2191)
+        // Modal integration (auto-wire system)
         add_action('wp_ajax_get_employee_form', [$this, 'handle_get_employee_form']);
+        add_action('wp_ajax_save_employee', [$this, 'handle_save_employee']);
+        add_action('wp_ajax_delete_employee', [$this, 'handle_delete_employee']);
 
         // Hook untuk menampilkan field tambahan di profil user
         add_action('show_user_profile', [$this, 'showProfileExtras']);
@@ -352,6 +354,7 @@ class CustomerEmployeeController extends AbstractCrudController {
 
         // Sanitize input
         $data = [
+            'customer_id' => $employee->customer_id, // Use existing customer_id (not editable)
             'name' => sanitize_text_field($_POST['name'] ?? ''),
             'position' => sanitize_text_field($_POST['position'] ?? ''),
             'email' => sanitize_email($_POST['email'] ?? ''),
@@ -751,7 +754,8 @@ class CustomerEmployeeController extends AbstractCrudController {
      */
     public function handle_get_employee_form() {
         try {
-            check_ajax_referer('wpapp_panel_nonce', '_ajax_nonce');
+            // Auto-wire system sends wpdt_nonce
+            check_ajax_referer('wpdt_nonce', 'nonce');
 
             $employee_id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
             $customer_id = isset($_GET['customer_id']) ? (int) $_GET['customer_id'] : 0;
@@ -776,8 +780,12 @@ class CustomerEmployeeController extends AbstractCrudController {
                     return;
                 }
 
-                // Load edit form
-                include WP_CUSTOMER_PATH . 'src/Views/customer/employee/forms/edit-employee-form.php';
+                // Load edit form and capture output for auto-wire system
+                ob_start();
+                include WP_CUSTOMER_PATH . 'src/Views/admin/employee/forms/edit-employee-form.php';
+                $html = ob_get_clean();
+
+                wp_send_json_success(['html' => $html]);
             } else {
                 // Create mode
                 if (!$customer_id) {
@@ -797,11 +805,13 @@ class CustomerEmployeeController extends AbstractCrudController {
                     return;
                 }
 
-                // Load create form
-                include WP_CUSTOMER_PATH . 'src/Views/customer/employee/forms/create-employee-form.php';
-            }
+                // Load create form and capture output for auto-wire system
+                ob_start();
+                include WP_CUSTOMER_PATH . 'src/Views/admin/employee/forms/create-employee-form.php';
+                $html = ob_get_clean();
 
-            wp_die();
+                wp_send_json_success(['html' => $html]);
+            }
 
         } catch (\Exception $e) {
             wp_send_json_error(['message' => $e->getMessage()]);
@@ -982,5 +992,135 @@ class CustomerEmployeeController extends AbstractCrudController {
 
         $actions .= '</div>'; // Close wpapp-actions wrapper
         return $actions;
+    }
+
+    // ========================================
+    // MODAL AUTO-WIRE HANDLERS
+    // ========================================
+
+    /**
+     * Handle save employee from modal (auto-wire)
+     *
+     * Wrapper method that delegates to parent update() method
+     * Used by wp-datatable auto-wire modal system
+     */
+    public function handle_save_employee() {
+        try {
+            // Verify wpdt_nonce (from auto-wire system)
+            $nonce = $_POST['nonce'] ?? '';
+            if (!wp_verify_nonce($nonce, 'wpdt_nonce')) {
+                throw new \Exception(__('Security check failed', 'wp-customer'));
+            }
+
+            $mode = isset($_POST['mode']) ? sanitize_text_field($_POST['mode']) : 'create';
+
+            if ($mode === 'edit') {
+                // Get ID from POST
+                $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+                if (!$id) {
+                    throw new \Exception('Employee ID is required');
+                }
+
+                // Prepare and validate data
+                $data = $this->prepareUpdateData($id);
+
+                // Update via model
+                if (!$this->model->update($id, $data)) {
+                    throw new \Exception('Failed to update employee');
+                }
+
+                // Clear cache
+                $this->cache->invalidateEmployeeCache($id);
+
+                // Get updated employee
+                $employee = $this->model->find($id);
+
+                // Send success response
+                wp_send_json_success([
+                    'message' => __('Data karyawan berhasil diperbarui', 'wp-customer'),
+                    'employee' => $employee
+                ]);
+            } else {
+                // Create mode
+                $data = $this->prepareCreateData();
+
+                $employee_id = $this->model->create($data);
+                if (!$employee_id) {
+                    // Rollback user creation if employee creation failed
+                    if (!empty($data['user_id'])) {
+                        wp_delete_user($data['user_id']);
+                    }
+                    throw new \Exception('Gagal menambah karyawan');
+                }
+
+                // Send success response
+                wp_send_json_success([
+                    'message' => 'Karyawan berhasil ditambahkan',
+                    'employee' => $this->model->find($employee_id)
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Handle delete employee from modal (auto-wire)
+     *
+     * Wrapper method that delegates to parent delete() method
+     * Used by wp-datatable auto-wire modal system
+     */
+    public function handle_delete_employee() {
+        try {
+            // Verify wpdt_nonce (from auto-wire system)
+            $nonce = $_POST['nonce'] ?? '';
+            if (!wp_verify_nonce($nonce, 'wpdt_nonce')) {
+                throw new \Exception(__('Security check failed', 'wp-customer'));
+            }
+
+            $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+            if (!$id) {
+                throw new \Exception('Invalid employee ID');
+            }
+
+            // Get employee and customer for permission check
+            $employee = $this->model->find($id);
+            if (!$employee) {
+                throw new \Exception('Employee not found');
+            }
+
+            $customer = $this->customerModel->find($employee->customer_id);
+            if (!$customer) {
+                throw new \Exception('Customer not found');
+            }
+
+            // Check delete permission
+            if (!$this->validator->canDeleteEmployee($employee, $customer)) {
+                throw new \Exception('Anda tidak memiliki izin untuk menghapus karyawan ini.');
+            }
+
+            // Validate delete
+            $errors = $this->validator->validateDelete($id);
+            if (!empty($errors)) {
+                throw new \Exception(reset($errors));
+            }
+
+            // Proceed with deletion
+            if (!$this->model->delete($id)) {
+                throw new \Exception('Failed to delete employee');
+            }
+
+            wp_send_json_success([
+                'message' => __('Karyawan berhasil dihapus', 'wp-customer')
+            ]);
+
+        } catch (\Exception $e) {
+            wp_send_json_error([
+                'message' => $e->getMessage()
+            ]);
+        }
     }
 }

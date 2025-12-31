@@ -73,7 +73,7 @@ class AuditLogDataTableModel extends AbstractDataTable {
      *
      * @return array Column definitions
      */
-    public function get_columns(): array {
+    protected function get_select_columns(): array {
         return [
             'al.id',
             'al.auditable_type',

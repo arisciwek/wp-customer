@@ -122,7 +122,7 @@ class CustomerDashboardController extends AbstractDashboardController {
             ],
             'history' => [
                 'title' => __('History', 'wp-customer'),
-                'template' => WP_CUSTOMER_PATH . 'src/Views/templates/audit-log/history-tab.php',
+                'template' => WP_CUSTOMER_PATH . 'src/Views/admin/customer/tabs/history.php',
                 'priority' => 40
             ]
         ];
@@ -162,10 +162,15 @@ class CustomerDashboardController extends AbstractDashboardController {
         add_action('wp_ajax_get_customer_branches_datatable', [$this, 'handle_branches_datatable']);
         add_action('wp_ajax_get_customer_employees_datatable', [$this, 'handle_employees_datatable']);
 
-        // Add custom AJAX handlers - Modal CRUD
+        // Add custom AJAX handlers - Modal CRUD (Customer)
         add_action('wp_ajax_get_customer_form', [$this, 'handle_get_customer_form']);
         add_action('wp_ajax_save_customer', [$this, 'handle_save_customer']);
         add_action('wp_ajax_delete_customer', [$this, 'handle_delete_customer']);
+
+        // Inject auto-wire config for nested entities (branch, employee)
+        // CRUD handlers are in BranchController.php and CustomerEmployeeController.php
+        add_filter('wpdt_localize_data', [$this, 'inject_branch_autowire_config']);
+        add_filter('wpdt_localize_data', [$this, 'inject_employee_autowire_config']);
 
         // Override stats handler to use v2
         remove_action('wp_ajax_get_customer_stats', [$this, 'handle_get_stats']);
@@ -673,5 +678,77 @@ class CustomerDashboardController extends AbstractDashboardController {
         } catch (\Exception $e) {
             wp_send_json_error(['message' => $e->getMessage()]);
         }
+    }
+
+    // ========================================
+    // AUTO-WIRE CONFIG INJECTION (Nested Entities)
+    // ========================================
+
+    /**
+     * Inject auto-wire configuration for branch buttons
+     *
+     * NOTE: CRUD handlers are in BranchController.php
+     *       This only provides config for auto-wire modal system
+     */
+    public function inject_branch_autowire_config($data) {
+        if (!isset($_GET['page']) || $_GET['page'] !== $this->getPageSlug()) {
+            return $data;
+        }
+
+        $data['branch'] = [
+            'action_buttons' => [
+                'edit' => [
+                    'enabled' => true,
+                    'ajax_action' => 'get_branch_form',
+                    'submit_action' => 'save_branch',
+                    'modal_title' => __('Edit Branch', 'wp-customer'),
+                    'success_message' => __('Branch updated successfully!', 'wp-customer'),
+                    'modal_size' => 'large',
+                ],
+                'delete' => [
+                    'enabled' => true,
+                    'ajax_action' => 'delete_branch',
+                    'confirm_title' => __('Delete Branch', 'wp-customer'),
+                    'confirm_message' => __('Are you sure you want to delete this branch?', 'wp-customer'),
+                    'success_message' => __('Branch deleted successfully!', 'wp-customer'),
+                ],
+            ],
+        ];
+
+        return $data;
+    }
+
+    /**
+     * Inject auto-wire configuration for employee buttons
+     *
+     * NOTE: CRUD handlers are in CustomerEmployeeController.php
+     *       This only provides config for auto-wire modal system
+     */
+    public function inject_employee_autowire_config($data) {
+        if (!isset($_GET['page']) || $_GET['page'] !== $this->getPageSlug()) {
+            return $data;
+        }
+
+        $data['employee'] = [
+            'action_buttons' => [
+                'edit' => [
+                    'enabled' => true,
+                    'ajax_action' => 'get_employee_form',
+                    'submit_action' => 'save_employee',
+                    'modal_title' => __('Edit Employee', 'wp-customer'),
+                    'success_message' => __('Employee updated successfully!', 'wp-customer'),
+                    'modal_size' => 'medium',
+                ],
+                'delete' => [
+                    'enabled' => true,
+                    'ajax_action' => 'delete_employee',
+                    'confirm_title' => __('Delete Employee', 'wp-customer'),
+                    'confirm_message' => __('Are you sure you want to delete this employee?', 'wp-customer'),
+                    'success_message' => __('Employee deleted successfully!', 'wp-customer'),
+                ],
+            ],
+        ];
+
+        return $data;
     }
 }

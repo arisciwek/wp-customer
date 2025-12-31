@@ -804,7 +804,17 @@ class BranchController extends AbstractCrudController {
      */
     public function handle_get_branch_form() {
         try {
-            check_ajax_referer('wpapp_panel_nonce', '_ajax_nonce');
+            // Auto-wire system sends wpdt_nonce
+            $nonce = $_GET['nonce'] ?? $_POST['nonce'] ?? '';
+            error_log('Branch Form - Nonce received: ' . $nonce);
+            error_log('Branch Form - Verify result: ' . wp_verify_nonce($nonce, 'wpdt_nonce'));
+
+            if (!wp_verify_nonce($nonce, 'wpdt_nonce')) {
+                error_log('Branch Form - NONCE VERIFICATION FAILED');
+                wp_send_json_error(['message' => __('Security check failed', 'wp-customer')]);
+                return;
+            }
+            error_log('Branch Form - Nonce verified successfully');
 
             $branch_id = isset($_GET['id']) ? (int) $_GET['id'] : 0;
             $customer_id = isset($_GET['customer_id']) ? (int) $_GET['customer_id'] : 0;
@@ -829,8 +839,12 @@ class BranchController extends AbstractCrudController {
                     return;
                 }
 
-                // Load edit form
-                include WP_CUSTOMER_PATH . 'src/Views/customer/branch/forms/edit-branch-form.php';
+                // Load edit form and capture output for auto-wire system
+                ob_start();
+                include WP_CUSTOMER_PATH . 'src/Views/admin/branch/forms/edit-branch-form.php';
+                $html = ob_get_clean();
+
+                wp_send_json_success(['html' => $html]);
             } else {
                 // Create mode
                 if (!$customer_id) {
@@ -850,11 +864,13 @@ class BranchController extends AbstractCrudController {
                     return;
                 }
 
-                // Load create form
-                include WP_CUSTOMER_PATH . 'src/Views/customer/branch/forms/create-branch-form.php';
-            }
+                // Load create form and capture output for auto-wire system
+                ob_start();
+                include WP_CUSTOMER_PATH . 'src/Views/admin/branch/forms/create-branch-form.php';
+                $html = ob_get_clean();
 
-            wp_die();
+                wp_send_json_success(['html' => $html]);
+            }
 
         } catch (\Exception $e) {
             wp_send_json_error(['message' => $e->getMessage()]);
@@ -870,20 +886,69 @@ class BranchController extends AbstractCrudController {
      */
     public function handle_save_branch() {
         try {
-            // No nonce check here - let internal methods handle it
-            // This wrapper just routes to appropriate method
+            // Auto-wire system sends wpdt_nonce
+            $nonce = $_POST['nonce'] ?? $_GET['nonce'] ?? '';
+            error_log('Branch Save - Nonce received: ' . $nonce);
+            error_log('Branch Save - POST data: ' . print_r($_POST, true));
+            error_log('Branch Save - Verify result: ' . wp_verify_nonce($nonce, 'wpdt_nonce'));
+
+            if (!wp_verify_nonce($nonce, 'wpdt_nonce')) {
+                error_log('Branch Save - NONCE VERIFICATION FAILED');
+                throw new \Exception(__('Security check failed', 'wp-customer'));
+            }
+
+            error_log('Branch Save - Nonce verified successfully');
 
             $mode = isset($_POST['mode']) ? sanitize_text_field($_POST['mode']) : 'create';
+            error_log('Branch Save - Mode: ' . $mode);
 
             if ($mode === 'edit') {
-                // Update existing branch (will check nonce internally)
-                $this->update();
+                // Get ID from POST
+                $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+                if (!$id) {
+                    throw new \Exception('Branch ID is required');
+                }
+
+                // Prepare and validate data
+                $data = $this->prepareUpdateData($id);
+
+                // Update via model
+                $result = $this->getModel()->update($id, $data);
+
+                // Clear cache
+                wp_cache_delete('branch_' . $id, $this->getCacheGroup());
+
+                // Send success response
+                wp_send_json_success([
+                    'message' => sprintf(
+                        __('%s updated successfully', $this->getTextDomain()),
+                        ucfirst($this->getEntityName())
+                    ),
+                    'data' => $result
+                ]);
             } else {
-                // Create new branch (will check nonce internally)
-                $this->store();
+                // Prepare data (includes user creation logic)
+                $data = $this->prepareCreateData();
+
+                // Create via model
+                $branch_id = $this->getModel()->create($data);
+                if (!$branch_id) {
+                    // Rollback user creation if branch creation failed
+                    if (!empty($data['user_id'])) {
+                        wp_delete_user($data['user_id']);
+                    }
+                    throw new \Exception('Gagal menambah cabang');
+                }
+
+                // Send success response
+                wp_send_json_success([
+                    'message' => 'Cabang berhasil ditambahkan',
+                    'branch' => $this->getModel()->find($branch_id)
+                ]);
             }
 
         } catch (\Exception $e) {
+            error_log('[branch] update error: ' . $e->getMessage());
             wp_send_json_error(['message' => $e->getMessage()]);
         }
     }

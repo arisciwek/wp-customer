@@ -136,6 +136,7 @@ class CompanyDataTableModel extends AbstractDataTable {
 
         return [
             'DT_RowId' => 'company-' . ($row->id ?? 0),
+            'DT_RowClass' => 'wpdt-clickable-row',
             'DT_RowData' => [
                 'id' => $row->id ?? 0,
                 'customer_id' => $row->customer_id ?? 0,

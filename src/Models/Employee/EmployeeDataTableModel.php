@@ -195,11 +195,12 @@ class EmployeeDataTableModel extends AbstractDataTable {
         $buttons = [];
 
         // Edit button (shown for users with edit permission)
+        // Uses wpdt-edit-btn class for auto-wire modal system integration
         if (current_user_can('manage_options') ||
             current_user_can('edit_all_customer_employees') ||
             current_user_can('edit_own_customer_employee')) {
             $buttons[] = sprintf(
-                '<button type="button" class="button button-small edit-employee" data-id="%d" data-customer-id="%d" title="%s">
+                '<button type="button" class="button button-small wpdt-edit-btn" data-id="%d" data-entity="employee" data-customer-id="%d" title="%s">
                     <span class="dashicons dashicons-edit"></span>
                 </button>',
                 esc_attr($row->id),
@@ -209,11 +210,12 @@ class EmployeeDataTableModel extends AbstractDataTable {
         }
 
         // Delete button (shown for users with delete permission)
+        // Uses wpdt-delete-btn class for auto-wire modal system integration
         if (current_user_can('manage_options') ||
             current_user_can('delete_all_customer_employees') ||
             current_user_can('delete_own_customer_employee')) {
             $buttons[] = sprintf(
-                '<button type="button" class="button button-small delete-employee" data-id="%d" data-customer-id="%d" title="%s">
+                '<button type="button" class="button button-small wpdt-delete-btn" data-id="%d" data-entity="employee" data-customer-id="%d" title="%s">
                     <span class="dashicons dashicons-trash"></span>
                 </button>',
                 esc_attr($row->id),

@@ -132,6 +132,7 @@ class CustomerDataTableModel extends AbstractDataTable {
 
         return [
             'DT_RowId' => 'customer-' . $row->id,
+            'DT_RowClass' => 'wpdt-clickable-row',
             'DT_RowData' => [
                 'id' => $row->id,
                 'entity' => 'customer'

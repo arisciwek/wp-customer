@@ -26,11 +26,11 @@ defined('ABSPATH') || exit;
 ?>
 
 <form id="employee-form" class="customer-modal-form">
-    <input type="hidden" name="action" value="update_customer_employee">
+    <input type="hidden" name="action" value="save_employee">
     <input type="hidden" name="mode" value="edit">
     <input type="hidden" name="id" value="<?php echo esc_attr($employee->id); ?>">
     <input type="hidden" name="customer_id" value="<?php echo esc_attr($employee->customer_id); ?>">
-    <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('wp_customer_nonce'); ?>">
+    <input type="hidden" name="nonce" value="<?php echo wp_create_nonce('wpdt_nonce'); ?>">
 
     <h4 style="margin: 0 0 15px 0; font-size: 14px; font-weight: 600; color: #23282d;">
         <?php _e('Informasi Dasar', 'wp-customer'); ?>
